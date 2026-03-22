@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pulso Ops Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css">
+</head>
+<body>
+  <main class="layout">
+    <section class="hero">
+      <p class="eyebrow">Pulso Operations</p>
+      <h1>Reviewer Sign In</h1>
+      <p class="subtitle">Use your reviewer credentials to access certificate verification and provider records.</p>
+    </section>
+    <section class="board" style="max-width: 520px; margin: 0 auto;">
+      <form action="/admin/login" method="post" class="card">
+        <h3>Sign in</h3>
+        <input name="username" type="text" placeholder="Username" required style="width: 100%; border: 1px solid rgba(89, 66, 43, 0.12); border-radius: 16px; padding: 14px 16px; font: inherit; margin-top: 16px;">
+        <input name="password" type="password" placeholder="Password" required style="width: 100%; border: 1px solid rgba(89, 66, 43, 0.12); border-radius: 16px; padding: 14px 16px; font: inherit; margin-top: 14px;">
+        <button class="button approve" type="submit" style="margin-top: 16px;">Enter dashboard</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

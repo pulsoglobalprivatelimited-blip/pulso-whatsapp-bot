@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pulso Ops Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css">
+</head>
+<body>
+  <main class="layout">
+    <section class="hero">
+      <p class="eyebrow">Pulso Operations</p>
+      <h1>Care Provider Verification Desk</h1>
+      <p class="subtitle">Review Meta ad leads, verify certificates, and unblock onboarding without leaving WhatsApp context.</p>
+      <div class="hero-meta">
+        <div class="metric">
+          <span id="pending-count">0</span>
+          <label>Pending verification</label>
+        </div>
+        <div class="metric">
+          <span id="completed-count">0</span>
+          <label>Completed today</label>
+        </div>
+      </div>
+    </section>
+
+    <section class="board">
+      <div class="board-header">
+        <div>
+          <p class="eyebrow">Queue</p>
+          <h2>Provider pipeline</h2>
+        </div>
+        <div class="actions">
+          <button id="refresh-button" class="button secondary">Refresh</button>
+          <form action="/admin/logout" method="post">
+            <button class="button secondary" type="submit">Log out</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="filters">
+        <button class="filter active" data-filter="all">All</button>
+        <button class="filter" data-filter="certificate_verification_pending">Pending</button>
+        <button class="filter" data-filter="awaiting_duty_preference">Approved</button>
+        <button class="filter" data-filter="certificate_rejected">Rejected</button>
+        <button class="filter" data-filter="completed">Completed</button>
+      </div>
+
+      <div class="content">
+        <aside class="list-panel">
+          <div id="provider-list" class="provider-list"></div>
+        </aside>
+
+        <section class="detail-panel">
+          <div id="empty-state" class="empty-state">
+            <h3>Select a provider</h3>
+            <p>The detail view will show qualification, document status, review notes, and message history.</p>
+          </div>
+
+          <div id="provider-detail" class="detail hidden">
+            <div class="detail-header">
+              <div>
+                <p id="detail-phone" class="detail-phone"></p>
+                <h3 id="detail-status"></h3>
+              </div>
+              <span id="detail-step" class="pill"></span>
+            </div>
+
+            <div class="detail-grid">
+              <article class="card">
+                <h4>Profile</h4>
+                <dl>
+                  <div><dt>Qualification</dt><dd id="detail-qualification">-</dd></div>
+                  <div><dt>Interested</dt><dd id="detail-interest">-</dd></div>
+                  <div><dt>Duty preference</dt><dd id="detail-duty">-</dd></div>
+                  <div><dt>Updated</dt><dd id="detail-updated">-</dd></div>
+                </dl>
+              </article>
+
+              <article class="card">
+                <h4>Documents</h4>
+                <dl>
+                  <div><dt>CV</dt><dd id="detail-cv">-</dd></div>
+                  <div><dt>Certificate</dt><dd id="detail-certificate">-</dd></div>
+                  <div><dt>Verification</dt><dd id="detail-verification">-</dd></div>
+                </dl>
+              </article>
+            </div>
+
+            <article class="card">
+              <div class="review-head">
+                <h4>Manual review</h4>
+                <p>Approve only after checking that the certificate is readable, valid, and matches the provider.</p>
+              </div>
+              <form id="review-form" class="review-form">
+                <input id="reviewer-input" type="text" name="reviewedBy" placeholder="Reviewer name" value="ops-team">
+                <textarea id="notes-input" name="notes" placeholder="Review notes"></textarea>
+                <div class="actions">
+                  <button type="button" id="approve-button" class="button approve">Approve certificate</button>
+                  <button type="button" id="reject-button" class="button reject">Reject certificate</button>
+                </div>
+              </form>
+            </article>
+
+            <article class="card">
+              <h4>History</h4>
+              <div id="history-list" class="history-list"></div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="/admin/assets/dashboard.js"></script>
+</body>
+</html>
