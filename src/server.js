@@ -46,6 +46,7 @@ app.get('/webhook', (req, res) => {
 app.post('/webhook', async (req, res) => {
   try {
     const entry = req.body.entry || [];
+    let processedMessages = 0;
 
     for (const item of entry) {
       const changes = item.changes || [];
@@ -55,9 +56,27 @@ app.post('/webhook', async (req, res) => {
 
         for (const message of messages) {
           if (!message.from) continue;
+          processedMessages += 1;
+          console.log(
+            '[WEBHOOK] Incoming message',
+            JSON.stringify(
+              {
+                from: message.from,
+                type: message.type,
+                text: message.text && message.text.body ? message.text.body : null,
+                id: message.id || null
+              },
+              null,
+              2
+            )
+          );
           await processIncomingMessage(message.from, message);
         }
       }
+    }
+
+    if (!processedMessages) {
+      console.log('[WEBHOOK] Event received with no message payload');
     }
 
     res.sendStatus(200);
