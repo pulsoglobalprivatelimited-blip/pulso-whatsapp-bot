@@ -31,6 +31,18 @@ app.get('/health', (_req, res) => {
   });
 });
 
+app.get('/privacy', (_req, res) => {
+  res.sendFile(path.join(config.publicDir, 'privacy.html'));
+});
+
+app.get('/terms', (_req, res) => {
+  res.sendFile(path.join(config.publicDir, 'terms.html'));
+});
+
+app.get('/data-deletion', (_req, res) => {
+  res.sendFile(path.join(config.publicDir, 'data-deletion.html'));
+});
+
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
