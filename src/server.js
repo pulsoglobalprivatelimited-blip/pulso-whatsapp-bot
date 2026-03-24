@@ -18,6 +18,44 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use('/admin/assets', express.static(path.join(config.publicDir, 'assets')));
 
+const recentlyProcessedMessageIds = new Map();
+const MESSAGE_DEDUPE_TTL_MS = 5 * 60 * 1000;
+
+function hasRecentlyProcessedMessage(messageId) {
+  if (!messageId) {
+    return false;
+  }
+
+  const processedAt = recentlyProcessedMessageIds.get(messageId);
+  if (!processedAt) {
+    return false;
+  }
+
+  if (Date.now() - processedAt > MESSAGE_DEDUPE_TTL_MS) {
+    recentlyProcessedMessageIds.delete(messageId);
+    return false;
+  }
+
+  return true;
+}
+
+function markMessageProcessed(messageId) {
+  if (!messageId) {
+    return;
+  }
+
+  recentlyProcessedMessageIds.set(messageId, Date.now());
+
+  if (recentlyProcessedMessageIds.size > 1000) {
+    const cutoff = Date.now() - MESSAGE_DEDUPE_TTL_MS;
+    for (const [id, processedAt] of recentlyProcessedMessageIds.entries()) {
+      if (processedAt < cutoff) {
+        recentlyProcessedMessageIds.delete(id);
+      }
+    }
+  }
+}
+
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
@@ -68,6 +106,13 @@ app.post('/webhook', async (req, res) => {
 
         for (const message of messages) {
           if (!message.from) continue;
+
+          if (hasRecentlyProcessedMessage(message.id)) {
+            console.log('[WEBHOOK] Skipping duplicate message', message.id);
+            continue;
+          }
+
+          markMessageProcessed(message.id);
           processedMessages += 1;
           console.log(
             '[WEBHOOK] Incoming message',
