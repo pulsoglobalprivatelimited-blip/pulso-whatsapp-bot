@@ -50,6 +50,16 @@ function recordInbound(phone, message) {
   });
 }
 
+function hasProcessedMessage(provider, messageId) {
+  if (!messageId || !provider || !Array.isArray(provider.history)) {
+    return false;
+  }
+
+  return provider.history.some(
+    (event) => event.type === 'inbound_message' && event.payload && event.payload.id === messageId
+  );
+}
+
 async function handleQualification(phone, text) {
   const qualification = parseQualification(text);
   if (isQualificationDeclined(text)) {
@@ -148,6 +158,11 @@ async function handleDutyPreference(phone, text) {
 
 async function processIncomingMessage(phone, message) {
   const provider = await getOrCreateProvider(phone);
+
+  if (hasProcessedMessage(provider, message.id)) {
+    return;
+  }
+
   await recordInbound(phone, message);
 
   if (provider.status === STATUS.NEW) {
@@ -161,6 +176,7 @@ async function processIncomingMessage(phone, message) {
     case STATUS.AWAITING_QUALIFICATION:
       await handleQualification(phone, text);
       return;
+    case STATUS.VOICE_NOTE_SENT:
     case STATUS.AWAITING_INTEREST:
       await handleInterest(phone, text);
       return;
