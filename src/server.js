@@ -17,6 +17,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use('/admin/assets', express.static(path.join(config.publicDir, 'assets')));
+app.use('/media', express.static(config.mediaStorageDir));
 
 const recentlyProcessedMessageIds = new Map();
 const MESSAGE_DEDUPE_TTL_MS = 5 * 60 * 1000;

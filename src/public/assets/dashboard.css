@@ -221,6 +221,48 @@ h1 {
   margin-bottom: 16px;
 }
 
+.attachment-section {
+  margin-top: 18px;
+}
+
+.attachment-section h5 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.attachment-list {
+  display: grid;
+  gap: 12px;
+}
+
+.attachment-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.attachment-card a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+  word-break: break-word;
+}
+
+.attachment-card p,
+.attachment-empty {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.attachment-card img {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}
+
 dl {
   margin: 16px 0 0;
   display: grid;

@@ -83,6 +83,37 @@ function setText(id, value) {
   document.getElementById(id).textContent = value || '-';
 }
 
+function mediaUrl(storagePath) {
+  if (!storagePath) return null;
+  const normalized = storagePath.replace(/^\.?\/*storage\/media\//, '');
+  return `/media/${normalized}`;
+}
+
+function renderAttachments(id, attachments) {
+  const target = document.getElementById(id);
+  if (!attachments || !attachments.length) {
+    target.innerHTML = '<p class="attachment-empty">No files available.</p>';
+    return;
+  }
+
+  target.innerHTML = attachments.map((file) => {
+    const href = mediaUrl(file.storagePath);
+    const name = file.fileName || file.id || 'Attachment';
+    const isImage = (file.mimeType || '').startsWith('image/');
+
+    if (!href) {
+      return `<div class="attachment-card"><strong>${escapeHtml(name)}</strong><p>File path unavailable</p></div>`;
+    }
+
+    return `
+      <article class="attachment-card">
+        <a href="${href}" target="_blank" rel="noreferrer">${escapeHtml(name)}</a>
+        ${isImage ? `<img src="${href}" alt="${escapeHtml(name)}">` : '<p>Preview unavailable for this file type.</p>'}
+      </article>
+    `;
+  }).join('');
+}
+
 function renderHistory(history) {
   const target = document.getElementById('history-list');
   target.innerHTML = (history || []).slice().reverse().map((entry) => `
@@ -110,6 +141,8 @@ function renderDetail(provider) {
   setText('detail-cv', provider.documents.cvReceived ? `${provider.documents.cvAttachments.length} file(s)` : 'Not received');
   setText('detail-certificate', provider.documents.certificateReceived ? `${provider.documents.certificateAttachments.length} file(s)` : 'Not received');
   setText('detail-verification', provider.verification.status);
+  renderAttachments('detail-cv-files', provider.documents.cvAttachments);
+  renderAttachments('detail-certificate-files', provider.documents.certificateAttachments);
 
   document.getElementById('reviewer-input').value = provider.verification.reviewedBy || 'ops-team';
   document.getElementById('notes-input').value = provider.verification.notes || '';
