@@ -18,12 +18,30 @@ const {
 const { archiveIncomingMedia } = require('./mediaStorage');
 
 async function sendAndLog(phone, kind, body, sender) {
-  if (kind === 'audio') {
-    await sendAudio(phone, body);
-  } else if (kind === 'terms') {
-    await sendTermsAndConditions(phone, body);
-  } else {
-    await sendText(phone, body);
+  try {
+    if (kind === 'audio') {
+      await sendAudio(phone, body);
+    } else if (kind === 'terms') {
+      await sendTermsAndConditions(phone, body);
+    } else {
+      await sendText(phone, body);
+    }
+  } catch (error) {
+    console.error(
+      '[WHATSAPP_SEND_ERROR]',
+      JSON.stringify(
+        {
+          phone,
+          kind,
+          body,
+          message: error.message,
+          response: error.response ? error.response.data : null
+        },
+        null,
+        2
+      )
+    );
+    throw error;
   }
 
   await appendHistory(phone, {
