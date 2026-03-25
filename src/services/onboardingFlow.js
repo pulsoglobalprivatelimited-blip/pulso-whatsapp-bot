@@ -78,6 +78,29 @@ function hasProcessedMessage(provider, messageId) {
   );
 }
 
+function lastOutboundBody(provider) {
+  if (!provider || !Array.isArray(provider.history)) {
+    return null;
+  }
+
+  for (let index = provider.history.length - 1; index >= 0; index -= 1) {
+    const event = provider.history[index];
+    if (event.type === 'outbound_message' && event.payload && event.payload.kind === 'text') {
+      return event.payload.body;
+    }
+  }
+
+  return null;
+}
+
+async function sendTextIfChanged(phone, provider, body) {
+  if (lastOutboundBody(provider) === body) {
+    return;
+  }
+
+  await sendAndLog(phone, 'text', body);
+}
+
 async function handleQualification(phone, text) {
   const qualification = parseQualification(text);
   if (isQualificationDeclined(text)) {
@@ -123,6 +146,15 @@ async function handleDocuments(phone, message) {
   const provider = (await getProvider(phone)) || (await getOrCreateProvider(phone));
   const kind = classifyDocument(message);
 
+  if (!kind) {
+    await sendTextIfChanged(
+      phone,
+      provider,
+      'Please send your CV and certificate as an image or document so we can continue.'
+    );
+    return;
+  }
+
   const nextDocuments = {
     ...provider.documents,
     cvAttachments: [...provider.documents.cvAttachments],
@@ -152,7 +184,11 @@ async function handleDocuments(phone, message) {
     const missing = [];
     if (!nextDocuments.cvReceived) missing.push('CV');
     if (!nextDocuments.certificateReceived) missing.push('certificate');
-    await sendAndLog(phone, 'text', `We have received part of your documents. Please send your ${missing.join(' and ')} to continue.`);
+    await sendTextIfChanged(
+      phone,
+      provider,
+      `We have received part of your documents. Please send your ${missing.join(' and ')} to continue.`
+    );
     return;
   }
 
