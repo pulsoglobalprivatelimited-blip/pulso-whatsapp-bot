@@ -37,15 +37,22 @@ function classifyDocument(message) {
   }
 
   const fileName = normalizeText(message.document && message.document.filename);
-  if (fileName.includes('cv') || fileName.includes('resume')) {
+  const cvHints = ['cv', 'resume', 'biodata', 'bio data', 'curriculum vitae', 'profile'];
+  const certificateHints = ['cert', 'certificate', 'registration', 'license', 'licence'];
+
+  if (cvHints.some((hint) => fileName.includes(hint))) {
     return 'cv';
   }
-  if (fileName.includes('cert')) {
+  if (certificateHints.some((hint) => fileName.includes(hint))) {
     return 'certificate';
   }
 
   if (type === 'image') {
     return 'certificate';
+  }
+
+  if (type === 'document') {
+    return 'cv';
   }
 
   return 'unknown';
