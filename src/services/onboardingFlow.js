@@ -144,7 +144,15 @@ async function addAttachment(targetList, phone, message, category) {
 
 async function handleDocuments(phone, message) {
   const provider = (await getProvider(phone)) || (await getOrCreateProvider(phone));
-  const kind = classifyDocument(message);
+  let kind = classifyDocument(message);
+
+  if (kind === 'certificate' && message.type === 'image') {
+    if (provider.documents.certificateReceived && !provider.documents.cvReceived) {
+      kind = 'cv';
+    } else if (provider.documents.cvReceived && !provider.documents.certificateReceived) {
+      kind = 'certificate';
+    }
+  }
 
   if (!kind) {
     await sendTextIfChanged(
