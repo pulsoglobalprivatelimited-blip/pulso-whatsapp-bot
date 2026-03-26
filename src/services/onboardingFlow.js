@@ -103,7 +103,7 @@ async function sendIfChanged(phone, provider, kind, body) {
 async function sendQualificationList(phone) {
   await sendAndLog(phone, 'list', {
     body: MESSAGES.welcomeQualification,
-    buttonText: 'Qualification തിരഞ്ഞെടുക്കുക',
+    buttonText: 'തിരഞ്ഞെടുക്കുക',
     sections: [
       {
         title: 'Qualification options',
