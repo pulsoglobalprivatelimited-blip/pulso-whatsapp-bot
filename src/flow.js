@@ -7,11 +7,10 @@ const STEPS = {
   6: 'awaiting_name',
   7: 'awaiting_age',
   8: 'awaiting_sex',
-  9: 'awaiting_district_region',
-  10: 'awaiting_district',
-  11: 'certificate_verification_pending',
-  12: 'awaiting_terms_acceptance',
-  13: 'completed'
+  9: 'awaiting_district',
+  10: 'certificate_verification_pending',
+  11: 'awaiting_terms_acceptance',
+  12: 'completed'
 };
 
 const STATUS = {
@@ -22,7 +21,6 @@ const STATUS = {
   AWAITING_NAME: 'awaiting_name',
   AWAITING_AGE: 'awaiting_age',
   AWAITING_SEX: 'awaiting_sex',
-  AWAITING_DISTRICT_REGION: 'awaiting_district_region',
   AWAITING_DISTRICT: 'awaiting_district',
   VERIFICATION_PENDING: 'certificate_verification_pending',
   AWAITING_TERMS_ACCEPTANCE: 'awaiting_terms_acceptance',
@@ -39,9 +37,6 @@ const BUTTON_IDS = {
   INTEREST_NO: 'interest_no',
   SEX_MALE: 'sex_male',
   SEX_FEMALE: 'sex_female',
-  DISTRICT_REGION_SOUTH: 'district_region_south',
-  DISTRICT_REGION_CENTRAL: 'district_region_central',
-  DISTRICT_REGION_NORTH: 'district_region_north',
   TERMS_ACCEPT: 'terms_accept',
   TERMS_HELP: 'terms_help'
 };
@@ -68,41 +63,6 @@ const DISTRICTS = [
   { id: 'district_wayanad', title: 'വയനാട്', value: 'Wayanad' },
   { id: 'district_kannur', title: 'കണ്ണൂർ', value: 'Kannur' },
   { id: 'district_kasaragod', title: 'കാസർഗോഡ്', value: 'Kasaragod' }
-];
-
-const DISTRICT_REGIONS = [
-  {
-    id: BUTTON_IDS.DISTRICT_REGION_SOUTH,
-    title: 'South Kerala',
-    districts: [
-      'district_thiruvananthapuram',
-      'district_kollam',
-      'district_pathanamthitta',
-      'district_alappuzha',
-      'district_kottayam',
-      'district_idukki'
-    ]
-  },
-  {
-    id: BUTTON_IDS.DISTRICT_REGION_CENTRAL,
-    title: 'Central Kerala',
-    districts: [
-      'district_ernakulam',
-      'district_thrissur',
-      'district_palakkad',
-      'district_malappuram'
-    ]
-  },
-  {
-    id: BUTTON_IDS.DISTRICT_REGION_NORTH,
-    title: 'North Kerala',
-    districts: [
-      'district_kozhikode',
-      'district_wayanad',
-      'district_kannur',
-      'district_kasaragod'
-    ]
-  }
 ];
 
 const MESSAGES = {
@@ -134,14 +94,10 @@ const MESSAGES = {
     'താങ്കളുടെ sex തിരഞ്ഞെടുക്കുക.',
   sexRetry:
     'ദയവായി Male അല്ലെങ്കിൽ Female തിരഞ്ഞെടുക്കുക.',
-  districtRegionQuestion:
-    'താങ്കളുടെ ജില്ല ഏത് ഭാഗത്താണ് വരുന്നത്? തിരഞ്ഞെടുക്കുക.',
-  districtRegionRetry:
-    'ദയവായി South Kerala / Central Kerala / North Kerala इनमें ഒന്ന് തിരഞ്ഞെടുക്കുക.',
   districtQuestion:
-    'താങ്കളുടെ ജില്ല തിരഞ്ഞെടുക്കുക.',
+    'താങ്കളുടെ ജില്ലയുടെ പേര് ടൈപ്പ് ചെയ്യുക.',
   districtRetry:
-    'ദയവായി list-ൽ നിന്നും താങ്കളുടെ ജില്ല തിരഞ്ഞെടുക്കുക.',
+    'ദയവായി താങ്കളുടെ ജില്ലയുടെ ശരിയായ പേര് ടൈപ്പ് ചെയ്യുക. ഉദാ: Ernakulam / എറണാകുളം',
   verificationPending:
     'നന്ദി. താങ്കളുടെ certificate verification-നായി അയച്ചിരിക്കുന്നു. പരിശോധിച്ച ശേഷം ഉടൻ അറിയിക്കും.',
   certificateApproved:
@@ -171,7 +127,6 @@ module.exports = {
   STATUS,
   BUTTON_IDS,
   QUALIFICATIONS,
-  DISTRICT_REGIONS,
   DISTRICTS,
   MESSAGES
 };
