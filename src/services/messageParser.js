@@ -1,4 +1,4 @@
-const { BUTTON_IDS, DISTRICTS } = require('../flow');
+const { BUTTON_IDS, DISTRICT_REGIONS, DISTRICTS } = require('../flow');
 
 function normalizeText(value) {
   return (value || '').trim().toLowerCase();
@@ -137,6 +137,26 @@ function parseDistrict(message) {
   return districtByTitle ? districtByTitle.value : null;
 }
 
+function parseDistrictRegion(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.DISTRICT_REGION_SOUTH) return 'south';
+  if (replyId === BUTTON_IDS.DISTRICT_REGION_CENTRAL) return 'central';
+  if (replyId === BUTTON_IDS.DISTRICT_REGION_NORTH) return 'north';
+
+  const normalized = normalizeText(getMessageText(message));
+  const region = DISTRICT_REGIONS.find(
+    (item) =>
+      normalizeText(item.title) === normalized ||
+      normalizeText(item.title.replace(' kerala', '')) === normalized
+  );
+
+  if (!region) return null;
+  if (region.id === BUTTON_IDS.DISTRICT_REGION_SOUTH) return 'south';
+  if (region.id === BUTTON_IDS.DISTRICT_REGION_CENTRAL) return 'central';
+  if (region.id === BUTTON_IDS.DISTRICT_REGION_NORTH) return 'north';
+  return null;
+}
+
 function classifyDocument(message) {
   const type = message && message.type;
   if (!type || !['document', 'image'].includes(type)) {
@@ -156,6 +176,7 @@ module.exports = {
   isNotInterested,
   parseAge,
   parseSex,
+  parseDistrictRegion,
   parseDistrict,
   parseTermsAcceptance,
   classifyDocument

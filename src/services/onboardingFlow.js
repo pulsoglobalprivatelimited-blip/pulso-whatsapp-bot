@@ -1,5 +1,5 @@
 const config = require('../config');
-const { MESSAGES, STATUS, BUTTON_IDS, QUALIFICATIONS, DISTRICTS } = require('../flow');
+const { MESSAGES, STATUS, BUTTON_IDS, QUALIFICATIONS, DISTRICT_REGIONS, DISTRICTS } = require('../flow');
 const { sendText, sendButtons, sendList } = require('./metaClient');
 const {
   getOrCreateProvider,
@@ -15,6 +15,7 @@ const {
   isNotInterested,
   parseAge,
   parseSex,
+  parseDistrictRegion,
   parseDistrict,
   parseTermsAcceptance,
   classifyDocument
@@ -143,19 +144,42 @@ async function sendTermsButtons(phone) {
   });
 }
 
-async function sendDistrictList(phone) {
-  const midpoint = Math.ceil(DISTRICTS.length / 2);
+function getDistrictRowsForRegion(regionKey) {
+  const regionIdByKey = {
+    south: BUTTON_IDS.DISTRICT_REGION_SOUTH,
+    central: BUTTON_IDS.DISTRICT_REGION_CENTRAL,
+    north: BUTTON_IDS.DISTRICT_REGION_NORTH
+  };
+
+  const region = DISTRICT_REGIONS.find((item) => item.id === regionIdByKey[regionKey]);
+  if (!region) {
+    return [];
+  }
+
+  return region.districts
+    .map((districtId) => DISTRICTS.find((district) => district.id === districtId))
+    .filter(Boolean);
+}
+
+async function sendDistrictRegionButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.districtRegionQuestion,
+    buttons: [
+      { id: BUTTON_IDS.DISTRICT_REGION_SOUTH, title: 'South Kerala' },
+      { id: BUTTON_IDS.DISTRICT_REGION_CENTRAL, title: 'Central Kerala' },
+      { id: BUTTON_IDS.DISTRICT_REGION_NORTH, title: 'North Kerala' }
+    ]
+  });
+}
+
+async function sendDistrictList(phone, regionKey) {
   await sendAndLog(phone, 'list', {
     body: MESSAGES.districtQuestion,
     buttonText: 'ജില്ല തിരഞ്ഞെടുക്കുക',
     sections: [
       {
-        title: 'കേരള ജില്ലകൾ 1',
-        rows: DISTRICTS.slice(0, midpoint)
-      },
-      {
-        title: 'കേരള ജില്ലകൾ 2',
-        rows: DISTRICTS.slice(midpoint)
+        title: 'കേരള ജില്ലകൾ',
+        rows: getDistrictRowsForRegion(regionKey)
       }
     ]
   });
@@ -270,19 +294,31 @@ async function handleSex(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_DISTRICT, 9, { sex });
-  await sendDistrictList(phone);
+  await updateStatus(phone, STATUS.AWAITING_DISTRICT_REGION, 9, { sex });
+  await sendDistrictRegionButtons(phone);
+}
+
+async function handleDistrictRegion(phone, message) {
+  const region = parseDistrictRegion(message);
+  if (!region) {
+    await sendAndLog(phone, 'text', MESSAGES.districtRegionRetry);
+    await sendDistrictRegionButtons(phone);
+    return;
+  }
+
+  await updateStatus(phone, STATUS.AWAITING_DISTRICT, 10, { districtRegion: region });
+  await sendDistrictList(phone, region);
 }
 
 async function handleDistrict(phone, message) {
   const district = parseDistrict(message);
   if (!district) {
     await sendAndLog(phone, 'text', MESSAGES.districtRetry);
-    await sendDistrictList(phone);
+    await sendDistrictList(phone, (await getProvider(phone))?.districtRegion || 'south');
     return;
   }
 
-  await updateStatus(phone, STATUS.VERIFICATION_PENDING, 10, {
+  await updateStatus(phone, STATUS.VERIFICATION_PENDING, 11, {
     district,
     verification: {
       status: 'pending',
@@ -298,7 +334,7 @@ async function handleDistrict(phone, message) {
 async function handleTerms(phone, message) {
   const action = parseTermsAcceptance(message);
   if (action === 'accept') {
-    await updateStatus(phone, STATUS.COMPLETED, 12, { termsAccepted: true });
+    await updateStatus(phone, STATUS.COMPLETED, 13, { termsAccepted: true });
     await sendAndLog(phone, 'text', MESSAGES.termsAccepted);
     return;
   }
@@ -344,6 +380,9 @@ async function processIncomingMessage(phone, message) {
     case STATUS.AWAITING_SEX:
       await handleSex(phone, message);
       return;
+    case STATUS.AWAITING_DISTRICT_REGION:
+      await handleDistrictRegion(phone, message);
+      return;
     case STATUS.AWAITING_DISTRICT:
       await handleDistrict(phone, message);
       return;
@@ -369,7 +408,7 @@ async function approveCertificate(phone, reviewedBy, notes) {
 
   await updateProvider(phone, {
     status: STATUS.AWAITING_TERMS_ACCEPTANCE,
-    currentStep: 11,
+    currentStep: 12,
     verification: {
       status: 'verified',
       notes: notes || '',
