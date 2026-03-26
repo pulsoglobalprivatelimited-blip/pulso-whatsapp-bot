@@ -1,4 +1,4 @@
-const { BUTTON_IDS } = require('../flow');
+const { BUTTON_IDS, DISTRICTS } = require('../flow');
 
 function normalizeText(value) {
   return (value || '').trim().toLowerCase();
@@ -107,6 +107,28 @@ function parseTermsAcceptance(message) {
   return null;
 }
 
+function parseDistrict(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId) {
+    const districtById = DISTRICTS.find((district) => district.id === replyId);
+    if (districtById) {
+      return districtById.value;
+    }
+  }
+
+  const normalized = normalizeText(getMessageText(message));
+  if (!normalized) {
+    return null;
+  }
+
+  const districtByTitle = DISTRICTS.find(
+    (district) =>
+      normalizeText(district.title) === normalized || normalizeText(district.value) === normalized
+  );
+
+  return districtByTitle ? districtByTitle.value : null;
+}
+
 function classifyDocument(message) {
   const type = message && message.type;
   if (!type || !['document', 'image'].includes(type)) {
@@ -126,6 +148,7 @@ module.exports = {
   isNotInterested,
   parseAge,
   parseSex,
+  parseDistrict,
   parseTermsAcceptance,
   classifyDocument
 };

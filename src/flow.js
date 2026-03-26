@@ -7,7 +7,7 @@ const STEPS = {
   6: 'awaiting_name',
   7: 'awaiting_age',
   8: 'awaiting_sex',
-  9: 'awaiting_address',
+  9: 'awaiting_district',
   10: 'certificate_verification_pending',
   11: 'awaiting_terms_acceptance',
   12: 'completed'
@@ -21,7 +21,7 @@ const STATUS = {
   AWAITING_NAME: 'awaiting_name',
   AWAITING_AGE: 'awaiting_age',
   AWAITING_SEX: 'awaiting_sex',
-  AWAITING_ADDRESS: 'awaiting_address',
+  AWAITING_DISTRICT: 'awaiting_district',
   VERIFICATION_PENDING: 'certificate_verification_pending',
   AWAITING_TERMS_ACCEPTANCE: 'awaiting_terms_acceptance',
   COMPLETED: 'completed',
@@ -39,6 +39,23 @@ const BUTTON_IDS = {
   TERMS_ACCEPT: 'terms_accept',
   TERMS_HELP: 'terms_help'
 };
+
+const DISTRICTS = [
+  { id: 'district_thiruvananthapuram', title: 'തിരുവനന്തപുരം', value: 'Thiruvananthapuram' },
+  { id: 'district_kollam', title: 'കൊല്ലം', value: 'Kollam' },
+  { id: 'district_pathanamthitta', title: 'പത്തനംതിട്ട', value: 'Pathanamthitta' },
+  { id: 'district_alappuzha', title: 'ആലപ്പുഴ', value: 'Alappuzha' },
+  { id: 'district_kottayam', title: 'കോട്ടയം', value: 'Kottayam' },
+  { id: 'district_idukki', title: 'ഇടുക്കി', value: 'Idukki' },
+  { id: 'district_ernakulam', title: 'എറണാകുളം', value: 'Ernakulam' },
+  { id: 'district_thrissur', title: 'തൃശ്ശൂർ', value: 'Thrissur' },
+  { id: 'district_palakkad', title: 'പാലക്കാട്', value: 'Palakkad' },
+  { id: 'district_malappuram', title: 'മലപ്പുറം', value: 'Malappuram' },
+  { id: 'district_kozhikode', title: 'കോഴിക്കോട്', value: 'Kozhikode' },
+  { id: 'district_wayanad', title: 'വയനാട്', value: 'Wayanad' },
+  { id: 'district_kannur', title: 'കണ്ണൂർ', value: 'Kannur' },
+  { id: 'district_kasaragod', title: 'കാസർഗോഡ്', value: 'Kasaragod' }
+];
 
 const MESSAGES = {
   welcomeQualification:
@@ -69,8 +86,10 @@ const MESSAGES = {
     'താങ്കളുടെ sex തിരഞ്ഞെടുക്കുക.',
   sexRetry:
     'ദയവായി Male അല്ലെങ്കിൽ Female തിരഞ്ഞെടുക്കുക.',
-  addressQuestion:
-    'താങ്കളുടെ പൂർണ്ണ വിലാസം അയയ്ക്കുക.',
+  districtQuestion:
+    'താങ്കളുടെ ജില്ല തിരഞ്ഞെടുക്കുക.',
+  districtRetry:
+    'ദയവായി list-ൽ നിന്നും താങ്കളുടെ ജില്ല തിരഞ്ഞെടുക്കുക.',
   verificationPending:
     'നന്ദി. താങ്കളുടെ certificate verification-നായി അയച്ചിരിക്കുന്നു. പരിശോധിച്ച ശേഷം ഉടൻ അറിയിക്കും.',
   certificateApproved:
@@ -100,5 +119,6 @@ module.exports = {
   STEPS,
   STATUS,
   BUTTON_IDS,
+  DISTRICTS,
   MESSAGES
 };

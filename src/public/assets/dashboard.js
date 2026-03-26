@@ -139,7 +139,7 @@ function renderDetail(provider) {
   setText('detail-interest', provider.interestConfirmed ? 'Yes' : 'No');
   setText('detail-age', provider.age);
   setText('detail-sex', provider.sex);
-  setText('detail-address', provider.address);
+  setText('detail-district', provider.district);
   setText('detail-updated', new Date(provider.updatedAt).toLocaleString());
   setText('detail-certificate', provider.documents.certificateReceived ? `${provider.documents.certificateAttachments.length} file(s)` : 'Not received');
   setText('detail-verification', provider.verification.status);

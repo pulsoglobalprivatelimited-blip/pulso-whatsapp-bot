@@ -1,6 +1,6 @@
 const config = require('../config');
-const { MESSAGES, STATUS, BUTTON_IDS } = require('../flow');
-const { sendText, sendButtons } = require('./metaClient');
+const { MESSAGES, STATUS, BUTTON_IDS, DISTRICTS } = require('../flow');
+const { sendText, sendButtons, sendList } = require('./metaClient');
 const {
   getOrCreateProvider,
   updateProvider,
@@ -15,6 +15,7 @@ const {
   isNotInterested,
   parseAge,
   parseSex,
+  parseDistrict,
   parseTermsAcceptance,
   classifyDocument
 } = require('./messageParser');
@@ -24,6 +25,8 @@ async function sendAndLog(phone, kind, body, sender) {
   try {
     if (kind === 'buttons') {
       await sendButtons(phone, body.body, body.buttons);
+    } else if (kind === 'list') {
+      await sendList(phone, body.body, body.buttonText, body.sections);
     } else {
       await sendText(phone, body);
     }
@@ -138,6 +141,24 @@ async function sendTermsButtons(phone) {
   });
 }
 
+async function sendDistrictList(phone) {
+  const midpoint = Math.ceil(DISTRICTS.length / 2);
+  await sendAndLog(phone, 'list', {
+    body: MESSAGES.districtQuestion,
+    buttonText: 'ജില്ല തിരഞ്ഞെടുക്കുക',
+    sections: [
+      {
+        title: 'കേരള ജില്ലകൾ 1',
+        rows: DISTRICTS.slice(0, midpoint)
+      },
+      {
+        title: 'കേരള ജില്ലകൾ 2',
+        rows: DISTRICTS.slice(midpoint)
+      }
+    ]
+  });
+}
+
 async function startFlow(phone) {
   await getOrCreateProvider(phone);
   await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2);
@@ -247,19 +268,20 @@ async function handleSex(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_ADDRESS, 9, { sex });
-  await sendAndLog(phone, 'text', MESSAGES.addressQuestion);
+  await updateStatus(phone, STATUS.AWAITING_DISTRICT, 9, { sex });
+  await sendDistrictList(phone);
 }
 
-async function handleAddress(phone, message) {
-  const address = getMessageText(message).trim();
-  if (!address) {
-    await sendAndLog(phone, 'text', MESSAGES.addressQuestion);
+async function handleDistrict(phone, message) {
+  const district = parseDistrict(message);
+  if (!district) {
+    await sendAndLog(phone, 'text', MESSAGES.districtRetry);
+    await sendDistrictList(phone);
     return;
   }
 
   await updateStatus(phone, STATUS.VERIFICATION_PENDING, 10, {
-    address,
+    district,
     verification: {
       status: 'pending',
       notes: '',
@@ -320,8 +342,8 @@ async function processIncomingMessage(phone, message) {
     case STATUS.AWAITING_SEX:
       await handleSex(phone, message);
       return;
-    case STATUS.AWAITING_ADDRESS:
-      await handleAddress(phone, message);
+    case STATUS.AWAITING_DISTRICT:
+      await handleDistrict(phone, message);
       return;
     case STATUS.VERIFICATION_PENDING:
       await sendAndLog(phone, 'text', MESSAGES.verificationStillPending);

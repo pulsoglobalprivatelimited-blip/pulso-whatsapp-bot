@@ -16,7 +16,7 @@ async function createProvider(phone) {
     fullName: null,
     age: null,
     sex: null,
-    address: null,
+    district: null,
     termsAccepted: false,
     documents: {
       cvReceived: false,
