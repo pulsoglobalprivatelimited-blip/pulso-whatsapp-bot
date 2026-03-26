@@ -1,6 +1,6 @@
 const config = require('../config');
 const { MESSAGES, STATUS, BUTTON_IDS } = require('../flow');
-const { sendText, sendButtons, sendTermsAndConditions } = require('./metaClient');
+const { sendText, sendButtons } = require('./metaClient');
 const {
   getOrCreateProvider,
   updateProvider,
@@ -22,9 +22,7 @@ const { archiveIncomingMedia } = require('./mediaStorage');
 
 async function sendAndLog(phone, kind, body, sender) {
   try {
-    if (kind === 'terms') {
-      await sendTermsAndConditions(phone, body);
-    } else if (kind === 'buttons') {
+    if (kind === 'buttons') {
       await sendButtons(phone, body.body, body.buttons);
     } else {
       await sendText(phone, body);
@@ -358,7 +356,6 @@ async function approveCertificate(phone, reviewedBy, notes) {
   await appendHistory(phone, { type: 'system', event: 'certificate_verified' });
   await sendAndLog(phone, 'text', MESSAGES.certificateApproved, reviewedBy || config.adminDefaultReviewer);
   await sendAndLog(phone, 'text', MESSAGES.termsIntro, reviewedBy || config.adminDefaultReviewer);
-  await sendAndLog(phone, 'terms', config.termsAndConditionsUrl, reviewedBy || config.adminDefaultReviewer);
   await sendTermsButtons(phone);
   return getProvider(phone);
 }
