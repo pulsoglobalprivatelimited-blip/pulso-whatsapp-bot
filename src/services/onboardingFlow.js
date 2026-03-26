@@ -1,5 +1,5 @@
 const config = require('../config');
-const { MESSAGES, STATUS, BUTTON_IDS, DISTRICTS } = require('../flow');
+const { MESSAGES, STATUS, BUTTON_IDS, QUALIFICATIONS, DISTRICTS } = require('../flow');
 const { sendText, sendButtons, sendList } = require('./metaClient');
 const {
   getOrCreateProvider,
@@ -100,14 +100,15 @@ async function sendIfChanged(phone, provider, kind, body) {
   await sendAndLog(phone, kind, body);
 }
 
-async function sendQualificationButtons(phone) {
-  await sendAndLog(phone, 'buttons', {
+async function sendQualificationList(phone) {
+  await sendAndLog(phone, 'list', {
     body: MESSAGES.welcomeQualification,
-    buttons: [
-      { id: BUTTON_IDS.QUALIFICATION_GDA, title: 'GDA' },
-      { id: BUTTON_IDS.QUALIFICATION_GNM, title: 'GNM' },
-      { id: BUTTON_IDS.QUALIFICATION_ANM, title: 'ANM' },
-      { id: BUTTON_IDS.QUALIFICATION_OTHER_CAREGIVING, title: 'Other with experience in caregiving' }
+    buttonText: 'Qualification തിരഞ്ഞെടുക്കുക',
+    sections: [
+      {
+        title: 'Qualification options',
+        rows: QUALIFICATIONS
+      }
     ]
   });
 }
@@ -163,7 +164,7 @@ async function sendDistrictList(phone) {
 async function startFlow(phone) {
   await getOrCreateProvider(phone);
   await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2);
-  await sendQualificationButtons(phone);
+  await sendQualificationList(phone);
 }
 
 async function handleQualification(phone, message) {
@@ -180,7 +181,7 @@ async function handleQualification(phone, message) {
 
   if (!qualification) {
     await sendAndLog(phone, 'text', MESSAGES.qualificationRetry);
-    await sendQualificationButtons(phone);
+    await sendQualificationList(phone);
     return;
   }
 

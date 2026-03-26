@@ -41,6 +41,13 @@ const BUTTON_IDS = {
   TERMS_HELP: 'terms_help'
 };
 
+const QUALIFICATIONS = [
+  { id: BUTTON_IDS.QUALIFICATION_GDA, title: 'GDA' },
+  { id: BUTTON_IDS.QUALIFICATION_GNM, title: 'GNM' },
+  { id: BUTTON_IDS.QUALIFICATION_ANM, title: 'ANM' },
+  { id: BUTTON_IDS.QUALIFICATION_OTHER_CAREGIVING, title: 'Other with experience in caregiving' }
+];
+
 const DISTRICTS = [
   { id: 'district_thiruvananthapuram', title: 'തിരുവനന്തപുരം', value: 'Thiruvananthapuram' },
   { id: 'district_kollam', title: 'കൊല്ലം', value: 'Kollam' },
@@ -119,6 +126,7 @@ module.exports = {
   STEPS,
   STATUS,
   BUTTON_IDS,
+  QUALIFICATIONS,
   DISTRICTS,
   MESSAGES
 };
