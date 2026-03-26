@@ -106,7 +106,8 @@ async function sendQualificationButtons(phone) {
     buttons: [
       { id: BUTTON_IDS.QUALIFICATION_GDA, title: 'GDA' },
       { id: BUTTON_IDS.QUALIFICATION_GNM, title: 'GNM' },
-      { id: BUTTON_IDS.QUALIFICATION_ANM, title: 'ANM' }
+      { id: BUTTON_IDS.QUALIFICATION_ANM, title: 'ANM' },
+      { id: BUTTON_IDS.QUALIFICATION_OTHER_CAREGIVING, title: 'Other with experience in caregiving' }
     ]
   });
 }

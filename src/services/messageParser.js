@@ -45,17 +45,25 @@ function parseQualification(message) {
   if (replyId === BUTTON_IDS.QUALIFICATION_GDA) return 'gda';
   if (replyId === BUTTON_IDS.QUALIFICATION_GNM) return 'gnm';
   if (replyId === BUTTON_IDS.QUALIFICATION_ANM) return 'anm';
+  if (replyId === BUTTON_IDS.QUALIFICATION_OTHER_CAREGIVING) return 'other_caregiving';
 
   const normalized = normalizeText(getMessageText(message));
   if (normalized.includes('gda')) return 'gda';
   if (normalized.includes('gnm')) return 'gnm';
   if (normalized.includes('anm')) return 'anm';
+  if (
+    normalized.includes('caregiving') ||
+    normalized.includes('care giving') ||
+    normalized.includes('experience in caregiving')
+  ) {
+    return 'other_caregiving';
+  }
   return null;
 }
 
 function isQualificationDeclined(message) {
   const normalized = normalizeText(getMessageText(message));
-  return ['other', 'others', 'no', 'not', 'none', 'na'].includes(normalized);
+  return ['no', 'not', 'none', 'na'].includes(normalized);
 }
 
 function isInterested(message) {

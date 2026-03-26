@@ -32,6 +32,7 @@ const BUTTON_IDS = {
   QUALIFICATION_GDA: 'qualification_gda',
   QUALIFICATION_GNM: 'qualification_gnm',
   QUALIFICATION_ANM: 'qualification_anm',
+  QUALIFICATION_OTHER_CAREGIVING: 'qualification_other_caregiving',
   INTEREST_YES: 'interest_yes',
   INTEREST_NO: 'interest_no',
   SEX_MALE: 'sex_male',
@@ -63,7 +64,7 @@ const MESSAGES = {
   notEligible:
     'ക്ഷമിക്കണം, നിലവിൽ GDA / GNM / ANM qualification ഉള്ള providers-നെ മാത്രമാണ് onboarding ചെയ്യുന്നത്.',
   qualificationRetry:
-    'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും qualification തിരഞ്ഞെടുക്കുക: GDA / GNM / ANM.',
+    'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും qualification തിരഞ്ഞെടുക്കുക: GDA / GNM / ANM / Other with experience in caregiving.',
   workingModel:
     `**Pulso** വീടുകളിൽ care ആവശ്യമായ രോഗികൾക്കും മുതിർന്നവർക്കും സഹായം നൽകുന്നതിനായി caregivers / nursing staff-നെ duty-കളിലേക്ക് connect ചെയ്യുന്ന സേവന സംവിധാനമാണ്.\n\n**Working model:**\n\n1. WhatsApp / app വഴി duty opportunities ലഭിക്കും\n2. താല്പര്യമുള്ള duty-കൾക്ക് മാത്രം reply / accept ചെയ്യുക\n3. ഒരു duty message പലർക്കും പോകാം. അതിൽ ആദ്യം confirm ചെയ്യുന്ന care provider-നാണ് സാധാരണയായി duty ലഭിക്കുക\n4. Duty confirm ചെയ്തതിന് ശേഷം office verification call ഉണ്ടാകും. Office staff എല്ലാ instructions-ും details-ും നിങ്ങളെ assist ചെയ്ത് clear ആയി അറിയിക്കും\n5. നേരിട്ട് duty location-ലേക്ക് പോകണം\n6. സമയത്തിന് duty ആരംഭിച്ച് ഉത്തരവാദിത്വത്തോടെ care നൽകണം\n7. Payment ദിവസേന ലഭിക്കും\n\n**Duty timing & payment:**\n8 മണിക്കൂർ duty: രാവിലെ 8 മണി മുതൽ 4 മണി വരെ — ₹900 per day\n24 മണിക്കൂർ duty: ₹1200 per day\n\n**Emergency leave:**\nEmergency leave വന്നാൽ Pulso മറ്റൊരു staff-നെ arrange ചെയ്ത് manage ചെയ്യും.\n\n**ശ്രദ്ധിക്കുക:**\nഇഷ്ടമുള്ള duty-കൾ മാത്രം സ്വീകരിക്കാം. താല്പര്യമില്ലാത്തവ ignore ചെയ്യാം.`,
   interestQuestion:
