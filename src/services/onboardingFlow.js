@@ -1,6 +1,6 @@
 const config = require('../config');
-const { MESSAGES, STATUS } = require('../flow');
-const { sendText, sendAudio, sendTermsAndConditions } = require('./metaClient');
+const { MESSAGES, STATUS, BUTTON_IDS } = require('../flow');
+const { sendText, sendButtons, sendTermsAndConditions } = require('./metaClient');
 const {
   getOrCreateProvider,
   updateProvider,
@@ -8,21 +8,24 @@ const {
   getProvider
 } = require('./providerService');
 const {
-  normalizeText,
+  getMessageText,
   parseQualification,
   isQualificationDeclined,
   isInterested,
-  parseDutyPreference,
+  isNotInterested,
+  parseAge,
+  parseSex,
+  parseTermsAcceptance,
   classifyDocument
 } = require('./messageParser');
 const { archiveIncomingMedia } = require('./mediaStorage');
 
 async function sendAndLog(phone, kind, body, sender) {
   try {
-    if (kind === 'audio') {
-      await sendAudio(phone, body);
-    } else if (kind === 'terms') {
+    if (kind === 'terms') {
       await sendTermsAndConditions(phone, body);
+    } else if (kind === 'buttons') {
+      await sendButtons(phone, body.body, body.buttons);
     } else {
       await sendText(phone, body);
     }
@@ -55,13 +58,7 @@ function updateStatus(phone, status, currentStep, extra = {}) {
   return updateProvider(phone, { status, currentStep, ...extra });
 }
 
-async function startFlow(phone) {
-  await getOrCreateProvider(phone);
-  await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2);
-  await sendAndLog(phone, 'text', MESSAGES.qualificationQuestion);
-}
-
-function recordInbound(phone, message) {
+async function recordInbound(phone, message) {
   return appendHistory(phone, {
     type: 'inbound_message',
     payload: message
@@ -78,35 +75,83 @@ function hasProcessedMessage(provider, messageId) {
   );
 }
 
-function lastOutboundBody(provider) {
+function lastOutboundSignature(provider) {
   if (!provider || !Array.isArray(provider.history)) {
     return null;
   }
 
   for (let index = provider.history.length - 1; index >= 0; index -= 1) {
     const event = provider.history[index];
-    if (event.type === 'outbound_message' && event.payload && event.payload.kind === 'text') {
-      return event.payload.body;
+    if (event.type === 'outbound_message') {
+      return JSON.stringify(event.payload);
     }
   }
 
   return null;
 }
 
-async function sendTextIfChanged(phone, provider, body) {
-  if (lastOutboundBody(provider) === body) {
+async function sendIfChanged(phone, provider, kind, body) {
+  const nextSignature = JSON.stringify({ kind, body });
+  if (lastOutboundSignature(provider) === nextSignature) {
     return;
   }
 
-  await sendAndLog(phone, 'text', body);
+  await sendAndLog(phone, kind, body);
 }
 
-async function handleQualification(phone, text) {
-  const qualification = parseQualification(text);
-  if (isQualificationDeclined(text)) {
+async function sendQualificationButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.welcomeQualification,
+    buttons: [
+      { id: BUTTON_IDS.QUALIFICATION_GDA, title: 'GDA' },
+      { id: BUTTON_IDS.QUALIFICATION_GNM, title: 'GNM' },
+      { id: BUTTON_IDS.QUALIFICATION_ANM, title: 'ANM' }
+    ]
+  });
+}
+
+async function sendInterestButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.interestQuestion,
+    buttons: [
+      { id: BUTTON_IDS.INTEREST_YES, title: 'താൽപര്യമുണ്ട്' },
+      { id: BUTTON_IDS.INTEREST_NO, title: 'താൽപര്യമില്ല' }
+    ]
+  });
+}
+
+async function sendSexButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.sexQuestion,
+    buttons: [
+      { id: BUTTON_IDS.SEX_MALE, title: 'Male' },
+      { id: BUTTON_IDS.SEX_FEMALE, title: 'Female' }
+    ]
+  });
+}
+
+async function sendTermsButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.termsQuestion,
+    buttons: [
+      { id: BUTTON_IDS.TERMS_ACCEPT, title: 'സ്വീകരിക്കുന്നു' },
+      { id: BUTTON_IDS.TERMS_HELP, title: 'സഹായം വേണം' }
+    ]
+  });
+}
+
+async function startFlow(phone) {
+  await getOrCreateProvider(phone);
+  await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2);
+  await sendQualificationButtons(phone);
+}
+
+async function handleQualification(phone, message) {
+  const qualification = parseQualification(message);
+  if (isQualificationDeclined(message)) {
     await updateProvider(phone, {
       status: STATUS.NEEDS_HUMAN_REVIEW,
-      currentStep: 3,
+      currentStep: 2,
       qualification: null
     });
     await sendAndLog(phone, 'text', MESSAGES.notEligible);
@@ -115,107 +160,133 @@ async function handleQualification(phone, text) {
 
   if (!qualification) {
     await sendAndLog(phone, 'text', MESSAGES.qualificationRetry);
+    await sendQualificationButtons(phone);
     return;
   }
 
-  await updateStatus(phone, STATUS.VOICE_NOTE_SENT, 4, { qualification });
-  await sendAndLog(phone, 'audio', config.voiceNoteMediaId);
-  await sendAndLog(phone, 'text', MESSAGES.voiceNoteIntro);
-  await updateStatus(phone, STATUS.AWAITING_INTEREST, 5);
+  await updateStatus(phone, STATUS.AWAITING_INTEREST, 4, { qualification });
+  await sendAndLog(phone, 'text', MESSAGES.workingModel);
+  await sendInterestButtons(phone);
 }
 
-async function handleInterest(phone, text) {
-  if (!isInterested(text)) {
-    await sendAndLog(phone, 'text', MESSAGES.interestedPrompt);
+async function handleInterest(phone, message) {
+  if (isNotInterested(message)) {
+    await updateProvider(phone, {
+      status: STATUS.NEEDS_HUMAN_REVIEW,
+      currentStep: 4,
+      interestConfirmed: false
+    });
+    await sendAndLog(phone, 'text', MESSAGES.notInterested);
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_DOCUMENTS, 6, { interestConfirmed: true });
-  await sendAndLog(phone, 'text', MESSAGES.documentsRequest);
+  if (!isInterested(message)) {
+    await sendAndLog(phone, 'text', MESSAGES.interestRetry);
+    await sendInterestButtons(phone);
+    return;
+  }
+
+  await updateStatus(phone, STATUS.AWAITING_CERTIFICATE, 5, { interestConfirmed: true });
+  await sendAndLog(phone, 'text', MESSAGES.certificateRequest);
 }
 
-async function addAttachment(targetList, phone, message, category) {
-  const attachment = await archiveIncomingMedia(phone, message, category);
-  targetList.push({
-    ...attachment,
-    receivedAt: new Date().toISOString()
-  });
-}
-
-async function handleDocuments(phone, message) {
+async function addCertificate(phone, message) {
+  const attachment = await archiveIncomingMedia(phone, message, 'certificate');
   const provider = (await getProvider(phone)) || (await getOrCreateProvider(phone));
-  let kind = classifyDocument(message);
-
-  if (kind === 'certificate' && message.type === 'image') {
-    if (provider.documents.certificateReceived && !provider.documents.cvReceived) {
-      kind = 'cv';
-    } else if (provider.documents.cvReceived && !provider.documents.certificateReceived) {
-      kind = 'certificate';
-    }
-  }
-
-  if (!kind) {
-    await sendTextIfChanged(
-      phone,
-      provider,
-      'Please send your CV and certificate as an image or document so we can continue.'
-    );
-    return;
-  }
-
-  const nextDocuments = {
-    ...provider.documents,
-    cvAttachments: [...provider.documents.cvAttachments],
-    certificateAttachments: [...provider.documents.certificateAttachments]
-  };
-
-  if (kind === 'cv') {
-    nextDocuments.cvReceived = true;
-    await addAttachment(nextDocuments.cvAttachments, phone, message, 'cv');
-  } else if (kind === 'certificate' || kind === 'unknown') {
-    nextDocuments.certificateReceived = true;
-    await addAttachment(nextDocuments.certificateAttachments, phone, message, 'certificate');
-  }
-
-  const hasRequiredDocuments = nextDocuments.cvReceived && nextDocuments.certificateReceived;
 
   await updateProvider(phone, {
-    documents: nextDocuments,
-    status: hasRequiredDocuments ? STATUS.VERIFICATION_PENDING : STATUS.AWAITING_DOCUMENTS,
-    currentStep: hasRequiredDocuments ? 9 : 6,
-    verification: hasRequiredDocuments
-      ? { status: 'pending', notes: '', reviewedAt: null, reviewedBy: null }
-      : provider.verification
+    documents: {
+      ...provider.documents,
+      certificateReceived: true,
+      certificateAttachments: [
+        ...(provider.documents.certificateAttachments || []),
+        { ...attachment, receivedAt: new Date().toISOString() }
+      ]
+    }
   });
-
-  if (!hasRequiredDocuments) {
-    const missing = [];
-    if (!nextDocuments.cvReceived) missing.push('CV');
-    if (!nextDocuments.certificateReceived) missing.push('certificate');
-    await sendTextIfChanged(
-      phone,
-      provider,
-      `We have received part of your documents. Please send your ${missing.join(' and ')} to continue.`
-    );
-    return;
-  }
-
-  await updateProvider(phone, { currentStep: 8 });
-  await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
-  await updateProvider(phone, { currentStep: 9 });
-  await sendAndLog(phone, 'text', MESSAGES.documentsAck);
 }
 
-async function handleDutyPreference(phone, text) {
-  const dutyPreference = parseDutyPreference(text);
-  if (!dutyPreference) {
-    await sendAndLog(phone, 'text', MESSAGES.dutyRetry);
+async function handleCertificate(phone, message) {
+  const kind = classifyDocument(message);
+  if (kind !== 'certificate') {
+    const provider = (await getProvider(phone)) || (await getOrCreateProvider(phone));
+    await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
     return;
   }
 
-  await updateStatus(phone, STATUS.COMPLETED, 12, { dutyPreference });
-  await sendAndLog(phone, 'text', MESSAGES.completion);
-  await sendAndLog(phone, 'terms', config.termsAndConditionsUrl);
+  await addCertificate(phone, message);
+  await updateStatus(phone, STATUS.AWAITING_NAME, 6);
+  await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
+}
+
+async function handleName(phone, message) {
+  const name = getMessageText(message).trim();
+  if (!name) {
+    await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
+    return;
+  }
+
+  await updateStatus(phone, STATUS.AWAITING_AGE, 7, { fullName: name });
+  await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
+}
+
+async function handleAge(phone, message) {
+  const age = parseAge(message);
+  if (!age) {
+    await sendAndLog(phone, 'text', MESSAGES.ageRetry);
+    return;
+  }
+
+  await updateStatus(phone, STATUS.AWAITING_SEX, 8, { age });
+  await sendSexButtons(phone);
+}
+
+async function handleSex(phone, message) {
+  const sex = parseSex(message);
+  if (!sex) {
+    await sendAndLog(phone, 'text', MESSAGES.sexRetry);
+    await sendSexButtons(phone);
+    return;
+  }
+
+  await updateStatus(phone, STATUS.AWAITING_ADDRESS, 9, { sex });
+  await sendAndLog(phone, 'text', MESSAGES.addressQuestion);
+}
+
+async function handleAddress(phone, message) {
+  const address = getMessageText(message).trim();
+  if (!address) {
+    await sendAndLog(phone, 'text', MESSAGES.addressQuestion);
+    return;
+  }
+
+  await updateStatus(phone, STATUS.VERIFICATION_PENDING, 10, {
+    address,
+    verification: {
+      status: 'pending',
+      notes: '',
+      reviewedAt: null,
+      reviewedBy: null
+    }
+  });
+  await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
+  await sendAndLog(phone, 'text', MESSAGES.verificationPending);
+}
+
+async function handleTerms(phone, message) {
+  const action = parseTermsAcceptance(message);
+  if (action === 'accept') {
+    await updateStatus(phone, STATUS.COMPLETED, 12, { termsAccepted: true });
+    await sendAndLog(phone, 'text', MESSAGES.termsAccepted);
+    return;
+  }
+
+  if (action === 'help') {
+    await sendAndLog(phone, 'text', MESSAGES.termsHelp);
+    return;
+  }
+
+  await sendTermsButtons(phone);
 }
 
 async function processIncomingMessage(phone, message) {
@@ -232,33 +303,39 @@ async function processIncomingMessage(phone, message) {
     return;
   }
 
-  const text = normalizeText(message.text && message.text.body);
-
   switch (provider.status) {
     case STATUS.AWAITING_QUALIFICATION:
-      await handleQualification(phone, text);
+      await handleQualification(phone, message);
       return;
-    case STATUS.VOICE_NOTE_SENT:
     case STATUS.AWAITING_INTEREST:
-      await handleInterest(phone, text);
+      await handleInterest(phone, message);
       return;
-    case STATUS.AWAITING_DOCUMENTS:
-      await handleDocuments(phone, message);
+    case STATUS.AWAITING_CERTIFICATE:
+      await handleCertificate(phone, message);
+      return;
+    case STATUS.AWAITING_NAME:
+      await handleName(phone, message);
+      return;
+    case STATUS.AWAITING_AGE:
+      await handleAge(phone, message);
+      return;
+    case STATUS.AWAITING_SEX:
+      await handleSex(phone, message);
+      return;
+    case STATUS.AWAITING_ADDRESS:
+      await handleAddress(phone, message);
       return;
     case STATUS.VERIFICATION_PENDING:
-      await sendAndLog(phone, 'text', 'Your documents are under review. We will update you once certificate verification is complete.');
+      await sendAndLog(phone, 'text', MESSAGES.verificationStillPending);
       return;
-    case STATUS.CERTIFICATE_REJECTED:
-      await handleDocuments(phone, message);
-      return;
-    case STATUS.AWAITING_DUTY_PREFERENCE:
-      await handleDutyPreference(phone, text);
+    case STATUS.AWAITING_TERMS_ACCEPTANCE:
+      await handleTerms(phone, message);
       return;
     case STATUS.COMPLETED:
-      await sendAndLog(phone, 'text', 'Your onboarding flow is already completed. Our team will contact you if anything else is required.');
+      await sendAndLog(phone, 'text', MESSAGES.completed);
       return;
     default:
-      await sendAndLog(phone, 'text', 'A team member will assist you shortly.');
+      await sendAndLog(phone, 'text', MESSAGES.notInterested);
   }
 }
 
@@ -269,7 +346,7 @@ async function approveCertificate(phone, reviewedBy, notes) {
   }
 
   await updateProvider(phone, {
-    status: STATUS.AWAITING_DUTY_PREFERENCE,
+    status: STATUS.AWAITING_TERMS_ACCEPTANCE,
     currentStep: 11,
     verification: {
       status: 'verified',
@@ -280,6 +357,9 @@ async function approveCertificate(phone, reviewedBy, notes) {
   });
   await appendHistory(phone, { type: 'system', event: 'certificate_verified' });
   await sendAndLog(phone, 'text', MESSAGES.certificateApproved, reviewedBy || config.adminDefaultReviewer);
+  await sendAndLog(phone, 'text', MESSAGES.termsIntro, reviewedBy || config.adminDefaultReviewer);
+  await sendAndLog(phone, 'terms', config.termsAndConditionsUrl, reviewedBy || config.adminDefaultReviewer);
+  await sendTermsButtons(phone);
   return getProvider(phone);
 }
 
@@ -290,8 +370,8 @@ async function rejectCertificate(phone, reviewedBy, notes) {
   }
 
   await updateProvider(phone, {
-    status: STATUS.CERTIFICATE_REJECTED,
-    currentStep: 10,
+    status: STATUS.AWAITING_CERTIFICATE,
+    currentStep: 5,
     verification: {
       status: 'rejected',
       notes: notes || '',

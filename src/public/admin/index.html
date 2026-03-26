@@ -44,8 +44,8 @@
       <div class="filters">
         <button class="filter active" data-filter="all">All</button>
         <button class="filter" data-filter="certificate_verification_pending">Pending</button>
-        <button class="filter" data-filter="awaiting_duty_preference">Approved</button>
-        <button class="filter" data-filter="certificate_rejected">Rejected</button>
+        <button class="filter" data-filter="awaiting_terms_acceptance">Approved</button>
+        <button class="filter" data-filter="awaiting_certificate">Rejected / Reupload</button>
         <button class="filter" data-filter="completed">Completed</button>
       </div>
 
@@ -73,9 +73,12 @@
               <article class="card">
                 <h4>Profile</h4>
                 <dl>
+                  <div><dt>Full name</dt><dd id="detail-name">-</dd></div>
                   <div><dt>Qualification</dt><dd id="detail-qualification">-</dd></div>
                   <div><dt>Interested</dt><dd id="detail-interest">-</dd></div>
-                  <div><dt>Duty preference</dt><dd id="detail-duty">-</dd></div>
+                  <div><dt>Age</dt><dd id="detail-age">-</dd></div>
+                  <div><dt>Sex</dt><dd id="detail-sex">-</dd></div>
+                  <div><dt>Address</dt><dd id="detail-address">-</dd></div>
                   <div><dt>Updated</dt><dd id="detail-updated">-</dd></div>
                 </dl>
               </article>
@@ -83,14 +86,9 @@
               <article class="card">
                 <h4>Documents</h4>
                 <dl>
-                  <div><dt>CV</dt><dd id="detail-cv">-</dd></div>
                   <div><dt>Certificate</dt><dd id="detail-certificate">-</dd></div>
                   <div><dt>Verification</dt><dd id="detail-verification">-</dd></div>
                 </dl>
-                <div class="attachment-section">
-                  <h5>CV Files</h5>
-                  <div id="detail-cv-files" class="attachment-list"></div>
-                </div>
                 <div class="attachment-section">
                   <h5>Certificate Files</h5>
                   <div id="detail-certificate-files" class="attachment-list"></div>

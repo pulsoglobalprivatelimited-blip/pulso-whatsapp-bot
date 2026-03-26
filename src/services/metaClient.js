@@ -31,6 +31,27 @@ async function sendText(to, body) {
   });
 }
 
+async function sendButtons(to, body, buttons) {
+  return sendRequest({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: body },
+      action: {
+        buttons: buttons.map((button) => ({
+          type: 'reply',
+          reply: {
+            id: button.id,
+            title: button.title
+          }
+        }))
+      }
+    }
+  });
+}
+
 async function sendAudio(to, mediaId) {
   if (!mediaId) {
     return sendText(to, 'Audio placeholder: configure WORKING_MODEL_AUDIO_MEDIA_ID to send the actual working-model voice note.');
@@ -89,6 +110,7 @@ async function downloadMediaFile(url) {
 
 module.exports = {
   sendText,
+  sendButtons,
   sendAudio,
   sendTermsAndConditions,
   getMediaMetadata,

@@ -65,7 +65,7 @@ function renderList() {
     ? filtered.map((provider) => `
         <article class="provider-item ${provider.phone === selectedPhone ? 'active' : ''}" data-phone="${provider.phone}">
           <strong>${provider.phone}</strong>
-          <p>${provider.qualification || 'Qualification pending'}</p>
+          <p>${provider.fullName || provider.qualification || 'Profile pending'}</p>
           <p>${formatStatus(provider.status)}</p>
         </article>
       `).join('')
@@ -134,14 +134,15 @@ function renderDetail(provider) {
   setText('detail-phone', provider.phone);
   setText('detail-status', formatStatus(provider.status));
   setText('detail-step', `Step ${provider.currentStep}`);
+  setText('detail-name', provider.fullName);
   setText('detail-qualification', provider.qualification);
   setText('detail-interest', provider.interestConfirmed ? 'Yes' : 'No');
-  setText('detail-duty', provider.dutyPreference);
+  setText('detail-age', provider.age);
+  setText('detail-sex', provider.sex);
+  setText('detail-address', provider.address);
   setText('detail-updated', new Date(provider.updatedAt).toLocaleString());
-  setText('detail-cv', provider.documents.cvReceived ? `${provider.documents.cvAttachments.length} file(s)` : 'Not received');
   setText('detail-certificate', provider.documents.certificateReceived ? `${provider.documents.certificateAttachments.length} file(s)` : 'Not received');
   setText('detail-verification', provider.verification.status);
-  renderAttachments('detail-cv-files', provider.documents.cvAttachments);
   renderAttachments('detail-certificate-files', provider.documents.certificateAttachments);
 
   document.getElementById('reviewer-input').value = provider.verification.reviewedBy || 'ops-team';
