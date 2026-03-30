@@ -14,6 +14,7 @@ const {
   isInterested,
   isNotInterested,
   parseAge,
+  parseAgeCorrectionAction,
   parseSex,
   parseDistrict,
   parseTermsAcceptance,
@@ -140,6 +141,16 @@ async function sendSexButtons(phone) {
   });
 }
 
+async function sendAgeCorrectionButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.ageAboveLimitOptions,
+    buttons: [
+      { id: BUTTON_IDS.AGE_RETRY_ENTRY, title: 'വയസ് വീണ്ടും നൽകാം' },
+      { id: BUTTON_IDS.AGE_CONFIRM_EXIT, title: 'ശരി' }
+    ]
+  });
+}
+
 async function sendTermsButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.termsQuestion,
@@ -254,6 +265,22 @@ async function handleName(phone, message) {
 }
 
 async function handleAge(phone, message) {
+  const ageAction = parseAgeCorrectionAction(message);
+  if (ageAction === 'retry') {
+    await updateStatus(phone, STATUS.AWAITING_AGE, 7, { age: null });
+    await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
+    return;
+  }
+
+  if (ageAction === 'exit') {
+    await updateProvider(phone, {
+      status: STATUS.NEEDS_HUMAN_REVIEW,
+      currentStep: 7
+    });
+    await sendAndLog(phone, 'text', MESSAGES.ageApplicationClosed);
+    return;
+  }
+
   const age = parseAge(message);
   if (!age) {
     await sendAndLog(phone, 'text', MESSAGES.ageRetry);
@@ -262,11 +289,12 @@ async function handleAge(phone, message) {
 
   if (age > 50) {
     await updateProvider(phone, {
-      status: STATUS.NEEDS_HUMAN_REVIEW,
+      status: STATUS.AWAITING_AGE,
       currentStep: 7,
       age
     });
     await sendAndLog(phone, 'text', MESSAGES.ageAboveLimit);
+    await sendAgeCorrectionButtons(phone);
     return;
   }
 

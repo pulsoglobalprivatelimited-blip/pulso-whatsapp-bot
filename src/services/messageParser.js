@@ -96,6 +96,17 @@ function parseAge(message) {
   return age;
 }
 
+function parseAgeCorrectionAction(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.AGE_RETRY_ENTRY) return 'retry';
+  if (replyId === BUTTON_IDS.AGE_CONFIRM_EXIT) return 'exit';
+
+  const normalized = normalizeText(getMessageText(message));
+  if (['വയസ് വീണ്ടും നൽകാം', 'retry age', 'retry', 'again'].includes(normalized)) return 'retry';
+  if (['ശരി', 'ok', 'okay'].includes(normalized)) return 'exit';
+  return null;
+}
+
 function parseSex(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId === BUTTON_IDS.SEX_MALE) return 'Male';
@@ -158,6 +169,7 @@ module.exports = {
   isInterested,
   isNotInterested,
   parseAge,
+  parseAgeCorrectionAction,
   parseSex,
   parseDistrict,
   parseTermsAcceptance,

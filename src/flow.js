@@ -37,6 +37,8 @@ const BUTTON_IDS = {
   QUALIFICATION_GO_BACK: 'qualification_go_back',
   INTEREST_YES: 'interest_yes',
   INTEREST_NO: 'interest_no',
+  AGE_RETRY_ENTRY: 'age_retry_entry',
+  AGE_CONFIRM_EXIT: 'age_confirm_exit',
   SEX_MALE: 'sex_male',
   SEX_FEMALE: 'sex_female',
   TERMS_ACCEPT: 'terms_accept',
@@ -105,7 +107,11 @@ const MESSAGES = {
   ageRetry:
     'ദയവായി വയസ് അക്കങ്ങളായി അയയ്ക്കുക. ഉദാ: 32',
   ageAboveLimit:
-    'ക്ഷമിക്കണം. നിലവിലെ onboarding criteria പ്രകാരം 50 വയസിന് മുകളിലുള്ള applicants-നെ ഇപ്പോൾ proceed ചെയ്യാൻ കഴിയില്ല. താങ്കളുടെ താൽപര്യത്തിനും സമയത്തിനും നന്ദി.',
+    'ക്ഷമിക്കണം. നിലവിലെ onboarding criteria പ്രകാരം 50 വയസിന് മുകളിലുള്ള applicants-നെ ഇപ്പോൾ proceed ചെയ്യാൻ കഴിയില്ല. വയസ് തെറ്റായി നൽകിയതാണെങ്കിൽ വീണ്ടും നൽകാം.',
+  ageAboveLimitOptions:
+    'വയസ് തെറ്റായി നൽകിയതാണെങ്കിൽ വീണ്ടും നൽകുക. അല്ലെങ്കിൽ ഇവിടെ തന്നെ നിർത്താം.',
+  ageApplicationClosed:
+    'ശരി. നിലവിലെ criteria പ്രകാരം ഇപ്പോൾ onboarding തുടരാൻ കഴിയില്ല. താങ്കളുടെ താൽപര്യത്തിനും സമയത്തിനും നന്ദി.',
   sexQuestion:
     'താങ്കളുടെ sex തിരഞ്ഞെടുക്കുക.',
   sexRetry:
