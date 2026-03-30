@@ -33,6 +33,8 @@ const BUTTON_IDS = {
   QUALIFICATION_GNM: 'qualification_gnm',
   QUALIFICATION_ANM: 'qualification_anm',
   QUALIFICATION_OTHER_CAREGIVING: 'qualification_other_caregiving',
+  QUALIFICATION_NONE_OF_THESE: 'qualification_none_of_these',
+  QUALIFICATION_GO_BACK: 'qualification_go_back',
   INTEREST_YES: 'interest_yes',
   INTEREST_NO: 'interest_no',
   SEX_MALE: 'sex_male',
@@ -49,6 +51,10 @@ const QUALIFICATIONS = [
     id: BUTTON_IDS.QUALIFICATION_OTHER_CAREGIVING,
     title: 'Other',
     description: 'Experience in caregiving'
+  },
+  {
+    id: BUTTON_IDS.QUALIFICATION_NONE_OF_THESE,
+    title: 'ഇവയൊന്നുമല്ല'
   }
 ];
 
@@ -76,6 +82,10 @@ const MESSAGES = {
     'ക്ഷമിക്കണം, നിലവിൽ GDA / GNM / ANM qualification ഉള്ള providers-നെ മാത്രമാണ് onboarding ചെയ്യുന്നത്.',
   qualificationRetry:
     'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും qualification തിരഞ്ഞെടുക്കുക: GDA / GNM / ANM / Other with experience in caregiving.',
+  qualificationCertificateRequired:
+    `Pulso-യിൽ Caregiver / Nursing Staff ആയി onboarding ചെയ്യുന്നതിനായി Certificate നിർബന്ധമാണ്.\nതാഴെ പറയുന്ന ഏതെങ്കിലും ഒരു യോഗ്യത നിർബന്ധമായും വേണം:\n✅ GDA (General Duty Assistant)\n✅ GNM (General Nursing & Midwifery)\n✅ ANM (Auxiliary Nurse Midwife)\n✅ Experience Certificate (caregiving fieldൽ ഉണ്ടായത്)\n💡 പ്രധാനമായി ശ്രദ്ധിക്കുക:\nഞങ്ങളുടെ daily payment automatic system പ്രവർത്തിക്കാൻ certificate upload ചെയ്യുന്നത് നിർബന്ധമാണ്.\nCertificate ഇല്ലാത്തവർക്ക് onboarding പൂർത്തിയാക്കാൻ സാധിക്കില്ല.`,
+  qualificationGoBack:
+    'മുകളിലെ യോഗ്യതകളിൽ ഏതെങ്കിലും ഉണ്ടെങ്കിൽ തിരികെ പോയി തിരഞ്ഞെടുക്കുക.',
   workingModel:
     `**Pulso Global Private Limited** ഒരു homecare കമ്പനിയാണ്. പ്രായമായർക്കും കിടപ്പ് രോഗികൾക്കും അവരുടെ വീടുകളിൽ പരിചരണം നൽകുന്നതാണ് ഞങ്ങളുടെ സർവീസ്.\n\nGDA (General Duty Assistant) staff-നും nurse-നും ഞങ്ങളോടൊപ്പം join ചെയ്യാൻ കഴിയും. നിങ്ങൾ interested ആണെങ്കിൽ ഞങ്ങൾ നിങ്ങൾക്ക് WhatsApp വഴി duty offers അയച്ചു തരും.\n\n**Duty details:**\n\n1. Duty area മിക്കപ്പോഴും Ernakulam ആയിരിക്കും\n2. Duty timing 8 hours, 24 hours എന്നീ രീതികളിലായിരിക്കും\n3. 8 hours duty സമയം രാവിലെ 8 മണി മുതൽ വൈകുന്നേരം 6 മണിവരെ ആയിരിക്കും\n4. Duty duration 1 week, 2 week, 1 month എന്നിങ്ങനെ വ്യത്യാസപ്പെടാം\n5. 24 hours duty-ക്ക് patient-ന്റെ വീട്ടിൽ stay-യും food-ും ലഭിക്കും\n6. 8 hour duty-ക്ക് stay ഉണ്ടായിരിക്കില്ല\n7. 8 hour duty-ക്ക് per day ₹900 ലഭിക്കും\n8. 24 hour duty-ക്ക് per day ₹1200 ലഭിക്കും\n9. Payment daily നിങ്ങളുടെ account-ിൽ credit ആവുന്നതാണ്\n10. നിങ്ങൾ work ചെയ്യുന്ന ദിവസങ്ങളിൽ മാത്രമായിരിക്കും payment ലഭിക്കുക\n\n**Working model:**\n\n1. WhatsApp വഴി duty offers ലഭിക്കും\n2. നിങ്ങൾക്ക് താല്പര്യമുള്ള duty-കൾ മാത്രം accept ചെയ്യാം\n3. താല്പര്യമില്ലെങ്കിൽ reject ചെയ്യാം അല്ലെങ്കിൽ ignore ചെയ്യാം\n4. Duty accept ചെയ്തതിന് ശേഷം office verification call ഉണ്ടാകും\n5. എല്ലാ instructions-ും duty details-ും office staff clear ആയി അറിയിക്കും\n6. പിന്നീട് നിങ്ങൾ നേരിട്ട് duty location-ലേക്ക് പോകണം\n7. സമയത്തിന് duty ആരംഭിച്ച് ഉത്തരവാദിത്വത്തോടെ care നൽകണം\n\n**Emergency leave:**\n\nEmergency leave ആവശ്യമായി വന്നാൽ വേറെ staff-നെ ഞങ്ങൾ arrange ചെയ്ത് തരുന്നതായിരിക്കും.\n\n**ശ്രദ്ധിക്കുക:**\n\n- Duty offer accept ചെയ്യണോ വേണ്ടയോ എന്നത് മുഴുവൻ നിങ്ങളുടെ ഇഷ്ടമാണ്\n- ഇഷ്ടമുള്ള duty-കൾ മാത്രം സ്വീകരിച്ചാൽ മതി\n- ഇതിനായി പ്രത്യേക registration fee ഒന്നും നൽകേണ്ടതില്ല`,
   interestQuestion:

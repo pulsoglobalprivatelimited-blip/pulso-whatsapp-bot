@@ -46,6 +46,8 @@ function parseQualification(message) {
   if (replyId === BUTTON_IDS.QUALIFICATION_GNM) return 'gnm';
   if (replyId === BUTTON_IDS.QUALIFICATION_ANM) return 'anm';
   if (replyId === BUTTON_IDS.QUALIFICATION_OTHER_CAREGIVING) return 'other_caregiving';
+  if (replyId === BUTTON_IDS.QUALIFICATION_NONE_OF_THESE) return 'none_of_these';
+  if (replyId === BUTTON_IDS.QUALIFICATION_GO_BACK) return 'go_back';
 
   const normalized = normalizeText(getMessageText(message));
   if (normalized.includes('gda')) return 'gda';
@@ -58,6 +60,7 @@ function parseQualification(message) {
   ) {
     return 'other_caregiving';
   }
+  if (['ivayonnumalla', 'ഇവയൊന്നുമല്ല'].includes(normalized)) return 'none_of_these';
   return null;
 }
 

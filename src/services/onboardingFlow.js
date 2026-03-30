@@ -113,6 +113,13 @@ async function sendQualificationList(phone) {
   });
 }
 
+async function sendQualificationHelpButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.qualificationGoBack,
+    buttons: [{ id: BUTTON_IDS.QUALIFICATION_GO_BACK, title: 'തിരികെ പോകുക' }]
+  });
+}
+
 async function sendInterestButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.interestQuestion,
@@ -158,6 +165,19 @@ async function handleQualification(phone, message) {
       qualification: null
     });
     await sendAndLog(phone, 'text', MESSAGES.notEligible);
+    return;
+  }
+
+  if (qualification === 'go_back') {
+    await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2, { qualification: null });
+    await sendQualificationList(phone);
+    return;
+  }
+
+  if (qualification === 'none_of_these') {
+    await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2, { qualification: null });
+    await sendAndLog(phone, 'text', MESSAGES.qualificationCertificateRequired);
+    await sendQualificationHelpButtons(phone);
     return;
   }
 
