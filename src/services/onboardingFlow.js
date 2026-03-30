@@ -433,6 +433,7 @@ async function handleTerms(phone, message) {
   if (action === 'accept') {
     await updateStatus(phone, STATUS.COMPLETED, 14, { termsAccepted: true });
     await sendAndLog(phone, 'text', MESSAGES.termsAccepted);
+    await sendAndLog(phone, 'text', MESSAGES.postOnboardingSupport);
     return;
   }
 
