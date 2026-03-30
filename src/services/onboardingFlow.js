@@ -197,6 +197,13 @@ async function sendTermsButtons(phone) {
   });
 }
 
+async function sendOptionalAgentHelpButton(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.optionalAgentHelp,
+    buttons: [{ id: BUTTON_IDS.CONNECT_PULSO_AGENT, title: 'Pulso agent-നോട് ബന്ധപ്പെടുക' }]
+  });
+}
+
 async function startFlow(phone) {
   await getOrCreateProvider(phone);
   await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2);
@@ -430,10 +437,20 @@ async function handleDistrict(phone, message) {
 
 async function handleTerms(phone, message) {
   const action = parseTermsAcceptance(message);
+  if (action === 'connect_agent') {
+    await updateProvider(phone, { agentHelpRequested: true });
+    await sendAndLog(phone, 'text', MESSAGES.optionalAgentHelpConfirmed);
+    return;
+  }
+
   if (action === 'accept') {
-    await updateStatus(phone, STATUS.COMPLETED, 14, { termsAccepted: true });
+    await updateStatus(phone, STATUS.COMPLETED, 14, {
+      termsAccepted: true,
+      agentHelpRequested: false
+    });
     await sendAndLog(phone, 'text', MESSAGES.termsAccepted);
     await sendAndLog(phone, 'text', MESSAGES.postOnboardingSupport);
+    await sendOptionalAgentHelpButton(phone);
     return;
   }
 

@@ -15,6 +15,7 @@ async function createProvider(phone) {
     interestConfirmed: false,
     dutyHourPreference: null,
     expectedDutiesAccepted: null,
+    agentHelpRequested: false,
     fullName: null,
     age: null,
     sex: null,

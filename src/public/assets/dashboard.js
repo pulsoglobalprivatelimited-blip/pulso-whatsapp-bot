@@ -70,6 +70,10 @@ function formatExpectedDuties(value) {
   return '-';
 }
 
+function formatAgentHelp(value) {
+  return value ? 'Requested' : 'Not requested';
+}
+
 function renderList() {
   const filtered = providers.filter((item) => currentFilter === 'all' || item.status === currentFilter);
 
@@ -151,6 +155,7 @@ function renderDetail(provider) {
   setText('detail-interest', provider.interestConfirmed ? 'Yes' : 'No');
   setText('detail-duty-hour', formatDutyHourPreference(provider.dutyHourPreference));
   setText('detail-expected-duties', formatExpectedDuties(provider.expectedDutiesAccepted));
+  setText('detail-agent-help', formatAgentHelp(provider.agentHelpRequested));
   setText('detail-age', provider.age);
   setText('detail-sex', provider.sex);
   setText('detail-district', provider.district);

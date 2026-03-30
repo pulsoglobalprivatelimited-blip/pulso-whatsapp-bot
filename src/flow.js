@@ -51,6 +51,7 @@ const BUTTON_IDS = {
   AGE_CONFIRM_EXIT: 'age_confirm_exit',
   AGE_EDIT_AFTER_REJECTION: 'age_edit_after_rejection',
   AGE_CLOSE_AFTER_REJECTION: 'age_close_after_rejection',
+  CONNECT_PULSO_AGENT: 'connect_pulso_agent',
   SEX_MALE: 'sex_male',
   SEX_FEMALE: 'sex_female',
   TERMS_ACCEPT: 'terms_accept',
@@ -170,6 +171,10 @@ const MESSAGES = {
     'നന്ദി. താങ്കളുടെ onboarding പൂർത്തിയായി.',
   postOnboardingSupport:
     'ഇന്ന് മുതൽ ലഭ്യമായ duty offers നിങ്ങളെ WhatsApp വഴി അറിയിക്കുന്നതാണ്. ഡ്യൂട്ടി മെസേജുകൾ എല്ലാം ഓട്ടോമാറ്റിക്കായി അയക്കുന്നതാണ്. താങ്കൾക്ക് അനുയോജ്യമല്ലാത്ത ഡ്യൂട്ടികൾ ദയവായി അവഗണിക്കാവുന്നതാണ്. താങ്കൾക്ക് സ്വീകരിക്കാൻ താൽപര്യമുള്ള ഡ്യൂട്ടികൾക്ക് മാത്രം ദയവായി reply ചെയ്യുക. സഹായത്തിനായി 8714105333 എന്ന നമ്പറിൽ രാവിലെ 10 മുതൽ വൈകിട്ട് 6 വരെ വിളിക്കാം. ഇവിടെ 24 മണിക്കൂറും സന്ദേശം അയക്കാം. നിങ്ങൾക്ക് സഹായം നൽകാൻ ഞങ്ങൾ എപ്പോഴും തയ്യാറാണ്. 👍🏼',
+  optionalAgentHelp:
+    'കൂടുതൽ സംശയങ്ങൾ ഉണ്ടെങ്കിൽ മാത്രം Pulso agent-നോട് ബന്ധപ്പെടാം.',
+  optionalAgentHelpConfirmed:
+    'ശരി. നിങ്ങളുടെ അധിക സംശയങ്ങൾക്ക് Pulso team നിങ്ങളെ സഹായിക്കും.',
   termsHelp:
     'ശരി. ഞങ്ങളുടെ team ഉടൻ താങ്കളെ സഹായിക്കും.',
   verificationStillPending:
