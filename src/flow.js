@@ -3,20 +3,22 @@ const STEPS = {
   2: 'awaiting_qualification',
   3: 'working_model_sent',
   4: 'awaiting_interest_confirmation',
-  5: 'awaiting_certificate',
-  6: 'awaiting_name',
-  7: 'awaiting_age',
-  8: 'awaiting_sex',
-  9: 'awaiting_district',
-  10: 'certificate_verification_pending',
-  11: 'awaiting_terms_acceptance',
-  12: 'completed'
+  5: 'awaiting_duty_hour_preference',
+  6: 'awaiting_certificate',
+  7: 'awaiting_name',
+  8: 'awaiting_age',
+  9: 'awaiting_sex',
+  10: 'awaiting_district',
+  11: 'certificate_verification_pending',
+  12: 'awaiting_terms_acceptance',
+  13: 'completed'
 };
 
 const STATUS = {
   NEW: 'new_lead',
   AWAITING_QUALIFICATION: 'awaiting_qualification',
   AWAITING_INTEREST: 'awaiting_interest_confirmation',
+  AWAITING_DUTY_HOUR_PREFERENCE: 'awaiting_duty_hour_preference',
   AWAITING_CERTIFICATE: 'awaiting_certificate',
   AWAITING_NAME: 'awaiting_name',
   AWAITING_AGE: 'awaiting_age',
@@ -39,6 +41,8 @@ const BUTTON_IDS = {
   QUALIFICATION_GO_BACK: 'qualification_go_back',
   INTEREST_YES: 'interest_yes',
   INTEREST_NO: 'interest_no',
+  DUTY_HOUR_8: 'duty_hour_8',
+  DUTY_HOUR_24: 'duty_hour_24',
   AGE_RETRY_ENTRY: 'age_retry_entry',
   AGE_CONFIRM_EXIT: 'age_confirm_exit',
   AGE_EDIT_AFTER_REJECTION: 'age_edit_after_rejection',
@@ -98,6 +102,10 @@ const MESSAGES = {
     'മുകളിലെ working model മനസ്സിലായോ? തുടരാൻ താൽപര്യമുണ്ടോ?',
   interestRetry:
     'തുടരാൻ താൽപര്യമുണ്ടെങ്കിൽ താഴെയുള്ള button തിരഞ്ഞെടുക്കുക.',
+  dutyHourPreferenceQuestion:
+    'താങ്കൾക്ക് ഏത് duty hour ആണ് preference?',
+  dutyHourPreferenceRetry:
+    'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും ഒരു duty hour preference തിരഞ്ഞെടുക്കുക.',
   notInterested:
     'ശരി. പിന്നീട് താൽപര്യമുണ്ടെങ്കിൽ വീണ്ടും message ചെയ്യാം.',
   certificateRequest:

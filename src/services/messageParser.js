@@ -86,6 +86,27 @@ function isNotInterested(message) {
   return ['താൽപര്യമില്ല', 'not interested', 'no'].includes(normalized);
 }
 
+function parseDutyHourPreference(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.DUTY_HOUR_8) return '8_hour';
+  if (replyId === BUTTON_IDS.DUTY_HOUR_24) return '24_hour';
+
+  const normalized = normalizeText(getMessageText(message));
+  if (
+    normalized.includes('8 hour') ||
+    normalized.includes('8 am to 6 pm') ||
+    normalized === '8'
+  ) {
+    return '8_hour';
+  }
+
+  if (normalized.includes('24 hour') || normalized === '24') {
+    return '24_hour';
+  }
+
+  return null;
+}
+
 function parseAge(message) {
   const normalized = normalizeText(getMessageText(message));
   const match = normalized.match(/\d{1,3}/);
@@ -171,6 +192,7 @@ module.exports = {
   isQualificationDeclined,
   isInterested,
   isNotInterested,
+  parseDutyHourPreference,
   parseAge,
   parseAgeCorrectionAction,
   parseSex,

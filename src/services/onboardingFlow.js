@@ -13,6 +13,7 @@ const {
   isQualificationDeclined,
   isInterested,
   isNotInterested,
+  parseDutyHourPreference,
   parseAge,
   parseAgeCorrectionAction,
   parseSex,
@@ -141,6 +142,17 @@ async function sendSexButtons(phone) {
   });
 }
 
+async function sendDutyHourPreferenceButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.dutyHourPreferenceQuestion,
+    buttons: [
+      { id: BUTTON_IDS.DUTY_HOUR_8, title: '8 hour' },
+      { id: BUTTON_IDS.DUTY_HOUR_24, title: '24 hour' }
+    ]
+  });
+  await sendAndLog(phone, 'text', '8 hour (8 am to 6 pm) - 900rs per day\n24 hour - 1200 rs per day');
+}
+
 async function sendAgeCorrectionButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.ageAboveLimitOptions,
@@ -230,7 +242,19 @@ async function handleInterest(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_CERTIFICATE, 5, { interestConfirmed: true });
+  await updateStatus(phone, STATUS.AWAITING_DUTY_HOUR_PREFERENCE, 5, { interestConfirmed: true });
+  await sendDutyHourPreferenceButtons(phone);
+}
+
+async function handleDutyHourPreference(phone, message) {
+  const dutyHourPreference = parseDutyHourPreference(message);
+  if (!dutyHourPreference) {
+    await sendAndLog(phone, 'text', MESSAGES.dutyHourPreferenceRetry);
+    await sendDutyHourPreferenceButtons(phone);
+    return;
+  }
+
+  await updateStatus(phone, STATUS.AWAITING_CERTIFICATE, 6, { dutyHourPreference });
   await sendAndLog(phone, 'text', MESSAGES.certificateRequest);
 }
 
@@ -259,7 +283,7 @@ async function handleCertificate(phone, message) {
   }
 
   await addCertificate(phone, message);
-  await updateStatus(phone, STATUS.AWAITING_NAME, 6);
+  await updateStatus(phone, STATUS.AWAITING_NAME, 7);
   await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
 }
 
@@ -270,14 +294,14 @@ async function handleName(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_AGE, 7, { fullName: name });
+  await updateStatus(phone, STATUS.AWAITING_AGE, 8, { fullName: name });
   await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
 }
 
 async function handleAge(phone, message) {
   const ageAction = parseAgeCorrectionAction(message);
   if (ageAction === 'retry') {
-    await updateStatus(phone, STATUS.AWAITING_AGE, 7, { age: null });
+    await updateStatus(phone, STATUS.AWAITING_AGE, 8, { age: null });
     await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
     return;
   }
@@ -285,7 +309,7 @@ async function handleAge(phone, message) {
   if (ageAction === 'exit') {
     await updateProvider(phone, {
       status: STATUS.AGE_REJECTED,
-      currentStep: 7
+      currentStep: 8
     });
     await sendAndLog(phone, 'text', MESSAGES.ageFinalRejection);
     await sendAgeFinalRejectionButtons(phone);
@@ -301,7 +325,7 @@ async function handleAge(phone, message) {
   if (age > 50) {
     await updateProvider(phone, {
       status: STATUS.AWAITING_AGE,
-      currentStep: 7,
+      currentStep: 8,
       age
     });
     await sendAndLog(phone, 'text', MESSAGES.ageAboveLimit);
@@ -309,14 +333,14 @@ async function handleAge(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_SEX, 8, { age });
+  await updateStatus(phone, STATUS.AWAITING_SEX, 9, { age });
   await sendSexButtons(phone);
 }
 
 async function handleAgeRejected(phone, message) {
   const ageAction = parseAgeCorrectionAction(message);
   if (ageAction === 'edit_after_rejection' || ageAction === 'retry') {
-    await updateStatus(phone, STATUS.AWAITING_AGE, 7, { age: null });
+    await updateStatus(phone, STATUS.AWAITING_AGE, 8, { age: null });
     await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
     return;
   }
@@ -324,7 +348,7 @@ async function handleAgeRejected(phone, message) {
   if (ageAction === 'close_after_rejection' || ageAction === 'exit') {
     await updateProvider(phone, {
       status: STATUS.NEEDS_HUMAN_REVIEW,
-      currentStep: 7
+      currentStep: 8
     });
     await sendAndLog(phone, 'text', MESSAGES.ageRejectionClosed);
     return;
@@ -342,7 +366,7 @@ async function handleSex(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_DISTRICT, 9, { sex });
+  await updateStatus(phone, STATUS.AWAITING_DISTRICT, 10, { sex });
   await sendAndLog(phone, 'text', MESSAGES.districtQuestion);
 }
 
@@ -353,7 +377,7 @@ async function handleDistrict(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.VERIFICATION_PENDING, 10, {
+  await updateStatus(phone, STATUS.VERIFICATION_PENDING, 11, {
     district,
     verification: {
       status: 'pending',
@@ -369,7 +393,7 @@ async function handleDistrict(phone, message) {
 async function handleTerms(phone, message) {
   const action = parseTermsAcceptance(message);
   if (action === 'accept') {
-    await updateStatus(phone, STATUS.COMPLETED, 12, { termsAccepted: true });
+    await updateStatus(phone, STATUS.COMPLETED, 13, { termsAccepted: true });
     await sendAndLog(phone, 'text', MESSAGES.termsAccepted);
     return;
   }
@@ -407,6 +431,9 @@ async function processIncomingMessage(phone, message) {
       return;
     case STATUS.AWAITING_INTEREST:
       await handleInterest(phone, message);
+      return;
+    case STATUS.AWAITING_DUTY_HOUR_PREFERENCE:
+      await handleDutyHourPreference(phone, message);
       return;
     case STATUS.AWAITING_CERTIFICATE:
       await handleCertificate(phone, message);
