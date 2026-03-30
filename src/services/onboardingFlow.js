@@ -216,7 +216,7 @@ async function handleQualification(phone, message) {
 async function handleInterest(phone, message) {
   if (isNotInterested(message)) {
     await updateProvider(phone, {
-      status: STATUS.NEEDS_HUMAN_REVIEW,
+      status: STATUS.NOT_INTERESTED_RESTARTABLE,
       currentStep: 4,
       interestConfirmed: false
     });
@@ -392,6 +392,11 @@ async function processIncomingMessage(phone, message) {
   await recordInbound(phone, message);
 
   if (provider.status === STATUS.NEW) {
+    await startFlow(phone);
+    return;
+  }
+
+  if (provider.status === STATUS.NOT_INTERESTED_RESTARTABLE) {
     await startFlow(phone);
     return;
   }

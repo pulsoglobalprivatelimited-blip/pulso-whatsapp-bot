@@ -21,6 +21,7 @@ const STATUS = {
   AWAITING_NAME: 'awaiting_name',
   AWAITING_AGE: 'awaiting_age',
   AGE_REJECTED: 'age_rejected',
+  NOT_INTERESTED_RESTARTABLE: 'not_interested_restartable',
   AWAITING_SEX: 'awaiting_sex',
   AWAITING_DISTRICT: 'awaiting_district',
   VERIFICATION_PENDING: 'certificate_verification_pending',
