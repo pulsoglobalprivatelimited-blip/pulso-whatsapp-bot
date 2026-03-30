@@ -58,6 +58,12 @@ function formatStatus(status) {
   return status.replace(/_/g, ' ');
 }
 
+function formatDutyHourPreference(value) {
+  if (value === '8_hour') return '8 hour (8 am to 6 pm) - 900rs per day';
+  if (value === '24_hour') return '24 hour - 1200 rs per day';
+  return value || '-';
+}
+
 function renderList() {
   const filtered = providers.filter((item) => currentFilter === 'all' || item.status === currentFilter);
 
@@ -137,6 +143,7 @@ function renderDetail(provider) {
   setText('detail-name', provider.fullName);
   setText('detail-qualification', provider.qualification);
   setText('detail-interest', provider.interestConfirmed ? 'Yes' : 'No');
+  setText('detail-duty-hour', formatDutyHourPreference(provider.dutyHourPreference));
   setText('detail-age', provider.age);
   setText('detail-sex', provider.sex);
   setText('detail-district', provider.district);

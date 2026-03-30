@@ -13,6 +13,7 @@ async function createProvider(phone) {
     currentStep: 1,
     qualification: null,
     interestConfirmed: false,
+    dutyHourPreference: null,
     fullName: null,
     age: null,
     sex: null,
