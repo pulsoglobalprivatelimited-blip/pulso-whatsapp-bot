@@ -347,3 +347,111 @@ dd {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 640px) {
+  .layout {
+    padding: 16px 12px 28px;
+  }
+
+  .hero,
+  .board {
+    border-radius: 20px;
+  }
+
+  .hero,
+  .board,
+  .card,
+  .provider-item,
+  .list-panel,
+  .detail-panel,
+  .empty-state {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .hero {
+    padding-top: 20px;
+    padding-bottom: 20px;
+    margin-bottom: 16px;
+  }
+
+  .board {
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 10vw, 2.8rem);
+    max-width: none;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+  }
+
+  .hero-meta,
+  .board-header,
+  .review-head,
+  .detail-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .metric {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+
+  .filter {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .content,
+  .detail-grid {
+    gap: 14px;
+  }
+
+  .card {
+    padding-top: 16px;
+    padding-bottom: 16px;
+    margin-bottom: 14px;
+  }
+
+  dl div {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  dd {
+    text-align: left;
+    word-break: break-word;
+  }
+
+  .pill {
+    align-self: flex-start;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .button,
+  .filter {
+    width: 100%;
+    text-align: center;
+  }
+
+  .filters .filter {
+    width: auto;
+  }
+}
