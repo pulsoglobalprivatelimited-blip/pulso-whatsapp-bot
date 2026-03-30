@@ -100,9 +100,12 @@ function parseAgeCorrectionAction(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId === BUTTON_IDS.AGE_RETRY_ENTRY) return 'retry';
   if (replyId === BUTTON_IDS.AGE_CONFIRM_EXIT) return 'exit';
+  if (replyId === BUTTON_IDS.AGE_EDIT_AFTER_REJECTION) return 'edit_after_rejection';
+  if (replyId === BUTTON_IDS.AGE_CLOSE_AFTER_REJECTION) return 'close_after_rejection';
 
   const normalized = normalizeText(getMessageText(message));
   if (['വയസ് വീണ്ടും നൽകാം', 'retry age', 'retry', 'again'].includes(normalized)) return 'retry';
+  if (['വയസ് തിരുത്താം', 'edit age'].includes(normalized)) return 'edit_after_rejection';
   if (['ശരി', 'ok', 'okay'].includes(normalized)) return 'exit';
   return null;
 }

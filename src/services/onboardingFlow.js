@@ -151,6 +151,16 @@ async function sendAgeCorrectionButtons(phone) {
   });
 }
 
+async function sendAgeFinalRejectionButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.ageFinalRejectionOptions,
+    buttons: [
+      { id: BUTTON_IDS.AGE_EDIT_AFTER_REJECTION, title: 'വയസ് തിരുത്താം' },
+      { id: BUTTON_IDS.AGE_CLOSE_AFTER_REJECTION, title: 'ശരി' }
+    ]
+  });
+}
+
 async function sendTermsButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.termsQuestion,
@@ -274,10 +284,11 @@ async function handleAge(phone, message) {
 
   if (ageAction === 'exit') {
     await updateProvider(phone, {
-      status: STATUS.NEEDS_HUMAN_REVIEW,
+      status: STATUS.AGE_REJECTED,
       currentStep: 7
     });
-    await sendAndLog(phone, 'text', MESSAGES.ageApplicationClosed);
+    await sendAndLog(phone, 'text', MESSAGES.ageFinalRejection);
+    await sendAgeFinalRejectionButtons(phone);
     return;
   }
 
@@ -300,6 +311,27 @@ async function handleAge(phone, message) {
 
   await updateStatus(phone, STATUS.AWAITING_SEX, 8, { age });
   await sendSexButtons(phone);
+}
+
+async function handleAgeRejected(phone, message) {
+  const ageAction = parseAgeCorrectionAction(message);
+  if (ageAction === 'edit_after_rejection' || ageAction === 'retry') {
+    await updateStatus(phone, STATUS.AWAITING_AGE, 7, { age: null });
+    await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
+    return;
+  }
+
+  if (ageAction === 'close_after_rejection' || ageAction === 'exit') {
+    await updateProvider(phone, {
+      status: STATUS.NEEDS_HUMAN_REVIEW,
+      currentStep: 7
+    });
+    await sendAndLog(phone, 'text', MESSAGES.ageRejectionClosed);
+    return;
+  }
+
+  await sendAndLog(phone, 'text', MESSAGES.ageFinalRejection);
+  await sendAgeFinalRejectionButtons(phone);
 }
 
 async function handleSex(phone, message) {
@@ -379,6 +411,9 @@ async function processIncomingMessage(phone, message) {
       return;
     case STATUS.AWAITING_AGE:
       await handleAge(phone, message);
+      return;
+    case STATUS.AGE_REJECTED:
+      await handleAgeRejected(phone, message);
       return;
     case STATUS.AWAITING_SEX:
       await handleSex(phone, message);

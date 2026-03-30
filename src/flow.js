@@ -20,6 +20,7 @@ const STATUS = {
   AWAITING_CERTIFICATE: 'awaiting_certificate',
   AWAITING_NAME: 'awaiting_name',
   AWAITING_AGE: 'awaiting_age',
+  AGE_REJECTED: 'age_rejected',
   AWAITING_SEX: 'awaiting_sex',
   AWAITING_DISTRICT: 'awaiting_district',
   VERIFICATION_PENDING: 'certificate_verification_pending',
@@ -39,6 +40,8 @@ const BUTTON_IDS = {
   INTEREST_NO: 'interest_no',
   AGE_RETRY_ENTRY: 'age_retry_entry',
   AGE_CONFIRM_EXIT: 'age_confirm_exit',
+  AGE_EDIT_AFTER_REJECTION: 'age_edit_after_rejection',
+  AGE_CLOSE_AFTER_REJECTION: 'age_close_after_rejection',
   SEX_MALE: 'sex_male',
   SEX_FEMALE: 'sex_female',
   TERMS_ACCEPT: 'terms_accept',
@@ -110,8 +113,12 @@ const MESSAGES = {
     'ക്ഷമിക്കണം. നിലവിലെ onboarding criteria പ്രകാരം 50 വയസിന് മുകളിലുള്ള applicants-നെ ഇപ്പോൾ proceed ചെയ്യാൻ കഴിയില്ല. വയസ് തെറ്റായി നൽകിയതാണെങ്കിൽ വീണ്ടും നൽകാം.',
   ageAboveLimitOptions:
     'വയസ് തെറ്റായി നൽകിയതാണെങ്കിൽ വീണ്ടും നൽകുക. അല്ലെങ്കിൽ ഇവിടെ തന്നെ നിർത്താം.',
-  ageApplicationClosed:
+  ageFinalRejection:
     'ശരി. നിലവിലെ criteria പ്രകാരം ഇപ്പോൾ onboarding തുടരാൻ കഴിയില്ല. താങ്കളുടെ താൽപര്യത്തിനും സമയത്തിനും നന്ദി.',
+  ageFinalRejectionOptions:
+    'വയസ് തെറ്റായി നൽകിയതാണെങ്കിൽ തിരുത്താം. അല്ലെങ്കിൽ ഇവിടെ തന്നെ തുടരാതെ നിർത്താം.',
+  ageRejectionClosed:
+    'ശരി. അപേക്ഷ ഇവിടെ അവസാനിപ്പിച്ചിരിക്കുന്നു. പിന്നീട് സഹായം ആവശ്യമെങ്കിൽ വീണ്ടും message ചെയ്യാം.',
   sexQuestion:
     'താങ്കളുടെ sex തിരഞ്ഞെടുക്കുക.',
   sexRetry:
