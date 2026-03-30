@@ -200,7 +200,7 @@ async function sendTermsButtons(phone) {
 async function sendOptionalAgentHelpButton(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.optionalAgentHelp,
-    buttons: [{ id: BUTTON_IDS.CONNECT_PULSO_AGENT, title: 'Pulso agent-നോട് ബന്ധപ്പെടുക' }]
+    buttons: [{ id: BUTTON_IDS.CONNECT_PULSO_AGENT, title: 'കൂടുതൽ സഹായം' }]
   });
 }
 
