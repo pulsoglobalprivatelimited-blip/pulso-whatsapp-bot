@@ -64,6 +64,12 @@ function formatDutyHourPreference(value) {
   return value || '-';
 }
 
+function formatExpectedDuties(value) {
+  if (value === true) return 'Accepted';
+  if (value === false) return 'Declined';
+  return '-';
+}
+
 function renderList() {
   const filtered = providers.filter((item) => currentFilter === 'all' || item.status === currentFilter);
 
@@ -144,6 +150,7 @@ function renderDetail(provider) {
   setText('detail-qualification', provider.qualification);
   setText('detail-interest', provider.interestConfirmed ? 'Yes' : 'No');
   setText('detail-duty-hour', formatDutyHourPreference(provider.dutyHourPreference));
+  setText('detail-expected-duties', formatExpectedDuties(provider.expectedDutiesAccepted));
   setText('detail-age', provider.age);
   setText('detail-sex', provider.sex);
   setText('detail-district', provider.district);

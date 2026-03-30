@@ -4,14 +4,15 @@ const STEPS = {
   3: 'working_model_sent',
   4: 'awaiting_interest_confirmation',
   5: 'awaiting_duty_hour_preference',
-  6: 'awaiting_certificate',
-  7: 'awaiting_name',
-  8: 'awaiting_age',
-  9: 'awaiting_sex',
-  10: 'awaiting_district',
-  11: 'certificate_verification_pending',
-  12: 'awaiting_terms_acceptance',
-  13: 'completed'
+  6: 'awaiting_expected_duties_confirmation',
+  7: 'awaiting_certificate',
+  8: 'awaiting_name',
+  9: 'awaiting_age',
+  10: 'awaiting_sex',
+  11: 'awaiting_district',
+  12: 'certificate_verification_pending',
+  13: 'awaiting_terms_acceptance',
+  14: 'completed'
 };
 
 const STATUS = {
@@ -19,6 +20,7 @@ const STATUS = {
   AWAITING_QUALIFICATION: 'awaiting_qualification',
   AWAITING_INTEREST: 'awaiting_interest_confirmation',
   AWAITING_DUTY_HOUR_PREFERENCE: 'awaiting_duty_hour_preference',
+  AWAITING_EXPECTED_DUTIES_CONFIRMATION: 'awaiting_expected_duties_confirmation',
   AWAITING_CERTIFICATE: 'awaiting_certificate',
   AWAITING_NAME: 'awaiting_name',
   AWAITING_AGE: 'awaiting_age',
@@ -43,6 +45,8 @@ const BUTTON_IDS = {
   INTEREST_NO: 'interest_no',
   DUTY_HOUR_8: 'duty_hour_8',
   DUTY_HOUR_24: 'duty_hour_24',
+  EXPECTED_DUTIES_YES: 'expected_duties_yes',
+  EXPECTED_DUTIES_NO: 'expected_duties_no',
   AGE_RETRY_ENTRY: 'age_retry_entry',
   AGE_CONFIRM_EXIT: 'age_confirm_exit',
   AGE_EDIT_AFTER_REJECTION: 'age_edit_after_rejection',
@@ -106,6 +110,18 @@ const MESSAGES = {
     'താങ്കൾക്ക് ഏത് duty hour ആണ് preference?',
   dutyHourPreferenceRetry:
     'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും ഒരു duty hour preference തിരഞ്ഞെടുക്കുക.',
+  expectedDutiesIntroOne:
+    `Caregiver duty-യിൽ സാധാരണയായി വരാവുന്ന ചില ജോലികൾ താഴെ കൊടുക്കുന്നു.\nPatient-ന്റെ condition അനുസരിച്ച് duty responsibilities മാറാം.\n\n*Personal care*\n- Bathing / sponge bath (non-clinical)\n- Dressing\n- Oral care, grooming, hair combing\n\n*Toileting & continence support*\n- Diaper change\n- Bedpan / urinal support\n- Cleaning and maintaining hygiene`,
+  expectedDutiesIntroTwo:
+    `*Mobility & safety*\n- Helping to sit, stand, walk\n- Turning & positioning in bed\n- Fall-risk precautions\n\n*Feeding support*\n- Helping with meals\n- Ensuring adequate water intake\n- Following diet plan given by doctor / dietician`,
+  expectedDutiesIntroThree:
+    `*Companionship*\n- Talking, engaging in simple activities\n- Reminding medicines (if prescribed schedule is given)\n\nഈ തരത്തിലുള്ള duty responsibilities ചെയ്യാൻ താങ്കൾക്ക് തയ്യാറാണെങ്കിൽ മാത്രം onboarding തുടരുക.`,
+  expectedDutiesQuestion:
+    'മുകളിലെ duty responsibilities ചെയ്യാൻ താങ്കൾക്ക് തയ്യാറാണോ?',
+  expectedDutiesRetry:
+    'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും ഒരു മറുപടി തിരഞ്ഞെടുക്കുക.',
+  expectedDutiesDeclined:
+    'ശരി. ഈ തരത്തിലുള്ള duty responsibilities-ിൽ താൽപര്യമില്ലെങ്കിൽ പിന്നീട് വീണ്ടും message ചെയ്യാം.',
   notInterested:
     'ശരി. പിന്നീട് താൽപര്യമുണ്ടെങ്കിൽ വീണ്ടും message ചെയ്യാം.',
   certificateRequest:

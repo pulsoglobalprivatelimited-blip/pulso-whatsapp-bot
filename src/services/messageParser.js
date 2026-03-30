@@ -107,6 +107,18 @@ function parseDutyHourPreference(message) {
   return null;
 }
 
+function parseExpectedDutiesResponse(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.EXPECTED_DUTIES_YES) return 'accept';
+  if (replyId === BUTTON_IDS.EXPECTED_DUTIES_NO) return 'decline';
+
+  const normalized = normalizeText(getMessageText(message));
+  if (['തയ്യാറാണ്', 'ready', 'yes', 'ok', 'okay'].includes(normalized)) return 'accept';
+  if (['താൽപര്യമില്ല', 'not interested', 'no'].includes(normalized)) return 'decline';
+
+  return null;
+}
+
 function parseAge(message) {
   const normalized = normalizeText(getMessageText(message));
   const match = normalized.match(/\d{1,3}/);
@@ -193,6 +205,7 @@ module.exports = {
   isInterested,
   isNotInterested,
   parseDutyHourPreference,
+  parseExpectedDutiesResponse,
   parseAge,
   parseAgeCorrectionAction,
   parseSex,
