@@ -260,6 +260,16 @@ async function handleAge(phone, message) {
     return;
   }
 
+  if (age > 50) {
+    await updateProvider(phone, {
+      status: STATUS.NEEDS_HUMAN_REVIEW,
+      currentStep: 7,
+      age
+    });
+    await sendAndLog(phone, 'text', MESSAGES.ageAboveLimit);
+    return;
+  }
+
   await updateStatus(phone, STATUS.AWAITING_SEX, 8, { age });
   await sendSexButtons(phone);
 }
