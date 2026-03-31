@@ -7,6 +7,7 @@ const {
   appendHistory,
   getProvider
 } = require('./providerService');
+const { isPreOnboardedPhone } = require('./preOnboardedService');
 const {
   getMessageText,
   parseQualification,
@@ -520,6 +521,10 @@ async function handleCompleted(phone, message) {
 }
 
 async function processIncomingMessage(phone, message) {
+  if (isPreOnboardedPhone(phone)) {
+    return;
+  }
+
   const provider = await getOrCreateProvider(phone);
 
   if (hasProcessedMessage(provider, message.id)) {
