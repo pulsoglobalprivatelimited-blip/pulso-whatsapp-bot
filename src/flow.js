@@ -60,7 +60,7 @@ const BUTTON_IDS = {
   SEX_MALE: 'sex_male',
   SEX_FEMALE: 'sex_female',
   TERMS_ACCEPT: 'terms_accept',
-  TERMS_HELP: 'terms_help'
+  TERMS_DECLINE: 'terms_decline'
 };
 
 const QUALIFICATIONS = [
@@ -193,14 +193,14 @@ const MESSAGES = {
     'Terms and conditions സ്വീകരിക്കുന്നുണ്ടോ?',
   termsAccepted:
     'നന്ദി. താങ്കളുടെ onboarding പൂർത്തിയായി.',
+  termsDeclined:
+    'ശരി. താൽപര്യമുണ്ടെങ്കിൽ പിന്നീട് വീണ്ടും message ചെയ്യാം.',
   postOnboardingSupport:
     'ഇന്ന് മുതൽ ലഭ്യമായ duty offers നിങ്ങളെ WhatsApp വഴി അറിയിക്കുന്നതാണ്. ഡ്യൂട്ടി മെസേജുകൾ എല്ലാം ഓട്ടോമാറ്റിക്കായി അയക്കുന്നതാണ്. താങ്കൾക്ക് അനുയോജ്യമല്ലാത്ത ഡ്യൂട്ടികൾ ദയവായി അവഗണിക്കാവുന്നതാണ്. താങ്കൾക്ക് സ്വീകരിക്കാൻ താൽപര്യമുള്ള ഡ്യൂട്ടികൾക്ക് മാത്രം ദയവായി reply ചെയ്യുക.',
   optionalAgentHelp:
     'കൂടുതൽ സംശയങ്ങൾ ഉണ്ടെങ്കിൽ Pulso agent-നോട് ബന്ധപ്പെടാം.',
   optionalAgentHelpConfirmed:
     'ശരി. Pulso agent ഉടൻ തന്നെ WhatsApp വഴി താങ്കളുമായി ബന്ധപ്പെടുന്നതാണ്.',
-  termsHelp:
-    'ശരി. ഞങ്ങളുടെ team ഉടൻ താങ്കളെ സഹായിക്കും.',
   verificationStillPending:
     'താങ്കളുടെ certificate ഇപ്പോൾ verification-ലാണ്. പരിശോധിച്ച ശേഷം ഉടൻ update അറിയിക്കും.',
   completed:

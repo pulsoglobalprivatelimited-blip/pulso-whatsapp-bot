@@ -201,7 +201,10 @@ async function sendAgeFinalRejectionButtons(phone) {
 async function sendTermsButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.termsQuestion,
-    buttons: [{ id: BUTTON_IDS.TERMS_ACCEPT, title: 'സ്വീകരിക്കുന്നു' }]
+    buttons: [
+      { id: BUTTON_IDS.TERMS_ACCEPT, title: 'സ്വീകരിക്കുന്നു' },
+      { id: BUTTON_IDS.TERMS_DECLINE, title: 'സ്വീകരിക്കുന്നില്ല' }
+    ]
   });
 }
 
@@ -488,8 +491,13 @@ async function handleTerms(phone, message) {
     return;
   }
 
-  if (action === 'help') {
-    await sendAndLog(phone, 'text', MESSAGES.termsHelp);
+  if (action === 'decline') {
+    await updateProvider(phone, {
+      status: STATUS.NOT_INTERESTED_RESTARTABLE,
+      currentStep: 14,
+      termsAccepted: false
+    });
+    await sendAndLog(phone, 'text', MESSAGES.termsDeclined);
     return;
   }
 

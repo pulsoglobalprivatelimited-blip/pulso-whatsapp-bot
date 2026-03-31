@@ -170,12 +170,12 @@ function parseTermsAcceptance(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId === BUTTON_IDS.CONNECT_PULSO_AGENT) return 'connect_agent';
   if (replyId === BUTTON_IDS.TERMS_ACCEPT) return 'accept';
-  if (replyId === BUTTON_IDS.TERMS_HELP) return 'help';
+  if (replyId === BUTTON_IDS.TERMS_DECLINE) return 'decline';
 
   const normalized = normalizeText(getMessageText(message));
   if (['pulso agent-നോട് ബന്ധപ്പെടുക', 'connect pulso agent'].includes(normalized)) return 'connect_agent';
   if (['സ്വീകരിക്കുന്നു', 'accept', 'accepted', 'ok', 'yes'].includes(normalized)) return 'accept';
-  if (['സഹായം വേണം', 'help', 'need help'].includes(normalized)) return 'help';
+  if (['സ്വീകരിക്കുന്നില്ല', 'decline', 'no'].includes(normalized)) return 'decline';
   return null;
 }
 
