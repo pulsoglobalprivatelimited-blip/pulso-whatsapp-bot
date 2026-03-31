@@ -225,6 +225,14 @@ h1 {
   margin-bottom: 16px;
 }
 
+.review-card {
+  position: sticky;
+  top: 16px;
+  z-index: 2;
+  border-color: rgba(183, 93, 50, 0.2);
+  box-shadow: 0 12px 28px rgba(79, 49, 21, 0.08);
+}
+
 .attachment-section {
   margin-top: 18px;
 }
@@ -397,6 +405,10 @@ dd {
 
   .actions {
     flex-wrap: wrap;
+  }
+
+  .review-card {
+    position: static;
   }
 }
 

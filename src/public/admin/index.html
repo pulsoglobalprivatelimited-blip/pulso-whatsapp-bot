@@ -69,6 +69,21 @@
               <span id="detail-step" class="pill"></span>
             </div>
 
+            <article class="card review-card">
+              <div class="review-head">
+                <h4>Manual review</h4>
+                <p>Approve only after checking that the certificate is readable, valid, and matches the provider.</p>
+              </div>
+              <form id="review-form" class="review-form">
+                <input id="reviewer-input" type="text" name="reviewedBy" placeholder="Reviewer name" value="ops-team">
+                <textarea id="notes-input" name="notes" placeholder="Review notes"></textarea>
+                <div class="actions">
+                  <button type="button" id="approve-button" class="button approve">Approve certificate</button>
+                  <button type="button" id="reject-button" class="button reject">Reject certificate</button>
+                </div>
+              </form>
+            </article>
+
             <div class="detail-grid">
               <article class="card">
                 <h4>Profile</h4>
@@ -98,21 +113,6 @@
                 </div>
               </article>
             </div>
-
-            <article class="card">
-              <div class="review-head">
-                <h4>Manual review</h4>
-                <p>Approve only after checking that the certificate is readable, valid, and matches the provider.</p>
-              </div>
-              <form id="review-form" class="review-form">
-                <input id="reviewer-input" type="text" name="reviewedBy" placeholder="Reviewer name" value="ops-team">
-                <textarea id="notes-input" name="notes" placeholder="Review notes"></textarea>
-                <div class="actions">
-                  <button type="button" id="approve-button" class="button approve">Approve certificate</button>
-                  <button type="button" id="reject-button" class="button reject">Reject certificate</button>
-                </div>
-              </form>
-            </article>
 
             <article class="card">
               <h4>History</h4>
