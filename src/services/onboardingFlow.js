@@ -499,6 +499,21 @@ async function handleTerms(phone, message) {
   await sendTermsButtons(phone);
 }
 
+async function handleCompleted(phone, message) {
+  const action = parseTermsAcceptance(message);
+  if (action === 'connect_agent') {
+    await updateProvider(phone, {
+      agentHelpRequested: true,
+      status: STATUS.AWAITING_PULSO_AGENT
+    });
+    await sendAndLog(phone, 'text', MESSAGES.optionalAgentHelpConfirmed);
+    return;
+  }
+
+  await sendAndLog(phone, 'text', MESSAGES.completed);
+  await sendOptionalAgentHelpButton(phone);
+}
+
 async function processIncomingMessage(phone, message) {
   const provider = await getOrCreateProvider(phone);
 
@@ -563,8 +578,7 @@ async function processIncomingMessage(phone, message) {
       await handleTerms(phone, message);
       return;
     case STATUS.COMPLETED:
-      await sendAndLog(phone, 'text', MESSAGES.completed);
-      await sendOptionalAgentHelpButton(phone);
+      await handleCompleted(phone, message);
       return;
     default:
       await sendAndLog(phone, 'text', MESSAGES.notInterested);
