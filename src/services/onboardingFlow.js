@@ -438,7 +438,10 @@ async function handleDistrict(phone, message) {
 async function handleTerms(phone, message) {
   const action = parseTermsAcceptance(message);
   if (action === 'connect_agent') {
-    await updateProvider(phone, { agentHelpRequested: true });
+    await updateProvider(phone, {
+      agentHelpRequested: true,
+      status: STATUS.AWAITING_PULSO_AGENT
+    });
     await sendAndLog(phone, 'text', MESSAGES.optionalAgentHelpConfirmed);
     return;
   }
@@ -478,6 +481,10 @@ async function processIncomingMessage(phone, message) {
 
   if (provider.status === STATUS.NOT_INTERESTED_RESTARTABLE) {
     await startFlow(phone);
+    return;
+  }
+
+  if (provider.status === STATUS.AWAITING_PULSO_AGENT) {
     return;
   }
 

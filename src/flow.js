@@ -26,6 +26,7 @@ const STATUS = {
   AWAITING_AGE: 'awaiting_age',
   AGE_REJECTED: 'age_rejected',
   NOT_INTERESTED_RESTARTABLE: 'not_interested_restartable',
+  AWAITING_PULSO_AGENT: 'awaiting_pulso_agent',
   AWAITING_SEX: 'awaiting_sex',
   AWAITING_DISTRICT: 'awaiting_district',
   VERIFICATION_PENDING: 'certificate_verification_pending',
@@ -174,7 +175,7 @@ const MESSAGES = {
   optionalAgentHelp:
     'കൂടുതൽ സംശയങ്ങൾ ഉണ്ടെങ്കിൽ മാത്രം Pulso agent-നോട് ബന്ധപ്പെടാം.',
   optionalAgentHelpConfirmed:
-    'ശരി. നിങ്ങളുടെ അധിക സംശയങ്ങൾക്ക് Pulso team നിങ്ങളെ സഹായിക്കും.',
+    'ശരി. Pulso agent ഉടൻ തന്നെ WhatsApp വഴി താങ്കളുമായി ബന്ധപ്പെടുന്നതാണ്.',
   termsHelp:
     'ശരി. ഞങ്ങളുടെ team ഉടൻ താങ്കളെ സഹായിക്കും.',
   verificationStillPending:
