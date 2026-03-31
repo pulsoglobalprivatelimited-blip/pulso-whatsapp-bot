@@ -3,7 +3,6 @@ let selectedPhone = null;
 let currentFilter = 'all';
 
 const providerList = document.getElementById('provider-list');
-const emptyState = document.getElementById('empty-state');
 const providerDetail = document.getElementById('provider-detail');
 const pendingCount = document.getElementById('pending-count');
 const completedCount = document.getElementById('completed-count');
@@ -77,6 +76,16 @@ function formatAgentHelp(value) {
 function renderList() {
   const filtered = providers.filter((item) => currentFilter === 'all' || item.status === currentFilter);
 
+  if (filtered.length && !filtered.some((item) => item.phone === selectedPhone)) {
+    renderDetail(filtered[0]);
+    return;
+  }
+
+  if (!filtered.length) {
+    selectedPhone = null;
+    providerDetail.classList.add('hidden');
+  }
+
   providerList.innerHTML = filtered.length
     ? filtered.map((provider) => `
         <article class="provider-item ${provider.phone === selectedPhone ? 'active' : ''}" data-phone="${provider.phone}">
@@ -143,7 +152,6 @@ function renderHistory(history) {
 
 function renderDetail(provider) {
   selectedPhone = provider.phone;
-  emptyState.classList.add('hidden');
   providerDetail.classList.remove('hidden');
   renderList();
 
