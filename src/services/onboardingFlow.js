@@ -201,10 +201,7 @@ async function sendAgeFinalRejectionButtons(phone) {
 async function sendTermsButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.termsQuestion,
-    buttons: [
-      { id: BUTTON_IDS.TERMS_ACCEPT, title: 'സ്വീകരിക്കുന്നു' },
-      { id: BUTTON_IDS.TERMS_HELP, title: 'സഹായം വേണം' }
-    ]
+    buttons: [{ id: BUTTON_IDS.TERMS_ACCEPT, title: 'സ്വീകരിക്കുന്നു' }]
   });
 }
 
