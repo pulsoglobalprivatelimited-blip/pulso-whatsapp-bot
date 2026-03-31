@@ -527,6 +527,7 @@ async function processIncomingMessage(phone, message) {
       return;
     case STATUS.COMPLETED:
       await sendAndLog(phone, 'text', MESSAGES.completed);
+      await sendOptionalAgentHelpButton(phone);
       return;
     default:
       await sendAndLog(phone, 'text', MESSAGES.notInterested);
