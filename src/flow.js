@@ -4,15 +4,16 @@ const STEPS = {
   3: 'working_model_sent',
   4: 'awaiting_interest_confirmation',
   5: 'awaiting_duty_hour_preference',
-  6: 'awaiting_expected_duties_confirmation',
-  7: 'awaiting_certificate',
-  8: 'awaiting_name',
-  9: 'awaiting_age',
-  10: 'awaiting_sex',
-  11: 'awaiting_district',
-  12: 'certificate_verification_pending',
-  13: 'awaiting_terms_acceptance',
-  14: 'completed'
+  6: 'awaiting_sample_duty_offer_preference',
+  7: 'awaiting_expected_duties_confirmation',
+  8: 'awaiting_certificate',
+  9: 'awaiting_name',
+  10: 'awaiting_age',
+  11: 'awaiting_sex',
+  12: 'awaiting_district',
+  13: 'certificate_verification_pending',
+  14: 'awaiting_terms_acceptance',
+  15: 'completed'
 };
 
 const STATUS = {
@@ -20,6 +21,7 @@ const STATUS = {
   AWAITING_QUALIFICATION: 'awaiting_qualification',
   AWAITING_INTEREST: 'awaiting_interest_confirmation',
   AWAITING_DUTY_HOUR_PREFERENCE: 'awaiting_duty_hour_preference',
+  AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE: 'awaiting_sample_duty_offer_preference',
   AWAITING_EXPECTED_DUTIES_CONFIRMATION: 'awaiting_expected_duties_confirmation',
   AWAITING_CERTIFICATE: 'awaiting_certificate',
   AWAITING_NAME: 'awaiting_name',
@@ -46,6 +48,8 @@ const BUTTON_IDS = {
   INTEREST_NO: 'interest_no',
   DUTY_HOUR_8: 'duty_hour_8',
   DUTY_HOUR_24: 'duty_hour_24',
+  SAMPLE_DUTY_YES: 'sample_duty_yes',
+  SAMPLE_DUTY_NO: 'sample_duty_no',
   EXPECTED_DUTIES_YES: 'expected_duties_yes',
   EXPECTED_DUTIES_NO: 'expected_duties_no',
   AGE_RETRY_ENTRY: 'age_retry_entry',
@@ -112,6 +116,14 @@ const MESSAGES = {
     'താങ്കൾക്ക് ഏത് duty hour ആണ് preference?',
   dutyHourPreferenceRetry:
     'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും ഒരു duty hour preference തിരഞ്ഞെടുക്കുക.',
+  sampleDutyOfferQuestion:
+    'ഒരു sample duty offer എങ്ങനെയിരിക്കും എന്ന് കാണണോ?',
+  sampleDutyOfferRetry:
+    'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും ഒരു മറുപടി തിരഞ്ഞെടുക്കുക.',
+  sampleDutyOffer24Hour:
+    `Elderly female Patient (71 yrs)\nCondition: Supportive care\n\n🟡 Care Level: Assisted care (with walker support)\n\n🕘 Duty: 24-hour care\n\n📅 Duration: 1 month (continuous) – from 21 Jan\n\n📍 Location: Vennala (nearby)\n\n🩺 Care Needed (Supportive &\n Assisted):\n\n•⁠  ⁠Washroom support\n•⁠  ⁠Bed making\n•⁠  ⁠Assistance while feeding\n•⁠  ⁠Helping with medicines\n•⁠  ⁠Assistance in lifting & walking using walker\n•⁠  ⁠Assistance during physiotherapy exercises\n(Supportive home care – not hospital duty)\n💰 Earnings:\n\n₹ 1200 per day × 30 days\n👉 ₹ 36000 total\n\n🛡 Safety & Support\n✔ Family verified\n✔ Payment guaranteed\n✔ Support available during duty`,
+  sampleDutyOffer8Hour:
+    `👤 Patient:\nfemale – 65 yrs\n\n🩺 Condition:\nPost-surgery recovery (Hip surgery)\n\n👨‍⚕ Care Type:\nHome supportive care (not complex)\n\n🕘 Duty:\n8 hours (8:00 AM – 4:00 PM)\n\n⏳ Duration:\nFrom 14 Feb – continuous\n\n📍 Location:\nThevakkal, Ernakulam\n\n🩺 Care Needed:\n•⁠  ⁠Walking / mobility support\n•⁠  ⁠Assistance with daily activities\n•⁠  ⁠Washroom support (if needed)\n•⁠  ⁠Helping with medicines\n•⁠  ⁠General supervision & comfort care\n\n💰 Earnings:\n₹900 per day\n👉 Stable regular day-duty\n\n🛡 Pulso Support:\n✔ Family verified\n✔ Payment guaranteed\n✔ Full support during duty`,
   expectedDutiesIntroOne:
     `Caregiver duty-യിൽ സാധാരണയായി വരാവുന്ന ചില ജോലികൾ താഴെ കൊടുക്കുന്നു.\nPatient-ന്റെ condition അനുസരിച്ച് duty responsibilities മാറാം.\n\n*Personal care*\n- Bathing / sponge bath (non-clinical)\n- Dressing\n- Oral care, grooming, hair combing\n\n*Toileting & continence support*\n- Diaper change\n- Bedpan / urinal support\n- Cleaning and maintaining hygiene`,
   expectedDutiesIntroTwo:

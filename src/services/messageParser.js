@@ -107,6 +107,18 @@ function parseDutyHourPreference(message) {
   return null;
 }
 
+function parseSampleDutyOfferPreference(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.SAMPLE_DUTY_YES) return 'show';
+  if (replyId === BUTTON_IDS.SAMPLE_DUTY_NO) return 'skip';
+
+  const normalized = normalizeText(getMessageText(message));
+  if (['കാണാം', 'show', 'yes', 'ok', 'okay'].includes(normalized)) return 'show';
+  if (['വേണ്ട', 'skip', 'no'].includes(normalized)) return 'skip';
+
+  return null;
+}
+
 function parseExpectedDutiesResponse(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId === BUTTON_IDS.EXPECTED_DUTIES_YES) return 'accept';
@@ -207,6 +219,7 @@ module.exports = {
   isInterested,
   isNotInterested,
   parseDutyHourPreference,
+  parseSampleDutyOfferPreference,
   parseExpectedDutiesResponse,
   parseAge,
   parseAgeCorrectionAction,
