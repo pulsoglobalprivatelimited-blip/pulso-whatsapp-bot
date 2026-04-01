@@ -14,6 +14,7 @@ const {
   parseReviewerAction,
   notifyCertificateUploaded,
   notifyCertificateReviewed,
+  notifyOnboardingCompleted,
   promptRejectNoteEntry,
   requestRejectNoteOrConfirmation,
   requestRejectReason,
@@ -545,6 +546,8 @@ async function handleTerms(phone, message) {
     await sendAndLog(phone, 'text', MESSAGES.termsAccepted);
     await sendAndLog(phone, 'text', MESSAGES.postOnboardingSupport);
     await sendOptionalAgentHelpButton(phone);
+    const provider = await getProvider(phone);
+    await notifyOnboardingCompleted(provider);
     return;
   }
 

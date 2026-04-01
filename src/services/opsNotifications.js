@@ -189,6 +189,15 @@ async function notifyCertificateReviewed(provider, decision, reviewedBy, notes) 
   return sendOpsNotification(body);
 }
 
+async function notifyOnboardingCompleted(provider) {
+  const body = joinLines([
+    'Pulso alert: onboarding completed',
+    ...formatProviderSummary(provider)
+  ]);
+
+  return sendOpsNotification(body);
+}
+
 async function requestReviewConfirmation(provider, action) {
   const to = normalizePhone(config.ownerNotificationPhone);
   if (!to || !provider || !provider.phone) {
@@ -415,6 +424,7 @@ module.exports = {
   isReviewerPhone,
   notifyCertificateUploaded,
   notifyCertificateReviewed,
+  notifyOnboardingCompleted,
   parseReviewerAction,
   promptRejectNoteEntry,
   requestRejectNoteOrConfirmation,
