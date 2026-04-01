@@ -35,6 +35,7 @@ const {
   parseAgeCorrectionAction,
   parseSex,
   parseDistrict,
+  parseDistrictRegion,
   parseTermsAcceptance,
   parseCertificateCollectionAction,
   classifyDocument
@@ -247,14 +248,60 @@ async function sendQualificationList(phone) {
 }
 
 async function sendDistrictList(phone) {
+  const provider = await getProvider(phone);
+  const region = provider && provider.districtRegion;
+  const rows = DISTRICTS.filter((district) => {
+    if (region === 'south') {
+      return [
+        'Thiruvananthapuram',
+        'Kollam',
+        'Pathanamthitta',
+        'Alappuzha',
+        'Kottayam',
+        'Idukki'
+      ].includes(district.value);
+    }
+
+    if (region === 'central') {
+      return [
+        'Ernakulam',
+        'Thrissur',
+        'Palakkad',
+        'Malappuram'
+      ].includes(district.value);
+    }
+
+    if (region === 'north') {
+      return [
+        'Kozhikode',
+        'Wayanad',
+        'Kannur',
+        'Kasaragod'
+      ].includes(district.value);
+    }
+
+    return false;
+  });
+
   await sendAndLog(phone, 'list', {
-    body: MESSAGES.districtQuestion,
+    body: MESSAGES.districtListQuestion,
     buttonText: 'ജില്ല തിരഞ്ഞെടുക്കുക',
     sections: [
       {
         title: 'District options',
-        rows: DISTRICTS
+        rows
       }
+    ]
+  });
+}
+
+async function sendDistrictRegionButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.districtRegionQuestion,
+    buttons: [
+      { id: BUTTON_IDS.DISTRICT_REGION_SOUTH, title: 'തെക്ക്' },
+      { id: BUTTON_IDS.DISTRICT_REGION_CENTRAL, title: 'മധ്യം' },
+      { id: BUTTON_IDS.DISTRICT_REGION_NORTH, title: 'വടക്ക്' }
     ]
   });
 }
@@ -663,13 +710,27 @@ async function handleSex(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_DISTRICT, 12, { sex });
-  await sendDistrictList(phone);
+  await updateStatus(phone, STATUS.AWAITING_DISTRICT, 12, { sex, districtRegion: null });
+  await sendDistrictRegionButtons(phone);
 }
 
 async function handleDistrict(phone, message) {
+  const provider = await getProvider(phone);
+  const region = parseDistrictRegion(message);
+  if (region) {
+    await updateProvider(phone, { districtRegion: region });
+    await sendDistrictList(phone);
+    return;
+  }
+
   const district = parseDistrict(message);
   if (!district) {
+    if (!provider || !provider.districtRegion) {
+      await sendAndLog(phone, 'text', MESSAGES.districtRegionRetry);
+      await sendDistrictRegionButtons(phone);
+      return;
+    }
+
     await sendAndLog(phone, 'text', MESSAGES.districtRetry);
     await sendDistrictList(phone);
     return;
@@ -677,6 +738,7 @@ async function handleDistrict(phone, message) {
 
   await updateStatus(phone, STATUS.VERIFICATION_PENDING, 13, {
     district,
+    districtRegion: null,
     verification: {
       status: 'pending',
       notes: '',
@@ -684,9 +746,9 @@ async function handleDistrict(phone, message) {
       reviewedBy: null
     }
   });
-  const provider = await getProvider(phone);
-  const attachments = provider && provider.documents ? provider.documents.certificateAttachments || [] : [];
-  await notifyCertificateUploaded(provider, attachments);
+  const updatedProvider = await getProvider(phone);
+  const attachments = updatedProvider && updatedProvider.documents ? updatedProvider.documents.certificateAttachments || [] : [];
+  await notifyCertificateUploaded(updatedProvider, attachments);
   await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
   await sendAndLog(phone, 'text', MESSAGES.verificationPending);
 }

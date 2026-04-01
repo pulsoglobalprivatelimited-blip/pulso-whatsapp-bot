@@ -190,6 +190,19 @@ function parseCertificateCollectionAction(message) {
   return null;
 }
 
+function parseDistrictRegion(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.DISTRICT_REGION_SOUTH) return 'south';
+  if (replyId === BUTTON_IDS.DISTRICT_REGION_CENTRAL) return 'central';
+  if (replyId === BUTTON_IDS.DISTRICT_REGION_NORTH) return 'north';
+
+  const normalized = normalizeText(getMessageText(message));
+  if (['south', 'തെക്ക്'].includes(normalized)) return 'south';
+  if (['central', 'മധ്യം'].includes(normalized)) return 'central';
+  if (['north', 'വടക്ക്'].includes(normalized)) return 'north';
+  return null;
+}
+
 function parseDistrict(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId) {
@@ -236,6 +249,7 @@ module.exports = {
   parseAgeCorrectionAction,
   parseSex,
   parseDistrict,
+  parseDistrictRegion,
   parseTermsAcceptance,
   parseCertificateCollectionAction,
   classifyDocument
