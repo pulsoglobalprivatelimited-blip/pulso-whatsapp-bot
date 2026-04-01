@@ -1,5 +1,5 @@
 const config = require('../config');
-const { MESSAGES, STATUS, BUTTON_IDS, QUALIFICATIONS } = require('../flow');
+const { MESSAGES, STATUS, BUTTON_IDS, QUALIFICATIONS, DISTRICTS } = require('../flow');
 const { sendText, sendButtons, sendList } = require('./metaClient');
 const {
   getOrCreateProvider,
@@ -241,6 +241,19 @@ async function sendQualificationList(phone) {
       {
         title: 'Qualification options',
         rows: QUALIFICATIONS
+      }
+    ]
+  });
+}
+
+async function sendDistrictList(phone) {
+  await sendAndLog(phone, 'list', {
+    body: MESSAGES.districtQuestion,
+    buttonText: 'ജില്ല തിരഞ്ഞെടുക്കുക',
+    sections: [
+      {
+        title: 'District options',
+        rows: DISTRICTS
       }
     ]
   });
@@ -651,13 +664,14 @@ async function handleSex(phone, message) {
   }
 
   await updateStatus(phone, STATUS.AWAITING_DISTRICT, 12, { sex });
-  await sendAndLog(phone, 'text', MESSAGES.districtQuestion);
+  await sendDistrictList(phone);
 }
 
 async function handleDistrict(phone, message) {
   const district = parseDistrict(message);
   if (!district) {
     await sendAndLog(phone, 'text', MESSAGES.districtRetry);
+    await sendDistrictList(phone);
     return;
   }
 
