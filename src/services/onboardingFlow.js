@@ -76,6 +76,16 @@ function updateStatus(phone, status, currentStep, extra = {}) {
   return updateProvider(phone, { status, currentStep, ...extra });
 }
 
+function hasCompletedProfile(provider) {
+  return Boolean(
+    provider &&
+      provider.fullName &&
+      provider.age &&
+      provider.sex &&
+      provider.district
+  );
+}
+
 function buildReviewerWorkflowPatch(existing, patch) {
   return {
     verification: {
@@ -383,6 +393,28 @@ async function handleCertificate(phone, message) {
   }
 
   await addCertificate(phone, message);
+  const provider = await getProvider(phone);
+
+  if (hasCompletedProfile(provider)) {
+    await updateStatus(phone, STATUS.VERIFICATION_PENDING, 13, {
+      verification: {
+        status: 'pending',
+        notes: '',
+        reviewedAt: null,
+        reviewedBy: null
+      }
+    });
+    const refreshedProvider = await getProvider(phone);
+    const attachments = refreshedProvider && refreshedProvider.documents
+      ? refreshedProvider.documents.certificateAttachments || []
+      : [];
+    const latestAttachment = attachments[attachments.length - 1] || null;
+    await notifyCertificateUploaded(refreshedProvider, latestAttachment);
+    await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
+    await sendAndLog(phone, 'text', MESSAGES.verificationPending);
+    return;
+  }
+
   await updateStatus(phone, STATUS.AWAITING_NAME, 9);
   await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
 }
