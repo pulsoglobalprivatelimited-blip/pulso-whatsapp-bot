@@ -8,6 +8,8 @@ const {
   getProvider
 } = require('./providerService');
 const {
+  isReviewerPhone,
+  parseReviewerAction,
   notifyCertificateUploaded,
   notifyCertificateReviewed
 } = require('./opsNotifications');
@@ -368,7 +370,9 @@ async function handleCertificate(phone, message) {
 
   await addCertificate(phone, message);
   const provider = await getProvider(phone);
-  await notifyCertificateUploaded(provider);
+  const attachments = provider && provider.documents ? provider.documents.certificateAttachments || [] : [];
+  const latestAttachment = attachments[attachments.length - 1] || null;
+  await notifyCertificateUploaded(provider, latestAttachment);
   await updateStatus(phone, STATUS.AWAITING_NAME, 9);
   await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
 }
@@ -526,7 +530,45 @@ async function handleCompleted(phone, message) {
   await sendOptionalAgentHelpButton(phone);
 }
 
+async function handleReviewerMessage(phone, message) {
+  const reviewAction = parseReviewerAction(message);
+  if (!reviewAction || !reviewAction.phone) {
+    await sendText(phone, 'Review command not recognized. Use the Approve/Reject button or send APPROVE <provider-phone>.');
+    return;
+  }
+
+  const provider = await getProvider(reviewAction.phone);
+  if (!provider) {
+    await sendText(phone, `Provider not found for ${reviewAction.phone}.`);
+    return;
+  }
+
+  if (reviewAction.action === 'approve') {
+    if (provider.verification && provider.verification.status === 'verified') {
+      await sendText(phone, `Certificate is already approved for ${reviewAction.phone}.`);
+      return;
+    }
+
+    await approveCertificate(reviewAction.phone, phone, 'Approved from reviewer WhatsApp');
+    await sendText(phone, `Approved certificate for ${reviewAction.phone}.`);
+    return;
+  }
+
+  if (provider.verification && provider.verification.status === 'rejected') {
+    await sendText(phone, `Certificate is already rejected for ${reviewAction.phone}.`);
+    return;
+  }
+
+  await rejectCertificate(reviewAction.phone, phone, 'Rejected from reviewer WhatsApp');
+  await sendText(phone, `Rejected certificate for ${reviewAction.phone}.`);
+}
+
 async function processIncomingMessage(phone, message) {
+  if (isReviewerPhone(phone)) {
+    await handleReviewerMessage(phone, message);
+    return;
+  }
+
   if (isPreOnboardedPhone(phone)) {
     return;
   }

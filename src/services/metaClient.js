@@ -31,6 +31,31 @@ async function sendText(to, body) {
   });
 }
 
+async function sendImageById(to, mediaId, caption) {
+  return sendRequest({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'image',
+    image: {
+      id: mediaId,
+      caption
+    }
+  });
+}
+
+async function sendDocumentById(to, mediaId, filename, caption) {
+  return sendRequest({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'document',
+    document: {
+      id: mediaId,
+      filename,
+      caption
+    }
+  });
+}
+
 async function sendButtons(to, body, buttons) {
   return sendRequest({
     messaging_product: 'whatsapp',
@@ -133,6 +158,8 @@ async function downloadMediaFile(url) {
 
 module.exports = {
   sendText,
+  sendImageById,
+  sendDocumentById,
   sendButtons,
   sendList,
   sendAudio,
