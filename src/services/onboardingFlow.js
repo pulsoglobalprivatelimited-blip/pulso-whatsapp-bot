@@ -7,6 +7,10 @@ const {
   appendHistory,
   getProvider
 } = require('./providerService');
+const {
+  notifyCertificateUploaded,
+  notifyCertificateReviewed
+} = require('./opsNotifications');
 const { isPreOnboardedPhone } = require('./preOnboardedService');
 const {
   getMessageText,
@@ -363,6 +367,8 @@ async function handleCertificate(phone, message) {
   }
 
   await addCertificate(phone, message);
+  const provider = await getProvider(phone);
+  await notifyCertificateUploaded(provider);
   await updateStatus(phone, STATUS.AWAITING_NAME, 9);
   await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
 }
@@ -615,7 +621,14 @@ async function approveCertificate(phone, reviewedBy, notes) {
   await sendAndLog(phone, 'text', MESSAGES.certificateApproved, reviewedBy || config.adminDefaultReviewer);
   await sendAndLog(phone, 'text', MESSAGES.termsIntro, reviewedBy || config.adminDefaultReviewer);
   await sendTermsButtons(phone);
-  return getProvider(phone);
+  const updatedProvider = await getProvider(phone);
+  await notifyCertificateReviewed(
+    updatedProvider,
+    'approved',
+    reviewedBy || config.adminDefaultReviewer,
+    notes || ''
+  );
+  return updatedProvider;
 }
 
 async function rejectCertificate(phone, reviewedBy, notes) {
@@ -641,7 +654,14 @@ async function rejectCertificate(phone, reviewedBy, notes) {
   });
   await appendHistory(phone, { type: 'system', event: 'certificate_rejected' });
   await sendAndLog(phone, 'text', MESSAGES.certificateRejected, reviewedBy || config.adminDefaultReviewer);
-  return getProvider(phone);
+  const updatedProvider = await getProvider(phone);
+  await notifyCertificateReviewed(
+    updatedProvider,
+    'rejected',
+    reviewedBy || config.adminDefaultReviewer,
+    notes || ''
+  );
+  return updatedProvider;
 }
 
 module.exports = {
