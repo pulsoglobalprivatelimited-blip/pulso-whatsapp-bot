@@ -42,6 +42,7 @@ const {
 const { archiveIncomingMedia } = require('./mediaStorage');
 
 const pendingCertificatePromptTimers = new Map();
+const pendingCertificateRetryTimers = new Map();
 const CERTIFICATE_PROMPT_DEBOUNCE_MS = 1500;
 
 function buildAgentHelpMessage() {
@@ -146,6 +147,41 @@ function scheduleCertificateCollectionPrompt(phone) {
   }, CERTIFICATE_PROMPT_DEBOUNCE_MS);
 
   pendingCertificatePromptTimers.set(phone, timer);
+}
+
+function clearPendingCertificateRetry(phone) {
+  const timer = pendingCertificateRetryTimers.get(phone);
+  if (timer) {
+    clearTimeout(timer);
+    pendingCertificateRetryTimers.delete(phone);
+  }
+}
+
+function scheduleCertificateRetry(phone) {
+  clearPendingCertificateRetry(phone);
+  const timer = setTimeout(async () => {
+    pendingCertificateRetryTimers.delete(phone);
+    try {
+      const provider = await getProvider(phone);
+      if (!provider || provider.status !== STATUS.AWAITING_CERTIFICATE) {
+        return;
+      }
+
+      const attachments = provider.documents && provider.documents.certificateAttachments
+        ? provider.documents.certificateAttachments
+        : [];
+
+      if (attachments.length) {
+        return;
+      }
+
+      await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
+    } catch (error) {
+      console.error('[CERTIFICATE_RETRY_SCHEDULE_ERROR]', error);
+    }
+  }, CERTIFICATE_PROMPT_DEBOUNCE_MS);
+
+  pendingCertificateRetryTimers.set(phone, timer);
 }
 
 function buildReviewerWorkflowPatch(existing, patch) {
@@ -448,6 +484,7 @@ async function addCertificate(phone, message) {
 
 async function finalizeCertificateCollection(phone) {
   clearPendingCertificatePrompt(phone);
+  clearPendingCertificateRetry(phone);
   const provider = await getProvider(phone);
 
   if (hasCompletedProfile(provider)) {
@@ -480,8 +517,9 @@ async function handleCertificate(phone, message) {
 
   if (collectionAction === 'continue') {
     clearPendingCertificatePrompt(phone);
+    clearPendingCertificateRetry(phone);
     if (!attachments.length) {
-      await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
+      scheduleCertificateRetry(phone);
       return;
     }
 
@@ -491,8 +529,9 @@ async function handleCertificate(phone, message) {
 
   if (collectionAction === 'add_more') {
     clearPendingCertificatePrompt(phone);
+    clearPendingCertificateRetry(phone);
     if (!attachments.length) {
-      await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
+      scheduleCertificateRetry(phone);
       return;
     }
 
@@ -505,9 +544,11 @@ async function handleCertificate(phone, message) {
     if (attachments.length) {
       return;
     }
-    await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
+    scheduleCertificateRetry(phone);
     return;
   }
+
+  clearPendingCertificateRetry(phone);
 
   if (attachments.length >= 4) {
     await sendAndLog(phone, 'text', MESSAGES.certificateUploadLimitReached);
