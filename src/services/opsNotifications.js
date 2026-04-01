@@ -34,12 +34,19 @@ function formatStatus(value) {
   return String(value || '').replace(/_/g, ' ');
 }
 
+function formatDutyHourPreference(value) {
+  if (value === '8_hour') return '8 hour';
+  if (value === '24_hour') return '24 hour';
+  return value || '-';
+}
+
 function formatProviderSummary(provider) {
   return [
     `Name: ${(provider && provider.fullName) || '-'}`,
     `Phone: ${(provider && provider.phone) || '-'}`,
     `Age: ${(provider && provider.age) || '-'}`,
     `Sex: ${(provider && provider.sex) || '-'}`,
+    `Preferred duty hour: ${formatDutyHourPreference(provider && provider.dutyHourPreference)}`,
     `Qualification: ${provider && provider.qualification ? provider.qualification.toUpperCase() : '-'}`,
     `District: ${(provider && provider.district) || '-'}`,
     `Status: ${provider && provider.status ? formatStatus(provider.status) : '-'}`
