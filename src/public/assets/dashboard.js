@@ -139,15 +139,117 @@ function renderAttachments(id, attachments) {
   }).join('');
 }
 
+function formatHistoryTime(value) {
+  return new Date(value).toLocaleString();
+}
+
+function getInboundMessageContent(payload) {
+  if (!payload) return '';
+
+  if (payload.text && payload.text.body) {
+    return payload.text.body;
+  }
+
+  if (payload.button && payload.button.text) {
+    return payload.button.text;
+  }
+
+  if (payload.interactive && payload.interactive.button_reply) {
+    return payload.interactive.button_reply.title || 'Button reply';
+  }
+
+  if (payload.interactive && payload.interactive.list_reply) {
+    return payload.interactive.list_reply.title || 'List reply';
+  }
+
+  if (payload.document) {
+    return payload.document.filename || 'Document uploaded';
+  }
+
+  if (payload.image) {
+    return payload.image.caption || 'Image uploaded';
+  }
+
+  return '';
+}
+
+function getOutboundMessageContent(payload) {
+  if (!payload) return '';
+  if (payload.kind === 'text') {
+    return payload.body || '';
+  }
+  if (payload.body && payload.body.body) {
+    return payload.body.body;
+  }
+  return '';
+}
+
+function describeSystemEvent(entry) {
+  const event = entry.event || '';
+
+  if (event === 'provider_created') return 'Conversation started';
+  if (event === 'verification_queue_created') return 'Certificate sent for manual verification';
+  if (event === 'certificate_verified') return 'Certificate approved by reviewer';
+  if (event === 'certificate_rejected') return 'Certificate rejected by reviewer';
+
+  return formatStatus(event || 'system update');
+}
+
+function renderHistoryBubble(entry) {
+  if (entry.type === 'inbound_message') {
+    const payload = entry.payload || {};
+    const content = getInboundMessageContent(payload);
+    const messageType = payload.type || 'message';
+    const isUpload = ['image', 'document'].includes(messageType);
+
+    return `
+      <article class="history-item history-item-inbound">
+        <div class="history-meta">
+          <span class="history-sender">Provider</span>
+          <time>${formatHistoryTime(entry.at)}</time>
+        </div>
+        <div class="history-bubble">
+          ${isUpload ? `<div class="history-label">${messageType === 'document' ? 'Document' : 'Image'}</div>` : ''}
+          <div class="history-text">${escapeHtml(content || 'Message received')}</div>
+        </div>
+      </article>
+    `;
+  }
+
+  if (entry.type === 'outbound_message') {
+    const payload = entry.payload || {};
+    const content = getOutboundMessageContent(payload);
+    const kind = payload.kind || 'message';
+
+    return `
+      <article class="history-item history-item-outbound">
+        <div class="history-meta">
+          <span class="history-sender">${escapeHtml(entry.sender || 'Bot')}</span>
+          <time>${formatHistoryTime(entry.at)}</time>
+        </div>
+        <div class="history-bubble">
+          ${kind !== 'text' ? `<div class="history-label">${escapeHtml(kind)}</div>` : ''}
+          <div class="history-text">${escapeHtml(content || 'Message sent')}</div>
+        </div>
+      </article>
+    `;
+  }
+
+  return `
+    <article class="history-item history-item-system">
+      <div class="history-meta">
+        <span class="history-sender">System</span>
+        <time>${formatHistoryTime(entry.at)}</time>
+      </div>
+      <div class="history-system-note">${escapeHtml(describeSystemEvent(entry))}</div>
+    </article>
+  `;
+}
+
 function renderHistory(history) {
   const target = document.getElementById('history-list');
-  target.innerHTML = (history || []).slice().reverse().map((entry) => `
-    <div class="history-item">
-      <time>${new Date(entry.at).toLocaleString()}</time>
-      <strong>${entry.type.replace(/_/g, ' ')}</strong>
-      <div>${escapeHtml(JSON.stringify(entry.payload || entry.event || '', null, 2))}</div>
-    </div>
-  `).join('');
+  const items = (history || []).map((entry) => renderHistoryBubble(entry)).join('');
+  target.innerHTML = items || '<p class="attachment-empty">No chat history yet.</p>';
 }
 
 function renderDetail(provider) {
