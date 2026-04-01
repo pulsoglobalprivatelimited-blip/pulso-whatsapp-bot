@@ -383,10 +383,6 @@ async function handleCertificate(phone, message) {
   }
 
   await addCertificate(phone, message);
-  const provider = await getProvider(phone);
-  const attachments = provider && provider.documents ? provider.documents.certificateAttachments || [] : [];
-  const latestAttachment = attachments[attachments.length - 1] || null;
-  await notifyCertificateUploaded(provider, latestAttachment);
   await updateStatus(phone, STATUS.AWAITING_NAME, 9);
   await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
 }
@@ -490,6 +486,10 @@ async function handleDistrict(phone, message) {
       reviewedBy: null
     }
   });
+  const provider = await getProvider(phone);
+  const attachments = provider && provider.documents ? provider.documents.certificateAttachments || [] : [];
+  const latestAttachment = attachments[attachments.length - 1] || null;
+  await notifyCertificateUploaded(provider, latestAttachment);
   await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
   await sendAndLog(phone, 'text', MESSAGES.verificationPending);
 }
