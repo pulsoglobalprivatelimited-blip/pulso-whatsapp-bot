@@ -44,7 +44,7 @@ const { archiveIncomingMedia } = require('./mediaStorage');
 
 const pendingCertificatePromptTimers = new Map();
 const pendingCertificateRetryTimers = new Map();
-const CERTIFICATE_PROMPT_DEBOUNCE_MS = 1500;
+const CERTIFICATE_PROMPT_DEBOUNCE_MS = 5000;
 
 function buildAgentHelpMessage() {
   const supportNumber = String(config.agentHelpWhatsappNumber || '').replace(/\D/g, '');
