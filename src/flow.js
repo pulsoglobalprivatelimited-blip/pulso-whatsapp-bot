@@ -139,9 +139,13 @@ const MESSAGES = {
   notInterested:
     'ശരി. പിന്നീട് താൽപര്യമുണ്ടെങ്കിൽ വീണ്ടും message ചെയ്യാം.',
   certificateRequest:
-    'ദയവായി ആദ്യം താങ്കളുടെ certificate photo അല്ലെങ്കിൽ PDF upload ചെയ്യുക.',
+    'ദയവായി താങ്കളുടെ certificate photo അല്ലെങ്കിൽ PDF upload ചെയ്യുക. പരമാവധി 4 image/PDF വരെ അയക്കാം. upload പൂർത്തിയായാൽ DONE എന്ന് type ചെയ്യുക.',
   certificateRetry:
-    'ദയവായി certificate image അല്ലെങ്കിൽ document ആയി upload ചെയ്യുക.',
+    'ദയവായി certificate image അല്ലെങ്കിൽ document ആയി upload ചെയ്യുക. പരമാവധി 4 image/PDF വരെ അയക്കാം. upload പൂർത്തിയായാൽ DONE എന്ന് type ചെയ്യുക.',
+  certificateUploadProgress:
+    'Certificate ലഭിച്ചു. കൂടുതൽ image/PDF ഉണ്ടെങ്കിൽ ഇനി അയക്കാം. upload പൂർത്തിയായാൽ DONE എന്ന് type ചെയ്യുക.',
+  certificateUploadLimitReached:
+    'പരമാവധി 4 certificate files ലഭിച്ചു. ഇനി അടുത്ത step-ലേക്ക് പോകുന്നു.',
   nameQuestion:
     'താങ്കളുടെ പൂർണ്ണ പേര് അയയ്ക്കുക.',
   ageQuestion:

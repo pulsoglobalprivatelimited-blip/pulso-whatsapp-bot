@@ -99,6 +99,11 @@ function hasCompletedProfile(provider) {
   );
 }
 
+function isDoneMessage(message) {
+  const text = getMessageText(message).trim().toLowerCase();
+  return ['done', 'complete', 'completed', 'finish', 'finished'].includes(text);
+}
+
 function buildReviewerWorkflowPatch(existing, patch) {
   return {
     verification: {
@@ -397,15 +402,7 @@ async function addCertificate(phone, message) {
   });
 }
 
-async function handleCertificate(phone, message) {
-  const kind = classifyDocument(message);
-  if (kind !== 'certificate') {
-    const provider = (await getProvider(phone)) || (await getOrCreateProvider(phone));
-    await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
-    return;
-  }
-
-  await addCertificate(phone, message);
+async function finalizeCertificateCollection(phone) {
   const provider = await getProvider(phone);
 
   if (hasCompletedProfile(provider)) {
@@ -430,6 +427,47 @@ async function handleCertificate(phone, message) {
 
   await updateStatus(phone, STATUS.AWAITING_NAME, 9);
   await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
+}
+
+async function handleCertificate(phone, message) {
+  const provider = (await getProvider(phone)) || (await getOrCreateProvider(phone));
+  const attachments = provider && provider.documents ? provider.documents.certificateAttachments || [] : [];
+
+  if (isDoneMessage(message)) {
+    if (!attachments.length) {
+      await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
+      return;
+    }
+
+    await finalizeCertificateCollection(phone);
+    return;
+  }
+
+  const kind = classifyDocument(message);
+  if (kind !== 'certificate') {
+    await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
+    return;
+  }
+
+  if (attachments.length >= 4) {
+    await sendAndLog(phone, 'text', MESSAGES.certificateUploadLimitReached);
+    await finalizeCertificateCollection(phone);
+    return;
+  }
+
+  await addCertificate(phone, message);
+  const refreshedProvider = await getProvider(phone);
+  const refreshedAttachments = refreshedProvider && refreshedProvider.documents
+    ? refreshedProvider.documents.certificateAttachments || []
+    : [];
+
+  if (refreshedAttachments.length >= 4) {
+    await sendAndLog(phone, 'text', MESSAGES.certificateUploadLimitReached);
+    await finalizeCertificateCollection(phone);
+    return;
+  }
+
+  await sendAndLog(phone, 'text', MESSAGES.certificateUploadProgress);
 }
 
 async function handleName(phone, message) {
