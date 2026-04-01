@@ -100,8 +100,8 @@ function hasCompletedProfile(provider) {
   );
 }
 
-async function sendCertificateCollectionButtons(phone) {
-  await sendAndLog(phone, 'buttons', {
+async function sendCertificateCollectionButtons(phone, provider) {
+  await sendIfChanged(phone, provider, 'buttons', {
     body: MESSAGES.certificateUploadProgress,
     buttons: [
       { id: BUTTON_IDS.CERTIFICATE_ADD_MORE, title: 'കൂടുതൽ അയക്കാം' },
@@ -483,7 +483,7 @@ async function handleCertificate(phone, message) {
     return;
   }
 
-  await sendCertificateCollectionButtons(phone);
+  await sendCertificateCollectionButtons(phone, refreshedProvider);
 }
 
 async function handleName(phone, message) {
