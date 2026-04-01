@@ -9,8 +9,12 @@ const {
 const REVIEW_ACTIONS = {
   APPROVE: 'review_approve_',
   REJECT: 'review_reject_',
-  CONFIRM_APPROVE: 'review_confirm_approve_',
+  REASON_REUPLOAD: 'review_reason_reupload_',
+  REASON_NAME_MISMATCH: 'review_reason_name_mismatch_',
+  REASON_OTHER: 'review_reason_other_',
+  ADD_NOTE: 'review_add_note_',
   CONFIRM_REJECT: 'review_confirm_reject_',
+  CONFIRM_APPROVE: 'review_confirm_approve_',
   CANCEL: 'review_cancel_'
 };
 
@@ -32,11 +36,13 @@ function formatStatus(value) {
 
 function formatProviderSummary(provider) {
   return [
-    provider && provider.fullName ? `Name: ${provider.fullName}` : null,
-    provider && provider.phone ? `Phone: ${provider.phone}` : null,
-    provider && provider.qualification ? `Qualification: ${provider.qualification.toUpperCase()}` : null,
-    provider && provider.district ? `District: ${provider.district}` : null,
-    provider && provider.status ? `Status: ${formatStatus(provider.status)}` : null
+    `Name: ${(provider && provider.fullName) || '-'}`,
+    `Phone: ${(provider && provider.phone) || '-'}`,
+    `Age: ${(provider && provider.age) || '-'}`,
+    `Sex: ${(provider && provider.sex) || '-'}`,
+    `Qualification: ${provider && provider.qualification ? provider.qualification.toUpperCase() : '-'}`,
+    `District: ${(provider && provider.district) || '-'}`,
+    `Status: ${provider && provider.status ? formatStatus(provider.status) : '-'}`
   ];
 }
 
@@ -57,6 +63,22 @@ function buildConfirmationButtons(providerPhone, action) {
 
   return [
     { id: `${REVIEW_ACTIONS.CONFIRM_REJECT}${providerPhone}`, title: 'Confirm reject' },
+    { id: `${REVIEW_ACTIONS.CANCEL}${providerPhone}`, title: 'Cancel' }
+  ];
+}
+
+function buildRejectReasonButtons(providerPhone) {
+  return [
+    { id: `${REVIEW_ACTIONS.REASON_REUPLOAD}${providerPhone}`, title: 'Request reupload' },
+    { id: `${REVIEW_ACTIONS.REASON_NAME_MISMATCH}${providerPhone}`, title: 'Name mismatch' },
+    { id: `${REVIEW_ACTIONS.REASON_OTHER}${providerPhone}`, title: 'Other reason' }
+  ];
+}
+
+function buildRejectFollowupButtons(providerPhone) {
+  return [
+    { id: `${REVIEW_ACTIONS.ADD_NOTE}${providerPhone}`, title: 'Add note' },
+    { id: `${REVIEW_ACTIONS.CONFIRM_REJECT}${providerPhone}`, title: 'Reject now' },
     { id: `${REVIEW_ACTIONS.CANCEL}${providerPhone}`, title: 'Cancel' }
   ];
 }
@@ -200,6 +222,104 @@ async function requestReviewConfirmation(provider, action) {
   }
 }
 
+async function requestRejectReason(provider) {
+  const to = normalizePhone(config.ownerNotificationPhone);
+  if (!to || !provider || !provider.phone) {
+    return null;
+  }
+
+  const body = joinLines([
+    'Choose the reject reason.',
+    ...formatProviderSummary(provider)
+  ]);
+
+  try {
+    return await sendButtons(to, body, buildRejectReasonButtons(provider.phone));
+  } catch (error) {
+    console.error(
+      '[OPS_REJECT_REASON_ERROR]',
+      JSON.stringify(
+        {
+          to,
+          providerPhone: provider.phone,
+          message: error.message,
+          response: error.response ? error.response.data : null
+        },
+        null,
+        2
+      )
+    );
+    return null;
+  }
+}
+
+async function requestRejectNoteOrConfirmation(provider, reasonLabel, note) {
+  const to = normalizePhone(config.ownerNotificationPhone);
+  if (!to || !provider || !provider.phone) {
+    return null;
+  }
+
+  const body = joinLines([
+    `Reject reason: ${reasonLabel}`,
+    note ? `Current note: ${note}` : 'You can add a note or reject now.',
+    ...formatProviderSummary(provider)
+  ]);
+
+  try {
+    return await sendButtons(to, body, buildRejectFollowupButtons(provider.phone));
+  } catch (error) {
+    console.error(
+      '[OPS_REJECT_NOTE_OR_CONFIRM_ERROR]',
+      JSON.stringify(
+        {
+          to,
+          providerPhone: provider.phone,
+          message: error.message,
+          response: error.response ? error.response.data : null
+        },
+        null,
+        2
+      )
+    );
+    return null;
+  }
+}
+
+async function promptRejectNoteEntry(provider, reasonLabel) {
+  const body = joinLines([
+    `Send the note for rejection now.`,
+    `Reason: ${reasonLabel}`,
+    'Your next WhatsApp text will be saved as the rejection note.'
+  ]);
+
+  return sendOpsNotification(body);
+}
+
+function getRejectReasonDetails(action) {
+  if (action === 'reason_reupload') {
+    return {
+      code: 'request_reupload',
+      label: 'Request reupload'
+    };
+  }
+
+  if (action === 'reason_name_mismatch') {
+    return {
+      code: 'name_mismatch',
+      label: 'Name mismatch'
+    };
+  }
+
+  if (action === 'reason_other') {
+    return {
+      code: 'other_reason',
+      label: 'Other reason'
+    };
+  }
+
+  return null;
+}
+
 function parseReviewerAction(message) {
   const replyId =
     message &&
@@ -218,6 +338,34 @@ function parseReviewerAction(message) {
     return {
       action: 'reject',
       phone: replyId.slice(REVIEW_ACTIONS.REJECT.length)
+    };
+  }
+
+  if (replyId && replyId.startsWith(REVIEW_ACTIONS.REASON_REUPLOAD)) {
+    return {
+      action: 'reason_reupload',
+      phone: replyId.slice(REVIEW_ACTIONS.REASON_REUPLOAD.length)
+    };
+  }
+
+  if (replyId && replyId.startsWith(REVIEW_ACTIONS.REASON_NAME_MISMATCH)) {
+    return {
+      action: 'reason_name_mismatch',
+      phone: replyId.slice(REVIEW_ACTIONS.REASON_NAME_MISMATCH.length)
+    };
+  }
+
+  if (replyId && replyId.startsWith(REVIEW_ACTIONS.REASON_OTHER)) {
+    return {
+      action: 'reason_other',
+      phone: replyId.slice(REVIEW_ACTIONS.REASON_OTHER.length)
+    };
+  }
+
+  if (replyId && replyId.startsWith(REVIEW_ACTIONS.ADD_NOTE)) {
+    return {
+      action: 'add_note',
+      phone: replyId.slice(REVIEW_ACTIONS.ADD_NOTE.length)
     };
   }
 
@@ -249,20 +397,27 @@ function parseReviewerAction(message) {
   ).trim();
 
   const match = text.match(/^(approve|reject)\s+(\+?\d+)/i);
-  if (!match) {
-    return null;
+  if (match) {
+    return {
+      action: match[1].toLowerCase(),
+      phone: normalizePhone(match[2])
+    };
   }
 
   return {
-    action: match[1].toLowerCase(),
-    phone: normalizePhone(match[2])
+    action: 'note_text',
+    note: text
   };
 }
 
 module.exports = {
+  getRejectReasonDetails,
   isReviewerPhone,
   notifyCertificateUploaded,
   notifyCertificateReviewed,
   parseReviewerAction,
+  promptRejectNoteEntry,
+  requestRejectNoteOrConfirmation,
+  requestRejectReason,
   requestReviewConfirmation
 };

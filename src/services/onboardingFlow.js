@@ -5,13 +5,18 @@ const {
   getOrCreateProvider,
   updateProvider,
   appendHistory,
-  getProvider
+  getProvider,
+  listProviders
 } = require('./providerService');
 const {
+  getRejectReasonDetails,
   isReviewerPhone,
   parseReviewerAction,
   notifyCertificateUploaded,
   notifyCertificateReviewed,
+  promptRejectNoteEntry,
+  requestRejectNoteOrConfirmation,
+  requestRejectReason,
   requestReviewConfirmation
 } = require('./opsNotifications');
 const { isPreOnboardedPhone } = require('./preOnboardedService');
@@ -69,6 +74,14 @@ async function sendAndLog(phone, kind, body, sender) {
 
 function updateStatus(phone, status, currentStep, extra = {}) {
   return updateProvider(phone, { status, currentStep, ...extra });
+}
+
+function buildReviewerWorkflowPatch(existing, patch) {
+  return {
+    verification: {
+      reviewerWorkflow: patch === null ? null : { ...(existing || {}), ...patch }
+    }
+  };
 }
 
 async function recordInbound(phone, message) {
@@ -531,48 +544,157 @@ async function handleCompleted(phone, message) {
   await sendOptionalAgentHelpButton(phone);
 }
 
+async function clearReviewerWorkflow(phone) {
+  const provider = await getProvider(phone);
+  await updateProvider(phone, buildReviewerWorkflowPatch(provider && provider.verification && provider.verification.reviewerWorkflow, null));
+}
+
 async function handleReviewerMessage(phone, message) {
   const reviewAction = parseReviewerAction(message);
-  if (!reviewAction || !reviewAction.phone) {
+  const providerPhone = reviewAction && reviewAction.phone ? reviewAction.phone : null;
+
+  if (reviewAction && reviewAction.action === 'note_text') {
+    const candidates = await listProviders();
+    const pendingProvider = candidates.find(
+      (candidate) =>
+        candidate &&
+        candidate.verification &&
+        candidate.verification.reviewerWorkflow &&
+        candidate.verification.reviewerWorkflow.reviewerPhone === phone &&
+        candidate.verification.reviewerWorkflow.stage === 'awaiting_note'
+    );
+
+    if (!pendingProvider) {
+      await sendText(phone, 'No rejection note is pending right now.');
+      return;
+    }
+
+    const note = (reviewAction.note || '').trim();
+    if (!note) {
+      await sendText(phone, 'Please send a non-empty note.');
+      return;
+    }
+
+    await updateProvider(
+      pendingProvider.phone,
+      buildReviewerWorkflowPatch(pendingProvider.verification.reviewerWorkflow, {
+        note,
+        stage: 'awaiting_reject_confirmation'
+      })
+    );
+    const refreshedProvider = await getProvider(pendingProvider.phone);
+    await requestRejectNoteOrConfirmation(
+      refreshedProvider,
+      refreshedProvider.verification.reviewerWorkflow.reasonLabel,
+      note
+    );
+    return;
+  }
+
+  if (!reviewAction || !providerPhone) {
     await sendText(phone, 'Review command not recognized. Use the Approve/Reject button or send APPROVE <provider-phone>.');
     return;
   }
 
-  const provider = await getProvider(reviewAction.phone);
+  const provider = await getProvider(providerPhone);
   if (!provider) {
-    await sendText(phone, `Provider not found for ${reviewAction.phone}.`);
+    await sendText(phone, `Provider not found for ${providerPhone}.`);
     return;
   }
 
   if (reviewAction.action === 'cancel') {
-    await sendText(phone, `Cancelled review action for ${reviewAction.phone}.`);
+    await clearReviewerWorkflow(providerPhone);
+    await sendText(phone, `Cancelled review action for ${providerPhone}.`);
     return;
   }
 
-  if (reviewAction.action === 'approve' || reviewAction.action === 'reject') {
+  if (reviewAction.action === 'approve') {
     await requestReviewConfirmation(provider, reviewAction.action);
+    return;
+  }
+
+  if (reviewAction.action === 'reject') {
+    await updateProvider(
+      providerPhone,
+      buildReviewerWorkflowPatch(provider.verification && provider.verification.reviewerWorkflow, {
+        reviewerPhone: phone,
+        stage: 'choose_reject_reason',
+        reason: null,
+        reasonLabel: null,
+        note: ''
+      })
+    );
+    const refreshedProvider = await getProvider(providerPhone);
+    await requestRejectReason(refreshedProvider);
     return;
   }
 
   if (reviewAction.action === 'confirm_approve') {
     if (provider.verification && provider.verification.status === 'verified') {
-      await sendText(phone, `Certificate is already approved for ${reviewAction.phone}.`);
+      await sendText(phone, `Certificate is already approved for ${providerPhone}.`);
       return;
     }
 
-    await approveCertificate(reviewAction.phone, phone, 'Approved from reviewer WhatsApp');
-    await sendText(phone, `Approved certificate for ${reviewAction.phone}.`);
+    await clearReviewerWorkflow(providerPhone);
+    await approveCertificate(providerPhone, phone, 'Approved from reviewer WhatsApp');
+    await sendText(phone, `Approved certificate for ${providerPhone}.`);
     return;
   }
 
-  if (provider.verification && provider.verification.status === 'rejected') {
-    await sendText(phone, `Certificate is already rejected for ${reviewAction.phone}.`);
+  if (provider.verification && provider.verification.status === 'rejected' && reviewAction.action === 'confirm_reject') {
+    await sendText(phone, `Certificate is already rejected for ${providerPhone}.`);
+    return;
+  }
+
+  const rejectReason = getRejectReasonDetails(reviewAction.action);
+  if (rejectReason) {
+    await updateProvider(
+      providerPhone,
+      buildReviewerWorkflowPatch(provider.verification && provider.verification.reviewerWorkflow, {
+        reviewerPhone: phone,
+        stage: 'awaiting_note_or_reject',
+        reason: rejectReason.code,
+        reasonLabel: rejectReason.label,
+        note: ''
+      })
+    );
+    const refreshedProvider = await getProvider(providerPhone);
+    await requestRejectNoteOrConfirmation(refreshedProvider, rejectReason.label, '');
+    return;
+  }
+
+  if (reviewAction.action === 'add_note') {
+    const workflow = provider.verification && provider.verification.reviewerWorkflow;
+    if (!workflow || !workflow.reason) {
+      await sendText(phone, 'Choose a reject reason first.');
+      return;
+    }
+
+    await updateProvider(
+      providerPhone,
+      buildReviewerWorkflowPatch(workflow, {
+        stage: 'awaiting_note'
+      })
+    );
+    await promptRejectNoteEntry(provider, workflow.reasonLabel);
     return;
   }
 
   if (reviewAction.action === 'confirm_reject') {
-    await rejectCertificate(reviewAction.phone, phone, 'Rejected from reviewer WhatsApp');
-    await sendText(phone, `Rejected certificate for ${reviewAction.phone}.`);
+    const workflow = provider.verification && provider.verification.reviewerWorkflow;
+    const noteParts = [];
+    if (workflow && workflow.reasonLabel) {
+      noteParts.push(`Reason: ${workflow.reasonLabel}`);
+    }
+    if (workflow && workflow.note) {
+      noteParts.push(workflow.note);
+    }
+    const finalNote = noteParts.join(' | ') || 'Rejected from reviewer WhatsApp';
+    const requestReupload = workflow && workflow.reason === 'request_reupload';
+
+    await clearReviewerWorkflow(providerPhone);
+    await rejectCertificate(providerPhone, phone, finalNote, { requestReupload });
+    await sendText(phone, `Rejected certificate for ${providerPhone}.`);
     return;
   }
 
@@ -689,7 +811,7 @@ async function approveCertificate(phone, reviewedBy, notes) {
   return updatedProvider;
 }
 
-async function rejectCertificate(phone, reviewedBy, notes) {
+async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
   const provider = await getProvider(phone);
   if (!provider) {
     throw new Error('Provider not found');
@@ -711,7 +833,10 @@ async function rejectCertificate(phone, reviewedBy, notes) {
     }
   });
   await appendHistory(phone, { type: 'system', event: 'certificate_rejected' });
-  await sendAndLog(phone, 'text', MESSAGES.certificateRejected, reviewedBy || config.adminDefaultReviewer);
+  const rejectMessage = options.requestReupload
+    ? MESSAGES.certificateReuploadRequested
+    : MESSAGES.certificateRejected;
+  await sendAndLog(phone, 'text', rejectMessage, reviewedBy || config.adminDefaultReviewer);
   const updatedProvider = await getProvider(phone);
   await notifyCertificateReviewed(
     updatedProvider,
