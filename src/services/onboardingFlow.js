@@ -35,7 +35,7 @@ const {
   parseAgeCorrectionAction,
   parseSex,
   parseDistrict,
-  parseDistrictRegion,
+  parseDistrictListAction,
   parseTermsAcceptance,
   parseCertificateCollectionAction,
   classifyDocument
@@ -249,59 +249,33 @@ async function sendQualificationList(phone) {
 
 async function sendDistrictList(phone) {
   const provider = await getProvider(phone);
-  const region = provider && provider.districtRegion;
-  const rows = DISTRICTS.filter((district) => {
-    if (region === 'south') {
-      return [
-        'Thiruvananthapuram',
-        'Kollam',
-        'Pathanamthitta',
-        'Alappuzha',
-        'Kottayam',
-        'Idukki'
-      ].includes(district.value);
-    }
-
-    if (region === 'central') {
-      return [
-        'Ernakulam',
-        'Thrissur',
-        'Palakkad',
-        'Malappuram'
-      ].includes(district.value);
-    }
-
-    if (region === 'north') {
-      return [
-        'Kozhikode',
-        'Wayanad',
-        'Kannur',
-        'Kasaragod'
-      ].includes(district.value);
-    }
-
-    return false;
-  });
+  const page = provider && provider.districtListPage === 2 ? 2 : 1;
+  const rows = page === 1
+    ? [
+        ...DISTRICTS.slice(0, 7),
+        {
+          id: BUTTON_IDS.DISTRICT_PAGE_NEXT,
+          title: 'അടുത്ത list',
+          description: 'ജില്ല ഇവിടെ ഇല്ലെങ്കിൽ തുറക്കുക'
+        }
+      ]
+    : [
+        ...DISTRICTS.slice(7, 14),
+        {
+          id: BUTTON_IDS.DISTRICT_PAGE_PREVIOUS,
+          title: 'ആദ്യ list',
+          description: 'മുൻപത്തെ ജില്ലകൾ കാണുക'
+        }
+      ];
 
   await sendAndLog(phone, 'list', {
-    body: MESSAGES.districtListQuestion,
+    body: page === 1 ? MESSAGES.districtQuestion : MESSAGES.districtListQuestion,
     buttonText: 'ജില്ല തിരഞ്ഞെടുക്കുക',
     sections: [
       {
         title: 'District options',
         rows
       }
-    ]
-  });
-}
-
-async function sendDistrictRegionButtons(phone) {
-  await sendAndLog(phone, 'buttons', {
-    body: MESSAGES.districtRegionQuestion,
-    buttons: [
-      { id: BUTTON_IDS.DISTRICT_REGION_SOUTH, title: 'തെക്ക്' },
-      { id: BUTTON_IDS.DISTRICT_REGION_CENTRAL, title: 'മധ്യം' },
-      { id: BUTTON_IDS.DISTRICT_REGION_NORTH, title: 'വടക്ക്' }
     ]
   });
 }
@@ -710,27 +684,26 @@ async function handleSex(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_DISTRICT, 12, { sex, districtRegion: null });
-  await sendDistrictRegionButtons(phone);
+  await updateStatus(phone, STATUS.AWAITING_DISTRICT, 12, { sex, districtListPage: 1 });
+  await sendDistrictList(phone);
 }
 
 async function handleDistrict(phone, message) {
   const provider = await getProvider(phone);
-  const region = parseDistrictRegion(message);
-  if (region) {
-    await updateProvider(phone, { districtRegion: region });
+  const listAction = parseDistrictListAction(message);
+  if (listAction === 'next') {
+    await updateProvider(phone, { districtListPage: 2 });
+    await sendDistrictList(phone);
+    return;
+  }
+  if (listAction === 'previous') {
+    await updateProvider(phone, { districtListPage: 1 });
     await sendDistrictList(phone);
     return;
   }
 
   const district = parseDistrict(message);
   if (!district) {
-    if (!provider || !provider.districtRegion) {
-      await sendAndLog(phone, 'text', MESSAGES.districtRegionRetry);
-      await sendDistrictRegionButtons(phone);
-      return;
-    }
-
     await sendAndLog(phone, 'text', MESSAGES.districtRetry);
     await sendDistrictList(phone);
     return;
@@ -738,7 +711,7 @@ async function handleDistrict(phone, message) {
 
   await updateStatus(phone, STATUS.VERIFICATION_PENDING, 13, {
     district,
-    districtRegion: null,
+    districtListPage: 1,
     verification: {
       status: 'pending',
       notes: '',

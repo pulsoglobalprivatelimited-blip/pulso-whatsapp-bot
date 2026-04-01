@@ -20,7 +20,7 @@ async function createProvider(phone) {
     age: null,
     sex: null,
     district: null,
-    districtRegion: null,
+    districtListPage: 1,
     termsAccepted: false,
     documents: {
       cvReceived: false,

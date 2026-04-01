@@ -58,9 +58,8 @@ const BUTTON_IDS = {
   AGE_CLOSE_AFTER_REJECTION: 'age_close_after_rejection',
   CERTIFICATE_ADD_MORE: 'certificate_add_more',
   CERTIFICATE_CONTINUE: 'certificate_continue',
-  DISTRICT_REGION_SOUTH: 'district_region_south',
-  DISTRICT_REGION_CENTRAL: 'district_region_central',
-  DISTRICT_REGION_NORTH: 'district_region_north',
+  DISTRICT_PAGE_NEXT: 'district_page_next',
+  DISTRICT_PAGE_PREVIOUS: 'district_page_previous',
   CONNECT_PULSO_AGENT: 'connect_pulso_agent',
   SEX_MALE: 'sex_male',
   SEX_FEMALE: 'sex_female',
@@ -172,13 +171,9 @@ const MESSAGES = {
   sexRetry:
     'ദയവായി Male അല്ലെങ്കിൽ Female തിരഞ്ഞെടുക്കുക.',
   districtQuestion:
-    'ആദ്യം താങ്കളുടെ ജില്ലയുടെ ഭാഗം തിരഞ്ഞെടുക്കുക.',
+    'താഴെയുള്ള ആദ്യ list-ിൽ നിന്ന് താങ്കളുടെ ജില്ല തിരഞ്ഞെടുക്കുക. ജില്ല കാണുന്നില്ലെങ്കിൽ അടുത്ത list തുറക്കുക.',
   districtRetry:
-    'ദയവായി ആദ്യം ഭാഗം തിരഞ്ഞെടുക്കുക, ശേഷം ജില്ല list-ിൽ നിന്ന് തിരഞ്ഞെടുക്കുക.',
-  districtRegionQuestion:
-    'താങ്കളുടെ ജില്ല ഏത് ഭാഗത്താണ്?',
-  districtRegionRetry:
-    'ദയവായി താഴെയുള്ള options-ിൽ നിന്ന് ഒരു ഭാഗം തിരഞ്ഞെടുക്കുക.',
+    'ദയവായി താഴെയുള്ള list-ിൽ നിന്ന് താങ്കളുടെ ജില്ല തിരഞ്ഞെടുക്കുക.',
   districtListQuestion:
     'താഴെയുള്ള list-ിൽ നിന്ന് താങ്കളുടെ ജില്ല തിരഞ്ഞെടുക്കുക.',
   verificationPending:
