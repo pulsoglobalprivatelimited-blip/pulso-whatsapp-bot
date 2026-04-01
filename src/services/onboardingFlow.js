@@ -36,6 +36,7 @@ const {
   parseSex,
   parseDistrict,
   parseTermsAcceptance,
+  parseCertificateCollectionAction,
   classifyDocument
 } = require('./messageParser');
 const { archiveIncomingMedia } = require('./mediaStorage');
@@ -99,9 +100,14 @@ function hasCompletedProfile(provider) {
   );
 }
 
-function isDoneMessage(message) {
-  const text = getMessageText(message).trim().toLowerCase();
-  return ['done', 'complete', 'completed', 'finish', 'finished'].includes(text);
+async function sendCertificateCollectionButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.certificateUploadProgress,
+    buttons: [
+      { id: BUTTON_IDS.CERTIFICATE_ADD_MORE, title: 'കൂടുതൽ അയക്കാം' },
+      { id: BUTTON_IDS.CERTIFICATE_CONTINUE, title: 'തുടരാം' }
+    ]
+  });
 }
 
 function buildReviewerWorkflowPatch(existing, patch) {
@@ -432,14 +438,25 @@ async function finalizeCertificateCollection(phone) {
 async function handleCertificate(phone, message) {
   const provider = (await getProvider(phone)) || (await getOrCreateProvider(phone));
   const attachments = provider && provider.documents ? provider.documents.certificateAttachments || [] : [];
+  const collectionAction = parseCertificateCollectionAction(message);
 
-  if (isDoneMessage(message)) {
+  if (collectionAction === 'continue') {
     if (!attachments.length) {
       await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
       return;
     }
 
     await finalizeCertificateCollection(phone);
+    return;
+  }
+
+  if (collectionAction === 'add_more') {
+    if (!attachments.length) {
+      await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
+      return;
+    }
+
+    await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
     return;
   }
 
@@ -467,7 +484,7 @@ async function handleCertificate(phone, message) {
     return;
   }
 
-  await sendAndLog(phone, 'text', MESSAGES.certificateUploadProgress);
+  await sendCertificateCollectionButtons(phone);
 }
 
 async function handleName(phone, message) {

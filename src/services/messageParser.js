@@ -179,6 +179,17 @@ function parseTermsAcceptance(message) {
   return null;
 }
 
+function parseCertificateCollectionAction(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.CERTIFICATE_ADD_MORE) return 'add_more';
+  if (replyId === BUTTON_IDS.CERTIFICATE_CONTINUE) return 'continue';
+
+  const normalized = normalizeText(getMessageText(message));
+  if (['കൂടുതൽ അയക്കാം', 'add more', 'more'].includes(normalized)) return 'add_more';
+  if (['തുടരാം', 'continue', 'next'].includes(normalized)) return 'continue';
+  return null;
+}
+
 function parseDistrict(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId) {
@@ -226,5 +237,6 @@ module.exports = {
   parseSex,
   parseDistrict,
   parseTermsAcceptance,
+  parseCertificateCollectionAction,
   classifyDocument
 };
