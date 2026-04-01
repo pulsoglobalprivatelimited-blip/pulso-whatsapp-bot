@@ -41,6 +41,9 @@ const {
 } = require('./messageParser');
 const { archiveIncomingMedia } = require('./mediaStorage');
 
+const pendingCertificatePromptTimers = new Map();
+const CERTIFICATE_PROMPT_DEBOUNCE_MS = 1500;
+
 function buildAgentHelpMessage() {
   const supportNumber = String(config.agentHelpWhatsappNumber || '').replace(/\D/g, '');
   const helpLink = supportNumber ? `https://wa.me/${supportNumber}` : '';
@@ -108,6 +111,41 @@ async function sendCertificateCollectionButtons(phone, provider) {
       { id: BUTTON_IDS.CERTIFICATE_CONTINUE, title: 'തുടരാം' }
     ]
   });
+}
+
+function clearPendingCertificatePrompt(phone) {
+  const timer = pendingCertificatePromptTimers.get(phone);
+  if (timer) {
+    clearTimeout(timer);
+    pendingCertificatePromptTimers.delete(phone);
+  }
+}
+
+function scheduleCertificateCollectionPrompt(phone) {
+  clearPendingCertificatePrompt(phone);
+  const timer = setTimeout(async () => {
+    pendingCertificatePromptTimers.delete(phone);
+    try {
+      const provider = await getProvider(phone);
+      if (!provider || provider.status !== STATUS.AWAITING_CERTIFICATE) {
+        return;
+      }
+
+      const attachments = provider.documents && provider.documents.certificateAttachments
+        ? provider.documents.certificateAttachments
+        : [];
+
+      if (!attachments.length || attachments.length >= 4) {
+        return;
+      }
+
+      await sendCertificateCollectionButtons(phone, provider);
+    } catch (error) {
+      console.error('[CERTIFICATE_PROMPT_SCHEDULE_ERROR]', error);
+    }
+  }, CERTIFICATE_PROMPT_DEBOUNCE_MS);
+
+  pendingCertificatePromptTimers.set(phone, timer);
 }
 
 function buildReviewerWorkflowPatch(existing, patch) {
@@ -409,6 +447,7 @@ async function addCertificate(phone, message) {
 }
 
 async function finalizeCertificateCollection(phone) {
+  clearPendingCertificatePrompt(phone);
   const provider = await getProvider(phone);
 
   if (hasCompletedProfile(provider)) {
@@ -440,6 +479,7 @@ async function handleCertificate(phone, message) {
   const collectionAction = parseCertificateCollectionAction(message);
 
   if (collectionAction === 'continue') {
+    clearPendingCertificatePrompt(phone);
     if (!attachments.length) {
       await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
       return;
@@ -450,6 +490,7 @@ async function handleCertificate(phone, message) {
   }
 
   if (collectionAction === 'add_more') {
+    clearPendingCertificatePrompt(phone);
     if (!attachments.length) {
       await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
       return;
@@ -461,6 +502,9 @@ async function handleCertificate(phone, message) {
 
   const kind = classifyDocument(message);
   if (kind !== 'certificate') {
+    if (attachments.length) {
+      return;
+    }
     await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
     return;
   }
@@ -483,7 +527,7 @@ async function handleCertificate(phone, message) {
     return;
   }
 
-  await sendCertificateCollectionButtons(phone, refreshedProvider);
+  scheduleCertificateCollectionPrompt(phone);
 }
 
 async function handleName(phone, message) {
