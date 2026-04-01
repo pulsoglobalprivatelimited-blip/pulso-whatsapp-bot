@@ -109,6 +109,32 @@ async function sendOpsNotification(body) {
   }
 }
 
+async function sendNotificationTo(phone, body, logLabel) {
+  const to = normalizePhone(phone);
+  if (!to) {
+    return null;
+  }
+
+  try {
+    return await sendText(to, body);
+  } catch (error) {
+    console.error(
+      `[${logLabel}]`,
+      JSON.stringify(
+        {
+          to,
+          body,
+          message: error.message,
+          response: error.response ? error.response.data : null
+        },
+        null,
+        2
+      )
+    );
+    return null;
+  }
+}
+
 async function sendReviewMedia(provider, attachment) {
   const to = normalizePhone(config.ownerNotificationPhone);
   if (!to || !attachment || !attachment.id) {
@@ -196,6 +222,21 @@ async function notifyOnboardingCompleted(provider) {
   ]);
 
   return sendOpsNotification(body);
+}
+
+async function notifyAgentHelpRequested(provider) {
+  const helpNumber = normalizePhone(config.agentHelpWhatsappNumber);
+  if (!helpNumber) {
+    return null;
+  }
+
+  const body = joinLines([
+    'Pulso alert: provider requested additional help',
+    ...formatProviderSummary(provider),
+    provider && provider.phone ? `Reply to provider: https://wa.me/${provider.phone}` : null
+  ]);
+
+  return sendNotificationTo(helpNumber, body, 'AGENT_HELP_NOTIFICATION_ERROR');
 }
 
 async function requestReviewConfirmation(provider, action) {
@@ -422,6 +463,7 @@ function parseReviewerAction(message) {
 module.exports = {
   getRejectReasonDetails,
   isReviewerPhone,
+  notifyAgentHelpRequested,
   notifyCertificateUploaded,
   notifyCertificateReviewed,
   notifyOnboardingCompleted,

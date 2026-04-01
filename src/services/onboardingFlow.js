@@ -11,6 +11,7 @@ const {
 const {
   getRejectReasonDetails,
   isReviewerPhone,
+  notifyAgentHelpRequested,
   parseReviewerAction,
   notifyCertificateUploaded,
   notifyCertificateReviewed,
@@ -38,6 +39,17 @@ const {
   classifyDocument
 } = require('./messageParser');
 const { archiveIncomingMedia } = require('./mediaStorage');
+
+function buildAgentHelpMessage() {
+  const supportNumber = String(config.agentHelpWhatsappNumber || '').replace(/\D/g, '');
+  const helpLink = supportNumber ? `https://wa.me/${supportNumber}` : '';
+
+  return [
+    'ശരി. കൂടുതൽ സഹായത്തിനായി Pulso support agent-നെ നേരിട്ട് WhatsApp-ൽ ബന്ധപ്പെടാം.',
+    supportNumber ? `Support number: +${supportNumber}` : null,
+    helpLink ? `WhatsApp link: ${helpLink}` : null
+  ].filter(Boolean).join('\n');
+}
 
 async function sendAndLog(phone, kind, body, sender) {
   try {
@@ -534,7 +546,9 @@ async function handleTerms(phone, message) {
       agentHelpRequested: true,
       status: STATUS.AWAITING_PULSO_AGENT
     });
-    await sendAndLog(phone, 'text', MESSAGES.optionalAgentHelpConfirmed);
+    const provider = await getProvider(phone);
+    await sendAndLog(phone, 'text', buildAgentHelpMessage());
+    await notifyAgentHelpRequested(provider);
     return;
   }
 
@@ -571,7 +585,9 @@ async function handleCompleted(phone, message) {
       agentHelpRequested: true,
       status: STATUS.AWAITING_PULSO_AGENT
     });
-    await sendAndLog(phone, 'text', MESSAGES.optionalAgentHelpConfirmed);
+    const provider = await getProvider(phone);
+    await sendAndLog(phone, 'text', buildAgentHelpMessage());
+    await notifyAgentHelpRequested(provider);
     return;
   }
 

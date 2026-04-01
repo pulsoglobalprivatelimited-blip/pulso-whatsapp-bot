@@ -21,6 +21,7 @@ module.exports = {
   sessionSecret: process.env.SESSION_SECRET || 'pulso-session-secret',
   sessionTtlHours: Number(process.env.SESSION_TTL_HOURS || 12),
   ownerNotificationPhone: process.env.OWNER_NOTIFICATION_PHONE || '917736108778',
+  agentHelpWhatsappNumber: process.env.AGENT_HELP_WHATSAPP_NUMBER || '919446600809',
   mediaStorageDir: process.env.MEDIA_STORAGE_DIR || path.join(process.cwd(), 'storage', 'media'),
   dryRun: process.env.WHATSAPP_DRY_RUN !== 'false',
   publicDir: path.join(__dirname, 'public')
