@@ -8,7 +8,10 @@ const {
 
 const REVIEW_ACTIONS = {
   APPROVE: 'review_approve_',
-  REJECT: 'review_reject_'
+  REJECT: 'review_reject_',
+  CONFIRM_APPROVE: 'review_confirm_approve_',
+  CONFIRM_REJECT: 'review_confirm_reject_',
+  CANCEL: 'review_cancel_'
 };
 
 function normalizePhone(value) {
@@ -41,6 +44,20 @@ function buildReviewButtons(providerPhone) {
   return [
     { id: `${REVIEW_ACTIONS.APPROVE}${providerPhone}`, title: 'Approve' },
     { id: `${REVIEW_ACTIONS.REJECT}${providerPhone}`, title: 'Reject' }
+  ];
+}
+
+function buildConfirmationButtons(providerPhone, action) {
+  if (action === 'approve') {
+    return [
+      { id: `${REVIEW_ACTIONS.CONFIRM_APPROVE}${providerPhone}`, title: 'Confirm approve' },
+      { id: `${REVIEW_ACTIONS.CANCEL}${providerPhone}`, title: 'Cancel' }
+    ];
+  }
+
+  return [
+    { id: `${REVIEW_ACTIONS.CONFIRM_REJECT}${providerPhone}`, title: 'Confirm reject' },
+    { id: `${REVIEW_ACTIONS.CANCEL}${providerPhone}`, title: 'Cancel' }
   ];
 }
 
@@ -150,6 +167,39 @@ async function notifyCertificateReviewed(provider, decision, reviewedBy, notes) 
   return sendOpsNotification(body);
 }
 
+async function requestReviewConfirmation(provider, action) {
+  const to = normalizePhone(config.ownerNotificationPhone);
+  if (!to || !provider || !provider.phone) {
+    return null;
+  }
+
+  const actionLabel = action === 'approve' ? 'approve' : 'reject';
+  const body = joinLines([
+    `Please confirm: ${actionLabel} certificate?`,
+    ...formatProviderSummary(provider)
+  ]);
+
+  try {
+    return await sendButtons(to, body, buildConfirmationButtons(provider.phone, action));
+  } catch (error) {
+    console.error(
+      '[OPS_REVIEW_CONFIRMATION_ERROR]',
+      JSON.stringify(
+        {
+          to,
+          providerPhone: provider.phone,
+          action,
+          message: error.message,
+          response: error.response ? error.response.data : null
+        },
+        null,
+        2
+      )
+    );
+    return null;
+  }
+}
+
 function parseReviewerAction(message) {
   const replyId =
     message &&
@@ -168,6 +218,27 @@ function parseReviewerAction(message) {
     return {
       action: 'reject',
       phone: replyId.slice(REVIEW_ACTIONS.REJECT.length)
+    };
+  }
+
+  if (replyId && replyId.startsWith(REVIEW_ACTIONS.CONFIRM_APPROVE)) {
+    return {
+      action: 'confirm_approve',
+      phone: replyId.slice(REVIEW_ACTIONS.CONFIRM_APPROVE.length)
+    };
+  }
+
+  if (replyId && replyId.startsWith(REVIEW_ACTIONS.CONFIRM_REJECT)) {
+    return {
+      action: 'confirm_reject',
+      phone: replyId.slice(REVIEW_ACTIONS.CONFIRM_REJECT.length)
+    };
+  }
+
+  if (replyId && replyId.startsWith(REVIEW_ACTIONS.CANCEL)) {
+    return {
+      action: 'cancel',
+      phone: replyId.slice(REVIEW_ACTIONS.CANCEL.length)
     };
   }
 
@@ -192,5 +263,6 @@ module.exports = {
   isReviewerPhone,
   notifyCertificateUploaded,
   notifyCertificateReviewed,
-  parseReviewerAction
+  parseReviewerAction,
+  requestReviewConfirmation
 };

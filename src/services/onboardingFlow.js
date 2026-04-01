@@ -11,7 +11,8 @@ const {
   isReviewerPhone,
   parseReviewerAction,
   notifyCertificateUploaded,
-  notifyCertificateReviewed
+  notifyCertificateReviewed,
+  requestReviewConfirmation
 } = require('./opsNotifications');
 const { isPreOnboardedPhone } = require('./preOnboardedService');
 const {
@@ -543,7 +544,17 @@ async function handleReviewerMessage(phone, message) {
     return;
   }
 
-  if (reviewAction.action === 'approve') {
+  if (reviewAction.action === 'cancel') {
+    await sendText(phone, `Cancelled review action for ${reviewAction.phone}.`);
+    return;
+  }
+
+  if (reviewAction.action === 'approve' || reviewAction.action === 'reject') {
+    await requestReviewConfirmation(provider, reviewAction.action);
+    return;
+  }
+
+  if (reviewAction.action === 'confirm_approve') {
     if (provider.verification && provider.verification.status === 'verified') {
       await sendText(phone, `Certificate is already approved for ${reviewAction.phone}.`);
       return;
@@ -559,8 +570,13 @@ async function handleReviewerMessage(phone, message) {
     return;
   }
 
-  await rejectCertificate(reviewAction.phone, phone, 'Rejected from reviewer WhatsApp');
-  await sendText(phone, `Rejected certificate for ${reviewAction.phone}.`);
+  if (reviewAction.action === 'confirm_reject') {
+    await rejectCertificate(reviewAction.phone, phone, 'Rejected from reviewer WhatsApp');
+    await sendText(phone, `Rejected certificate for ${reviewAction.phone}.`);
+    return;
+  }
+
+  await sendText(phone, 'Review command not recognized. Use the Approve/Reject button or send APPROVE <provider-phone>.');
 }
 
 async function processIncomingMessage(phone, message) {
