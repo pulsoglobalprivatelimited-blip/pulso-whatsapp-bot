@@ -424,8 +424,7 @@ async function finalizeCertificateCollection(phone) {
     const attachments = refreshedProvider && refreshedProvider.documents
       ? refreshedProvider.documents.certificateAttachments || []
       : [];
-    const latestAttachment = attachments[attachments.length - 1] || null;
-    await notifyCertificateUploaded(refreshedProvider, latestAttachment);
+    await notifyCertificateUploaded(refreshedProvider, attachments);
     await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
     await sendAndLog(phone, 'text', MESSAGES.verificationPending);
     return;
@@ -588,8 +587,7 @@ async function handleDistrict(phone, message) {
   });
   const provider = await getProvider(phone);
   const attachments = provider && provider.documents ? provider.documents.certificateAttachments || [] : [];
-  const latestAttachment = attachments[attachments.length - 1] || null;
-  await notifyCertificateUploaded(provider, latestAttachment);
+  await notifyCertificateUploaded(provider, attachments);
   await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
   await sendAndLog(phone, 'text', MESSAGES.verificationPending);
 }

@@ -135,14 +135,14 @@ async function sendNotificationTo(phone, body, logLabel) {
   }
 }
 
-async function sendReviewMedia(provider, attachment) {
+async function sendReviewMedia(provider, attachment, index, total) {
   const to = normalizePhone(config.ownerNotificationPhone);
   if (!to || !attachment || !attachment.id) {
     return null;
   }
 
   const caption = joinLines([
-    'Provider certificate for review',
+    total > 1 ? `Provider certificate for review (${index}/${total})` : 'Provider certificate for review',
     provider && provider.phone ? `Phone: ${provider.phone}` : null
   ]);
 
@@ -171,7 +171,7 @@ async function sendReviewMedia(provider, attachment) {
   }
 }
 
-async function notifyCertificateUploaded(provider, attachment) {
+async function notifyCertificateUploaded(provider, attachments) {
   const to = normalizePhone(config.ownerNotificationPhone);
   if (!to) {
     return null;
@@ -201,7 +201,12 @@ async function notifyCertificateUploaded(provider, attachment) {
     );
   }
 
-  return sendReviewMedia(provider, attachment);
+  const files = Array.isArray(attachments) ? attachments : attachments ? [attachments] : [];
+  for (let index = 0; index < files.length; index += 1) {
+    await sendReviewMedia(provider, files[index], index + 1, files.length);
+  }
+
+  return null;
 }
 
 async function notifyCertificateReviewed(provider, decision, reviewedBy, notes) {
