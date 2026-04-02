@@ -893,6 +893,7 @@ async function handleReviewerMessage(phone, message) {
         stage: 'awaiting_note_or_reject',
         reason: rejectReason.code,
         reasonLabel: rejectReason.label,
+        rejectMessageKey: rejectReason.rejectMessageKey || null,
         note: ''
       })
     );
@@ -928,10 +929,13 @@ async function handleReviewerMessage(phone, message) {
       noteParts.push(workflow.note);
     }
     const finalNote = noteParts.join(' | ') || 'Rejected from reviewer WhatsApp';
-    const requestReupload = workflow && workflow.reason === 'request_reupload';
+    const requestReupload =
+      workflow &&
+      ['request_reupload', 'cv_instead_of_certificate'].includes(workflow.reason);
+    const rejectMessageKey = workflow && workflow.rejectMessageKey ? workflow.rejectMessageKey : null;
 
     await clearReviewerWorkflow(providerPhone);
-    await rejectCertificate(providerPhone, phone, finalNote, { requestReupload });
+    await rejectCertificate(providerPhone, phone, finalNote, { requestReupload, rejectMessageKey });
     await sendText(phone, `Rejected certificate for ${providerPhone}.`);
     return;
   }
@@ -1071,9 +1075,12 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
     }
   });
   await appendHistory(phone, { type: 'system', event: 'certificate_rejected' });
-  const rejectMessage = options.requestReupload
-    ? MESSAGES.certificateReuploadRequested
-    : MESSAGES.certificateRejected;
+  const rejectMessage =
+    options.rejectMessageKey && MESSAGES[options.rejectMessageKey]
+      ? MESSAGES[options.rejectMessageKey]
+      : options.requestReupload
+        ? MESSAGES.certificateReuploadRequested
+        : MESSAGES.certificateRejected;
   await sendAndLog(phone, 'text', rejectMessage, reviewedBy || config.adminDefaultReviewer);
   const updatedProvider = await getProvider(phone);
   await notifyCertificateReviewed(

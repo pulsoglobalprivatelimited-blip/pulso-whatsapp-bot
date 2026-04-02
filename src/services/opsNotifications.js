@@ -10,6 +10,7 @@ const REVIEW_ACTIONS = {
   APPROVE: 'review_approve_',
   REJECT: 'review_reject_',
   REASON_REUPLOAD: 'review_reason_reupload_',
+  REASON_CV_INSTEAD_OF_CERTIFICATE: 'review_reason_cv_instead_',
   REASON_NAME_MISMATCH: 'review_reason_name_mismatch_',
   REASON_OTHER: 'review_reason_other_',
   ADD_NOTE: 'review_add_note_',
@@ -77,6 +78,7 @@ function buildConfirmationButtons(providerPhone, action) {
 function buildRejectReasonButtons(providerPhone) {
   return [
     { id: `${REVIEW_ACTIONS.REASON_REUPLOAD}${providerPhone}`, title: 'Request reupload' },
+    { id: `${REVIEW_ACTIONS.REASON_CV_INSTEAD_OF_CERTIFICATE}${providerPhone}`, title: 'CV instead' },
     { id: `${REVIEW_ACTIONS.REASON_NAME_MISMATCH}${providerPhone}`, title: 'Name mismatch' },
     { id: `${REVIEW_ACTIONS.REASON_OTHER}${providerPhone}`, title: 'Other reason' }
   ];
@@ -361,21 +363,32 @@ function getRejectReasonDetails(action) {
   if (action === 'reason_reupload') {
     return {
       code: 'request_reupload',
-      label: 'Request reupload'
+      label: 'Request reupload',
+      rejectMessageKey: 'certificateReuploadRequested'
+    };
+  }
+
+  if (action === 'reason_cv_instead_of_certificate') {
+    return {
+      code: 'cv_instead_of_certificate',
+      label: 'CV instead of certificate',
+      rejectMessageKey: 'certificateCvUploaded'
     };
   }
 
   if (action === 'reason_name_mismatch') {
     return {
       code: 'name_mismatch',
-      label: 'Name mismatch'
+      label: 'Name mismatch',
+      rejectMessageKey: 'certificateRejected'
     };
   }
 
   if (action === 'reason_other') {
     return {
       code: 'other_reason',
-      label: 'Other reason'
+      label: 'Other reason',
+      rejectMessageKey: 'certificateRejected'
     };
   }
 
@@ -407,6 +420,13 @@ function parseReviewerAction(message) {
     return {
       action: 'reason_reupload',
       phone: replyId.slice(REVIEW_ACTIONS.REASON_REUPLOAD.length)
+    };
+  }
+
+  if (replyId && replyId.startsWith(REVIEW_ACTIONS.REASON_CV_INSTEAD_OF_CERTIFICATE)) {
+    return {
+      action: 'reason_cv_instead_of_certificate',
+      phone: replyId.slice(REVIEW_ACTIONS.REASON_CV_INSTEAD_OF_CERTIFICATE.length)
     };
   }
 

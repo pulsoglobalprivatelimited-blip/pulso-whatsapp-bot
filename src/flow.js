@@ -184,6 +184,8 @@ const MESSAGES = {
     'ക്ഷമിക്കണം, താങ്കൾ അയച്ച certificate verify ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി വ്യക്തമായ certificate വീണ്ടും upload ചെയ്യുക.',
   certificateReuploadRequested:
     'താങ്കൾ അയച്ച certificate വ്യക്തമായി വായിക്കാൻ കഴിഞ്ഞില്ല. ദയവായി കൂടുതൽ clarity ഉള്ള certificate photo അല്ലെങ്കിൽ PDF വീണ്ടും upload ചെയ്യുക.',
+  certificateCvUploaded:
+    'താങ്കൾ CV ആണ് അയച്ചിരിക്കുന്നത്. Onboarding തുടരാൻ ദയവായി certificate photo അല്ലെങ്കിൽ certificate PDF upload ചെയ്യുക.',
   termsIntro:
     `ഞങ്ങളോടൊപ്പം ചേരുന്നതിന് മുമ്പ് താഴെ നൽകിയിരിക്കുന്ന എല്ലാ നിർദേശങ്ങളും ദയവായി വായിക്കുക.
 
