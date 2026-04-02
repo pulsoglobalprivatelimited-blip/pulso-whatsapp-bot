@@ -258,6 +258,7 @@ function describeSystemEvent(entry) {
   if (event === 'verification_queue_created') return 'Certificate sent for manual verification';
   if (event === 'certificate_verified') return 'Certificate approved by reviewer';
   if (event === 'certificate_rejected') return 'Certificate rejected by reviewer';
+  if (event === 'agent_help_requested') return 'Provider requested additional help';
 
   return formatStatus(event || 'system update');
 }

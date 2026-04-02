@@ -57,6 +57,18 @@ function buildAgentHelpMessage() {
   ].filter(Boolean).join('\n');
 }
 
+async function handleAgentHelpRequest(phone) {
+  await updateProvider(phone, {
+    agentHelpRequested: true,
+    status: STATUS.AWAITING_PULSO_AGENT
+  });
+
+  await appendHistory(phone, { type: 'system', event: 'agent_help_requested' });
+  const provider = await getProvider(phone);
+  await sendAndLog(phone, 'text', buildAgentHelpMessage());
+  await notifyAgentHelpRequested(provider);
+}
+
 async function sendAndLog(phone, kind, body, sender) {
   try {
     if (kind === 'buttons') {
@@ -729,13 +741,7 @@ async function handleDistrict(phone, message) {
 async function handleTerms(phone, message) {
   const action = parseTermsAcceptance(message);
   if (action === 'connect_agent') {
-    await updateProvider(phone, {
-      agentHelpRequested: true,
-      status: STATUS.AWAITING_PULSO_AGENT
-    });
-    const provider = await getProvider(phone);
-    await sendAndLog(phone, 'text', buildAgentHelpMessage());
-    await notifyAgentHelpRequested(provider);
+    await handleAgentHelpRequest(phone);
     return;
   }
 
@@ -768,13 +774,7 @@ async function handleTerms(phone, message) {
 async function handleCompleted(phone, message) {
   const action = parseTermsAcceptance(message);
   if (action === 'connect_agent') {
-    await updateProvider(phone, {
-      agentHelpRequested: true,
-      status: STATUS.AWAITING_PULSO_AGENT
-    });
-    const provider = await getProvider(phone);
-    await sendAndLog(phone, 'text', buildAgentHelpMessage());
-    await notifyAgentHelpRequested(provider);
+    await handleAgentHelpRequest(phone);
     return;
   }
 

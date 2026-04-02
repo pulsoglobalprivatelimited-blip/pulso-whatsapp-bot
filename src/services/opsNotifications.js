@@ -238,17 +238,24 @@ async function notifyOnboardingCompleted(provider) {
 
 async function notifyAgentHelpRequested(provider) {
   const helpNumber = normalizePhone(config.agentHelpWhatsappNumber);
-  if (!helpNumber) {
+  const ownerNumber = normalizePhone(config.ownerNotificationPhone);
+  const recipients = [helpNumber, ownerNumber].filter(Boolean).filter((value, index, list) => list.indexOf(value) === index);
+  if (!recipients.length) {
     return null;
   }
 
   const body = joinLines([
     'Pulso alert: provider requested additional help',
     ...formatProviderSummary(provider),
+    provider && provider.updatedAt ? `Requested at: ${provider.updatedAt}` : null,
     provider && provider.phone ? `Reply to provider: https://wa.me/${provider.phone}` : null
   ]);
 
-  return sendNotificationTo(helpNumber, body, 'AGENT_HELP_NOTIFICATION_ERROR');
+  for (const recipient of recipients) {
+    await sendNotificationTo(recipient, body, 'AGENT_HELP_NOTIFICATION_ERROR');
+  }
+
+  return null;
 }
 
 async function requestReviewConfirmation(provider, action) {
