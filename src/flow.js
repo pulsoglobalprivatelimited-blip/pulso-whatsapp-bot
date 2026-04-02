@@ -143,7 +143,7 @@ const MESSAGES = {
   notInterested:
     'ശരി. പിന്നീട് താൽപര്യമുണ്ടെങ്കിൽ വീണ്ടും message ചെയ്യാം.',
   certificateRequest:
-    'ദയവായി താങ്കളുടെ certificate photo അല്ലെങ്കിൽ PDF upload ചെയ്യുക. പരമാവധി 4 image/PDF വരെ അയക്കാം.',
+    'ദയവായി താങ്കളുടെ certificate upload ചെയ്യുക.',
   certificateRetry:
     'ദയവായി certificate image അല്ലെങ്കിൽ document ആയി upload ചെയ്യുക. പരമാവധി 4 image/PDF വരെ അയക്കാം.',
   certificateUploadProgress:
@@ -186,6 +186,8 @@ const MESSAGES = {
     'താങ്കൾ അയച്ച certificate വ്യക്തമായി വായിക്കാൻ കഴിഞ്ഞില്ല. ദയവായി കൂടുതൽ clarity ഉള്ള certificate photo അല്ലെങ്കിൽ PDF വീണ്ടും upload ചെയ്യുക.',
   certificateCvUploaded:
     'താങ്കൾ CV ആണ് അയച്ചിരിക്കുന്നത്. Onboarding തുടരാൻ ദയവായി certificate photo അല്ലെങ്കിൽ certificate PDF upload ചെയ്യുക.',
+  certificateWrongImageUploaded:
+    'താങ്കൾ certificate അല്ലാത്ത image ആണ് അയച്ചിരിക്കുന്നത്. Onboarding തുടരാൻ ദയവായി താങ്കളുടെ certificate upload ചെയ്യുക.',
   termsIntro:
     `ഞങ്ങളോടൊപ്പം ചേരുന്നതിന് മുമ്പ് താഴെ നൽകിയിരിക്കുന്ന എല്ലാ നിർദേശങ്ങളും ദയവായി വായിക്കുക.
 

@@ -931,7 +931,7 @@ async function handleReviewerMessage(phone, message) {
     const finalNote = noteParts.join(' | ') || 'Rejected from reviewer WhatsApp';
     const requestReupload =
       workflow &&
-      ['request_reupload', 'cv_instead_of_certificate'].includes(workflow.reason);
+      ['request_reupload', 'cv_instead_of_certificate', 'wrong_image_instead_of_certificate'].includes(workflow.reason);
     const rejectMessageKey = workflow && workflow.rejectMessageKey ? workflow.rejectMessageKey : null;
 
     await clearReviewerWorkflow(providerPhone);

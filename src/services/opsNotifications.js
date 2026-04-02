@@ -11,6 +11,7 @@ const REVIEW_ACTIONS = {
   REJECT: 'review_reject_',
   REASON_REUPLOAD: 'review_reason_reupload_',
   REASON_CV_INSTEAD_OF_CERTIFICATE: 'review_reason_cv_instead_',
+  REASON_WRONG_IMAGE: 'review_reason_wrong_image_',
   REASON_OTHER: 'review_reason_other_',
   ADD_NOTE: 'review_add_note_',
   CONFIRM_REJECT: 'review_confirm_reject_',
@@ -78,6 +79,7 @@ function buildRejectReasonButtons(providerPhone) {
   return [
     { id: `${REVIEW_ACTIONS.REASON_REUPLOAD}${providerPhone}`, title: 'Request reupload' },
     { id: `${REVIEW_ACTIONS.REASON_CV_INSTEAD_OF_CERTIFICATE}${providerPhone}`, title: 'CV instead' },
+    { id: `${REVIEW_ACTIONS.REASON_WRONG_IMAGE}${providerPhone}`, title: 'Wrong image' },
     { id: `${REVIEW_ACTIONS.REASON_OTHER}${providerPhone}`, title: 'Other reason' }
   ];
 }
@@ -381,6 +383,14 @@ function getRejectReasonDetails(action) {
     };
   }
 
+  if (action === 'reason_wrong_image') {
+    return {
+      code: 'wrong_image_instead_of_certificate',
+      label: 'Wrong image',
+      rejectMessageKey: 'certificateWrongImageUploaded'
+    };
+  }
+
   if (action === 'reason_other') {
     return {
       code: 'other_reason',
@@ -424,6 +434,13 @@ function parseReviewerAction(message) {
     return {
       action: 'reason_cv_instead_of_certificate',
       phone: replyId.slice(REVIEW_ACTIONS.REASON_CV_INSTEAD_OF_CERTIFICATE.length)
+    };
+  }
+
+  if (replyId && replyId.startsWith(REVIEW_ACTIONS.REASON_WRONG_IMAGE)) {
+    return {
+      action: 'reason_wrong_image',
+      phone: replyId.slice(REVIEW_ACTIONS.REASON_WRONG_IMAGE.length)
     };
   }
 
