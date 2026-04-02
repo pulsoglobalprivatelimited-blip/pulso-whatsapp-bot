@@ -1,11 +1,14 @@
 let providers = [];
 let selectedPhone = null;
 let currentFilter = 'all';
+let currentSearch = '';
 
 const providerList = document.getElementById('provider-list');
 const providerDetail = document.getElementById('provider-detail');
 const pendingCount = document.getElementById('pending-count');
 const completedCount = document.getElementById('completed-count');
+const phoneSearchInput = document.getElementById('phone-search');
+const clearSearchButton = document.getElementById('clear-search-button');
 
 document.getElementById('refresh-button').addEventListener('click', loadProviders);
 document.querySelectorAll('.filter').forEach((button) => {
@@ -15,6 +18,15 @@ document.querySelectorAll('.filter').forEach((button) => {
     currentFilter = button.dataset.filter;
     renderList();
   });
+});
+phoneSearchInput.addEventListener('input', () => {
+  currentSearch = normalizePhone(phoneSearchInput.value);
+  renderList();
+});
+clearSearchButton.addEventListener('click', () => {
+  phoneSearchInput.value = '';
+  currentSearch = '';
+  renderList();
 });
 
 document.getElementById('approve-button').addEventListener('click', () => submitReview('approve-certificate'));
@@ -41,15 +53,21 @@ async function loadProviders() {
   renderList();
 
   if (selectedPhone) {
-    const selected = providers.find((item) => item.phone === selectedPhone);
+    const selected = getVisibleProviders().find((item) => item.phone === selectedPhone) ||
+      providers.find((item) => item.phone === selectedPhone);
     if (selected) {
       renderDetail(selected);
       return;
     }
   }
 
-  if (providers[0]) {
-    renderDetail(providers[0]);
+  const visibleProviders = getVisibleProviders();
+  const exactMatch = currentSearch
+    ? visibleProviders.find((item) => normalizePhone(item.phone) === currentSearch)
+    : null;
+  const initialProvider = exactMatch || visibleProviders[0];
+  if (initialProvider) {
+    renderDetail(initialProvider);
   }
 }
 
@@ -73,11 +91,26 @@ function formatAgentHelp(value) {
   return value ? 'Requested' : 'Not requested';
 }
 
+function normalizePhone(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function getVisibleProviders() {
+  return providers.filter((item) => {
+    const matchesFilter = currentFilter === 'all' || item.status === currentFilter;
+    const matchesSearch = !currentSearch || normalizePhone(item.phone).includes(currentSearch);
+    return matchesFilter && matchesSearch;
+  });
+}
+
 function renderList() {
-  const filtered = providers.filter((item) => currentFilter === 'all' || item.status === currentFilter);
+  const filtered = getVisibleProviders();
 
   if (filtered.length && !filtered.some((item) => item.phone === selectedPhone)) {
-    renderDetail(filtered[0]);
+    const exactMatch = currentSearch
+      ? filtered.find((item) => normalizePhone(item.phone) === currentSearch)
+      : null;
+    renderDetail(exactMatch || filtered[0]);
     return;
   }
 
@@ -110,14 +143,29 @@ function setText(id, value) {
 
 function mediaUrl(storagePath) {
   if (!storagePath) return null;
-  const normalized = storagePath.replace(/^\.?\/*storage\/media\//, '');
-  return `/media/${normalized}`;
+  const normalizedPath = String(storagePath).replaceAll('\\', '/');
+  const pathParts = normalizedPath.split('/').filter(Boolean);
+  if (pathParts.length < 3) {
+    return null;
+  }
+
+  const relativePath = pathParts.slice(-3).join('/');
+  return `/admin/media/${relativePath}`;
+}
+
+function formatAttachmentType(file) {
+  const mimeType = file && file.mimeType ? file.mimeType : '';
+  if (mimeType === 'application/pdf') return 'PDF';
+  if (mimeType.startsWith('image/')) return 'Image';
+  if (file && file.type === 'document') return 'Document';
+  if (file && file.type === 'image') return 'Image';
+  return 'File';
 }
 
 function renderAttachments(id, attachments) {
   const target = document.getElementById(id);
   if (!attachments || !attachments.length) {
-    target.innerHTML = '<p class="attachment-empty">No files available.</p>';
+    target.innerHTML = '<p class="attachment-empty">No certificate files uploaded yet.</p>';
     return;
   }
 
@@ -125,14 +173,33 @@ function renderAttachments(id, attachments) {
     const href = mediaUrl(file.storagePath);
     const name = file.fileName || file.id || 'Attachment';
     const isImage = (file.mimeType || '').startsWith('image/');
+    const uploadTime = file.receivedAt || file.archivedAt || null;
+    const typeLabel = formatAttachmentType(file);
 
     if (!href) {
-      return `<div class="attachment-card"><strong>${escapeHtml(name)}</strong><p>File path unavailable</p></div>`;
+      return `
+        <div class="attachment-card">
+          <strong>${escapeHtml(name)}</strong>
+          <div class="attachment-meta">
+            <span>${escapeHtml(typeLabel)}</span>
+            <span>${escapeHtml(file.archiveStatus || 'Unavailable')}</span>
+          </div>
+          <p>File path unavailable.</p>
+        </div>
+      `;
     }
 
     return `
       <article class="attachment-card">
         <a href="${href}" target="_blank" rel="noreferrer">${escapeHtml(name)}</a>
+        <div class="attachment-meta">
+          <span>${escapeHtml(typeLabel)}</span>
+          <span>${uploadTime ? escapeHtml(formatHistoryTime(uploadTime)) : 'Upload time unavailable'}</span>
+        </div>
+        <div class="attachment-actions">
+          <a class="attachment-action" href="${href}" target="_blank" rel="noreferrer">Open</a>
+          <a class="attachment-action" href="${href}" download>Download</a>
+        </div>
         ${isImage ? `<img src="${href}" alt="${escapeHtml(name)}">` : '<p>Preview unavailable for this file type.</p>'}
       </article>
     `;

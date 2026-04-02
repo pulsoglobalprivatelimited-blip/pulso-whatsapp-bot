@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 const config = require('./config');
 const { processIncomingMessage, approveCertificate, rejectCertificate } = require('./services/onboardingFlow');
@@ -17,7 +18,6 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use('/admin/assets', express.static(path.join(config.publicDir, 'assets')));
-app.use('/media', express.static(config.mediaStorageDir));
 
 const recentlyProcessedMessageIds = new Map();
 const MESSAGE_DEDUPE_TTL_MS = 5 * 60 * 1000;
@@ -55,6 +55,19 @@ function markMessageProcessed(messageId) {
       }
     }
   }
+}
+
+function resolveAdminMediaPath(relativePath) {
+  const mediaRoot = path.resolve(config.mediaStorageDir);
+  const absolutePath = path.resolve(mediaRoot, relativePath || '');
+  const isInsideMediaRoot =
+    absolutePath === mediaRoot || absolutePath.startsWith(`${mediaRoot}${path.sep}`);
+
+  if (!isInsideMediaRoot) {
+    return null;
+  }
+
+  return absolutePath;
 }
 
 app.get('/health', (_req, res) => {
@@ -172,6 +185,15 @@ app.use('/admin', requireAdminAuth);
 
 app.get('/admin', (_req, res) => {
   res.sendFile(path.join(config.publicDir, 'admin', 'index.html'));
+});
+
+app.get('/admin/media/*', (req, res) => {
+  const absolutePath = resolveAdminMediaPath(req.params[0]);
+  if (!absolutePath || !fs.existsSync(absolutePath) || fs.statSync(absolutePath).isDirectory()) {
+    return res.status(404).json({ error: 'File not found' });
+  }
+
+  return res.sendFile(absolutePath);
 });
 
 app.get('/admin/providers', async (_req, res) => {
