@@ -93,7 +93,7 @@ function formatAgentHelp(value) {
 
 function buildProviderIntroMessage(provider) {
   const greetingName = provider && provider.fullName ? ` ${provider.fullName}` : '';
-  return `നമസ്കാരം${greetingName}, ഞാൻ Pulso support team-ിൽ നിന്നാണ് message ചെയ്യുന്നത്. താങ്കൾ കൂടുതൽ സഹായം ആവശ്യപ്പെട്ടതായി കണ്ടു. എങ്ങനെ സഹായിക്കാം?`;
+  return `നമസ്കാരം${greetingName}, ഞാൻ Abdul, Pulso support team-ിൽ നിന്നാണ് message ചെയ്യുന്നത്. താങ്കൾ കൂടുതൽ സഹായം ആവശ്യപ്പെട്ടതായി കണ്ടു. എങ്ങനെ സഹായിക്കാം?`;
 }
 
 function normalizePhone(value) {

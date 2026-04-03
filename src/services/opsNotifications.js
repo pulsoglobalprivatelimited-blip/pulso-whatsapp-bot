@@ -63,7 +63,7 @@ function buildProviderIntroMessage(provider) {
   const name = provider && provider.fullName ? provider.fullName : null;
   return [
     `നമസ്കാരം${name ? ` ${name}` : ''},`,
-    'ഞാൻ Pulso support team-ിൽ നിന്നാണ് message ചെയ്യുന്നത്.',
+    'ഞാൻ Abdul, Pulso support team-ിൽ നിന്നാണ് message ചെയ്യുന്നത്.',
     'താങ്കൾ കൂടുതൽ സഹായം ആവശ്യപ്പെട്ടതായി കണ്ടു.',
     'എങ്ങനെ സഹായിക്കാം?'
   ].join(' ');
