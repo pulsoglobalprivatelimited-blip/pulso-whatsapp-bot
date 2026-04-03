@@ -12,6 +12,8 @@ const detailPanel = document.getElementById('detail-panel');
 const pendingCount = document.getElementById('pending-count');
 const completedCount = document.getElementById('completed-count');
 const newConversationsCount = document.getElementById('new-conversations-count');
+const completed7dCount = document.getElementById('completed-7d-count');
+const completed30dCount = document.getElementById('completed-30d-count');
 const phoneSearchInput = document.getElementById('phone-search');
 const clearSearchButton = document.getElementById('clear-search-button');
 const completedRangeFilters = document.getElementById('completed-range-filters');
@@ -81,6 +83,8 @@ async function loadProviders() {
   pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
   completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
   newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
+  completed7dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 7)).length;
+  completed30dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 30)).length;
   updateCompletedRangeFilterState();
   renderList();
 
@@ -609,6 +613,8 @@ async function submitReview(action) {
     pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
     completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
     newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
+    completed7dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 7)).length;
+    completed30dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 30)).length;
   } catch (error) {
     alert(error.message);
   }
