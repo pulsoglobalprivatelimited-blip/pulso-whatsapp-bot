@@ -217,6 +217,11 @@ h1 {
   font-size: 0.92rem;
 }
 
+.mobile-detail-bar {
+  display: none;
+  margin-bottom: 16px;
+}
+
 .detail.hidden {
   display: none;
 }
@@ -250,6 +255,12 @@ h1 {
 .card {
   padding: 20px;
   margin-bottom: 16px;
+}
+
+.history-card .history-list {
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
 .review-card {
@@ -499,6 +510,18 @@ dd {
     grid-template-columns: 1fr;
   }
 
+  .content.mobile-detail-open .list-panel {
+    display: none;
+  }
+
+  .content.mobile-detail-open .detail-panel {
+    display: block;
+  }
+
+  .content:not(.mobile-detail-open) .detail-panel {
+    display: none;
+  }
+
   .board-header,
   .review-head,
   .detail-header {
@@ -528,6 +551,33 @@ dd {
 
   .review-card {
     position: static;
+  }
+
+  .mobile-detail-bar {
+    display: block;
+  }
+
+  .detail {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .history-card {
+    order: 1;
+  }
+
+  .detail-grid {
+    order: 2;
+  }
+
+  .review-card {
+    order: 3;
+  }
+
+  .history-card .history-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 }
 

@@ -3,15 +3,19 @@ let selectedPhone = null;
 let currentFilter = 'all';
 let currentSearch = '';
 let currentCompletedRange = 'all';
+let mobileDetailOpen = false;
 
 const providerList = document.getElementById('provider-list');
 const providerDetail = document.getElementById('provider-detail');
+const listPanel = document.getElementById('list-panel');
+const detailPanel = document.getElementById('detail-panel');
 const pendingCount = document.getElementById('pending-count');
 const completedCount = document.getElementById('completed-count');
 const newConversationsCount = document.getElementById('new-conversations-count');
 const phoneSearchInput = document.getElementById('phone-search');
 const clearSearchButton = document.getElementById('clear-search-button');
 const completedRangeFilters = document.getElementById('completed-range-filters');
+const backToListButton = document.getElementById('back-to-list-button');
 
 document.getElementById('refresh-button').addEventListener('click', loadProviders);
 document.querySelectorAll('.filter').forEach((button) => {
@@ -45,9 +49,14 @@ clearSearchButton.addEventListener('click', () => {
   currentSearch = '';
   renderList();
 });
+backToListButton.addEventListener('click', () => {
+  mobileDetailOpen = false;
+  updateMobileDetailState();
+});
 
 document.getElementById('approve-button').addEventListener('click', () => submitReview('approve-certificate'));
 document.getElementById('reject-button').addEventListener('click', () => submitReview('reject-certificate'));
+window.addEventListener('resize', updateMobileDetailState);
 
 async function fetchJson(url, options) {
   const response = await fetch(url, options);
@@ -92,6 +101,22 @@ async function loadProviders() {
 
 function formatStatus(status) {
   return status.replace(/_/g, ' ');
+}
+
+function isMobileViewport() {
+  return window.matchMedia('(max-width: 960px), (hover: none) and (pointer: coarse)').matches;
+}
+
+function updateMobileDetailState() {
+  const content = document.querySelector('.content');
+  if (!content) {
+    return;
+  }
+
+  const shouldShowDetail = isMobileViewport() && mobileDetailOpen && !providerDetail.classList.contains('hidden');
+  content.classList.toggle('mobile-detail-open', shouldShowDetail);
+  listPanel.classList.toggle('hidden', shouldShowDetail);
+  detailPanel.classList.toggle('hidden', isMobileViewport() && !shouldShowDetail);
 }
 
 function getDashboardStatus(provider) {
@@ -282,7 +307,9 @@ function renderList() {
 
   if (!filtered.length) {
     selectedPhone = null;
+    mobileDetailOpen = false;
     providerDetail.classList.add('hidden');
+    updateMobileDetailState();
   }
 
   providerList.innerHTML = filtered.length
@@ -511,7 +538,12 @@ function renderHistory(history) {
 
 function renderDetail(provider) {
   selectedPhone = provider.phone;
+  if (isMobileViewport()) {
+    mobileDetailOpen = true;
+  }
   providerDetail.classList.remove('hidden');
+  detailPanel.classList.remove('hidden');
+  updateMobileDetailState();
   renderList();
 
   setText('detail-phone', provider.phone);
@@ -535,6 +567,9 @@ function renderDetail(provider) {
   document.getElementById('reviewer-input').value = provider.verification.reviewedBy || 'ops-team';
   document.getElementById('notes-input').value = provider.verification.notes || '';
   renderHistory(provider.history);
+  if (isMobileViewport()) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 }
 
 async function submitReview(action) {

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260403b">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260403c">
 </head>
 <body>
   <main class="layout">
@@ -69,26 +69,15 @@
       </div>
 
       <div class="content">
-        <aside class="list-panel">
+        <aside id="list-panel" class="list-panel">
           <div id="provider-list" class="provider-list"></div>
         </aside>
 
-        <section class="detail-panel">
+        <section id="detail-panel" class="detail-panel">
           <div id="provider-detail" class="detail hidden">
-            <article class="card review-card">
-              <div class="review-head">
-                <h4>Manual review</h4>
-                <p>Approve only after checking that the certificate is readable, valid, and matches the provider.</p>
-              </div>
-              <form id="review-form" class="review-form">
-                <input id="reviewer-input" type="text" name="reviewedBy" placeholder="Reviewer name" value="ops-team">
-                <textarea id="notes-input" name="notes" placeholder="Review notes"></textarea>
-                <div class="actions">
-                  <button type="button" id="approve-button" class="button approve">Approve certificate</button>
-                  <button type="button" id="reject-button" class="button reject">Reject certificate</button>
-                </div>
-              </form>
-            </article>
+            <div class="mobile-detail-bar">
+              <button id="back-to-list-button" class="button secondary" type="button">Back to list</button>
+            </div>
 
             <div class="detail-header">
               <div>
@@ -98,7 +87,24 @@
               <span id="detail-step" class="pill"></span>
             </div>
 
+            <article class="card history-card">
+              <h4>History</h4>
+              <div id="history-list" class="history-list"></div>
+            </article>
+
             <div class="detail-grid">
+              <article class="card">
+                <h4>Documents</h4>
+                <dl>
+                  <div><dt>Certificate</dt><dd id="detail-certificate">-</dd></div>
+                  <div><dt>Verification</dt><dd id="detail-verification">-</dd></div>
+                </dl>
+                <div class="attachment-section">
+                  <h5>Certificate Files</h5>
+                  <div id="detail-certificate-files" class="attachment-list"></div>
+                </div>
+              </article>
+
               <article class="card">
                 <h4>Profile</h4>
                 <dl>
@@ -118,23 +124,21 @@
                   <div id="detail-provider-chat-actions" class="attachment-list"></div>
                 </div>
               </article>
-
-              <article class="card">
-                <h4>Documents</h4>
-                <dl>
-                  <div><dt>Certificate</dt><dd id="detail-certificate">-</dd></div>
-                  <div><dt>Verification</dt><dd id="detail-verification">-</dd></div>
-                </dl>
-                <div class="attachment-section">
-                  <h5>Certificate Files</h5>
-                  <div id="detail-certificate-files" class="attachment-list"></div>
-                </div>
-              </article>
             </div>
 
-            <article class="card">
-              <h4>History</h4>
-              <div id="history-list" class="history-list"></div>
+            <article class="card review-card">
+              <div class="review-head">
+                <h4>Manual review</h4>
+                <p>Approve only after checking that the certificate is readable, valid, and matches the provider.</p>
+              </div>
+              <form id="review-form" class="review-form">
+                <input id="reviewer-input" type="text" name="reviewedBy" placeholder="Reviewer name" value="ops-team">
+                <textarea id="notes-input" name="notes" placeholder="Review notes"></textarea>
+                <div class="actions">
+                  <button type="button" id="approve-button" class="button approve">Approve certificate</button>
+                  <button type="button" id="reject-button" class="button reject">Reject certificate</button>
+                </div>
+              </form>
             </article>
           </div>
         </section>
@@ -142,6 +146,6 @@
     </section>
   </main>
 
-  <script src="/admin/assets/dashboard.js?v=20260403b"></script>
+  <script src="/admin/assets/dashboard.js?v=20260403c"></script>
 </body>
 </html>
