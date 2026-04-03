@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260403a">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260403b">
 </head>
 <body>
   <main class="layout">
@@ -51,6 +51,13 @@
         <button class="filter" data-filter="awaiting_terms_acceptance">Approved</button>
         <button class="filter" data-filter="awaiting_certificate">Rejected / Reupload</button>
         <button class="filter" data-filter="completed">Completed</button>
+      </div>
+
+      <div id="completed-range-filters" class="filters hidden">
+        <button class="filter active" data-completed-range="all">All completed</button>
+        <button class="filter" data-completed-range="today">Today</button>
+        <button class="filter" data-completed-range="7d">Past 7 days</button>
+        <button class="filter" data-completed-range="30d">Past 30 days</button>
       </div>
 
       <div class="search-row">
@@ -135,6 +142,6 @@
     </section>
   </main>
 
-  <script src="/admin/assets/dashboard.js?v=20260403a"></script>
+  <script src="/admin/assets/dashboard.js?v=20260403b"></script>
 </body>
 </html>

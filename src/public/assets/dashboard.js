@@ -2,6 +2,7 @@ let providers = [];
 let selectedPhone = null;
 let currentFilter = 'all';
 let currentSearch = '';
+let currentCompletedRange = 'all';
 
 const providerList = document.getElementById('provider-list');
 const providerDetail = document.getElementById('provider-detail');
@@ -10,13 +11,28 @@ const completedCount = document.getElementById('completed-count');
 const newConversationsCount = document.getElementById('new-conversations-count');
 const phoneSearchInput = document.getElementById('phone-search');
 const clearSearchButton = document.getElementById('clear-search-button');
+const completedRangeFilters = document.getElementById('completed-range-filters');
 
 document.getElementById('refresh-button').addEventListener('click', loadProviders);
 document.querySelectorAll('.filter').forEach((button) => {
+  if (!button.dataset.filter) {
+    return;
+  }
+
   button.addEventListener('click', () => {
     document.querySelectorAll('.filter').forEach((item) => item.classList.remove('active'));
     button.classList.add('active');
     currentFilter = button.dataset.filter;
+    currentCompletedRange = 'all';
+    updateCompletedRangeFilterState();
+    renderList();
+  });
+});
+document.querySelectorAll('[data-completed-range]').forEach((button) => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('[data-completed-range]').forEach((item) => item.classList.remove('active'));
+    button.classList.add('active');
+    currentCompletedRange = button.dataset.completedRange;
     renderList();
   });
 });
@@ -52,6 +68,7 @@ async function loadProviders() {
   pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
   completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
   newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
+  updateCompletedRangeFilterState();
   renderList();
 
   if (selectedPhone) {
@@ -139,6 +156,25 @@ function isCompletedToday(provider) {
   );
 }
 
+function isCompletedInPastDays(provider, days) {
+  if (getDashboardStatus(provider) !== 'completed') {
+    return false;
+  }
+
+  const completedAt = getCompletedAt(provider);
+  if (!completedAt) {
+    return false;
+  }
+
+  const completedDate = new Date(completedAt);
+  const now = new Date();
+  const cutoff = new Date(now);
+  cutoff.setHours(0, 0, 0, 0);
+  cutoff.setDate(cutoff.getDate() - (days - 1));
+
+  return completedDate >= cutoff && completedDate <= now;
+}
+
 function isSameLocalDate(value) {
   if (!value) {
     return false;
@@ -152,6 +188,37 @@ function isSameLocalDate(value) {
     date.getMonth() === now.getMonth() &&
     date.getDate() === now.getDate()
   );
+}
+
+function matchesCompletedRange(provider) {
+  if (getDashboardStatus(provider) !== 'completed') {
+    return true;
+  }
+
+  if (currentCompletedRange === 'today') {
+    return isCompletedToday(provider);
+  }
+
+  if (currentCompletedRange === '7d') {
+    return isCompletedInPastDays(provider, 7);
+  }
+
+  if (currentCompletedRange === '30d') {
+    return isCompletedInPastDays(provider, 30);
+  }
+
+  return true;
+}
+
+function updateCompletedRangeFilterState() {
+  if (!completedRangeFilters) {
+    return;
+  }
+
+  completedRangeFilters.classList.toggle('hidden', currentFilter !== 'completed');
+  document.querySelectorAll('[data-completed-range]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.completedRange === currentCompletedRange);
+  });
 }
 
 function formatDutyHourPreference(value) {
@@ -196,8 +263,9 @@ function buildProviderPrefilledChatLink(provider) {
 function getVisibleProviders() {
   return providers.filter((item) => {
     const matchesFilter = currentFilter === 'all' || getDashboardStatus(item) === currentFilter;
+    const matchesCompletedWindow = currentFilter !== 'completed' || matchesCompletedRange(item);
     const matchesSearch = !currentSearch || normalizePhone(item.phone).includes(currentSearch);
-    return matchesFilter && matchesSearch;
+    return matchesFilter && matchesCompletedWindow && matchesSearch;
   });
 }
 
