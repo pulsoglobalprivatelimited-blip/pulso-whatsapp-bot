@@ -23,8 +23,12 @@ function normalizePhone(value) {
   return String(value || '').replace(/\D/g, '');
 }
 
+function getOpsNotificationPhone() {
+  return normalizePhone(config.agentHelpWhatsappNumber) || normalizePhone(config.ownerNotificationPhone);
+}
+
 function isReviewerPhone(phone) {
-  return normalizePhone(phone) === normalizePhone(config.ownerNotificationPhone);
+  return normalizePhone(phone) === getOpsNotificationPhone();
 }
 
 function joinLines(lines) {
@@ -117,7 +121,7 @@ function buildRejectFollowupButtons(providerPhone) {
 }
 
 async function sendOpsNotification(body) {
-  const to = normalizePhone(config.ownerNotificationPhone);
+  const to = getOpsNotificationPhone();
   if (!to) {
     return null;
   }
@@ -169,7 +173,7 @@ async function sendNotificationTo(phone, body, logLabel) {
 }
 
 async function sendReviewMedia(provider, attachment, index, total) {
-  const to = normalizePhone(config.ownerNotificationPhone);
+  const to = getOpsNotificationPhone();
   if (!to || !attachment || !attachment.id) {
     return null;
   }
@@ -205,7 +209,7 @@ async function sendReviewMedia(provider, attachment, index, total) {
 }
 
 async function notifyCertificateUploaded(provider, attachments) {
-  const to = normalizePhone(config.ownerNotificationPhone);
+  const to = getOpsNotificationPhone();
   if (!to) {
     return null;
   }
@@ -281,7 +285,7 @@ async function notifyAgentHelpRequested(provider) {
 }
 
 async function requestReviewConfirmation(provider, action) {
-  const to = normalizePhone(config.ownerNotificationPhone);
+  const to = getOpsNotificationPhone();
   if (!to || !provider || !provider.phone) {
     return null;
   }
@@ -314,7 +318,7 @@ async function requestReviewConfirmation(provider, action) {
 }
 
 async function requestRejectReason(provider) {
-  const to = normalizePhone(config.ownerNotificationPhone);
+  const to = getOpsNotificationPhone();
   if (!to || !provider || !provider.phone) {
     return null;
   }
@@ -345,7 +349,7 @@ async function requestRejectReason(provider) {
 }
 
 async function requestRejectNoteOrConfirmation(provider, reasonLabel, note) {
-  const to = normalizePhone(config.ownerNotificationPhone);
+  const to = getOpsNotificationPhone();
   if (!to || !provider || !provider.phone) {
     return null;
   }
