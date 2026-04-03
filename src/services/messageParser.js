@@ -92,8 +92,19 @@ function parseDutyHourPreference(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId === BUTTON_IDS.DUTY_HOUR_8) return '8_hour';
   if (replyId === BUTTON_IDS.DUTY_HOUR_24) return '24_hour';
+  if (replyId === BUTTON_IDS.DUTY_HOUR_BOTH) return 'both';
 
   const normalized = normalizeText(getMessageText(message));
+  if (
+    normalized.includes('രണ്ടും') ||
+    normalized === 'both' ||
+    normalized.includes('both') ||
+    normalized.includes('8 hour and 24 hour') ||
+    normalized.includes('24 hour and 8 hour') ||
+    normalized.includes('8 & 24')
+  ) {
+    return 'both';
+  }
   if (
     normalized.includes('8 hour') ||
     normalized.includes('8 am to 6 pm') ||

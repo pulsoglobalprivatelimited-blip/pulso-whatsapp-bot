@@ -42,6 +42,7 @@ function formatStatus(value) {
 function formatDutyHourPreference(value) {
   if (value === '8_hour') return '8 hour';
   if (value === '24_hour') return '24 hour';
+  if (value === 'both') return 'Both';
   return value || '-';
 }
 

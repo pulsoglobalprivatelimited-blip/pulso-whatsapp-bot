@@ -249,6 +249,7 @@ function updateCompletedRangeFilterState() {
 function formatDutyHourPreference(value) {
   if (value === '8_hour') return '8 hour (8 am to 6 pm) - 900rs per day';
   if (value === '24_hour') return '24 hour - 1200 rs per day';
+  if (value === 'both') return 'Both (8 hour and 24 hour)';
   return value || '-';
 }
 

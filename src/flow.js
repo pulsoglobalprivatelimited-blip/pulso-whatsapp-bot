@@ -49,6 +49,7 @@ const BUTTON_IDS = {
   INTEREST_NO: 'interest_no',
   DUTY_HOUR_8: 'duty_hour_8',
   DUTY_HOUR_24: 'duty_hour_24',
+  DUTY_HOUR_BOTH: 'duty_hour_both',
   SAMPLE_DUTY_YES: 'sample_duty_yes',
   SAMPLE_DUTY_NO: 'sample_duty_no',
   EXPECTED_DUTIES_YES: 'expected_duties_yes',
@@ -121,7 +122,7 @@ const MESSAGES = {
   dutyHourPreferenceQuestion:
     'താങ്കൾക്ക് ഏത് duty hour ആണ് preference?',
   dutyHourPreferenceRetry:
-    'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും ഒരു duty hour preference തിരഞ്ഞെടുക്കുക.',
+    'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും ഒരു duty hour preference തിരഞ്ഞെടുക്കുക: 8 hour / 24 hour / രണ്ടും.',
   dutyHourPreference8HourNotice:
     '8 hour duty തിരഞ്ഞെടുക്കുന്നവർ ശ്രദ്ധിക്കുക: stay ഉം food ഉം ലഭിക്കില്ല. Food ഉം stay ഉം 24 hour duty-ക്ക് മാത്രമാണ് ലഭിക്കുക.',
   sampleDutyOfferQuestion:
@@ -135,7 +136,7 @@ const MESSAGES = {
   sampleDutyFinalChoiceQuestion:
     'ഏത് duty hour ആണ് താങ്കളുടെ final preference?',
   sampleDutyFinalChoiceRetry:
-    'ദയവായി 8 hour അല്ലെങ്കിൽ 24 hour തിരഞ്ഞെടുക്കുക.',
+    'ദയവായി 8 hour / 24 hour / രണ്ടും എന്നിവയിൽ ഒന്നിനെ തിരഞ്ഞെടുക്കുക.',
   sampleDutyOffer24Hour:
     `Elderly female Patient (71 yrs)\nCondition: Supportive care\n\n🟡 Care Level: Assisted care (with walker support)\n\n🕘 Duty: 24-hour care\n\n📅 Duration: 1 month (continuous) – from 21 Jan\n\n📍 Location: Vennala (nearby)\n\n🩺 Care Needed (Supportive &\n Assisted):\n\n•⁠  ⁠Washroom support\n•⁠  ⁠Bed making\n•⁠  ⁠Assistance while feeding\n•⁠  ⁠Helping with medicines\n•⁠  ⁠Assistance in lifting & walking using walker\n•⁠  ⁠Assistance during physiotherapy exercises\n(Supportive home care – not hospital duty)\n💰 Earnings:\n\n₹ 1200 per day × 30 days\n👉 ₹ 36000 total\n\n🛡 Safety & Support\n✔ Family verified\n✔ Payment guaranteed\n✔ Support available during duty`,
   sampleDutyOffer8Hour:

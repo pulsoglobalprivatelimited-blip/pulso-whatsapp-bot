@@ -321,7 +321,8 @@ async function sendDutyHourPreferenceButtons(phone) {
     body: MESSAGES.dutyHourPreferenceQuestion,
     buttons: [
       { id: BUTTON_IDS.DUTY_HOUR_8, title: '8 hour' },
-      { id: BUTTON_IDS.DUTY_HOUR_24, title: '24 hour' }
+      { id: BUTTON_IDS.DUTY_HOUR_24, title: '24 hour' },
+      { id: BUTTON_IDS.DUTY_HOUR_BOTH, title: 'രണ്ടും' }
     ]
   });
   await sendAndLog(phone, 'text', '8 hour (8 am to 6 pm) - 900rs per day\n24 hour - 1200 rs per day');
@@ -338,14 +339,17 @@ async function sendSampleDutyOfferPrompt(phone) {
 }
 
 function getOtherDutyPreference(value) {
+  if (value === 'both') return null;
   return value === '24_hour' ? '8_hour' : '24_hour';
 }
 
 function getSampleDutyMessage(value) {
+  if (value === 'both') return null;
   return value === '24_hour' ? MESSAGES.sampleDutyOffer24Hour : MESSAGES.sampleDutyOffer8Hour;
 }
 
 function getOtherSampleQuestion(value) {
+  if (value === 'both') return null;
   return value === '24_hour'
     ? MESSAGES.sampleDutyOtherOffer24HourQuestion
     : MESSAGES.sampleDutyOtherOffer8HourQuestion;
@@ -366,13 +370,14 @@ async function sendFinalDutyChoiceButtons(phone) {
     body: MESSAGES.sampleDutyFinalChoiceQuestion,
     buttons: [
       { id: BUTTON_IDS.DUTY_HOUR_8, title: '8 hour' },
-      { id: BUTTON_IDS.DUTY_HOUR_24, title: '24 hour' }
+      { id: BUTTON_IDS.DUTY_HOUR_24, title: '24 hour' },
+      { id: BUTTON_IDS.DUTY_HOUR_BOTH, title: 'രണ്ടും' }
     ]
   });
 }
 
 async function notify8HourNoStayOrFood(phone, dutyHourPreference) {
-  if (dutyHourPreference !== '8_hour') {
+  if (!['8_hour', 'both'].includes(dutyHourPreference)) {
     return;
   }
 
@@ -513,7 +518,7 @@ async function handleDutyHourPreference(phone, message) {
   await updateStatus(phone, STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE, 6, {
     dutyHourPreference,
     sampleDutyState: {
-      stage: 'initial_prompt',
+      stage: dutyHourPreference === 'both' ? 'both_prompt' : 'initial_prompt',
       initialChoice: dutyHourPreference,
       alternateChoice: getOtherDutyPreference(dutyHourPreference)
     }
@@ -555,6 +560,13 @@ async function handleSampleDutyOfferPreference(phone, message) {
   }
 
   if (action === 'show') {
+    if (sampleDutyState.initialChoice === 'both') {
+      await sendAndLog(phone, 'text', MESSAGES.sampleDutyOffer8Hour);
+      await sendAndLog(phone, 'text', MESSAGES.sampleDutyOffer24Hour);
+      await moveToExpectedDuties(phone, 'both');
+      return;
+    }
+
     if (sampleDutyState.stage === 'other_prompt') {
       await sendAndLog(phone, 'text', getSampleDutyMessage(sampleDutyState.alternateChoice));
       await updateProvider(phone, {
