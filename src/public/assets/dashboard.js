@@ -7,6 +7,7 @@ const providerList = document.getElementById('provider-list');
 const providerDetail = document.getElementById('provider-detail');
 const pendingCount = document.getElementById('pending-count');
 const completedCount = document.getElementById('completed-count');
+const newConversationsCount = document.getElementById('new-conversations-count');
 const phoneSearchInput = document.getElementById('phone-search');
 const clearSearchButton = document.getElementById('clear-search-button');
 
@@ -50,6 +51,7 @@ async function loadProviders() {
   providers = data.providers || [];
   pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
   completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
+  newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
   renderList();
 
   if (selectedPhone) {
@@ -134,6 +136,21 @@ function isCompletedToday(provider) {
     completedDate.getFullYear() === now.getFullYear() &&
     completedDate.getMonth() === now.getMonth() &&
     completedDate.getDate() === now.getDate()
+  );
+}
+
+function isSameLocalDate(value) {
+  if (!value) {
+    return false;
+  }
+
+  const date = new Date(value);
+  const now = new Date();
+
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
   );
 }
 
@@ -470,6 +487,7 @@ async function submitReview(action) {
     renderDetail(provider);
     pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
     completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
+    newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
   } catch (error) {
     alert(error.message);
   }
