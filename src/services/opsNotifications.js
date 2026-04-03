@@ -264,9 +264,7 @@ async function notifyOnboardingCompleted(provider) {
 
 async function notifyAgentHelpRequested(provider) {
   const helpNumber = normalizePhone(config.agentHelpWhatsappNumber);
-  const ownerNumber = normalizePhone(config.ownerNotificationPhone);
-  const recipients = [helpNumber, ownerNumber].filter(Boolean).filter((value, index, list) => list.indexOf(value) === index);
-  if (!recipients.length) {
+  if (!helpNumber) {
     return null;
   }
 
@@ -279,11 +277,7 @@ async function notifyAgentHelpRequested(provider) {
     `Intro message: ${buildProviderIntroMessage(provider)}`
   ]);
 
-  for (const recipient of recipients) {
-    await sendNotificationTo(recipient, body, 'AGENT_HELP_NOTIFICATION_ERROR');
-  }
-
-  return null;
+  return sendNotificationTo(helpNumber, body, 'AGENT_HELP_NOTIFICATION_ERROR');
 }
 
 async function requestReviewConfirmation(provider, action) {
