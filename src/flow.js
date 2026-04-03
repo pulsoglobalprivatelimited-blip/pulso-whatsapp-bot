@@ -129,7 +129,7 @@ const MESSAGES = {
   sampleDutyOtherOffer24HourQuestion:
     '24 hour duty കാണണോ?',
   sampleDutyFinalChoiceQuestion:
-    'ഇപ്പോൾ ഏത് duty ആണ് താങ്കളുടെ final preference?',
+    'ഏത് duty hour ആണ് താങ്കളുടെ final preference?',
   sampleDutyFinalChoiceRetry:
     'ദയവായി 8 hour അല്ലെങ്കിൽ 24 hour തിരഞ്ഞെടുക്കുക.',
   sampleDutyOffer24Hour:
