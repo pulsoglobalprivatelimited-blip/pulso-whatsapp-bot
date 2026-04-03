@@ -269,7 +269,11 @@ async function notifyOnboardingCompleted(provider) {
 
 async function notifyAgentHelpRequested(provider) {
   const helpNumber = normalizePhone(config.agentHelpWhatsappNumber);
-  if (!helpNumber) {
+  const backupHelpNumber = normalizePhone('917736129809');
+  const recipients = [helpNumber, backupHelpNumber]
+    .filter(Boolean)
+    .filter((value, index, list) => list.indexOf(value) === index);
+  if (!recipients.length) {
     return null;
   }
 
@@ -282,7 +286,11 @@ async function notifyAgentHelpRequested(provider) {
     `Intro message: ${buildProviderIntroMessage(provider)}`
   ]);
 
-  return sendNotificationTo(helpNumber, body, 'AGENT_HELP_NOTIFICATION_ERROR');
+  for (const recipient of recipients) {
+    await sendNotificationTo(recipient, body, 'AGENT_HELP_NOTIFICATION_ERROR');
+  }
+
+  return null;
 }
 
 async function requestReviewConfirmation(provider, action) {
