@@ -45,6 +45,7 @@ function parseQualification(message) {
   if (replyId === BUTTON_IDS.QUALIFICATION_GDA) return 'gda';
   if (replyId === BUTTON_IDS.QUALIFICATION_GNM) return 'gnm';
   if (replyId === BUTTON_IDS.QUALIFICATION_ANM) return 'anm';
+  if (replyId === BUTTON_IDS.QUALIFICATION_BSC_NURSING) return 'bsc_nursing';
   if (replyId === BUTTON_IDS.QUALIFICATION_OTHER_CAREGIVING) return 'other_caregiving';
   if (replyId === BUTTON_IDS.QUALIFICATION_NONE_OF_THESE) return 'none_of_these';
   if (replyId === BUTTON_IDS.QUALIFICATION_GO_BACK) return 'go_back';
@@ -53,6 +54,7 @@ function parseQualification(message) {
   if (normalized.includes('gda')) return 'gda';
   if (normalized.includes('gnm')) return 'gnm';
   if (normalized.includes('anm')) return 'anm';
+  if (normalized.includes('bsc nursing') || normalized.includes('b.sc nursing')) return 'bsc_nursing';
   if (
     normalized.includes('caregiving') ||
     normalized.includes('care giving') ||

@@ -41,6 +41,7 @@ const BUTTON_IDS = {
   QUALIFICATION_GDA: 'qualification_gda',
   QUALIFICATION_GNM: 'qualification_gnm',
   QUALIFICATION_ANM: 'qualification_anm',
+  QUALIFICATION_BSC_NURSING: 'qualification_bsc_nursing',
   QUALIFICATION_OTHER_CAREGIVING: 'qualification_other_caregiving',
   QUALIFICATION_NONE_OF_THESE: 'qualification_none_of_these',
   QUALIFICATION_GO_BACK: 'qualification_go_back',
@@ -71,6 +72,7 @@ const QUALIFICATIONS = [
   { id: BUTTON_IDS.QUALIFICATION_GDA, title: 'GDA' },
   { id: BUTTON_IDS.QUALIFICATION_GNM, title: 'GNM' },
   { id: BUTTON_IDS.QUALIFICATION_ANM, title: 'ANM' },
+  { id: BUTTON_IDS.QUALIFICATION_BSC_NURSING, title: 'BSc Nursing' },
   {
     id: BUTTON_IDS.QUALIFICATION_OTHER_CAREGIVING,
     title: 'Other',
@@ -103,11 +105,11 @@ const MESSAGES = {
   welcomeQualification:
     'നമസ്കാരം. Pulso-ലേക്ക് സ്വാഗതം.\nതാങ്കളുടെ qualification തിരഞ്ഞെടുക്കുക.',
   notEligible:
-    'ക്ഷമിക്കണം, നിലവിൽ GDA / GNM / ANM qualification ഉള്ള providers-നെ മാത്രമാണ് onboarding ചെയ്യുന്നത്.',
+    'ക്ഷമിക്കണം, നിലവിൽ GDA / GNM / ANM / BSc Nursing qualification ഉള്ള providers-നെ മാത്രമാണ് onboarding ചെയ്യുന്നത്.',
   qualificationRetry:
-    'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും qualification തിരഞ്ഞെടുക്കുക: GDA / GNM / ANM / Other with experience in caregiving.',
+    'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും qualification തിരഞ്ഞെടുക്കുക: GDA / GNM / ANM / BSc Nursing / Other with experience in caregiving.',
   qualificationCertificateRequired:
-    `Pulso-യിൽ Caregiver / Nursing Staff ആയി onboarding ചെയ്യുന്നതിനായി Certificate നിർബന്ധമാണ്.\nതാഴെ പറയുന്ന ഏതെങ്കിലും ഒരു യോഗ്യത നിർബന്ധമായും വേണം:\n✅ GDA (General Duty Assistant)\n✅ GNM (General Nursing & Midwifery)\n✅ ANM (Auxiliary Nurse Midwife)\n✅ Experience Certificate (caregiving fieldൽ ഉണ്ടായത്)\n💡 പ്രധാനമായി ശ്രദ്ധിക്കുക:\nഞങ്ങളുടെ daily payment automatic system പ്രവർത്തിക്കാൻ certificate upload ചെയ്യുന്നത് നിർബന്ധമാണ്.\nCertificate ഇല്ലാത്തവർക്ക് onboarding പൂർത്തിയാക്കാൻ സാധിക്കില്ല.`,
+    `Pulso-യിൽ Caregiver / Nursing Staff ആയി onboarding ചെയ്യുന്നതിനായി Certificate നിർബന്ധമാണ്.\nതാഴെ പറയുന്ന ഏതെങ്കിലും ഒരു യോഗ്യത നിർബന്ധമായും വേണം:\n✅ GDA (General Duty Assistant)\n✅ GNM (General Nursing & Midwifery)\n✅ ANM (Auxiliary Nurse Midwife)\n✅ BSc Nursing\n✅ Experience Certificate (caregiving fieldൽ ഉണ്ടായത്)\n💡 പ്രധാനമായി ശ്രദ്ധിക്കുക:\nഞങ്ങളുടെ daily payment automatic system പ്രവർത്തിക്കാൻ certificate upload ചെയ്യുന്നത് നിർബന്ധമാണ്.\nCertificate ഇല്ലാത്തവർക്ക് onboarding പൂർത്തിയാക്കാൻ സാധിക്കില്ല.`,
   qualificationGoBack:
     'മുകളിലെ യോഗ്യതകളിൽ ഏതെങ്കിലും ഉണ്ടെങ്കിൽ തിരികെ പോയി തിരഞ്ഞെടുക്കുക.',
   workingModel:
