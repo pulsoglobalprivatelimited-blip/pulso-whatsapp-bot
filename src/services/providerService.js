@@ -22,6 +22,7 @@ async function createProvider(phone) {
     district: null,
     districtListPage: 1,
     termsAccepted: false,
+    completedAt: null,
     documents: {
       cvReceived: false,
       certificateReceived: false,

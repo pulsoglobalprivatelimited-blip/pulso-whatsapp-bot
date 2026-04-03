@@ -49,7 +49,7 @@ async function loadProviders() {
   const data = await fetchJson('/admin/providers');
   providers = data.providers || [];
   pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
-  completedCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'completed').length;
+  completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
   renderList();
 
   if (selectedPhone) {
@@ -81,6 +81,60 @@ function getDashboardStatus(provider) {
   }
 
   return provider && provider.status ? provider.status : '';
+}
+
+function getCompletedAt(provider) {
+  if (!provider) {
+    return null;
+  }
+
+  if (provider.completedAt) {
+    return provider.completedAt;
+  }
+
+  const history = Array.isArray(provider.history) ? provider.history : [];
+  const historyCompletion = history.find((entry) => {
+    if (!entry) {
+      return false;
+    }
+
+    if (entry.type === 'system' && entry.event === 'onboarding_completed') {
+      return true;
+    }
+
+    return (
+      entry.type === 'outbound_message' &&
+      entry.payload &&
+      entry.payload.kind === 'text' &&
+      entry.payload.body === 'നന്ദി. താങ്കളുടെ onboarding പൂർത്തിയായി.'
+    );
+  });
+
+  if (historyCompletion && historyCompletion.at) {
+    return historyCompletion.at;
+  }
+
+  return provider.updatedAt || null;
+}
+
+function isCompletedToday(provider) {
+  if (getDashboardStatus(provider) !== 'completed') {
+    return false;
+  }
+
+  const completedAt = getCompletedAt(provider);
+  if (!completedAt) {
+    return false;
+  }
+
+  const completedDate = new Date(completedAt);
+  const now = new Date();
+
+  return (
+    completedDate.getFullYear() === now.getFullYear() &&
+    completedDate.getMonth() === now.getMonth() &&
+    completedDate.getDate() === now.getDate()
+  );
 }
 
 function formatDutyHourPreference(value) {
@@ -415,7 +469,7 @@ async function submitReview(action) {
     if (index >= 0) providers[index] = provider;
     renderDetail(provider);
     pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
-    completedCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'completed').length;
+    completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
   } catch (error) {
     alert(error.message);
   }

@@ -846,8 +846,10 @@ async function handleTerms(phone, message) {
   if (action === 'accept') {
     await updateStatus(phone, STATUS.COMPLETED, 15, {
       termsAccepted: true,
-      agentHelpRequested: false
+      agentHelpRequested: false,
+      completedAt: new Date().toISOString()
     });
+    await appendHistory(phone, { type: 'system', event: 'onboarding_completed' });
     await sendAndLog(phone, 'text', MESSAGES.termsAccepted);
     await sendAndLog(phone, 'text', MESSAGES.postOnboardingSupport);
     await sendOptionalAgentHelpButton(phone);
