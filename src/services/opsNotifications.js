@@ -64,23 +64,23 @@ function buildProviderChatLink(phone) {
   return normalizedPhone ? `https://wa.me/${normalizedPhone}` : null;
 }
 
-function buildProviderIntroMessage(provider) {
+function buildProviderIntroMessage(provider, senderName = 'Abdul') {
   const name = provider && provider.fullName ? provider.fullName : null;
   return [
     `നമസ്കാരം${name ? ` ${name}` : ''},`,
-    'ഞാൻ Abdul, Pulso support team-ിൽ നിന്നാണ് message ചെയ്യുന്നത്.',
+    `ഞാൻ ${senderName}, Pulso support team-ിൽ നിന്നാണ് message ചെയ്യുന്നത്.`,
     'താങ്കൾ കൂടുതൽ സഹായം ആവശ്യപ്പെട്ടതായി കണ്ടു.',
     'എങ്ങനെ സഹായിക്കാം?'
   ].join(' ');
 }
 
-function buildProviderPrefilledChatLink(provider) {
+function buildProviderPrefilledChatLink(provider, senderName = 'Abdul') {
   const chatLink = buildProviderChatLink(provider && provider.phone);
   if (!chatLink) {
     return null;
   }
 
-  return `${chatLink}?text=${encodeURIComponent(buildProviderIntroMessage(provider))}`;
+  return `${chatLink}?text=${encodeURIComponent(buildProviderIntroMessage(provider, senderName))}`;
 }
 
 function buildReviewButtons(providerPhone) {
@@ -270,24 +270,28 @@ async function notifyOnboardingCompleted(provider) {
 async function notifyAgentHelpRequested(provider) {
   const helpNumber = normalizePhone(config.agentHelpWhatsappNumber);
   const backupHelpNumber = normalizePhone('917736129809');
-  const recipients = [helpNumber, backupHelpNumber]
-    .filter(Boolean)
-    .filter((value, index, list) => list.indexOf(value) === index);
+  const recipients = [
+    { phone: helpNumber, senderName: 'Abdul' },
+    { phone: backupHelpNumber, senderName: 'Ashmila' }
+  ]
+    .filter((entry) => entry.phone)
+    .filter((entry, index, list) => list.findIndex((item) => item.phone === entry.phone) === index);
   if (!recipients.length) {
     return null;
   }
 
-  const body = joinLines([
-    'Pulso alert: provider requested additional help',
-    ...formatProviderSummary(provider),
-    provider && provider.updatedAt ? `Requested at: ${provider.updatedAt}` : null,
-    buildProviderChatLink(provider && provider.phone) ? `Open chat: ${buildProviderChatLink(provider.phone)}` : null,
-    buildProviderPrefilledChatLink(provider) ? `Open chat with intro: ${buildProviderPrefilledChatLink(provider)}` : null,
-    `Intro message: ${buildProviderIntroMessage(provider)}`
-  ]);
-
   for (const recipient of recipients) {
-    await sendNotificationTo(recipient, body, 'AGENT_HELP_NOTIFICATION_ERROR');
+    const body = joinLines([
+      'Pulso alert: provider requested additional help',
+      ...formatProviderSummary(provider),
+      provider && provider.updatedAt ? `Requested at: ${provider.updatedAt}` : null,
+      buildProviderChatLink(provider && provider.phone) ? `Open chat: ${buildProviderChatLink(provider.phone)}` : null,
+      buildProviderPrefilledChatLink(provider, recipient.senderName)
+        ? `Open chat with intro: ${buildProviderPrefilledChatLink(provider, recipient.senderName)}`
+        : null,
+      `Intro message: ${buildProviderIntroMessage(provider, recipient.senderName)}`
+    ]);
+    await sendNotificationTo(recipient.phone, body, 'AGENT_HELP_NOTIFICATION_ERROR');
   }
 
   return null;
