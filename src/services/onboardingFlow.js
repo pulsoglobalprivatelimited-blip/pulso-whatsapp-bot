@@ -374,7 +374,16 @@ async function sendFinalDutyChoiceButtons(phone) {
   });
 }
 
+async function notify8HourNoStayOrFood(phone, dutyHourPreference) {
+  if (dutyHourPreference !== '8_hour') {
+    return;
+  }
+
+  await sendAndLog(phone, 'text', MESSAGES.dutyHourPreference8HourNotice);
+}
+
 async function moveToExpectedDuties(phone, dutyHourPreference) {
+  await notify8HourNoStayOrFood(phone, dutyHourPreference);
   await updateStatus(phone, STATUS.AWAITING_EXPECTED_DUTIES_CONFIRMATION, 7, {
     dutyHourPreference,
     sampleDutyState: null
@@ -503,6 +512,7 @@ async function handleDutyHourPreference(phone, message) {
     return;
   }
 
+  await notify8HourNoStayOrFood(phone, dutyHourPreference);
   await updateStatus(phone, STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE, 6, {
     dutyHourPreference,
     sampleDutyState: {

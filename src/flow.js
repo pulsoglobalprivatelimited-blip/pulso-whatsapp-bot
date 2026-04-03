@@ -120,6 +120,8 @@ const MESSAGES = {
     'താങ്കൾക്ക് ഏത് duty hour ആണ് preference?',
   dutyHourPreferenceRetry:
     'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും ഒരു duty hour preference തിരഞ്ഞെടുക്കുക.',
+  dutyHourPreference8HourNotice:
+    '8 hour duty തിരഞ്ഞെടുക്കുന്നവർ ശ്രദ്ധിക്കുക: stay ഉം food ഉം ലഭിക്കില്ല. Food ഉം stay ഉം 24 hour duty-ക്ക് മാത്രമാണ് ലഭിക്കുക.',
   sampleDutyOfferQuestion:
     'ഒരു sample duty offer എങ്ങനെയിരിക്കും എന്ന് കാണണോ?',
   sampleDutyOfferRetry:
