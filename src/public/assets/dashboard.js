@@ -16,6 +16,7 @@ const phoneSearchInput = document.getElementById('phone-search');
 const clearSearchButton = document.getElementById('clear-search-button');
 const completedRangeFilters = document.getElementById('completed-range-filters');
 const backToListButton = document.getElementById('back-to-list-button');
+const historyBottomButton = document.getElementById('history-bottom-button');
 
 document.getElementById('refresh-button').addEventListener('click', loadProviders);
 document.querySelectorAll('.filter').forEach((button) => {
@@ -52,6 +53,9 @@ clearSearchButton.addEventListener('click', () => {
 backToListButton.addEventListener('click', () => {
   mobileDetailOpen = false;
   updateMobileDetailState();
+});
+historyBottomButton.addEventListener('click', () => {
+  scrollHistoryToBottom();
 });
 
 document.getElementById('approve-button').addEventListener('click', () => submitReview('approve-certificate'));
@@ -537,6 +541,18 @@ function renderHistory(history) {
   target.innerHTML = items || '<p class="attachment-empty">No chat history yet.</p>';
 }
 
+function scrollHistoryToBottom() {
+  const target = document.getElementById('history-list');
+  if (!target) {
+    return;
+  }
+
+  target.scrollTo({
+    top: target.scrollHeight,
+    behavior: 'smooth'
+  });
+}
+
 function renderDetail(provider) {
   selectedPhone = provider.phone;
   if (isMobileViewport()) {
@@ -568,6 +584,7 @@ function renderDetail(provider) {
   document.getElementById('reviewer-input').value = provider.verification.reviewedBy || 'ops-team';
   document.getElementById('notes-input').value = provider.verification.notes || '';
   renderHistory(provider.history);
+  setTimeout(scrollHistoryToBottom, 0);
   if (isMobileViewport()) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }

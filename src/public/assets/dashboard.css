@@ -263,6 +263,13 @@ h1 {
   margin-bottom: 16px;
 }
 
+.history-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
 .history-card .history-list {
   max-height: 420px;
   overflow-y: auto;
@@ -534,7 +541,8 @@ dd {
 
   .board-header,
   .review-head,
-  .detail-header {
+  .detail-header,
+  .history-card-head {
     flex-direction: column;
     align-items: stretch;
   }
