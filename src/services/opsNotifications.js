@@ -54,6 +54,30 @@ function formatProviderSummary(provider) {
   ];
 }
 
+function buildProviderChatLink(phone) {
+  const normalizedPhone = normalizePhone(phone);
+  return normalizedPhone ? `https://wa.me/${normalizedPhone}` : null;
+}
+
+function buildProviderIntroMessage(provider) {
+  const name = provider && provider.fullName ? provider.fullName : null;
+  return [
+    `നമസ്കാരം${name ? ` ${name}` : ''},`,
+    'ഞാൻ Pulso support team-ിൽ നിന്നാണ് message ചെയ്യുന്നത്.',
+    'താങ്കൾ കൂടുതൽ സഹായം ആവശ്യപ്പെട്ടതായി കണ്ടു.',
+    'എങ്ങനെ സഹായിക്കാം?'
+  ].join(' ');
+}
+
+function buildProviderPrefilledChatLink(provider) {
+  const chatLink = buildProviderChatLink(provider && provider.phone);
+  if (!chatLink) {
+    return null;
+  }
+
+  return `${chatLink}?text=${encodeURIComponent(buildProviderIntroMessage(provider))}`;
+}
+
 function buildReviewButtons(providerPhone) {
   return [
     { id: `${REVIEW_ACTIONS.APPROVE}${providerPhone}`, title: 'Approve' },
@@ -250,7 +274,9 @@ async function notifyAgentHelpRequested(provider) {
     'Pulso alert: provider requested additional help',
     ...formatProviderSummary(provider),
     provider && provider.updatedAt ? `Requested at: ${provider.updatedAt}` : null,
-    provider && provider.phone ? `Reply to provider: https://wa.me/${provider.phone}` : null
+    buildProviderChatLink(provider && provider.phone) ? `Open chat: ${buildProviderChatLink(provider.phone)}` : null,
+    buildProviderPrefilledChatLink(provider) ? `Open chat with intro: ${buildProviderPrefilledChatLink(provider)}` : null,
+    `Intro message: ${buildProviderIntroMessage(provider)}`
   ]);
 
   for (const recipient of recipients) {

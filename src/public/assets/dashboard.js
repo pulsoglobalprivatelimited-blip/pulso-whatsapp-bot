@@ -91,8 +91,27 @@ function formatAgentHelp(value) {
   return value ? 'Requested' : 'Not requested';
 }
 
+function buildProviderIntroMessage(provider) {
+  const greetingName = provider && provider.fullName ? ` ${provider.fullName}` : '';
+  return `നമസ്കാരം${greetingName}, ഞാൻ Pulso support team-ിൽ നിന്നാണ് message ചെയ്യുന്നത്. താങ്കൾ കൂടുതൽ സഹായം ആവശ്യപ്പെട്ടതായി കണ്ടു. എങ്ങനെ സഹായിക്കാം?`;
+}
+
 function normalizePhone(value) {
   return String(value || '').replace(/\D/g, '');
+}
+
+function buildProviderChatLink(phone) {
+  const normalized = normalizePhone(phone);
+  return normalized ? `https://wa.me/${normalized}` : null;
+}
+
+function buildProviderPrefilledChatLink(provider) {
+  const chatLink = buildProviderChatLink(provider && provider.phone);
+  if (!chatLink) {
+    return null;
+  }
+
+  return `${chatLink}?text=${encodeURIComponent(buildProviderIntroMessage(provider))}`;
 }
 
 function getVisibleProviders() {
@@ -204,6 +223,29 @@ function renderAttachments(id, attachments) {
       </article>
     `;
   }).join('');
+}
+
+function renderProviderChatActions(provider) {
+  const target = document.getElementById('detail-provider-chat-actions');
+  const chatLink = buildProviderChatLink(provider && provider.phone);
+  const introLink = buildProviderPrefilledChatLink(provider);
+  const introMessage = buildProviderIntroMessage(provider);
+
+  if (!chatLink) {
+    target.innerHTML = '<p class="attachment-empty">Provider phone unavailable.</p>';
+    return;
+  }
+
+  target.innerHTML = `
+    <article class="attachment-card">
+      <strong>Quick WhatsApp handoff</strong>
+      <div class="attachment-actions">
+        <a class="attachment-action" href="${chatLink}" target="_blank" rel="noreferrer">Open chat</a>
+        <a class="attachment-action" href="${introLink}" target="_blank" rel="noreferrer">Open with intro</a>
+      </div>
+      <p>${escapeHtml(introMessage)}</p>
+    </article>
+  `;
 }
 
 function formatHistoryTime(value) {
@@ -340,6 +382,7 @@ function renderDetail(provider) {
   setText('detail-updated', new Date(provider.updatedAt).toLocaleString());
   setText('detail-certificate', provider.documents.certificateReceived ? `${provider.documents.certificateAttachments.length} file(s)` : 'Not received');
   setText('detail-verification', provider.verification.status);
+  renderProviderChatActions(provider);
   renderAttachments('detail-certificate-files', provider.documents.certificateAttachments);
 
   document.getElementById('reviewer-input').value = provider.verification.reviewedBy || 'ops-team';
