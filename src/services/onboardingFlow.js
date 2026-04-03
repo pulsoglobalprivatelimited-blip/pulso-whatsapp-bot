@@ -340,6 +340,48 @@ async function sendSampleDutyOfferPrompt(phone) {
   });
 }
 
+function getOtherDutyPreference(value) {
+  return value === '24_hour' ? '8_hour' : '24_hour';
+}
+
+function getSampleDutyMessage(value) {
+  return value === '24_hour' ? MESSAGES.sampleDutyOffer24Hour : MESSAGES.sampleDutyOffer8Hour;
+}
+
+function getOtherSampleQuestion(value) {
+  return value === '24_hour'
+    ? MESSAGES.sampleDutyOtherOffer24HourQuestion
+    : MESSAGES.sampleDutyOtherOffer8HourQuestion;
+}
+
+async function sendOtherSamplePrompt(phone, dutyHourPreference) {
+  await sendAndLog(phone, 'buttons', {
+    body: getOtherSampleQuestion(dutyHourPreference),
+    buttons: [
+      { id: BUTTON_IDS.SAMPLE_DUTY_YES, title: 'കാണാം' },
+      { id: BUTTON_IDS.SAMPLE_DUTY_NO, title: 'വേണ്ട' }
+    ]
+  });
+}
+
+async function sendFinalDutyChoiceButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.sampleDutyFinalChoiceQuestion,
+    buttons: [
+      { id: BUTTON_IDS.DUTY_HOUR_8, title: '8 hour' },
+      { id: BUTTON_IDS.DUTY_HOUR_24, title: '24 hour' }
+    ]
+  });
+}
+
+async function moveToExpectedDuties(phone, dutyHourPreference) {
+  await updateStatus(phone, STATUS.AWAITING_EXPECTED_DUTIES_CONFIRMATION, 7, {
+    dutyHourPreference,
+    sampleDutyState: null
+  });
+  await sendExpectedDutiesFlow(phone);
+}
+
 async function sendExpectedDutiesFlow(phone) {
   await sendAndLog(phone, 'text', MESSAGES.expectedDutiesIntroOne);
   await sendAndLog(phone, 'text', MESSAGES.expectedDutiesIntroTwo);
@@ -462,32 +504,74 @@ async function handleDutyHourPreference(phone, message) {
   }
 
   await updateStatus(phone, STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE, 6, {
-    dutyHourPreference
+    dutyHourPreference,
+    sampleDutyState: {
+      stage: 'initial_prompt',
+      initialChoice: dutyHourPreference,
+      alternateChoice: getOtherDutyPreference(dutyHourPreference)
+    }
   });
   await sendSampleDutyOfferPrompt(phone);
 }
 
 async function handleSampleDutyOfferPreference(phone, message) {
   const provider = await getProvider(phone);
+  const sampleDutyState = provider && provider.sampleDutyState
+    ? provider.sampleDutyState
+    : {
+        stage: 'initial_prompt',
+        initialChoice: provider ? provider.dutyHourPreference : null,
+        alternateChoice: getOtherDutyPreference(provider ? provider.dutyHourPreference : null)
+      };
+
+  if (sampleDutyState.stage === 'final_choice') {
+    const finalChoice = parseDutyHourPreference(message);
+    if (!finalChoice) {
+      await sendAndLog(phone, 'text', MESSAGES.sampleDutyFinalChoiceRetry);
+      await sendFinalDutyChoiceButtons(phone);
+      return;
+    }
+
+    await moveToExpectedDuties(phone, finalChoice);
+    return;
+  }
+
   const action = parseSampleDutyOfferPreference(message);
   if (!action) {
     await sendAndLog(phone, 'text', MESSAGES.sampleDutyOfferRetry);
+    if (sampleDutyState.stage === 'other_prompt') {
+      await sendOtherSamplePrompt(phone, sampleDutyState.alternateChoice);
+      return;
+    }
     await sendSampleDutyOfferPrompt(phone);
     return;
   }
 
   if (action === 'show') {
-    const sampleMessage =
-      provider && provider.dutyHourPreference === '24_hour'
-        ? MESSAGES.sampleDutyOffer24Hour
-        : MESSAGES.sampleDutyOffer8Hour;
-    await sendAndLog(phone, 'text', sampleMessage);
+    if (sampleDutyState.stage === 'other_prompt') {
+      await sendAndLog(phone, 'text', getSampleDutyMessage(sampleDutyState.alternateChoice));
+      await updateProvider(phone, {
+        sampleDutyState: {
+          ...sampleDutyState,
+          stage: 'final_choice'
+        }
+      });
+      await sendFinalDutyChoiceButtons(phone);
+      return;
+    }
+
+    await sendAndLog(phone, 'text', getSampleDutyMessage(sampleDutyState.initialChoice));
+    await updateProvider(phone, {
+      sampleDutyState: {
+        ...sampleDutyState,
+        stage: 'other_prompt'
+      }
+    });
+    await sendOtherSamplePrompt(phone, sampleDutyState.alternateChoice);
+    return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_EXPECTED_DUTIES_CONFIRMATION, 7, {
-    dutyHourPreference: provider ? provider.dutyHourPreference : null
-  });
-  await sendExpectedDutiesFlow(phone);
+  await moveToExpectedDuties(phone, sampleDutyState.initialChoice);
 }
 
 async function handleExpectedDutiesConfirmation(phone, message) {

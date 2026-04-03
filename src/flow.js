@@ -124,6 +124,14 @@ const MESSAGES = {
     'ഒരു sample duty offer എങ്ങനെയിരിക്കും എന്ന് കാണണോ?',
   sampleDutyOfferRetry:
     'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും ഒരു മറുപടി തിരഞ്ഞെടുക്കുക.',
+  sampleDutyOtherOffer8HourQuestion:
+    '8 hour duty കാണണോ?',
+  sampleDutyOtherOffer24HourQuestion:
+    '24 hour duty കാണണോ?',
+  sampleDutyFinalChoiceQuestion:
+    'ഇപ്പോൾ ഏത് duty ആണ് താങ്കളുടെ final preference?',
+  sampleDutyFinalChoiceRetry:
+    'ദയവായി 8 hour അല്ലെങ്കിൽ 24 hour തിരഞ്ഞെടുക്കുക.',
   sampleDutyOffer24Hour:
     `Elderly female Patient (71 yrs)\nCondition: Supportive care\n\n🟡 Care Level: Assisted care (with walker support)\n\n🕘 Duty: 24-hour care\n\n📅 Duration: 1 month (continuous) – from 21 Jan\n\n📍 Location: Vennala (nearby)\n\n🩺 Care Needed (Supportive &\n Assisted):\n\n•⁠  ⁠Washroom support\n•⁠  ⁠Bed making\n•⁠  ⁠Assistance while feeding\n•⁠  ⁠Helping with medicines\n•⁠  ⁠Assistance in lifting & walking using walker\n•⁠  ⁠Assistance during physiotherapy exercises\n(Supportive home care – not hospital duty)\n💰 Earnings:\n\n₹ 1200 per day × 30 days\n👉 ₹ 36000 total\n\n🛡 Safety & Support\n✔ Family verified\n✔ Payment guaranteed\n✔ Support available during duty`,
   sampleDutyOffer8Hour:
