@@ -47,14 +47,7 @@ const pendingCertificateRetryTimers = new Map();
 const CERTIFICATE_PROMPT_DEBOUNCE_MS = 5000;
 
 function buildAgentHelpMessage() {
-  const supportNumber = String(config.agentHelpWhatsappNumber || '').replace(/\D/g, '');
-  const helpLink = supportNumber ? `https://wa.me/${supportNumber}` : '';
-
-  return [
-    'ശരി. കൂടുതൽ സഹായത്തിനായി Pulso support agent-നെ നേരിട്ട് WhatsApp-ൽ ബന്ധപ്പെടാം.',
-    supportNumber ? `Support number: +${supportNumber}` : null,
-    helpLink ? `WhatsApp link: ${helpLink}` : null
-  ].filter(Boolean).join('\n');
+  return 'Pulso support team ഉടൻ തന്നെ താങ്കളെ ബന്ധപ്പെടുന്നതാണ്.';
 }
 
 async function handleAgentHelpRequest(phone) {
