@@ -58,15 +58,19 @@ function buildAgentHelpMessage() {
 }
 
 async function handleAgentHelpRequest(phone) {
+  const provider = await getProvider(phone);
+  const nextStatus =
+    provider && provider.termsAccepted ? STATUS.COMPLETED : STATUS.AWAITING_PULSO_AGENT;
+
   await updateProvider(phone, {
     agentHelpRequested: true,
-    status: STATUS.AWAITING_PULSO_AGENT
+    status: nextStatus
   });
 
   await appendHistory(phone, { type: 'system', event: 'agent_help_requested' });
-  const provider = await getProvider(phone);
+  const updatedProvider = await getProvider(phone);
   await sendAndLog(phone, 'text', buildAgentHelpMessage());
-  await notifyAgentHelpRequested(provider);
+  await notifyAgentHelpRequested(updatedProvider);
 }
 
 async function sendAndLog(phone, kind, body, sender) {

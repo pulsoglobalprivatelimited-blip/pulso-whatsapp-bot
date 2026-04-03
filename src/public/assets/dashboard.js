@@ -48,8 +48,8 @@ async function fetchJson(url, options) {
 async function loadProviders() {
   const data = await fetchJson('/admin/providers');
   providers = data.providers || [];
-  pendingCount.textContent = providers.filter((item) => item.status === 'certificate_verification_pending').length;
-  completedCount.textContent = providers.filter((item) => item.status === 'completed').length;
+  pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
+  completedCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'completed').length;
   renderList();
 
   if (selectedPhone) {
@@ -73,6 +73,14 @@ async function loadProviders() {
 
 function formatStatus(status) {
   return status.replace(/_/g, ' ');
+}
+
+function getDashboardStatus(provider) {
+  if (provider && provider.termsAccepted) {
+    return 'completed';
+  }
+
+  return provider && provider.status ? provider.status : '';
 }
 
 function formatDutyHourPreference(value) {
@@ -116,7 +124,7 @@ function buildProviderPrefilledChatLink(provider) {
 
 function getVisibleProviders() {
   return providers.filter((item) => {
-    const matchesFilter = currentFilter === 'all' || item.status === currentFilter;
+    const matchesFilter = currentFilter === 'all' || getDashboardStatus(item) === currentFilter;
     const matchesSearch = !currentSearch || normalizePhone(item.phone).includes(currentSearch);
     return matchesFilter && matchesSearch;
   });
@@ -143,7 +151,7 @@ function renderList() {
         <article class="provider-item ${provider.phone === selectedPhone ? 'active' : ''}" data-phone="${provider.phone}">
           <strong>${provider.phone}</strong>
           <p>${provider.fullName || provider.qualification || 'Profile pending'}</p>
-          <p>${formatStatus(provider.status)}</p>
+          <p>${formatStatus(getDashboardStatus(provider))}</p>
         </article>
       `).join('')
     : '<div class="provider-item"><strong>No providers</strong><p>Nothing matches the selected filter right now.</p></div>';
@@ -368,7 +376,7 @@ function renderDetail(provider) {
   renderList();
 
   setText('detail-phone', provider.phone);
-  setText('detail-status', formatStatus(provider.status));
+  setText('detail-status', formatStatus(getDashboardStatus(provider)));
   setText('detail-step', `Step ${provider.currentStep}`);
   setText('detail-name', provider.fullName);
   setText('detail-qualification', provider.qualification);
@@ -406,7 +414,8 @@ async function submitReview(action) {
     const index = providers.findIndex((item) => item.phone === provider.phone);
     if (index >= 0) providers[index] = provider;
     renderDetail(provider);
-    pendingCount.textContent = providers.filter((item) => item.status === 'certificate_verification_pending').length;
+    pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
+    completedCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'completed').length;
   } catch (error) {
     alert(error.message);
   }
