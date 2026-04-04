@@ -13,6 +13,7 @@ const REVIEW_ACTIONS = {
   REASON_REUPLOAD: 'review_reason_reupload_',
   REASON_CV_INSTEAD_OF_CERTIFICATE: 'review_reason_cv_instead_',
   REASON_WRONG_IMAGE: 'review_reason_wrong_image_',
+  REASON_AGE_LIMIT_EXCEEDED: 'review_reason_age_limit_',
   REASON_OTHER: 'review_reason_other_',
   ADD_NOTE: 'review_add_note_',
   CONFIRM_REJECT: 'review_confirm_reject_',
@@ -110,6 +111,7 @@ function buildRejectReasonButtons(providerPhone) {
     { id: `${REVIEW_ACTIONS.REASON_REUPLOAD}${providerPhone}`, title: 'Request reupload' },
     { id: `${REVIEW_ACTIONS.REASON_CV_INSTEAD_OF_CERTIFICATE}${providerPhone}`, title: 'CV instead' },
     { id: `${REVIEW_ACTIONS.REASON_WRONG_IMAGE}${providerPhone}`, title: 'Wrong image' },
+    { id: `${REVIEW_ACTIONS.REASON_AGE_LIMIT_EXCEEDED}${providerPhone}`, title: 'Age limit exceeded' },
     { id: `${REVIEW_ACTIONS.REASON_OTHER}${providerPhone}`, title: 'Other reason' }
   ];
 }
@@ -450,6 +452,14 @@ function getRejectReasonDetails(action) {
     };
   }
 
+  if (action === 'reason_age_limit_exceeded') {
+    return {
+      code: 'age_limit_exceeded',
+      label: 'Age limit exceeded',
+      rejectMessageKey: 'ageFinalRejection'
+    };
+  }
+
   if (action === 'reason_other') {
     return {
       code: 'other_reason',
@@ -506,6 +516,13 @@ function parseReviewerAction(message) {
     return {
       action: 'reason_wrong_image',
       phone: interactiveReplyId.slice(REVIEW_ACTIONS.REASON_WRONG_IMAGE.length)
+    };
+  }
+
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.REASON_AGE_LIMIT_EXCEEDED)) {
+    return {
+      action: 'reason_age_limit_exceeded',
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.REASON_AGE_LIMIT_EXCEEDED.length)
     };
   }
 

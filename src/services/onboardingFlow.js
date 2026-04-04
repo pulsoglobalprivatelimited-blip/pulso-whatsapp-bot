@@ -1039,9 +1039,19 @@ async function handleReviewerMessage(phone, message) {
       workflow &&
       ['request_reupload', 'cv_instead_of_certificate', 'wrong_image_instead_of_certificate'].includes(workflow.reason);
     const rejectMessageKey = workflow && workflow.rejectMessageKey ? workflow.rejectMessageKey : null;
+    const isAgeLimitRejected = workflow && workflow.reason === 'age_limit_exceeded';
 
     await clearReviewerWorkflow(providerPhone);
-    await rejectCertificate(providerPhone, phone, finalNote, { requestReupload, rejectMessageKey });
+    await rejectCertificate(providerPhone, phone, finalNote, {
+      requestReupload,
+      rejectMessageKey,
+      nextStatus: isAgeLimitRejected ? STATUS.AGE_REJECTED : undefined,
+      nextStep: isAgeLimitRejected ? 10 : undefined,
+      resetCertificate: !isAgeLimitRejected
+    });
+    if (isAgeLimitRejected) {
+      await sendAgeFinalRejectionButtons(providerPhone);
+    }
     await sendText(phone, `Rejected certificate for ${providerPhone}.`);
     return;
   }
@@ -1165,9 +1175,13 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
     throw new Error('Provider not found');
   }
 
+  const nextStatus = options.nextStatus || STATUS.AWAITING_CERTIFICATE;
+  const nextStep = options.nextStep || 5;
+  const resetCertificate = options.resetCertificate !== false;
+
   await updateProvider(phone, {
-    status: STATUS.AWAITING_CERTIFICATE,
-    currentStep: 5,
+    status: nextStatus,
+    currentStep: nextStep,
     verification: {
       status: 'rejected',
       notes: notes || '',
@@ -1176,8 +1190,8 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
     },
     documents: {
       ...provider.documents,
-      certificateReceived: false,
-      certificateAttachments: []
+      certificateReceived: resetCertificate ? false : provider.documents && provider.documents.certificateReceived,
+      certificateAttachments: resetCertificate ? [] : provider.documents && provider.documents.certificateAttachments
     }
   });
   await appendHistory(phone, { type: 'system', event: 'certificate_rejected' });
