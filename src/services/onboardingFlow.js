@@ -929,7 +929,8 @@ async function handleReviewerMessage(phone, message) {
     await requestRejectNoteOrConfirmation(
       refreshedProvider,
       refreshedProvider.verification.reviewerWorkflow.reasonLabel,
-      note
+      note,
+      phone
     );
     return;
   }
@@ -952,7 +953,7 @@ async function handleReviewerMessage(phone, message) {
   }
 
   if (reviewAction.action === 'approve') {
-    await requestReviewConfirmation(provider, reviewAction.action);
+    await requestReviewConfirmation(provider, reviewAction.action, phone);
     return;
   }
 
@@ -968,7 +969,7 @@ async function handleReviewerMessage(phone, message) {
       })
     );
     const refreshedProvider = await getProvider(providerPhone);
-    await requestRejectReason(refreshedProvider);
+    await requestRejectReason(refreshedProvider, phone);
     return;
   }
 
@@ -1003,7 +1004,7 @@ async function handleReviewerMessage(phone, message) {
       })
     );
     const refreshedProvider = await getProvider(providerPhone);
-    await requestRejectNoteOrConfirmation(refreshedProvider, rejectReason.label, '');
+    await requestRejectNoteOrConfirmation(refreshedProvider, rejectReason.label, '', phone);
     return;
   }
 
@@ -1020,7 +1021,7 @@ async function handleReviewerMessage(phone, message) {
         stage: 'awaiting_note'
       })
     );
-    await promptRejectNoteEntry(provider, workflow.reasonLabel);
+    await promptRejectNoteEntry(provider, workflow.reasonLabel, phone);
     return;
   }
 

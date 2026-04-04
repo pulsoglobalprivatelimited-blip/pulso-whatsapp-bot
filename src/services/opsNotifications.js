@@ -2,6 +2,7 @@ const config = require('../config');
 const {
   sendText,
   sendButtons,
+  sendList,
   sendImageById,
   sendDocumentById
 } = require('./metaClient');
@@ -113,6 +114,13 @@ function buildRejectReasonButtons(providerPhone) {
   ];
 }
 
+function buildRejectReasonRows(providerPhone) {
+  return buildRejectReasonButtons(providerPhone).map((button) => ({
+    id: button.id,
+    title: button.title
+  }));
+}
+
 function buildRejectFollowupButtons(providerPhone) {
   return [
     { id: `${REVIEW_ACTIONS.ADD_NOTE}${providerPhone}`, title: 'Add note' },
@@ -171,6 +179,10 @@ async function sendNotificationTo(phone, body, logLabel) {
     );
     return null;
   }
+}
+
+function getReviewerDestination(reviewerPhone) {
+  return normalizePhone(reviewerPhone) || getOpsNotificationPhone();
 }
 
 async function sendReviewMedia(provider, attachment, index, total) {
@@ -297,8 +309,8 @@ async function notifyAgentHelpRequested(provider) {
   return null;
 }
 
-async function requestReviewConfirmation(provider, action) {
-  const to = getOpsNotificationPhone();
+async function requestReviewConfirmation(provider, action, reviewerPhone) {
+  const to = getReviewerDestination(reviewerPhone);
   if (!to || !provider || !provider.phone) {
     return null;
   }
@@ -330,8 +342,8 @@ async function requestReviewConfirmation(provider, action) {
   }
 }
 
-async function requestRejectReason(provider) {
-  const to = getOpsNotificationPhone();
+async function requestRejectReason(provider, reviewerPhone) {
+  const to = getReviewerDestination(reviewerPhone);
   if (!to || !provider || !provider.phone) {
     return null;
   }
@@ -342,7 +354,12 @@ async function requestRejectReason(provider) {
   ]);
 
   try {
-    return await sendButtons(to, body, buildRejectReasonButtons(provider.phone));
+    return await sendList(to, body, 'Choose reason', [
+      {
+        title: 'Reject reason',
+        rows: buildRejectReasonRows(provider.phone)
+      }
+    ]);
   } catch (error) {
     console.error(
       '[OPS_REJECT_REASON_ERROR]',
@@ -361,8 +378,8 @@ async function requestRejectReason(provider) {
   }
 }
 
-async function requestRejectNoteOrConfirmation(provider, reasonLabel, note) {
-  const to = getOpsNotificationPhone();
+async function requestRejectNoteOrConfirmation(provider, reasonLabel, note, reviewerPhone) {
+  const to = getReviewerDestination(reviewerPhone);
   if (!to || !provider || !provider.phone) {
     return null;
   }
@@ -393,14 +410,19 @@ async function requestRejectNoteOrConfirmation(provider, reasonLabel, note) {
   }
 }
 
-async function promptRejectNoteEntry(provider, reasonLabel) {
+async function promptRejectNoteEntry(provider, reasonLabel, reviewerPhone) {
+  const to = getReviewerDestination(reviewerPhone);
+  if (!to) {
+    return null;
+  }
+
   const body = joinLines([
     `Send the note for rejection now.`,
     `Reason: ${reasonLabel}`,
     'Your next WhatsApp text will be saved as the rejection note.'
   ]);
 
-  return sendOpsNotification(body);
+  return sendNotificationTo(to, body, 'OPS_REJECT_NOTE_PROMPT_ERROR');
 }
 
 function getRejectReasonDetails(action) {
@@ -445,74 +467,80 @@ function parseReviewerAction(message) {
     message.interactive &&
     message.interactive.button_reply &&
     message.interactive.button_reply.id;
+  const listReplyId =
+    message &&
+    message.interactive &&
+    message.interactive.list_reply &&
+    message.interactive.list_reply.id;
+  const interactiveReplyId = replyId || listReplyId;
 
-  if (replyId && replyId.startsWith(REVIEW_ACTIONS.APPROVE)) {
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.APPROVE)) {
     return {
       action: 'approve',
-      phone: replyId.slice(REVIEW_ACTIONS.APPROVE.length)
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.APPROVE.length)
     };
   }
 
-  if (replyId && replyId.startsWith(REVIEW_ACTIONS.REJECT)) {
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.REJECT)) {
     return {
       action: 'reject',
-      phone: replyId.slice(REVIEW_ACTIONS.REJECT.length)
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.REJECT.length)
     };
   }
 
-  if (replyId && replyId.startsWith(REVIEW_ACTIONS.REASON_REUPLOAD)) {
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.REASON_REUPLOAD)) {
     return {
       action: 'reason_reupload',
-      phone: replyId.slice(REVIEW_ACTIONS.REASON_REUPLOAD.length)
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.REASON_REUPLOAD.length)
     };
   }
 
-  if (replyId && replyId.startsWith(REVIEW_ACTIONS.REASON_CV_INSTEAD_OF_CERTIFICATE)) {
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.REASON_CV_INSTEAD_OF_CERTIFICATE)) {
     return {
       action: 'reason_cv_instead_of_certificate',
-      phone: replyId.slice(REVIEW_ACTIONS.REASON_CV_INSTEAD_OF_CERTIFICATE.length)
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.REASON_CV_INSTEAD_OF_CERTIFICATE.length)
     };
   }
 
-  if (replyId && replyId.startsWith(REVIEW_ACTIONS.REASON_WRONG_IMAGE)) {
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.REASON_WRONG_IMAGE)) {
     return {
       action: 'reason_wrong_image',
-      phone: replyId.slice(REVIEW_ACTIONS.REASON_WRONG_IMAGE.length)
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.REASON_WRONG_IMAGE.length)
     };
   }
 
-  if (replyId && replyId.startsWith(REVIEW_ACTIONS.REASON_OTHER)) {
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.REASON_OTHER)) {
     return {
       action: 'reason_other',
-      phone: replyId.slice(REVIEW_ACTIONS.REASON_OTHER.length)
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.REASON_OTHER.length)
     };
   }
 
-  if (replyId && replyId.startsWith(REVIEW_ACTIONS.ADD_NOTE)) {
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.ADD_NOTE)) {
     return {
       action: 'add_note',
-      phone: replyId.slice(REVIEW_ACTIONS.ADD_NOTE.length)
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.ADD_NOTE.length)
     };
   }
 
-  if (replyId && replyId.startsWith(REVIEW_ACTIONS.CONFIRM_APPROVE)) {
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.CONFIRM_APPROVE)) {
     return {
       action: 'confirm_approve',
-      phone: replyId.slice(REVIEW_ACTIONS.CONFIRM_APPROVE.length)
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.CONFIRM_APPROVE.length)
     };
   }
 
-  if (replyId && replyId.startsWith(REVIEW_ACTIONS.CONFIRM_REJECT)) {
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.CONFIRM_REJECT)) {
     return {
       action: 'confirm_reject',
-      phone: replyId.slice(REVIEW_ACTIONS.CONFIRM_REJECT.length)
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.CONFIRM_REJECT.length)
     };
   }
 
-  if (replyId && replyId.startsWith(REVIEW_ACTIONS.CANCEL)) {
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.CANCEL)) {
     return {
       action: 'cancel',
-      phone: replyId.slice(REVIEW_ACTIONS.CANCEL.length)
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.CANCEL.length)
     };
   }
 
