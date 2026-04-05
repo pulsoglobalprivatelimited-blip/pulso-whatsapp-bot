@@ -229,7 +229,7 @@ const MESSAGES = {
   postOnboardingContactSupport:
     'സഹായത്തിനായി ഓഫീസ് നമ്പർ 8714105333-ൽ രാവിലെ 10 മുതൽ വൈകിട്ട് 6 വരെ വിളിക്കാം.\n9446600809 എന്ന നമ്പറിൽ 24 മണിക്കൂറും WhatsApp സന്ദേശം അയക്കാം.\nനിങ്ങൾക്ക് സഹായം നൽകാൻ ഞങ്ങൾ എപ്പോഴും തയ്യാറാണ്. 👍🏼',
   postOnboardingLinks:
-    'Office details: Pulso elderly care https://share.google/MWyrmA6XvDInViFkq\nWebsite: https://www.pulso.co.in/',
+    'Office details:\nPulso elderly care\nhttps://share.google/MWyrmA6XvDInViFkq\n\nWebsite:\nhttps://www.pulso.co.in/',
   optionalAgentHelp:
     'കൂടുതൽ സംശയങ്ങൾ ഉണ്ടെങ്കിൽ Pulso agent-നോട് ബന്ധപ്പെടാം.',
   optionalAgentHelpConfirmed:
