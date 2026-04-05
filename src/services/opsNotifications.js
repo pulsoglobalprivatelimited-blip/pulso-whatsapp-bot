@@ -296,7 +296,7 @@ async function notifyOnboardingCompleted(provider) {
 
 async function notifyAgentHelpRequested(provider) {
   const helpNumber = normalizePhone(config.agentHelpWhatsappNumber);
-  const backupHelpNumber = normalizePhone('918606230613');
+  const backupHelpNumber = normalizePhone('917736129809');
   const recipients = [
     { phone: helpNumber, senderName: 'Abdul' },
     { phone: backupHelpNumber, senderName: 'Ashmila' }
