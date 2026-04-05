@@ -29,6 +29,10 @@ function getOpsNotificationPhone() {
   return normalizePhone(config.agentHelpWhatsappNumber) || normalizePhone(config.ownerNotificationPhone);
 }
 
+function getCertificateReviewPhone() {
+  return normalizePhone(config.ownerNotificationPhone) || getOpsNotificationPhone();
+}
+
 function getReviewerPhones() {
   return [
     normalizePhone(config.agentHelpWhatsappNumber),
@@ -140,7 +144,7 @@ function buildRejectFollowupButtons(providerPhone) {
 }
 
 async function sendOpsNotification(body) {
-  const to = getOpsNotificationPhone();
+  const to = getCertificateReviewPhone();
   if (!to) {
     return null;
   }
@@ -205,11 +209,11 @@ async function sendNotificationTo(phone, body, logLabel) {
 }
 
 function getReviewerDestination(reviewerPhone) {
-  return normalizePhone(reviewerPhone) || getOpsNotificationPhone();
+  return normalizePhone(reviewerPhone) || getCertificateReviewPhone();
 }
 
 async function sendReviewMedia(provider, attachment, index, total) {
-  const to = getOpsNotificationPhone();
+  const to = getCertificateReviewPhone();
   if (!to || !attachment || !attachment.id) {
     return null;
   }
@@ -245,7 +249,7 @@ async function sendReviewMedia(provider, attachment, index, total) {
 }
 
 async function notifyCertificateUploaded(provider, attachments) {
-  const to = getOpsNotificationPhone();
+  const to = getCertificateReviewPhone();
   if (!to) {
     return null;
   }
