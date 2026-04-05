@@ -226,6 +226,10 @@ const MESSAGES = {
     'ശരി. താൽപര്യമുണ്ടെങ്കിൽ പിന്നീട് വീണ്ടും message ചെയ്യാം.',
   postOnboardingSupport:
     'ഇന്ന് മുതൽ ലഭ്യമായ duty offers നിങ്ങളെ WhatsApp വഴി അറിയിക്കുന്നതാണ്. ഡ്യൂട്ടി മെസേജുകൾ എല്ലാം ഓട്ടോമാറ്റിക്കായി അയക്കുന്നതാണ്. താങ്കൾക്ക് അനുയോജ്യമല്ലാത്ത ഡ്യൂട്ടികൾ ദയവായി അവഗണിക്കാവുന്നതാണ്. താങ്കൾക്ക് സ്വീകരിക്കാൻ താൽപര്യമുള്ള ഡ്യൂട്ടികൾക്ക് മാത്രം ദയവായി reply ചെയ്യുക.',
+  postOnboardingContactSupport:
+    'സഹായത്തിനായി ഓഫീസ് നമ്പർ 8714105333-ൽ രാവിലെ 10 മുതൽ വൈകിട്ട് 6 വരെ വിളിക്കാം.\n9446600809 എന്ന നമ്പറിൽ 24 മണിക്കൂറും സന്ദേശം അയക്കാം.\nനിങ്ങൾക്ക് സഹായം നൽകാൻ ഞങ്ങൾ എപ്പോഴും തയ്യാറാണ്. 👍🏼',
+  postOnboardingLinks:
+    'Office details: Pulso elderly care https://share.google/MWyrmA6XvDInViFkq\nWebsite: https://www.pulso.co.in/',
   optionalAgentHelp:
     'കൂടുതൽ സംശയങ്ങൾ ഉണ്ടെങ്കിൽ Pulso agent-നോട് ബന്ധപ്പെടാം.',
   optionalAgentHelpConfirmed:

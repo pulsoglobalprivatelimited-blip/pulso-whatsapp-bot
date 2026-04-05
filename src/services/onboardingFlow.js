@@ -857,6 +857,8 @@ async function handleTerms(phone, message) {
     await appendHistory(phone, { type: 'system', event: 'onboarding_completed' });
     await sendAndLog(phone, 'text', MESSAGES.termsAccepted);
     await sendAndLog(phone, 'text', MESSAGES.postOnboardingSupport);
+    await sendAndLog(phone, 'text', MESSAGES.postOnboardingContactSupport);
+    await sendAndLog(phone, 'text', MESSAGES.postOnboardingLinks);
     await sendOptionalAgentHelpButton(phone);
     const provider = await getProvider(phone);
     await notifyOnboardingCompleted(provider);
