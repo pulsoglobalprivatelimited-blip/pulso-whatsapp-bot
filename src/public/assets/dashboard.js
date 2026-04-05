@@ -12,6 +12,8 @@ const detailPanel = document.getElementById('detail-panel');
 const pendingCount = document.getElementById('pending-count');
 const completedCount = document.getElementById('completed-count');
 const newConversationsCount = document.getElementById('new-conversations-count');
+const started7dCount = document.getElementById('started-7d-count');
+const started30dCount = document.getElementById('started-30d-count');
 const completed7dCount = document.getElementById('completed-7d-count');
 const completed30dCount = document.getElementById('completed-30d-count');
 const phoneSearchInput = document.getElementById('phone-search');
@@ -83,6 +85,8 @@ async function loadProviders() {
   pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
   completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
   newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
+  started7dCount.textContent = providers.filter((item) => isCreatedInPastDays(item, 7)).length;
+  started30dCount.textContent = providers.filter((item) => isCreatedInPastDays(item, 30)).length;
   completed7dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 7)).length;
   completed30dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 30)).length;
   updateCompletedRangeFilterState();
@@ -206,6 +210,20 @@ function isCompletedInPastDays(provider, days) {
   cutoff.setDate(cutoff.getDate() - (days - 1));
 
   return completedDate >= cutoff && completedDate <= now;
+}
+
+function isCreatedInPastDays(provider, days) {
+  if (!provider || !provider.createdAt) {
+    return false;
+  }
+
+  const createdDate = new Date(provider.createdAt);
+  const now = new Date();
+  const cutoff = new Date(now);
+  cutoff.setHours(0, 0, 0, 0);
+  cutoff.setDate(cutoff.getDate() - (days - 1));
+
+  return createdDate >= cutoff && createdDate <= now;
 }
 
 function isSameLocalDate(value) {

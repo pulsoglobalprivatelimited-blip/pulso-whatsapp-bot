@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260404a">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260405a">
 </head>
 <body>
   <main class="layout">
@@ -26,7 +26,15 @@
         </div>
         <div class="metric">
           <span id="new-conversations-count">0</span>
-          <label>New conversations today</label>
+          <label>Conversations started today</label>
+        </div>
+        <div class="metric">
+          <span id="started-7d-count">0</span>
+          <label>Conversations started in 7 days</label>
+        </div>
+        <div class="metric">
+          <span id="started-30d-count">0</span>
+          <label>Conversations started in 30 days</label>
         </div>
         <div class="metric">
           <span id="completed-7d-count">0</span>
@@ -157,6 +165,6 @@
     </section>
   </main>
 
-  <script src="/admin/assets/dashboard.js?v=20260404a"></script>
+  <script src="/admin/assets/dashboard.js?v=20260405a"></script>
 </body>
 </html>
