@@ -29,8 +29,16 @@ function getOpsNotificationPhone() {
   return normalizePhone(config.agentHelpWhatsappNumber) || normalizePhone(config.ownerNotificationPhone);
 }
 
+function getReviewerPhones() {
+  return [
+    normalizePhone(config.agentHelpWhatsappNumber),
+    normalizePhone(config.ownerNotificationPhone),
+    normalizePhone('917736129809')
+  ].filter(Boolean);
+}
+
 function isReviewerPhone(phone) {
-  return normalizePhone(phone) === getOpsNotificationPhone();
+  return getReviewerPhones().includes(normalizePhone(phone));
 }
 
 function joinLines(lines) {
