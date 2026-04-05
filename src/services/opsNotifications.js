@@ -164,7 +164,20 @@ async function sendNotificationTo(phone, body, logLabel) {
   }
 
   try {
-    return await sendText(to, body);
+    const result = await sendText(to, body);
+    console.log(
+      '[OPS_NOTIFICATION_SENT]',
+      JSON.stringify(
+        {
+          to,
+          logLabel,
+          preview: body.slice(0, 140)
+        },
+        null,
+        2
+      )
+    );
+    return result;
   } catch (error) {
     console.error(
       `[${logLabel}]`,
@@ -293,6 +306,18 @@ async function notifyAgentHelpRequested(provider) {
   if (!recipients.length) {
     return null;
   }
+
+  console.log(
+    '[AGENT_HELP_REQUESTED]',
+    JSON.stringify(
+      {
+        providerPhone: provider && provider.phone ? provider.phone : null,
+        recipients: recipients.map((entry) => entry.phone)
+      },
+      null,
+      2
+    )
+  );
 
   for (const recipient of recipients) {
     const body = joinLines([

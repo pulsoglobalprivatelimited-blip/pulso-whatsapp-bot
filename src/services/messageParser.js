@@ -186,7 +186,9 @@ function parseTermsAcceptance(message) {
   if (replyId === BUTTON_IDS.TERMS_DECLINE) return 'decline';
 
   const normalized = normalizeText(getMessageText(message));
-  if (['pulso agent-നോട് ബന്ധപ്പെടുക', 'connect pulso agent'].includes(normalized)) return 'connect_agent';
+  if (['കൂടുതൽ സഹായം', 'pulso agent-നോട് ബന്ധപ്പെടുക', 'connect pulso agent'].includes(normalized)) {
+    return 'connect_agent';
+  }
   if (['സ്വീകരിക്കുന്നു', 'accept', 'accepted', 'ok', 'yes'].includes(normalized)) return 'accept';
   if (['സ്വീകരിക്കുന്നില്ല', 'decline', 'no'].includes(normalized)) return 'decline';
   return null;
