@@ -1029,6 +1029,7 @@ async function handleReviewerMessage(phone, message) {
 
   if (reviewAction.action === 'confirm_reject') {
     const workflow = provider.verification && provider.verification.reviewerWorkflow;
+    const customProviderMessage = workflow && workflow.note ? workflow.note.trim() : '';
     const noteParts = [];
     if (workflow && workflow.reasonLabel) {
       noteParts.push(`Reason: ${workflow.reasonLabel}`);
@@ -1045,6 +1046,7 @@ async function handleReviewerMessage(phone, message) {
 
     await clearReviewerWorkflow(providerPhone);
     await rejectCertificate(providerPhone, phone, finalNote, {
+      providerMessage: customProviderMessage || null,
       requestReupload,
       rejectMessageKey,
       nextStatus: isAgeLimitRejected ? STATUS.AGE_REJECTED : undefined,
@@ -1198,7 +1200,9 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
   });
   await appendHistory(phone, { type: 'system', event: 'certificate_rejected' });
   const rejectMessage =
-    options.rejectMessageKey && MESSAGES[options.rejectMessageKey]
+    options.providerMessage
+      ? options.providerMessage
+      : options.rejectMessageKey && MESSAGES[options.rejectMessageKey]
       ? MESSAGES[options.rejectMessageKey]
       : options.requestReupload
         ? MESSAGES.certificateReuploadRequested
