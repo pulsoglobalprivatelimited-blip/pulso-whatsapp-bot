@@ -349,13 +349,38 @@ async function notifyAdditionalDocumentRequested(provider, requestedBy, note) {
 }
 
 async function notifyAdditionalDocumentUploaded(provider, attachment, request) {
+  const to = getCertificateReviewPhone();
   const body = joinLines([
     'Pulso alert: requested additional document uploaded',
     ...formatProviderSummary(provider),
     request && request.note ? `Requested note: ${request.note}` : null,
-    attachment && attachment.fileName ? `File: ${attachment.fileName}` : null
+    attachment && attachment.fileName ? `File: ${attachment.fileName}` : null,
+    'Tap below to approve, reject, or request another document.'
   ]);
-  await sendOpsNotification(body);
+
+  if (to && provider && provider.phone) {
+    try {
+      await sendButtons(to, body, buildReviewButtons(provider.phone));
+    } catch (error) {
+      console.error(
+        '[OPS_ADDITIONAL_DOC_BUTTON_ERROR]',
+        JSON.stringify(
+          {
+            to,
+            providerPhone: provider.phone,
+            message: error.message,
+            response: error.response ? error.response.data : null
+          },
+          null,
+          2
+        )
+      );
+      await sendOpsNotification(body);
+    }
+  } else {
+    await sendOpsNotification(body);
+  }
+
   await sendAdditionalDocumentMedia(provider, attachment);
   return null;
 }
