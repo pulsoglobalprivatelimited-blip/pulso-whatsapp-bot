@@ -2,7 +2,12 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
-const { processIncomingMessage, approveCertificate, rejectCertificate } = require('./services/onboardingFlow');
+const {
+  processIncomingMessage,
+  approveCertificate,
+  rejectCertificate,
+  requestAdditionalDocument
+} = require('./services/onboardingFlow');
 const { listProviders, getProvider } = require('./services/providerService');
 const { initializeStorage } = require('./services/storage');
 const {
@@ -236,6 +241,15 @@ app.post('/admin/providers/:phone/approve-certificate', async (req, res) => {
 app.post('/admin/providers/:phone/reject-certificate', async (req, res) => {
   try {
     const provider = await rejectCertificate(req.params.phone, req.body.reviewedBy, req.body.notes);
+    res.json(provider);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post('/admin/providers/:phone/request-additional-document', async (req, res) => {
+  try {
+    const provider = await requestAdditionalDocument(req.params.phone, req.body.reviewedBy, req.body.note);
     res.json(provider);
   } catch (error) {
     res.status(400).json({ error: error.message });

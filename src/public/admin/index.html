@@ -122,6 +122,14 @@
                   <h5>Certificate Files</h5>
                   <div id="detail-certificate-files" class="attachment-list"></div>
                 </div>
+                <div class="attachment-section">
+                  <h5>Additional Document Request</h5>
+                  <div id="detail-additional-request" class="attachment-list"></div>
+                </div>
+                <div class="attachment-section">
+                  <h5>Additional Document Files</h5>
+                  <div id="detail-additional-document-files" class="attachment-list"></div>
+                </div>
               </article>
 
               <article class="card">
@@ -159,12 +167,26 @@
                 </div>
               </form>
             </article>
+
+            <article class="card review-card">
+              <div class="review-head">
+                <h4>Additional document request</h4>
+                <p>Ask the provider to upload one more document with a custom note.</p>
+              </div>
+              <form id="additional-document-form" class="review-form">
+                <input id="additional-reviewer-input" type="text" name="reviewedBy" placeholder="Requested by" value="ops-team">
+                <textarea id="additional-note-input" name="note" placeholder="Example: Please upload Aadhaar front side"></textarea>
+                <div class="actions">
+                  <button type="button" id="request-additional-document-button" class="button">Request additional document</button>
+                </div>
+              </form>
+            </article>
           </div>
         </section>
       </div>
     </section>
   </main>
 
-  <script src="/admin/assets/dashboard.js?v=20260405a"></script>
+  <script src="/admin/assets/dashboard.js?v=20260406a"></script>
 </body>
 </html>

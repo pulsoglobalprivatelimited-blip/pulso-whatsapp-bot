@@ -32,6 +32,7 @@ const STATUS = {
   AWAITING_SEX: 'awaiting_sex',
   AWAITING_DISTRICT: 'awaiting_district',
   VERIFICATION_PENDING: 'certificate_verification_pending',
+  ADDITIONAL_DOCUMENT_REQUESTED: 'additional_document_requested',
   AWAITING_TERMS_ACCEPTANCE: 'awaiting_terms_acceptance',
   COMPLETED: 'completed',
   NEEDS_HUMAN_REVIEW: 'needs_human_review'
@@ -191,6 +192,12 @@ const MESSAGES = {
     'താഴെയുള്ള list-ിൽ നിന്ന് താങ്കളുടെ ജില്ല തിരഞ്ഞെടുക്കുക.',
   verificationPending:
     'നന്ദി. താങ്കളുടെ certificate verification-നായി അയച്ചിരിക്കുന്നു. പരിശോധിച്ച ശേഷം ഉടൻ അറിയിക്കും.',
+  additionalDocumentRequest:
+    'Onboarding തുടരാൻ ഒരു additional document കൂടി ആവശ്യമാണ്.\n\nNote: {{note}}\n\nദയവായി image അല്ലെങ്കിൽ PDF ആയി ഇപ്പോൾ upload ചെയ്യുക.',
+  additionalDocumentRetry:
+    'ദയവായി ആവശ്യപ്പെട്ട additional document image അല്ലെങ്കിൽ PDF ആയി upload ചെയ്യുക.',
+  additionalDocumentReceived:
+    'നന്ദി. ആവശ്യപ്പെട്ട additional document ലഭിച്ചു. വീണ്ടും review-നായി അയച്ചിരിക്കുന്നു.',
   certificateApproved:
     'താങ്കളുടെ certificate verify ചെയ്തിരിക്കുന്നു.\nതാങ്കൾ Pulso-യിൽ ജോയിൻ ചെയ്യാൻ eligible ആണ്.',
   certificateRejected:

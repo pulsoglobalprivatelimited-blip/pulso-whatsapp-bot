@@ -27,7 +27,9 @@ async function createProvider(phone) {
       cvReceived: false,
       certificateReceived: false,
       cvAttachments: [],
-      certificateAttachments: []
+      certificateAttachments: [],
+      additionalDocumentAttachments: [],
+      additionalDocumentRequest: null
     },
     verification: {
       status: 'not_started',

@@ -12,6 +12,8 @@ const {
   getRejectReasonDetails,
   isReviewerPhone,
   notifyAgentHelpRequested,
+  notifyAdditionalDocumentRequested,
+  notifyAdditionalDocumentUploaded,
   parseReviewerAction,
   notifyCertificateUploaded,
   notifyCertificateReviewed,
@@ -48,6 +50,10 @@ const CERTIFICATE_PROMPT_DEBOUNCE_MS = 5000;
 
 function buildAgentHelpMessage() {
   return 'Pulso support team ഉടൻ തന്നെ താങ്കളെ ബന്ധപ്പെടുന്നതാണ്.';
+}
+
+function buildAdditionalDocumentMessage(note) {
+  return MESSAGES.additionalDocumentRequest.replace('{{note}}', note);
 }
 
 async function handleAgentHelpRequest(phone) {
@@ -720,6 +726,93 @@ async function handleCertificate(phone, message) {
   scheduleCertificateCollectionPrompt(phone);
 }
 
+async function requestAdditionalDocument(phone, requestedBy, note) {
+  const provider = await getProvider(phone);
+  if (!provider) {
+    throw new Error('Provider not found');
+  }
+
+  const trimmedNote = String(note || '').trim();
+  if (!trimmedNote) {
+    throw new Error('Custom note is required');
+  }
+
+  const reviewer = String(requestedBy || config.adminDefaultReviewer || 'ops-team').trim();
+  const requestedAt = new Date().toISOString();
+
+  await updateProvider(phone, {
+    status: STATUS.ADDITIONAL_DOCUMENT_REQUESTED,
+    currentStep: 13,
+    documents: {
+      ...provider.documents,
+      additionalDocumentRequest: {
+        status: 'pending',
+        note: trimmedNote,
+        requestedAt,
+        requestedBy: reviewer,
+        fulfilledAt: null
+      }
+    }
+  });
+  await appendHistory(phone, { type: 'system', event: 'additional_document_requested' });
+  await sendAndLog(phone, 'text', buildAdditionalDocumentMessage(trimmedNote), reviewer);
+  const updatedProvider = await getProvider(phone);
+  await notifyAdditionalDocumentRequested(updatedProvider, reviewer, trimmedNote);
+  return updatedProvider;
+}
+
+async function handleAdditionalDocument(phone, message) {
+  const provider = (await getProvider(phone)) || (await getOrCreateProvider(phone));
+  const request = provider && provider.documents ? provider.documents.additionalDocumentRequest : null;
+  const kind = classifyDocument(message);
+
+  if (!request || request.status !== 'pending') {
+    await updateProvider(phone, {
+      status: STATUS.VERIFICATION_PENDING,
+      currentStep: 13
+    });
+    await sendAndLog(phone, 'text', MESSAGES.verificationStillPending);
+    return;
+  }
+
+  if (kind !== 'certificate') {
+    await sendAndLog(phone, 'text', MESSAGES.additionalDocumentRetry);
+    return;
+  }
+
+  const attachment = await archiveIncomingMedia(phone, message, 'additional-document');
+  const receivedAt = new Date().toISOString();
+
+  await updateProvider(phone, {
+    status: STATUS.VERIFICATION_PENDING,
+    currentStep: 13,
+    verification: {
+      status: 'pending'
+    },
+    documents: {
+      ...provider.documents,
+      additionalDocumentAttachments: [
+        ...((provider.documents && provider.documents.additionalDocumentAttachments) || []),
+        { ...attachment, receivedAt }
+      ],
+      additionalDocumentRequest: {
+        ...(request || {}),
+        status: 'fulfilled',
+        fulfilledAt: receivedAt
+      }
+    }
+  });
+  await appendHistory(phone, { type: 'system', event: 'additional_document_received' });
+  const updatedProvider = await getProvider(phone);
+  await notifyAdditionalDocumentUploaded(
+    updatedProvider,
+    { ...attachment, receivedAt },
+    updatedProvider && updatedProvider.documents ? updatedProvider.documents.additionalDocumentRequest : null
+  );
+  await sendAndLog(phone, 'text', MESSAGES.additionalDocumentReceived);
+  await sendAndLog(phone, 'text', MESSAGES.verificationPending);
+}
+
 async function handleName(phone, message) {
   const name = getMessageText(message).trim();
   if (!name) {
@@ -1132,6 +1225,9 @@ async function processIncomingMessage(phone, message) {
     case STATUS.VERIFICATION_PENDING:
       await sendAndLog(phone, 'text', MESSAGES.verificationStillPending);
       return;
+    case STATUS.ADDITIONAL_DOCUMENT_REQUESTED:
+      await handleAdditionalDocument(phone, message);
+      return;
     case STATUS.AWAITING_TERMS_ACCEPTANCE:
       await handleTerms(phone, message);
       return;
@@ -1222,5 +1318,6 @@ module.exports = {
   processIncomingMessage,
   approveCertificate,
   rejectCertificate,
+  requestAdditionalDocument,
   startFlow
 };

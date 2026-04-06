@@ -297,6 +297,28 @@ async function notifyCertificateReviewed(provider, decision, reviewedBy, notes) 
   return sendOpsNotification(body);
 }
 
+async function notifyAdditionalDocumentRequested(provider, requestedBy, note) {
+  const body = joinLines([
+    'Pulso alert: additional document requested',
+    ...formatProviderSummary(provider),
+    requestedBy ? `Requested by: ${requestedBy}` : null,
+    note ? `Note: ${note}` : null
+  ]);
+
+  return sendOpsNotification(body);
+}
+
+async function notifyAdditionalDocumentUploaded(provider, attachment, request) {
+  const body = joinLines([
+    'Pulso alert: requested additional document uploaded',
+    ...formatProviderSummary(provider),
+    request && request.note ? `Requested note: ${request.note}` : null,
+    attachment && attachment.fileName ? `File: ${attachment.fileName}` : null
+  ]);
+
+  return sendOpsNotification(body);
+}
+
 async function notifyOnboardingCompleted(provider) {
   const body = joinLines([
     'Pulso alert: onboarding completed',
@@ -622,6 +644,8 @@ module.exports = {
   getRejectReasonDetails,
   isReviewerPhone,
   notifyAgentHelpRequested,
+  notifyAdditionalDocumentRequested,
+  notifyAdditionalDocumentUploaded,
   notifyCertificateUploaded,
   notifyCertificateReviewed,
   notifyOnboardingCompleted,

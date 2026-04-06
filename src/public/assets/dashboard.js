@@ -64,6 +64,9 @@ historyBottomButton.addEventListener('click', () => {
 
 document.getElementById('approve-button').addEventListener('click', () => submitReview('approve-certificate'));
 document.getElementById('reject-button').addEventListener('click', () => submitReview('reject-certificate'));
+document
+  .getElementById('request-additional-document-button')
+  .addEventListener('click', submitAdditionalDocumentRequest);
 window.addEventListener('resize', updateMobileDetailState);
 
 async function fetchJson(url, options) {
@@ -385,7 +388,7 @@ function formatAttachmentType(file) {
 function renderAttachments(id, attachments) {
   const target = document.getElementById(id);
   if (!attachments || !attachments.length) {
-    target.innerHTML = '<p class="attachment-empty">No certificate files uploaded yet.</p>';
+    target.innerHTML = '<p class="attachment-empty">No files uploaded yet.</p>';
     return;
   }
 
@@ -424,6 +427,30 @@ function renderAttachments(id, attachments) {
       </article>
     `;
   }).join('');
+}
+
+function renderAdditionalDocumentRequest(provider) {
+  const target = document.getElementById('detail-additional-request');
+  const request = provider && provider.documents ? provider.documents.additionalDocumentRequest : null;
+
+  if (!request) {
+    target.innerHTML = '<p class="attachment-empty">No additional document request yet.</p>';
+    return;
+  }
+
+  target.innerHTML = `
+    <article class="attachment-card">
+      <strong>${escapeHtml(request.status || 'pending')}</strong>
+      <div class="attachment-meta">
+        <span>${escapeHtml(request.requestedBy || 'Unknown requester')}</span>
+        <span>${request.requestedAt ? escapeHtml(formatHistoryTime(request.requestedAt)) : 'Request time unavailable'}</span>
+      </div>
+      <p>${escapeHtml(request.note || 'No note')}</p>
+      <div class="attachment-meta">
+        <span>${request.fulfilledAt ? `Fulfilled ${escapeHtml(formatHistoryTime(request.fulfilledAt))}` : 'Awaiting upload'}</span>
+      </div>
+    </article>
+  `;
 }
 
 function renderProviderChatActions(provider) {
@@ -501,6 +528,8 @@ function describeSystemEvent(entry) {
   if (event === 'verification_queue_created') return 'Certificate sent for manual verification';
   if (event === 'certificate_verified') return 'Certificate approved by reviewer';
   if (event === 'certificate_rejected') return 'Certificate rejected by reviewer';
+  if (event === 'additional_document_requested') return 'Additional document requested from provider';
+  if (event === 'additional_document_received') return 'Requested additional document uploaded';
   if (event === 'agent_help_requested') return 'Provider requested additional help';
 
   return formatStatus(event || 'system update');
@@ -602,9 +631,16 @@ function renderDetail(provider) {
   setText('detail-verification', provider.verification.status);
   renderProviderChatActions(provider);
   renderAttachments('detail-certificate-files', provider.documents.certificateAttachments);
+  renderAdditionalDocumentRequest(provider);
+  renderAttachments('detail-additional-document-files', provider.documents.additionalDocumentAttachments);
 
   document.getElementById('reviewer-input').value = provider.verification.reviewedBy || 'ops-team';
   document.getElementById('notes-input').value = provider.verification.notes || '';
+  document.getElementById('additional-reviewer-input').value = provider.verification.reviewedBy || 'ops-team';
+  document.getElementById('additional-note-input').value =
+    provider.documents && provider.documents.additionalDocumentRequest && provider.documents.additionalDocumentRequest.status === 'pending'
+      ? provider.documents.additionalDocumentRequest.note || ''
+      : '';
   renderHistory(provider.history);
   setTimeout(scrollHistoryToBottom, 0);
   if (isMobileViewport()) {
@@ -623,6 +659,32 @@ async function submitReview(action) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reviewedBy, notes })
+    });
+
+    const index = providers.findIndex((item) => item.phone === provider.phone);
+    if (index >= 0) providers[index] = provider;
+    renderDetail(provider);
+    pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
+    completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
+    newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
+    completed7dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 7)).length;
+    completed30dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 30)).length;
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function submitAdditionalDocumentRequest() {
+  if (!selectedPhone) return;
+
+  const reviewedBy = document.getElementById('additional-reviewer-input').value || 'ops-team';
+  const note = document.getElementById('additional-note-input').value || '';
+
+  try {
+    const provider = await fetchJson(`/admin/providers/${selectedPhone}/request-additional-document`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviewedBy, note })
     });
 
     const index = providers.findIndex((item) => item.phone === provider.phone);
