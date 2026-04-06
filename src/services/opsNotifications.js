@@ -39,8 +39,7 @@ function getReviewerPhones() {
   return [
     normalizePhone(config.agentHelpWhatsappNumber),
     normalizePhone(config.ownerNotificationPhone),
-    normalizePhone('917736129809'),
-    normalizePhone('918593085803')
+    normalizePhone('917736129809')
   ].filter(Boolean);
 }
 
