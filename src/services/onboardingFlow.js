@@ -18,7 +18,9 @@ const {
   notifyCertificateUploaded,
   notifyCertificateReviewed,
   notifyOnboardingCompleted,
+  promptAdditionalDocumentNoteEntry,
   promptRejectNoteEntry,
+  requestAdditionalDocumentConfirmation,
   requestRejectNoteOrConfirmation,
   requestRejectReason,
   requestReviewConfirmation
@@ -999,11 +1001,11 @@ async function handleReviewerMessage(phone, message) {
         candidate.verification &&
         candidate.verification.reviewerWorkflow &&
         candidate.verification.reviewerWorkflow.reviewerPhone === phone &&
-        candidate.verification.reviewerWorkflow.stage === 'awaiting_note'
+        ['awaiting_note', 'awaiting_additional_document_note'].includes(candidate.verification.reviewerWorkflow.stage)
     );
 
     if (!pendingProvider) {
-      await sendText(phone, 'No rejection note is pending right now.');
+      await sendText(phone, 'No reviewer note is pending right now.');
       return;
     }
 
@@ -1013,9 +1015,23 @@ async function handleReviewerMessage(phone, message) {
       return;
     }
 
+    const workflow = pendingProvider.verification.reviewerWorkflow;
+    if (workflow.stage === 'awaiting_additional_document_note') {
+      await updateProvider(
+        pendingProvider.phone,
+        buildReviewerWorkflowPatch(workflow, {
+          note,
+          stage: 'awaiting_additional_document_confirmation'
+        })
+      );
+      const refreshedProvider = await getProvider(pendingProvider.phone);
+      await requestAdditionalDocumentConfirmation(refreshedProvider, note, phone);
+      return;
+    }
+
     await updateProvider(
       pendingProvider.phone,
-      buildReviewerWorkflowPatch(pendingProvider.verification.reviewerWorkflow, {
+      buildReviewerWorkflowPatch(workflow, {
         note,
         stage: 'awaiting_reject_confirmation'
       })
@@ -1049,6 +1065,20 @@ async function handleReviewerMessage(phone, message) {
 
   if (reviewAction.action === 'approve') {
     await requestReviewConfirmation(provider, reviewAction.action, phone);
+    return;
+  }
+
+  if (reviewAction.action === 'request_additional_document') {
+    await updateProvider(
+      providerPhone,
+      buildReviewerWorkflowPatch(provider.verification && provider.verification.reviewerWorkflow, {
+        reviewerPhone: phone,
+        stage: 'awaiting_additional_document_note',
+        note: ''
+      })
+    );
+    const refreshedProvider = await getProvider(providerPhone);
+    await promptAdditionalDocumentNoteEntry(refreshedProvider, phone);
     return;
   }
 
@@ -1150,6 +1180,20 @@ async function handleReviewerMessage(phone, message) {
       await sendAgeFinalRejectionButtons(providerPhone);
     }
     await sendText(phone, `Rejected certificate for ${providerPhone}.`);
+    return;
+  }
+
+  if (reviewAction.action === 'confirm_request_additional_document') {
+    const workflow = provider.verification && provider.verification.reviewerWorkflow;
+    const customNote = workflow && workflow.note ? workflow.note.trim() : '';
+    if (!customNote) {
+      await sendText(phone, 'Add a note before sending the additional document request.');
+      return;
+    }
+
+    await clearReviewerWorkflow(providerPhone);
+    await requestAdditionalDocument(providerPhone, phone, customNote);
+    await sendText(phone, `Requested an additional document for ${providerPhone}.`);
     return;
   }
 

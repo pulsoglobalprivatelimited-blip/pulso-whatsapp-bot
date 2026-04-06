@@ -10,12 +10,14 @@ const {
 const REVIEW_ACTIONS = {
   APPROVE: 'review_approve_',
   REJECT: 'review_reject_',
+  REQUEST_ADDITIONAL_DOCUMENT: 'review_request_additional_document_',
   REASON_REUPLOAD: 'review_reason_reupload_',
   REASON_CV_INSTEAD_OF_CERTIFICATE: 'review_reason_cv_instead_',
   REASON_WRONG_IMAGE: 'review_reason_wrong_image_',
   REASON_AGE_LIMIT_EXCEEDED: 'review_reason_age_limit_',
   REASON_OTHER: 'review_reason_other_',
   ADD_NOTE: 'review_add_note_',
+  CONFIRM_REQUEST_ADDITIONAL_DOCUMENT: 'review_confirm_request_additional_document_',
   CONFIRM_REJECT: 'review_confirm_reject_',
   CONFIRM_APPROVE: 'review_confirm_approve_',
   CANCEL: 'review_cancel_'
@@ -100,7 +102,8 @@ function buildProviderPrefilledChatLink(provider, senderName = 'Abdul') {
 function buildReviewButtons(providerPhone) {
   return [
     { id: `${REVIEW_ACTIONS.APPROVE}${providerPhone}`, title: 'Approve' },
-    { id: `${REVIEW_ACTIONS.REJECT}${providerPhone}`, title: 'Reject' }
+    { id: `${REVIEW_ACTIONS.REJECT}${providerPhone}`, title: 'Reject' },
+    { id: `${REVIEW_ACTIONS.REQUEST_ADDITIONAL_DOCUMENT}${providerPhone}`, title: 'Request doc' }
   ];
 }
 
@@ -471,6 +474,57 @@ async function requestRejectNoteOrConfirmation(provider, reasonLabel, note, revi
   }
 }
 
+async function promptAdditionalDocumentNoteEntry(provider, reviewerPhone) {
+  const to = getReviewerDestination(reviewerPhone);
+  if (!to || !provider || !provider.phone) {
+    return null;
+  }
+
+  const body = joinLines([
+    'Send the note for the additional document request now.',
+    'Example: Please upload Aadhaar front side.',
+    'Your next WhatsApp text will be saved as the request note.'
+  ]);
+
+  return sendNotificationTo(to, body, 'OPS_ADDITIONAL_DOC_NOTE_PROMPT_ERROR');
+}
+
+async function requestAdditionalDocumentConfirmation(provider, note, reviewerPhone) {
+  const to = getReviewerDestination(reviewerPhone);
+  if (!to || !provider || !provider.phone) {
+    return null;
+  }
+
+  const body = joinLines([
+    'Please confirm: request additional document?',
+    note ? `Note: ${note}` : null,
+    ...formatProviderSummary(provider)
+  ]);
+
+  try {
+    return await sendButtons(to, body, [
+      { id: `${REVIEW_ACTIONS.REQUEST_ADDITIONAL_DOCUMENT}${provider.phone}`, title: 'Edit note' },
+      { id: `${REVIEW_ACTIONS.CONFIRM_REQUEST_ADDITIONAL_DOCUMENT}${provider.phone}`, title: 'Send request' },
+      { id: `${REVIEW_ACTIONS.CANCEL}${provider.phone}`, title: 'Cancel' }
+    ]);
+  } catch (error) {
+    console.error(
+      '[OPS_ADDITIONAL_DOC_CONFIRM_ERROR]',
+      JSON.stringify(
+        {
+          to,
+          providerPhone: provider.phone,
+          message: error.message,
+          response: error.response ? error.response.data : null
+        },
+        null,
+        2
+      )
+    );
+    return null;
+  }
+}
+
 async function promptRejectNoteEntry(provider, reasonLabel, reviewerPhone) {
   const to = getReviewerDestination(reviewerPhone);
   if (!to) {
@@ -557,6 +611,13 @@ function parseReviewerAction(message) {
     };
   }
 
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.REQUEST_ADDITIONAL_DOCUMENT)) {
+    return {
+      action: 'request_additional_document',
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.REQUEST_ADDITIONAL_DOCUMENT.length)
+    };
+  }
+
   if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.REASON_REUPLOAD)) {
     return {
       action: 'reason_reupload',
@@ -606,6 +667,13 @@ function parseReviewerAction(message) {
     };
   }
 
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.CONFIRM_REQUEST_ADDITIONAL_DOCUMENT)) {
+    return {
+      action: 'confirm_request_additional_document',
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.CONFIRM_REQUEST_ADDITIONAL_DOCUMENT.length)
+    };
+  }
+
   if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.CONFIRM_REJECT)) {
     return {
       action: 'confirm_reject',
@@ -650,7 +718,9 @@ module.exports = {
   notifyCertificateReviewed,
   notifyOnboardingCompleted,
   parseReviewerAction,
+  promptAdditionalDocumentNoteEntry,
   promptRejectNoteEntry,
+  requestAdditionalDocumentConfirmation,
   requestRejectNoteOrConfirmation,
   requestRejectReason,
   requestReviewConfirmation
