@@ -251,6 +251,43 @@ async function sendReviewMedia(provider, attachment, index, total) {
   }
 }
 
+async function sendAdditionalDocumentMedia(provider, attachment) {
+  const to = getCertificateReviewPhone();
+  if (!to || !attachment || !attachment.id) {
+    return null;
+  }
+
+  const caption = joinLines([
+    'Requested additional document uploaded',
+    provider && provider.phone ? `Phone: ${provider.phone}` : null,
+    attachment.fileName ? `File: ${attachment.fileName}` : null
+  ]);
+
+  try {
+    if (attachment.type === 'image') {
+      return await sendImageById(to, attachment.id, caption);
+    }
+
+    return await sendDocumentById(to, attachment.id, attachment.fileName || undefined, caption);
+  } catch (error) {
+    console.error(
+      '[OPS_ADDITIONAL_DOC_MEDIA_ERROR]',
+      JSON.stringify(
+        {
+          to,
+          attachmentId: attachment.id,
+          attachmentType: attachment.type,
+          message: error.message,
+          response: error.response ? error.response.data : null
+        },
+        null,
+        2
+      )
+    );
+    return null;
+  }
+}
+
 async function notifyCertificateUploaded(provider, attachments) {
   const to = getCertificateReviewPhone();
   if (!to) {
@@ -318,8 +355,9 @@ async function notifyAdditionalDocumentUploaded(provider, attachment, request) {
     request && request.note ? `Requested note: ${request.note}` : null,
     attachment && attachment.fileName ? `File: ${attachment.fileName}` : null
   ]);
-
-  return sendOpsNotification(body);
+  await sendOpsNotification(body);
+  await sendAdditionalDocumentMedia(provider, attachment);
+  return null;
 }
 
 async function notifyOnboardingCompleted(provider) {
