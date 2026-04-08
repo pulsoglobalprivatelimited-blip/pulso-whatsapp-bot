@@ -391,7 +391,17 @@ async function notifyOnboardingCompleted(provider) {
     ...formatProviderSummary(provider)
   ]);
 
-  return sendOpsNotification(body);
+  const recipients = [
+    getCertificateReviewPhone(),
+    normalizePhone('917736129809')
+  ].filter(Boolean)
+    .filter((phone, index, list) => list.indexOf(phone) === index);
+
+  for (const recipient of recipients) {
+    await sendNotificationTo(recipient, body, 'OPS_ONBOARDING_COMPLETED_ERROR');
+  }
+
+  return null;
 }
 
 async function notifyAgentHelpRequested(provider) {

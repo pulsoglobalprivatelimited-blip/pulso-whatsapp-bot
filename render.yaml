@@ -29,6 +29,10 @@ services:
         sync: false
       - key: TERMS_AND_CONDITIONS_URL
         sync: false
+      - key: OWNER_NOTIFICATION_PHONE
+        value: "919446600809"
+      - key: AGENT_HELP_WHATSAPP_NUMBER
+        value: "919446600809"
       - key: WHATSAPP_DRY_RUN
         value: "false"
       - key: ADMIN_USERNAME
