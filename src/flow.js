@@ -27,6 +27,7 @@ const STATUS = {
   AWAITING_NAME: 'awaiting_name',
   AWAITING_AGE: 'awaiting_age',
   AGE_REJECTED: 'age_rejected',
+  CERTIFICATE_REJECTED_PERMANENT: 'certificate_rejected_permanent',
   NOT_INTERESTED_RESTARTABLE: 'not_interested_restartable',
   AWAITING_PULSO_AGENT: 'awaiting_pulso_agent',
   AWAITING_SEX: 'awaiting_sex',
@@ -208,6 +209,8 @@ const MESSAGES = {
     'താങ്കൾ CV ആണ് അയച്ചിരിക്കുന്നത്. Onboarding തുടരാൻ ദയവായി certificate photo അല്ലെങ്കിൽ certificate PDF upload ചെയ്യുക.',
   certificateWrongImageUploaded:
     'താങ്കൾ certificate അല്ലാത്ത image ആണ് അയച്ചിരിക്കുന്നത്. Onboarding തുടരാൻ ദയവായി താങ്കളുടെ certificate upload ചെയ്യുക.',
+  certificateRejectedPermanent:
+    'ക്ഷമിക്കണം, നിലവിലെ review അടിസ്ഥാനത്തിൽ ഈ onboarding അപേക്ഷ ഇനി തുടരാൻ കഴിയില്ല. പിന്നീട് സഹായം ആവശ്യമെങ്കിൽ ഓഫീസുമായി ബന്ധപ്പെടാം.',
   termsIntro:
     `ഞങ്ങളോടൊപ്പം ചേരുന്നതിന് മുമ്പ് താഴെ നൽകിയിരിക്കുന്ന എല്ലാ നിർദേശങ്ങളും ദയവായി വായിക്കുക.
 

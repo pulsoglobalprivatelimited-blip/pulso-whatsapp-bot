@@ -15,6 +15,7 @@ const REVIEW_ACTIONS = {
   REASON_CV_INSTEAD_OF_CERTIFICATE: 'review_reason_cv_instead_',
   REASON_WRONG_IMAGE: 'review_reason_wrong_image_',
   REASON_AGE_LIMIT_EXCEEDED: 'review_reason_age_limit_',
+  REASON_PERMANENT_REJECT: 'review_reason_permanent_reject_',
   REASON_OTHER: 'review_reason_other_',
   ADD_NOTE: 'review_add_note_',
   CONFIRM_REQUEST_ADDITIONAL_DOCUMENT: 'review_confirm_request_additional_document_',
@@ -127,6 +128,7 @@ function buildRejectReasonButtons(providerPhone) {
     { id: `${REVIEW_ACTIONS.REASON_CV_INSTEAD_OF_CERTIFICATE}${providerPhone}`, title: 'CV instead' },
     { id: `${REVIEW_ACTIONS.REASON_WRONG_IMAGE}${providerPhone}`, title: 'Wrong image' },
     { id: `${REVIEW_ACTIONS.REASON_AGE_LIMIT_EXCEEDED}${providerPhone}`, title: 'Age limit exceeded' },
+    { id: `${REVIEW_ACTIONS.REASON_PERMANENT_REJECT}${providerPhone}`, title: 'Permanent reject' },
     { id: `${REVIEW_ACTIONS.REASON_OTHER}${providerPhone}`, title: 'Other reason' }
   ];
 }
@@ -648,6 +650,14 @@ function getRejectReasonDetails(action) {
     };
   }
 
+  if (action === 'reason_permanent_reject') {
+    return {
+      code: 'permanent_reject',
+      label: 'Permanent reject',
+      rejectMessageKey: 'certificateRejectedPermanent'
+    };
+  }
+
   if (action === 'reason_other') {
     return {
       code: 'other_reason',
@@ -718,6 +728,13 @@ function parseReviewerAction(message) {
     return {
       action: 'reason_age_limit_exceeded',
       phone: interactiveReplyId.slice(REVIEW_ACTIONS.REASON_AGE_LIMIT_EXCEEDED.length)
+    };
+  }
+
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.REASON_PERMANENT_REJECT)) {
+    return {
+      action: 'reason_permanent_reject',
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.REASON_PERMANENT_REJECT.length)
     };
   }
 

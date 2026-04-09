@@ -1182,15 +1182,21 @@ async function handleReviewerMessage(phone, message) {
       ['request_reupload', 'cv_instead_of_certificate', 'wrong_image_instead_of_certificate'].includes(workflow.reason);
     const rejectMessageKey = workflow && workflow.rejectMessageKey ? workflow.rejectMessageKey : null;
     const isAgeLimitRejected = workflow && workflow.reason === 'age_limit_exceeded';
+    const isPermanentRejected = workflow && workflow.reason === 'permanent_reject';
 
     await clearReviewerWorkflow(providerPhone);
     await rejectCertificate(providerPhone, phone, finalNote, {
       providerMessage: customProviderMessage || null,
       requestReupload,
       rejectMessageKey,
-      nextStatus: isAgeLimitRejected ? STATUS.AGE_REJECTED : undefined,
-      nextStep: isAgeLimitRejected ? 10 : undefined,
-      resetCertificate: !isAgeLimitRejected
+      nextStatus:
+        isAgeLimitRejected
+          ? STATUS.AGE_REJECTED
+          : isPermanentRejected
+            ? STATUS.CERTIFICATE_REJECTED_PERMANENT
+            : undefined,
+      nextStep: isAgeLimitRejected ? 10 : isPermanentRejected ? 13 : undefined,
+      resetCertificate: !isAgeLimitRejected && !isPermanentRejected
     });
     if (isAgeLimitRejected) {
       await sendAgeFinalRejectionButtons(providerPhone);
@@ -1275,6 +1281,9 @@ async function processIncomingMessage(phone, message) {
       return;
     case STATUS.AGE_REJECTED:
       await handleAgeRejected(phone, message);
+      return;
+    case STATUS.CERTIFICATE_REJECTED_PERMANENT:
+      await sendAndLog(phone, 'text', MESSAGES.certificateRejectedPermanent);
       return;
     case STATUS.AWAITING_SEX:
       await handleSex(phone, message);
