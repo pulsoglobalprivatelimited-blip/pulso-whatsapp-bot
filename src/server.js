@@ -2,14 +2,16 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
+const { STATUS } = require('./flow');
 const {
   processIncomingMessage,
   approveCertificate,
   rejectCertificate,
   requestAdditionalDocument
 } = require('./services/onboardingFlow');
-const { listProviders, getProvider } = require('./services/providerService');
+const { listProviders, getProvider, updateProvider } = require('./services/providerService');
 const { initializeStorage } = require('./services/storage');
+const { notifyCertificateUploaded } = require('./services/opsNotifications');
 const {
   requireAdminAuth,
   setSessionCookie,
@@ -256,7 +258,47 @@ app.post('/admin/providers/:phone/request-additional-document', async (req, res)
   }
 });
 
+async function reconcilePendingVerificationNotifications() {
+  const providers = await listProviders();
+  const pendingProviders = providers.filter(
+    (provider) =>
+      provider &&
+      provider.phone &&
+      provider.status === STATUS.VERIFICATION_PENDING &&
+      provider.verification &&
+      provider.verification.status === 'pending' &&
+      !provider.verification.notificationSentAt
+  );
+
+  if (!pendingProviders.length) {
+    console.log('[STARTUP] No pending verification notifications to resend');
+    return;
+  }
+
+  console.log(`[STARTUP] Retrying ${pendingProviders.length} pending verification notification(s)`);
+
+  for (const provider of pendingProviders) {
+    const attachments =
+      provider && provider.documents ? provider.documents.certificateAttachments || [] : [];
+    const notificationSent = await notifyCertificateUploaded(provider, attachments);
+
+    if (notificationSent) {
+      await updateProvider(provider.phone, {
+        verification: {
+          notificationSentAt: new Date().toISOString()
+        }
+      });
+      console.log(`[STARTUP] Resent verification notification for ${provider.phone}`);
+    } else {
+      console.error(`[STARTUP] Failed to resend verification notification for ${provider.phone}`);
+    }
+  }
+}
+
 initializeStorage()
+  .then(() => {
+    return reconcilePendingVerificationNotifications();
+  })
   .then(() => {
     app.listen(config.port, () => {
       console.log(`Pulso WhatsApp bot listening on port ${config.port}`);

@@ -650,14 +650,22 @@ async function finalizeCertificateCollection(phone) {
         status: 'pending',
         notes: '',
         reviewedAt: null,
-        reviewedBy: null
+        reviewedBy: null,
+        notificationSentAt: null
       }
     });
     const refreshedProvider = await getProvider(phone);
     const attachments = refreshedProvider && refreshedProvider.documents
       ? refreshedProvider.documents.certificateAttachments || []
       : [];
-    await notifyCertificateUploaded(refreshedProvider, attachments);
+    const notificationSent = await notifyCertificateUploaded(refreshedProvider, attachments);
+    if (notificationSent) {
+      await updateProvider(phone, {
+        verification: {
+          notificationSentAt: new Date().toISOString()
+        }
+      });
+    }
     await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
     await sendAndLog(phone, 'text', MESSAGES.verificationPending);
     return;
@@ -926,12 +934,20 @@ async function handleDistrict(phone, message) {
       status: 'pending',
       notes: '',
       reviewedAt: null,
-      reviewedBy: null
+      reviewedBy: null,
+      notificationSentAt: null
     }
   });
   const updatedProvider = await getProvider(phone);
   const attachments = updatedProvider && updatedProvider.documents ? updatedProvider.documents.certificateAttachments || [] : [];
-  await notifyCertificateUploaded(updatedProvider, attachments);
+  const notificationSent = await notifyCertificateUploaded(updatedProvider, attachments);
+  if (notificationSent) {
+    await updateProvider(phone, {
+      verification: {
+        notificationSentAt: new Date().toISOString()
+      }
+    });
+  }
   await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
   await sendAndLog(phone, 'text', MESSAGES.verificationPending);
 }

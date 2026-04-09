@@ -291,7 +291,7 @@ async function sendAdditionalDocumentMedia(provider, attachment) {
 async function notifyCertificateUploaded(provider, attachments) {
   const to = getCertificateReviewPhone();
   if (!to) {
-    return null;
+    return false;
   }
 
   const body = joinLines([
@@ -300,8 +300,10 @@ async function notifyCertificateUploaded(provider, attachments) {
     'Tap below to approve or reject.'
   ]);
 
+  let notificationSent = false;
   try {
     await sendButtons(to, body, buildReviewButtons(provider.phone));
+    notificationSent = true;
   } catch (error) {
     console.error(
       '[OPS_REVIEW_BUTTON_ERROR]',
@@ -323,7 +325,7 @@ async function notifyCertificateUploaded(provider, attachments) {
     await sendReviewMedia(provider, files[index], index + 1, files.length);
   }
 
-  return null;
+  return notificationSent;
 }
 
 async function notifyCertificateReviewed(provider, decision, reviewedBy, notes) {
