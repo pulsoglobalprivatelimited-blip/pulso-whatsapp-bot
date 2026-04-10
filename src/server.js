@@ -305,6 +305,7 @@ initializeStorage()
       console.log(`Webhook verify token: ${config.verifyToken}`);
       console.log(`Webhook callback URL: ${config.baseUrl}/webhook`);
       console.log(`Dry run mode: ${config.dryRun}`);
+      console.log(`Media storage dir: ${config.mediaStorageDir}`);
     });
   })
   .catch((error) => {

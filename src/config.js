@@ -1,6 +1,18 @@
 require('dotenv').config();
 const path = require('path');
 
+function resolveMediaStorageDir() {
+  if (process.env.MEDIA_STORAGE_DIR) {
+    return process.env.MEDIA_STORAGE_DIR;
+  }
+
+  if (process.env.RENDER === 'true') {
+    return '/var/data/pulso-media';
+  }
+
+  return path.join(process.cwd(), 'storage', 'media');
+}
+
 module.exports = {
   port: Number(process.env.PORT || 3000),
   verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'pulso-verify-token',
@@ -22,7 +34,7 @@ module.exports = {
   sessionTtlHours: Number(process.env.SESSION_TTL_HOURS || 12),
   ownerNotificationPhone: process.env.OWNER_NOTIFICATION_PHONE || '919446600809',
   agentHelpWhatsappNumber: process.env.AGENT_HELP_WHATSAPP_NUMBER || '919446600809',
-  mediaStorageDir: process.env.MEDIA_STORAGE_DIR || path.join(process.cwd(), 'storage', 'media'),
+  mediaStorageDir: resolveMediaStorageDir(),
   dryRun: process.env.WHATSAPP_DRY_RUN !== 'false',
   publicDir: path.join(__dirname, 'public')
 };
