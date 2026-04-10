@@ -49,9 +49,24 @@ const { archiveIncomingMedia } = require('./mediaStorage');
 const pendingCertificatePromptTimers = new Map();
 const pendingCertificateRetryTimers = new Map();
 const CERTIFICATE_PROMPT_DEBOUNCE_MS = 5000;
+const AGENT_HELP_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 
 function buildAgentHelpMessage() {
   return 'Pulso support team ഉടൻ തന്നെ താങ്കളെ ബന്ധപ്പെടുന്നതാണ്.';
+}
+
+function getAgentHelpCooldownRemainingMs(provider) {
+  const requestedAt = provider && provider.agentHelpRequestedAt ? Date.parse(provider.agentHelpRequestedAt) : NaN;
+  if (!requestedAt) {
+    return 0;
+  }
+
+  const remainingMs = AGENT_HELP_COOLDOWN_MS - (Date.now() - requestedAt);
+  return remainingMs > 0 ? remainingMs : 0;
+}
+
+function canRequestAgentHelp(provider) {
+  return getAgentHelpCooldownRemainingMs(provider) === 0;
 }
 
 function buildAdditionalDocumentMessage(note) {
@@ -60,11 +75,17 @@ function buildAdditionalDocumentMessage(note) {
 
 async function handleAgentHelpRequest(phone) {
   const provider = await getProvider(phone);
+  if (provider && !canRequestAgentHelp(provider)) {
+    await sendAndLog(phone, 'text', MESSAGES.agentHelpAlreadyRequested);
+    return;
+  }
+
   const nextStatus =
     provider && provider.termsAccepted ? STATUS.COMPLETED : STATUS.AWAITING_PULSO_AGENT;
 
   await updateProvider(phone, {
     agentHelpRequested: true,
+    agentHelpRequestedAt: new Date().toISOString(),
     status: nextStatus
   });
 
@@ -963,6 +984,7 @@ async function handleTerms(phone, message) {
     await updateStatus(phone, STATUS.COMPLETED, 15, {
       termsAccepted: true,
       agentHelpRequested: false,
+      agentHelpRequestedAt: null,
       completedAt: new Date().toISOString()
     });
     await appendHistory(phone, { type: 'system', event: 'onboarding_completed' });
@@ -990,6 +1012,7 @@ async function handleTerms(phone, message) {
 }
 
 async function handleCompleted(phone, message) {
+  const provider = await getProvider(phone);
   const action = parseTermsAcceptance(message);
   if (action === 'connect_agent') {
     await handleAgentHelpRequest(phone);
@@ -997,7 +1020,12 @@ async function handleCompleted(phone, message) {
   }
 
   await sendAndLog(phone, 'text', MESSAGES.completed);
-  await sendOptionalAgentHelpButton(phone);
+  if (canRequestAgentHelp(provider)) {
+    await sendOptionalAgentHelpButton(phone);
+    return;
+  }
+
+  await sendAndLog(phone, 'text', MESSAGES.agentHelpAlreadyRequested);
 }
 
 async function clearReviewerWorkflow(phone) {
@@ -1251,6 +1279,12 @@ async function processIncomingMessage(phone, message) {
   }
 
   if (provider.status === STATUS.AWAITING_PULSO_AGENT) {
+    if (canRequestAgentHelp(provider)) {
+      await handleAgentHelpRequest(phone);
+      return;
+    }
+
+    await sendAndLog(phone, 'text', MESSAGES.agentHelpAlreadyRequested);
     return;
   }
 
