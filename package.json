@@ -5,6 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "db:init": "node src/scripts/initDb.js",
+    "media:backfill": "node src/scripts/backfillMediaToStorage.js",
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "check": "node --check src/server.js"

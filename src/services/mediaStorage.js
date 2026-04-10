@@ -29,7 +29,7 @@ function buildCloudObjectPath(phone, category, fileName) {
   return `providers/${phone}/${category}/${timestamp}-${safeName}`;
 }
 
-async function uploadToFirebaseStorage(phone, category, fileName, fileBuffer, mimeType) {
+async function uploadBufferToFirebaseStorage(phone, category, fileName, fileBuffer, mimeType) {
   if (!config.firebaseStorageBucket) {
     return {
       uploaded: false,
@@ -68,6 +68,11 @@ async function uploadToFirebaseStorage(phone, category, fileName, fileBuffer, mi
       cloudError: error.message
     };
   }
+}
+
+async function uploadLocalFileToFirebaseStorage(phone, category, fileName, localPath, mimeType) {
+  const fileBuffer = fs.readFileSync(localPath);
+  return uploadBufferToFirebaseStorage(phone, category, fileName, fileBuffer, mimeType);
 }
 
 async function archiveIncomingMedia(phone, message, category) {
@@ -109,7 +114,7 @@ async function archiveIncomingMedia(phone, message, category) {
     const finalFileName = originalFileName || `${mediaId}${extension}`;
     const targetPath = path.join(providerDir, finalFileName);
     const fileBuffer = await downloadMediaFile(metadata.url);
-    const cloudUpload = await uploadToFirebaseStorage(phone, category, finalFileName, fileBuffer, metadata.mime_type);
+    const cloudUpload = await uploadBufferToFirebaseStorage(phone, category, finalFileName, fileBuffer, metadata.mime_type);
 
     fs.writeFileSync(targetPath, fileBuffer);
 
@@ -149,5 +154,7 @@ async function archiveIncomingMedia(phone, message, category) {
 }
 
 module.exports = {
-  archiveIncomingMedia
+  archiveIncomingMedia,
+  uploadBufferToFirebaseStorage,
+  uploadLocalFileToFirebaseStorage
 };
