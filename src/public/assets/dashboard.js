@@ -11,6 +11,7 @@ const listPanel = document.getElementById('list-panel');
 const detailPanel = document.getElementById('detail-panel');
 const pendingCount = document.getElementById('pending-count');
 const completedCount = document.getElementById('completed-count');
+const completedYesterdayCount = document.getElementById('completed-yesterday-count');
 const newConversationsCount = document.getElementById('new-conversations-count');
 const started7dCount = document.getElementById('started-7d-count');
 const started30dCount = document.getElementById('started-30d-count');
@@ -105,6 +106,7 @@ async function loadProviders() {
   providers = data.providers || [];
   pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
   completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
+  completedYesterdayCount.textContent = providers.filter((item) => isCompletedYesterday(item)).length;
   newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
   started7dCount.textContent = providers.filter((item) => isCreatedInPastDays(item, 7)).length;
   started30dCount.textContent = providers.filter((item) => isCreatedInPastDays(item, 30)).length;
@@ -211,6 +213,27 @@ function isCompletedToday(provider) {
     completedDate.getFullYear() === now.getFullYear() &&
     completedDate.getMonth() === now.getMonth() &&
     completedDate.getDate() === now.getDate()
+  );
+}
+
+function isCompletedYesterday(provider) {
+  if (getDashboardStatus(provider) !== 'completed') {
+    return false;
+  }
+
+  const completedAt = getCompletedAt(provider);
+  if (!completedAt) {
+    return false;
+  }
+
+  const completedDate = new Date(completedAt);
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  return (
+    completedDate.getFullYear() === yesterday.getFullYear() &&
+    completedDate.getMonth() === yesterday.getMonth() &&
+    completedDate.getDate() === yesterday.getDate()
   );
 }
 
@@ -689,6 +712,7 @@ async function submitReview(action) {
     renderDetail(provider);
     pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
     completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
+    completedYesterdayCount.textContent = providers.filter((item) => isCompletedYesterday(item)).length;
     newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
     completed7dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 7)).length;
     completed30dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 30)).length;
@@ -715,6 +739,7 @@ async function submitAdditionalDocumentRequest() {
     renderDetail(provider);
     pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
     completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
+    completedYesterdayCount.textContent = providers.filter((item) => isCompletedYesterday(item)).length;
     newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
     completed7dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 7)).length;
     completed30dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 30)).length;
