@@ -767,6 +767,14 @@ async function adminUploadCertificateFiles(phone, files, uploadedBy = 'admin') {
     return refreshedProvider;
   }
 
+  const alreadyApproved =
+    refreshedProvider &&
+    refreshedProvider.verification &&
+    refreshedProvider.verification.status === 'verified';
+  if (alreadyApproved || (refreshedProvider && refreshedProvider.termsAccepted)) {
+    return refreshedProvider;
+  }
+
   await updateStatus(phone, STATUS.VERIFICATION_PENDING, 13, {
     verification: {
       status: 'pending',
