@@ -49,7 +49,7 @@ document.querySelectorAll('[data-completed-range]').forEach((button) => {
   });
 });
 phoneSearchInput.addEventListener('input', () => {
-  currentSearch = normalizePhone(phoneSearchInput.value);
+  currentSearch = normalizeSearchTerm(phoneSearchInput.value);
   renderList();
 });
 clearSearchButton.addEventListener('click', () => {
@@ -125,8 +125,9 @@ async function loadProviders() {
   }
 
   const visibleProviders = getVisibleProviders();
+  const exactPhoneSearch = normalizePhone(currentSearch);
   const exactMatch = currentSearch
-    ? visibleProviders.find((item) => normalizePhone(item.phone) === currentSearch)
+    ? visibleProviders.find((item) => exactPhoneSearch && normalizePhone(item.phone) === exactPhoneSearch)
     : null;
   const initialProvider = exactMatch || visibleProviders[0];
   if (initialProvider) {
@@ -342,6 +343,10 @@ function normalizePhone(value) {
   return String(value || '').replace(/\D/g, '');
 }
 
+function normalizeSearchTerm(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
 function buildProviderChatLink(phone) {
   const normalized = normalizePhone(phone);
   return normalized ? `https://wa.me/${normalized}` : null;
@@ -357,10 +362,14 @@ function buildProviderPrefilledChatLink(provider) {
 }
 
 function getVisibleProviders() {
+  const phoneSearch = normalizePhone(currentSearch);
   return providers.filter((item) => {
     const matchesFilter = currentFilter === 'all' || getDashboardStatus(item) === currentFilter;
     const matchesCompletedWindow = currentFilter !== 'completed' || matchesCompletedRange(item);
-    const matchesSearch = !currentSearch || normalizePhone(item.phone).includes(currentSearch);
+    const fullName = normalizeSearchTerm(item && item.fullName);
+    const matchesPhone = phoneSearch ? normalizePhone(item.phone).includes(phoneSearch) : false;
+    const matchesName = currentSearch ? fullName.includes(currentSearch) : false;
+    const matchesSearch = !currentSearch || matchesPhone || matchesName;
     return matchesFilter && matchesCompletedWindow && matchesSearch;
   });
 }
@@ -369,8 +378,9 @@ function renderList() {
   const filtered = getVisibleProviders();
 
   if (filtered.length && !filtered.some((item) => item.phone === selectedPhone)) {
+    const exactPhoneSearch = normalizePhone(currentSearch);
     const exactMatch = currentSearch
-      ? filtered.find((item) => normalizePhone(item.phone) === currentSearch)
+      ? filtered.find((item) => exactPhoneSearch && normalizePhone(item.phone) === exactPhoneSearch)
       : null;
     renderDetail(exactMatch || filtered[0]);
     return;
