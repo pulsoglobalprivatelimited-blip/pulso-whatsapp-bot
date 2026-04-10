@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260405a">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260410a">
 </head>
 <body>
   <main class="layout">
@@ -190,6 +190,7 @@
               <form id="manual-certificate-form" class="review-form">
                 <input id="manual-uploaded-by-input" type="text" name="uploadedBy" placeholder="Uploaded by" value="ops-team">
                 <input id="manual-certificate-files" type="file" name="certificates" accept=".jpg,.jpeg,.png,.pdf" multiple>
+                <p id="manual-certificate-upload-status" class="form-status" aria-live="polite"></p>
                 <div class="actions">
                   <button type="button" id="manual-certificate-upload-button" class="button">Upload certificate files</button>
                 </div>
@@ -201,6 +202,6 @@
     </section>
   </main>
 
-  <script src="/admin/assets/dashboard.js?v=20260406a"></script>
+  <script src="/admin/assets/dashboard.js?v=20260410a"></script>
 </body>
 </html>

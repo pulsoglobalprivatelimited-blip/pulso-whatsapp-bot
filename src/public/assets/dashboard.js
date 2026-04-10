@@ -21,6 +21,8 @@ const clearSearchButton = document.getElementById('clear-search-button');
 const completedRangeFilters = document.getElementById('completed-range-filters');
 const backToListButton = document.getElementById('back-to-list-button');
 const historyBottomButton = document.getElementById('history-bottom-button');
+const manualCertificateUploadButton = document.getElementById('manual-certificate-upload-button');
+const manualCertificateUploadStatus = document.getElementById('manual-certificate-upload-status');
 
 document.getElementById('refresh-button').addEventListener('click', loadProviders);
 document.querySelectorAll('.filter').forEach((button) => {
@@ -71,6 +73,19 @@ document
   .getElementById('manual-certificate-upload-button')
   .addEventListener('click', submitManualCertificateUpload);
 window.addEventListener('resize', updateMobileDetailState);
+
+function setManualUploadStatus(message, tone) {
+  if (!manualCertificateUploadStatus) {
+    return;
+  }
+
+  manualCertificateUploadStatus.textContent = message || '';
+  manualCertificateUploadStatus.classList.remove('success', 'error');
+
+  if (tone) {
+    manualCertificateUploadStatus.classList.add(tone);
+  }
+}
 
 async function fetchJson(url, options) {
   const response = await fetch(url, options);
@@ -717,7 +732,7 @@ async function submitManualCertificateUpload() {
   const uploadedBy = document.getElementById('manual-uploaded-by-input').value || 'ops-team';
   const files = Array.from(fileInput.files || []);
   if (!files.length) {
-    window.alert('Choose at least one certificate file first.');
+    setManualUploadStatus('Choose at least one certificate file first.', 'error');
     return;
   }
 
@@ -726,6 +741,9 @@ async function submitManualCertificateUpload() {
   files.forEach((file) => formData.append('certificates', file));
 
   try {
+    manualCertificateUploadButton.disabled = true;
+    manualCertificateUploadButton.textContent = 'Uploading...';
+    setManualUploadStatus(`Uploading ${files.length} file${files.length > 1 ? 's' : ''}...`);
     await fetchJson(`/admin/providers/${selectedPhone}/upload-certificate`, {
       method: 'POST',
       body: formData
@@ -736,9 +754,12 @@ async function submitManualCertificateUpload() {
     if (provider) {
       renderDetail(provider);
     }
-    window.alert('Certificate files uploaded successfully.');
+    setManualUploadStatus('Certificate files uploaded successfully.', 'success');
   } catch (error) {
-    window.alert(error.message);
+    setManualUploadStatus(error.message, 'error');
+  } finally {
+    manualCertificateUploadButton.disabled = false;
+    manualCertificateUploadButton.textContent = 'Upload certificate files';
   }
 }
 

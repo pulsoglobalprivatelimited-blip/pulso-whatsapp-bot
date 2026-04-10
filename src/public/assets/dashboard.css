@@ -404,6 +404,21 @@ dd {
   resize: vertical;
 }
 
+.form-status {
+  min-height: 1.3em;
+  margin: 12px 2px 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.form-status.success {
+  color: var(--success);
+}
+
+.form-status.error {
+  color: var(--danger);
+}
+
 .actions {
   display: flex;
   gap: 12px;
