@@ -364,7 +364,12 @@ function setText(id, value) {
   document.getElementById(id).textContent = value || '-';
 }
 
-function mediaUrl(storagePath) {
+function mediaUrl(file) {
+  if (file && file.cloudStorageUrl) {
+    return file.cloudStorageUrl;
+  }
+
+  const storagePath = file && file.storagePath ? file.storagePath : null;
   if (!storagePath) return null;
   const normalizedPath = String(storagePath).replaceAll('\\', '/');
   const pathParts = normalizedPath.split('/').filter(Boolean);
@@ -393,7 +398,7 @@ function renderAttachments(id, attachments) {
   }
 
   target.innerHTML = attachments.map((file) => {
-    const href = mediaUrl(file.storagePath);
+    const href = mediaUrl(file);
     const name = file.fileName || file.id || 'Attachment';
     const isImage = (file.mimeType || '').startsWith('image/');
     const uploadTime = file.receivedAt || file.archivedAt || null;

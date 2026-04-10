@@ -4,6 +4,15 @@ const config = require('../config');
 let app;
 let db;
 
+function getFirebaseApp() {
+  if (app) {
+    return app;
+  }
+
+  getFirestore();
+  return app;
+}
+
 function getFirestore() {
   if (db) {
     return db;
@@ -38,6 +47,11 @@ function getFirestore() {
   return db;
 }
 
+function getStorageBucket() {
+  const firebaseApp = getFirebaseApp();
+  return admin.storage(firebaseApp).bucket(config.firebaseStorageBucket || undefined);
+}
+
 async function initializeStorage() {
   await getFirestore().collection('_health').doc('startup').set(
     {
@@ -70,5 +84,6 @@ module.exports = {
   initializeStorage,
   getProvider,
   listProviders,
-  saveProvider
+  saveProvider,
+  getStorageBucket
 };
