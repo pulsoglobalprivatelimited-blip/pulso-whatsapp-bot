@@ -1,13 +1,15 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const multer = require('multer');
 const config = require('./config');
 const { STATUS } = require('./flow');
 const {
   processIncomingMessage,
   approveCertificate,
   rejectCertificate,
-  requestAdditionalDocument
+  requestAdditionalDocument,
+  adminUploadCertificateFiles
 } = require('./services/onboardingFlow');
 const { listProviders, getProvider, updateProvider } = require('./services/providerService');
 const { initializeStorage } = require('./services/storage');
@@ -22,6 +24,7 @@ const {
 } = require('./services/authService');
 
 const app = express();
+const upload = multer({ storage: multer.memoryStorage() });
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use('/admin/assets', express.static(path.join(config.publicDir, 'assets')));
@@ -252,6 +255,19 @@ app.post('/admin/providers/:phone/reject-certificate', async (req, res) => {
 app.post('/admin/providers/:phone/request-additional-document', async (req, res) => {
   try {
     const provider = await requestAdditionalDocument(req.params.phone, req.body.reviewedBy, req.body.note);
+    res.json(provider);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post('/admin/providers/:phone/upload-certificate', upload.array('certificates', 4), async (req, res) => {
+  try {
+    const provider = await adminUploadCertificateFiles(
+      req.params.phone,
+      req.files || [],
+      req.body.uploadedBy || req.body.reviewedBy || 'admin'
+    );
     res.json(provider);
   } catch (error) {
     res.status(400).json({ error: error.message });

@@ -1,4 +1,6 @@
 const config = require('../config');
+const fs = require('fs');
+const path = require('path');
 const { MESSAGES, STATUS, BUTTON_IDS, QUALIFICATIONS, DISTRICTS } = require('../flow');
 const { sendText, sendButtons, sendList } = require('./metaClient');
 const {
@@ -71,6 +73,10 @@ function canRequestAgentHelp(provider) {
 
 function buildAdditionalDocumentMessage(note) {
   return MESSAGES.additionalDocumentRequest.replace('{{note}}', note);
+}
+
+function ensureDir(dir) {
+  fs.mkdirSync(dir, { recursive: true });
 }
 
 async function handleAgentHelpRequest(phone) {
@@ -694,6 +700,98 @@ async function finalizeCertificateCollection(phone) {
 
   await updateStatus(phone, STATUS.AWAITING_NAME, 9);
   await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
+}
+
+async function adminUploadCertificateFiles(phone, files, uploadedBy = 'admin') {
+  const provider = await getProvider(phone);
+  if (!provider) {
+    throw new Error('Provider not found');
+  }
+
+  const uploads = Array.isArray(files) ? files.filter(Boolean) : [];
+  if (!uploads.length) {
+    throw new Error('At least one certificate file is required');
+  }
+
+  const providerDir = path.join(config.mediaStorageDir, phone, 'certificate');
+  ensureDir(providerDir);
+
+  const existingAttachments = provider.documents && provider.documents.certificateAttachments
+    ? provider.documents.certificateAttachments
+    : [];
+  const remainingSlots = Math.max(0, 4 - existingAttachments.length);
+  if (!remainingSlots) {
+    throw new Error('Certificate upload limit already reached for this provider');
+  }
+
+  const acceptedFiles = uploads.slice(0, remainingSlots);
+  const archivedAt = new Date().toISOString();
+  const attachments = acceptedFiles.map((file, index) => {
+    const baseName = file.originalname || `manual-upload-${Date.now()}-${index}`;
+    const safeName = String(baseName).replace(/[^\w.-]+/g, '_');
+    const targetPath = path.join(providerDir, safeName);
+    fs.writeFileSync(targetPath, file.buffer);
+
+    return {
+      id: null,
+      type: file.mimetype && file.mimetype.startsWith('image/') ? 'image' : 'document',
+      category: 'certificate',
+      fileName: safeName,
+      mimeType: file.mimetype || 'application/octet-stream',
+      bytes: file.size || file.buffer.length,
+      storagePath: targetPath,
+      archived: true,
+      archiveStatus: 'manual_upload',
+      uploadedBy,
+      archivedAt,
+      receivedAt: archivedAt
+    };
+  });
+
+  await updateProvider(phone, {
+    documents: {
+      ...provider.documents,
+      certificateReceived: true,
+      certificateAttachments: [...existingAttachments, ...attachments]
+    }
+  });
+  await appendHistory(phone, {
+    type: 'system',
+    event: 'admin_certificate_uploaded',
+    count: attachments.length,
+    uploadedBy
+  });
+
+  const refreshedProvider = await getProvider(phone);
+  if (!hasCompletedProfile(refreshedProvider)) {
+    return refreshedProvider;
+  }
+
+  await updateStatus(phone, STATUS.VERIFICATION_PENDING, 13, {
+    verification: {
+      status: 'pending',
+      notes: '',
+      reviewedAt: null,
+      reviewedBy: null,
+      notificationSentAt: null
+    }
+  });
+  const verificationProvider = await getProvider(phone);
+  const notificationSent = await notifyCertificateUploaded(
+    verificationProvider,
+    verificationProvider && verificationProvider.documents
+      ? verificationProvider.documents.certificateAttachments || []
+      : []
+  );
+  if (notificationSent) {
+    await updateProvider(phone, {
+      verification: {
+        notificationSentAt: new Date().toISOString()
+      }
+    });
+  }
+  await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
+  return getProvider(phone);
 }
 
 async function handleCertificate(phone, message) {
@@ -1422,5 +1520,6 @@ module.exports = {
   approveCertificate,
   rejectCertificate,
   requestAdditionalDocument,
-  startFlow
+  startFlow,
+  adminUploadCertificateFiles
 };

@@ -67,6 +67,9 @@ document.getElementById('reject-button').addEventListener('click', () => submitR
 document
   .getElementById('request-additional-document-button')
   .addEventListener('click', submitAdditionalDocumentRequest);
+document
+  .getElementById('manual-certificate-upload-button')
+  .addEventListener('click', submitManualCertificateUpload);
 window.addEventListener('resize', updateMobileDetailState);
 
 async function fetchJson(url, options) {
@@ -702,6 +705,40 @@ async function submitAdditionalDocumentRequest() {
     completed30dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 30)).length;
   } catch (error) {
     alert(error.message);
+  }
+}
+
+async function submitManualCertificateUpload() {
+  if (!selectedPhone) {
+    return;
+  }
+
+  const fileInput = document.getElementById('manual-certificate-files');
+  const uploadedBy = document.getElementById('manual-uploaded-by-input').value || 'ops-team';
+  const files = Array.from(fileInput.files || []);
+  if (!files.length) {
+    window.alert('Choose at least one certificate file first.');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('uploadedBy', uploadedBy);
+  files.forEach((file) => formData.append('certificates', file));
+
+  try {
+    await fetchJson(`/admin/providers/${selectedPhone}/upload-certificate`, {
+      method: 'POST',
+      body: formData
+    });
+    fileInput.value = '';
+    await loadProviders();
+    const provider = providers.find((item) => item.phone === selectedPhone);
+    if (provider) {
+      renderDetail(provider);
+    }
+    window.alert('Certificate files uploaded successfully.');
+  } catch (error) {
+    window.alert(error.message);
   }
 }
 
