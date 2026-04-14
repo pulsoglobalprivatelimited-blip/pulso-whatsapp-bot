@@ -12,6 +12,7 @@ const listPanel = document.getElementById('list-panel');
 const detailPanel = document.getElementById('detail-panel');
 const pendingCount = document.getElementById('pending-count');
 const awaitingTermsCount = document.getElementById('awaiting-terms-count');
+const awaitingTermsMetric = document.getElementById('awaiting-terms-metric');
 const completedCount = document.getElementById('completed-count');
 const completedYesterdayCount = document.getElementById('completed-yesterday-count');
 const completedTodayMetric = document.getElementById('completed-today-metric');
@@ -49,6 +50,21 @@ completedTodayMetric.addEventListener('click', () => {
 });
 completedYesterdayMetric.addEventListener('click', () => {
   applyCompletedMetricFilter('yesterday');
+});
+awaitingTermsMetric.addEventListener('click', () => {
+  currentFilter = 'awaiting_terms_acceptance';
+  currentCompletedRange = 'all';
+  mobileDetailOpen = false;
+  selectedPhone = null;
+  suppressAutoSelectOnce = true;
+  providerDetail.classList.add('hidden');
+  updateMobileDetailState();
+  document.querySelectorAll('.filter').forEach((item) => {
+    item.classList.toggle('active', item.dataset.filter === currentFilter);
+  });
+  updateCompletedRangeFilterState();
+  renderList();
+  document.querySelector('.board')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 document.querySelectorAll('[data-completed-range]').forEach((button) => {
   button.addEventListener('click', () => {
