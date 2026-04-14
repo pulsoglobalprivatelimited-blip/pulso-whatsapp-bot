@@ -452,7 +452,7 @@ function updateDashboardMetrics() {
 function renderList() {
   const filtered = getVisibleProviders();
 
-  if (filtered.length && !filtered.some((item) => item.phone === selectedPhone)) {
+  if (selectedPhone && filtered.length && !filtered.some((item) => item.phone === selectedPhone)) {
     const exactPhoneSearch = normalizePhone(currentSearch);
     const exactMatch = currentSearch
       ? filtered.find((item) => exactPhoneSearch && normalizePhone(item.phone) === exactPhoneSearch)
