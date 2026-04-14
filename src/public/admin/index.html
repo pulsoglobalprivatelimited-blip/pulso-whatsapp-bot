@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260410c">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260414a">
 </head>
 <body>
   <main class="layout">
@@ -19,6 +19,10 @@
         <div class="metric">
           <span id="pending-count">0</span>
           <label>Pending verification</label>
+        </div>
+        <div class="metric">
+          <span id="awaiting-terms-count">0</span>
+          <label>Waiting for terms acceptance</label>
         </div>
         <div class="metric">
           <span id="completed-count">0</span>
@@ -68,7 +72,7 @@
       <div class="filters">
         <button class="filter active" data-filter="all">All</button>
         <button class="filter" data-filter="certificate_verification_pending">Pending</button>
-        <button class="filter" data-filter="awaiting_terms_acceptance">Approved</button>
+        <button class="filter" data-filter="awaiting_terms_acceptance">Waiting for terms</button>
         <button class="filter" data-filter="awaiting_certificate">Rejected / Reupload</button>
         <button class="filter" data-filter="completed">Completed</button>
       </div>
@@ -206,6 +210,6 @@
     </section>
   </main>
 
-  <script src="/admin/assets/dashboard.js?v=20260410c"></script>
+  <script src="/admin/assets/dashboard.js?v=20260414a"></script>
 </body>
 </html>

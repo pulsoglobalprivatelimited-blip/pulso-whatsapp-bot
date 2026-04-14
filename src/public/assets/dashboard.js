@@ -10,6 +10,7 @@ const providerDetail = document.getElementById('provider-detail');
 const listPanel = document.getElementById('list-panel');
 const detailPanel = document.getElementById('detail-panel');
 const pendingCount = document.getElementById('pending-count');
+const awaitingTermsCount = document.getElementById('awaiting-terms-count');
 const completedCount = document.getElementById('completed-count');
 const completedYesterdayCount = document.getElementById('completed-yesterday-count');
 const newConversationsCount = document.getElementById('new-conversations-count');
@@ -104,14 +105,7 @@ async function fetchJson(url, options) {
 async function loadProviders() {
   const data = await fetchJson('/admin/providers');
   providers = data.providers || [];
-  pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
-  completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
-  completedYesterdayCount.textContent = providers.filter((item) => isCompletedYesterday(item)).length;
-  newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
-  started7dCount.textContent = providers.filter((item) => isCreatedInPastDays(item, 7)).length;
-  started30dCount.textContent = providers.filter((item) => isCreatedInPastDays(item, 30)).length;
-  completed7dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 7)).length;
-  completed30dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 30)).length;
+  updateDashboardMetrics();
   updateCompletedRangeFilterState();
   renderList();
 
@@ -160,7 +154,23 @@ function getDashboardStatus(provider) {
     return 'completed';
   }
 
+  if (isAwaitingTermsAcceptance(provider)) {
+    return 'awaiting_terms_acceptance';
+  }
+
   return provider && provider.status ? provider.status : '';
+}
+
+function isAwaitingTermsAcceptance(provider) {
+  if (!provider || provider.termsAccepted) {
+    return false;
+  }
+
+  if (provider.status === 'awaiting_terms_acceptance') {
+    return true;
+  }
+
+  return provider.verification && provider.verification.status === 'verified';
 }
 
 function getCompletedAt(provider) {
@@ -372,6 +382,18 @@ function getVisibleProviders() {
     const matchesSearch = !currentSearch || matchesPhone || matchesName;
     return matchesFilter && matchesCompletedWindow && matchesSearch;
   });
+}
+
+function updateDashboardMetrics() {
+  pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
+  awaitingTermsCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'awaiting_terms_acceptance').length;
+  completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
+  completedYesterdayCount.textContent = providers.filter((item) => isCompletedYesterday(item)).length;
+  newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
+  started7dCount.textContent = providers.filter((item) => isCreatedInPastDays(item, 7)).length;
+  started30dCount.textContent = providers.filter((item) => isCreatedInPastDays(item, 30)).length;
+  completed7dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 7)).length;
+  completed30dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 30)).length;
 }
 
 function renderList() {
@@ -720,12 +742,7 @@ async function submitReview(action) {
     const index = providers.findIndex((item) => item.phone === provider.phone);
     if (index >= 0) providers[index] = provider;
     renderDetail(provider);
-    pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
-    completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
-    completedYesterdayCount.textContent = providers.filter((item) => isCompletedYesterday(item)).length;
-    newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
-    completed7dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 7)).length;
-    completed30dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 30)).length;
+    updateDashboardMetrics();
   } catch (error) {
     alert(error.message);
   }
@@ -747,12 +764,7 @@ async function submitAdditionalDocumentRequest() {
     const index = providers.findIndex((item) => item.phone === provider.phone);
     if (index >= 0) providers[index] = provider;
     renderDetail(provider);
-    pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
-    completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
-    completedYesterdayCount.textContent = providers.filter((item) => isCompletedYesterday(item)).length;
-    newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
-    completed7dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 7)).length;
-    completed30dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 30)).length;
+    updateDashboardMetrics();
   } catch (error) {
     alert(error.message);
   }
