@@ -366,10 +366,11 @@ function formatExpectedDuties(value) {
 
 function formatListSummary(provider) {
   const name = provider && provider.fullName ? provider.fullName : 'Profile pending';
+  const qualification = provider && provider.qualification ? provider.qualification : '-';
   const dutyHour = provider && provider.dutyHourPreference ? formatDutyHourPreference(provider.dutyHourPreference) : '-';
   const district = provider && provider.district ? provider.district : '-';
   const sex = provider && provider.sex ? provider.sex : '-';
-  return [name, dutyHour, district, sex].join(' | ');
+  return [name, qualification, dutyHour, district, sex].join(' | ');
 }
 
 function formatAgentHelp(value) {
