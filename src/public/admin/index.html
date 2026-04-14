@@ -30,14 +30,14 @@
           <span id="awaiting-terms-count">0</span>
           <label>Waiting for terms acceptance</label>
         </div>
-        <div class="metric">
+        <button class="metric metric-button" id="completed-today-metric" type="button">
           <span id="completed-count">0</span>
           <label>Completed today</label>
-        </div>
-        <div class="metric">
+        </button>
+        <button class="metric metric-button" id="completed-yesterday-metric" type="button">
           <span id="completed-yesterday-count">0</span>
           <label>Completed yesterday</label>
-        </div>
+        </button>
         <div class="metric">
           <span id="new-conversations-count">0</span>
           <label>Conversations started today</label>
@@ -86,6 +86,7 @@
       <div id="completed-range-filters" class="filters hidden">
         <button class="filter active" data-completed-range="all">All completed</button>
         <button class="filter" data-completed-range="today">Today</button>
+        <button class="filter" data-completed-range="yesterday">Yesterday</button>
         <button class="filter" data-completed-range="7d">Past 7 days</button>
         <button class="filter" data-completed-range="30d">Past 30 days</button>
       </div>

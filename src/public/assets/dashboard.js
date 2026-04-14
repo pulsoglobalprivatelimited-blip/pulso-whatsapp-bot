@@ -13,6 +13,8 @@ const pendingCount = document.getElementById('pending-count');
 const awaitingTermsCount = document.getElementById('awaiting-terms-count');
 const completedCount = document.getElementById('completed-count');
 const completedYesterdayCount = document.getElementById('completed-yesterday-count');
+const completedTodayMetric = document.getElementById('completed-today-metric');
+const completedYesterdayMetric = document.getElementById('completed-yesterday-metric');
 const newConversationsCount = document.getElementById('new-conversations-count');
 const started7dCount = document.getElementById('started-7d-count');
 const started30dCount = document.getElementById('started-30d-count');
@@ -40,6 +42,12 @@ document.querySelectorAll('.filter').forEach((button) => {
     updateCompletedRangeFilterState();
     renderList();
   });
+});
+completedTodayMetric.addEventListener('click', () => {
+  applyCompletedMetricFilter('today');
+});
+completedYesterdayMetric.addEventListener('click', () => {
+  applyCompletedMetricFilter('yesterday');
 });
 document.querySelectorAll('[data-completed-range]').forEach((button) => {
   button.addEventListener('click', () => {
@@ -267,6 +275,18 @@ function isCompletedInPastDays(provider, days) {
   return completedDate >= cutoff && completedDate <= now;
 }
 
+function applyCompletedMetricFilter(range) {
+  currentFilter = 'completed';
+  currentCompletedRange = range;
+  mobileDetailOpen = false;
+  document.querySelectorAll('.filter').forEach((item) => {
+    item.classList.toggle('active', item.dataset.filter === currentFilter);
+  });
+  updateCompletedRangeFilterState();
+  renderList();
+  document.querySelector('.board')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function isCreatedInPastDays(provider, days) {
   if (!provider || !provider.createdAt) {
     return false;
@@ -303,6 +323,10 @@ function matchesCompletedRange(provider) {
 
   if (currentCompletedRange === 'today') {
     return isCompletedToday(provider);
+  }
+
+  if (currentCompletedRange === 'yesterday') {
+    return isCompletedYesterday(provider);
   }
 
   if (currentCompletedRange === '7d') {
