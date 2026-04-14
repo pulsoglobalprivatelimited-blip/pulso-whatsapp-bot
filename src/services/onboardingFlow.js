@@ -502,6 +502,22 @@ function hasReminderBeenSent(provider) {
   return Boolean(provider && provider.termsReminderSentAt);
 }
 
+function isLegacyWaitingForTermsProvider(provider) {
+  if (!provider || !provider.phone || provider.termsAccepted) {
+    return false;
+  }
+
+  if (provider.status !== STATUS.AWAITING_TERMS_ACCEPTANCE) {
+    return false;
+  }
+
+  if (provider.termsSentAt || hasReminderBeenSent(provider)) {
+    return false;
+  }
+
+  return true;
+}
+
 function isTermsReminderDue(provider, now = Date.now()) {
   if (!provider || !provider.phone || provider.termsAccepted) {
     return false;
@@ -559,6 +575,28 @@ async function remindProviderToAcceptTerms(provider) {
   return true;
 }
 
+async function sendLegacyTermsReminder(provider) {
+  if (!isLegacyWaitingForTermsProvider(provider)) {
+    return false;
+  }
+
+  const reminderKind = await sendTermsReminder(provider.phone, 'terms-reminder-backfill');
+  const sentAt = new Date().toISOString();
+  await updateProvider(provider.phone, {
+    termsSentAt: getTermsSentAt(provider) || (provider.verification && provider.verification.reviewedAt) || sentAt,
+    termsReminderSentAt: sentAt,
+    termsReminderCount: Number(provider.termsReminderCount || 0) + 1,
+    termsReminderKind: reminderKind
+  });
+  await appendHistory(provider.phone, {
+    type: 'system',
+    event: TERMS_REMINDER_HISTORY_EVENT,
+    reminderKind,
+    source: 'legacy_backfill'
+  });
+  return true;
+}
+
 async function runTermsReminderSweep() {
   const providers = await listProviders();
   const dueProviders = providers.filter((provider) => isTermsReminderDue(provider));
@@ -595,6 +633,44 @@ async function runTermsReminderSweep() {
   }
 
   return { scanned: providers.length, due: dueProviders.length, sent };
+}
+
+async function runLegacyTermsReminderBackfill() {
+  const providers = await listProviders();
+  const legacyProviders = providers.filter((provider) => isLegacyWaitingForTermsProvider(provider));
+
+  if (!legacyProviders.length) {
+    console.log('[TERMS_REMINDER_BACKFILL] No legacy providers waiting for terms');
+    return { scanned: providers.length, eligible: 0, sent: 0 };
+  }
+
+  console.log(`[TERMS_REMINDER_BACKFILL] Sending one-time reminders to ${legacyProviders.length} provider(s)`);
+  let sent = 0;
+
+  for (const provider of legacyProviders) {
+    try {
+      const delivered = await sendLegacyTermsReminder(provider);
+      if (delivered) {
+        sent += 1;
+        console.log(`[TERMS_REMINDER_BACKFILL] Reminder sent to ${provider.phone}`);
+      }
+    } catch (error) {
+      console.error(
+        '[TERMS_REMINDER_BACKFILL_ERROR]',
+        JSON.stringify(
+          {
+            phone: provider.phone,
+            message: error.message,
+            response: error.response ? error.response.data : null
+          },
+          null,
+          2
+        )
+      );
+    }
+  }
+
+  return { scanned: providers.length, eligible: legacyProviders.length, sent };
 }
 
 function startTermsReminderScheduler() {
@@ -1689,6 +1765,7 @@ module.exports = {
   approveCertificate,
   rejectCertificate,
   requestAdditionalDocument,
+  runLegacyTermsReminderBackfill,
   runTermsReminderSweep,
   startTermsReminderScheduler,
   startFlow,
