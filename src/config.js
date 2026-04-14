@@ -34,6 +34,7 @@ module.exports = {
   sessionTtlHours: Number(process.env.SESSION_TTL_HOURS || 12),
   ownerNotificationPhone: process.env.OWNER_NOTIFICATION_PHONE || '919446600809',
   agentHelpWhatsappNumber: process.env.AGENT_HELP_WHATSAPP_NUMBER || '919446600809',
+  secondaryNotificationPhone: process.env.SECONDARY_NOTIFICATION_PHONE || '',
   mediaStorageDir: resolveMediaStorageDir(),
   dryRun: process.env.WHATSAPP_DRY_RUN !== 'false',
   publicDir: path.join(__dirname, 'public')

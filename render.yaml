@@ -33,6 +33,8 @@ services:
         value: "919446600809"
       - key: AGENT_HELP_WHATSAPP_NUMBER
         value: "919446600809"
+      - key: SECONDARY_NOTIFICATION_PHONE
+        value: "917736129809"
       - key: WHATSAPP_DRY_RUN
         value: "false"
       - key: ADMIN_USERNAME

@@ -40,7 +40,7 @@ function getReviewerPhones() {
   return [
     normalizePhone(config.agentHelpWhatsappNumber),
     normalizePhone(config.ownerNotificationPhone),
-    normalizePhone('917736129809')
+    normalizePhone(config.secondaryNotificationPhone)
   ].filter(Boolean);
 }
 
@@ -397,7 +397,7 @@ async function notifyOnboardingCompleted(provider) {
 
   const recipients = [
     getCertificateReviewPhone(),
-    normalizePhone('917736129809')
+    normalizePhone(config.secondaryNotificationPhone)
   ].filter(Boolean)
     .filter((phone, index, list) => list.indexOf(phone) === index);
 
@@ -410,7 +410,7 @@ async function notifyOnboardingCompleted(provider) {
 
 async function notifyAgentHelpRequested(provider) {
   const helpNumber = normalizePhone(config.agentHelpWhatsappNumber);
-  const backupHelpNumber = normalizePhone('917736129809');
+  const backupHelpNumber = normalizePhone(config.secondaryNotificationPhone);
   const recipients = [
     { phone: helpNumber, senderName: 'Abdul' },
     { phone: backupHelpNumber, senderName: 'Ashmila' }
