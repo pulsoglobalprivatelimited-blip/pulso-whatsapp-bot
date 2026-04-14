@@ -223,6 +223,27 @@ h1 {
   font-size: 0.92rem;
 }
 
+.phone-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.phone-link:hover,
+.phone-link:focus-visible {
+  text-decoration: underline;
+}
+
+.provider-phone-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detail-phone-link {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
 .mobile-detail-bar {
   display: none;
   margin-bottom: 16px;

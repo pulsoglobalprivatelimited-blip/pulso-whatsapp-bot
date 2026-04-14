@@ -362,6 +362,16 @@ function buildProviderChatLink(phone) {
   return normalized ? `https://wa.me/${normalized}` : null;
 }
 
+function renderPhoneLink(phone, className = '') {
+  const normalized = normalizePhone(phone);
+  if (!normalized) {
+    return escapeHtml(phone || '-');
+  }
+
+  const classes = ['phone-link', className].filter(Boolean).join(' ');
+  return `<a class="${classes}" href="https://wa.me/${normalized}" target="_blank" rel="noreferrer">${escapeHtml(phone || normalized)}</a>`;
+}
+
 function buildProviderPrefilledChatLink(provider) {
   const chatLink = buildProviderChatLink(provider && provider.phone);
   if (!chatLink) {
@@ -418,7 +428,7 @@ function renderList() {
   providerList.innerHTML = filtered.length
     ? filtered.map((provider) => `
         <article class="provider-item ${provider.phone === selectedPhone ? 'active' : ''}" data-phone="${provider.phone}">
-          <strong>${provider.phone}</strong>
+          <strong>${renderPhoneLink(provider.phone, 'provider-phone-link')}</strong>
           <p>${provider.fullName || provider.qualification || 'Profile pending'}</p>
           <p>${formatStatus(getDashboardStatus(provider))}</p>
         </article>
@@ -429,6 +439,12 @@ function renderList() {
     item.addEventListener('click', () => {
       const provider = providers.find((entry) => entry.phone === item.dataset.phone);
       if (provider) renderDetail(provider);
+    });
+  });
+
+  providerList.querySelectorAll('.phone-link').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.stopPropagation();
     });
   });
 }
@@ -692,7 +708,7 @@ function renderDetail(provider) {
   updateMobileDetailState();
   renderList();
 
-  setText('detail-phone', provider.phone);
+  document.getElementById('detail-phone').innerHTML = renderPhoneLink(provider.phone, 'detail-phone-link');
   setText('detail-status', formatStatus(getDashboardStatus(provider)));
   setText('detail-step', `Step ${provider.currentStep}`);
   setText('detail-name', provider.fullName);
