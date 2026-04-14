@@ -1,9 +1,9 @@
-const CACHE_NAME = 'pulso-admin-v1';
+const CACHE_NAME = 'pulso-admin-v2';
 const STATIC_ASSETS = [
   '/admin/login',
   '/admin/manifest.webmanifest',
-  '/admin/assets/dashboard.css?v=20260414a',
-  '/admin/assets/admin-pwa.js?v=20260414a',
+  '/admin/assets/dashboard.css?v=20260414b',
+  '/admin/assets/admin-pwa.js?v=20260414b',
   '/admin/assets/pwa/icon.svg',
   '/admin/assets/pwa/icon-maskable.svg'
 ];
