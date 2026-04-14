@@ -31,6 +31,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use('/admin/assets', express.static(path.join(config.publicDir, 'assets')));
 
+app.get('/admin/manifest.webmanifest', (_req, res) => {
+  res.type('application/manifest+json');
+  res.sendFile(path.join(config.publicDir, 'admin', 'manifest.webmanifest'));
+});
+
+app.get('/admin/sw.js', (_req, res) => {
+  res.type('application/javascript');
+  res.set('Service-Worker-Allowed', '/admin/');
+  res.sendFile(path.join(config.publicDir, 'admin', 'sw.js'));
+});
+
 const recentlyProcessedMessageIds = new Map();
 const MESSAGE_DEDUPE_TTL_MS = 5 * 60 * 1000;
 

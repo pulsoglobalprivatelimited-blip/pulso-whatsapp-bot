@@ -1,0 +1,25 @@
+{
+  "name": "Pulso Admin",
+  "short_name": "Pulso Admin",
+  "description": "Pulso operations dashboard for reviewer login, provider verification, and onboarding follow-up.",
+  "start_url": "/admin/login",
+  "scope": "/admin/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f5efe5",
+  "theme_color": "#b75d32",
+  "icons": [
+    {
+      "src": "/admin/assets/pwa/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/admin/assets/pwa/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
