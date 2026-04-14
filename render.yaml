@@ -35,6 +35,16 @@ services:
         value: "919446600809"
       - key: SECONDARY_NOTIFICATION_PHONE
         value: "917736129809"
+      - key: TERMS_REMINDER_DELAY_HOURS
+        value: "24"
+      - key: TERMS_REMINDER_CHECK_INTERVAL_MINUTES
+        value: "30"
+      - key: TERMS_REMINDER_RESUME_KEYWORD
+        value: "continue"
+      - key: TERMS_REMINDER_TEMPLATE_NAME
+        sync: false
+      - key: TERMS_REMINDER_TEMPLATE_LANGUAGE
+        value: "en"
       - key: WHATSAPP_DRY_RUN
         value: "false"
       - key: ADMIN_USERNAME

@@ -1,3 +1,4 @@
+const config = require('../config');
 const { BUTTON_IDS, DISTRICTS } = require('../flow');
 
 function normalizeText(value) {
@@ -194,6 +195,20 @@ function parseTermsAcceptance(message) {
   return null;
 }
 
+function parseTermsReminderResume(message) {
+  const normalized = normalizeText(getMessageText(message));
+  const configuredKeyword = normalizeText(config.termsReminderResumeKeyword);
+
+  return [
+    configuredKeyword,
+    'continue',
+    'start',
+    'resume',
+    'hi',
+    'hello'
+  ].filter(Boolean).includes(normalized);
+}
+
 function parseCertificateCollectionAction(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId === BUTTON_IDS.CERTIFICATE_ADD_MORE) return 'add_more';
@@ -264,6 +279,7 @@ module.exports = {
   parseDistrict,
   parseDistrictListAction,
   parseTermsAcceptance,
+  parseTermsReminderResume,
   parseCertificateCollectionAction,
   classifyDocument
 };

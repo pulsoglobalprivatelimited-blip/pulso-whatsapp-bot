@@ -9,7 +9,9 @@ const {
   approveCertificate,
   rejectCertificate,
   requestAdditionalDocument,
-  adminUploadCertificateFiles
+  adminUploadCertificateFiles,
+  runTermsReminderSweep,
+  startTermsReminderScheduler
 } = require('./services/onboardingFlow');
 const { listProviders, getProvider, updateProvider } = require('./services/providerService');
 const { initializeStorage } = require('./services/storage');
@@ -316,12 +318,19 @@ initializeStorage()
     return reconcilePendingVerificationNotifications();
   })
   .then(() => {
+    return runTermsReminderSweep();
+  })
+  .then(() => {
+    startTermsReminderScheduler();
     app.listen(config.port, () => {
       console.log(`Pulso WhatsApp bot listening on port ${config.port}`);
       console.log(`Webhook verify token: ${config.verifyToken}`);
       console.log(`Webhook callback URL: ${config.baseUrl}/webhook`);
       console.log(`Dry run mode: ${config.dryRun}`);
       console.log(`Media storage dir: ${config.mediaStorageDir}`);
+      console.log(`Terms reminder delay hours: ${config.termsReminderDelayHours}`);
+      console.log(`Terms reminder check interval minutes: ${config.termsReminderCheckIntervalMinutes}`);
+      console.log(`Terms reminder template configured: ${Boolean(config.termsReminderTemplateName)}`);
     });
   })
   .catch((error) => {

@@ -77,6 +77,21 @@ async function sendButtons(to, body, buttons) {
   });
 }
 
+async function sendTemplate(to, name, languageCode, components) {
+  return sendRequest({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'template',
+    template: {
+      name,
+      language: {
+        code: languageCode
+      },
+      ...(components && components.length ? { components } : {})
+    }
+  });
+}
+
 async function sendList(to, body, buttonText, sections) {
   return sendRequest({
     messaging_product: 'whatsapp',
@@ -162,6 +177,7 @@ module.exports = {
   sendDocumentById,
   sendButtons,
   sendList,
+  sendTemplate,
   sendAudio,
   sendTermsAndConditions,
   getMediaMetadata,

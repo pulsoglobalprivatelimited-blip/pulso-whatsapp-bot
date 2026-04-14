@@ -2,7 +2,7 @@ const config = require('../config');
 const fs = require('fs');
 const path = require('path');
 const { MESSAGES, STATUS, BUTTON_IDS, QUALIFICATIONS, DISTRICTS } = require('../flow');
-const { sendText, sendButtons, sendList } = require('./metaClient');
+const { sendText, sendButtons, sendList, sendTemplate } = require('./metaClient');
 const {
   getOrCreateProvider,
   updateProvider,
@@ -43,6 +43,7 @@ const {
   parseDistrict,
   parseDistrictListAction,
   parseTermsAcceptance,
+  parseTermsReminderResume,
   parseCertificateCollectionAction,
   classifyDocument
 } = require('./messageParser');
@@ -52,6 +53,9 @@ const pendingCertificatePromptTimers = new Map();
 const pendingCertificateRetryTimers = new Map();
 const CERTIFICATE_PROMPT_DEBOUNCE_MS = 5000;
 const AGENT_HELP_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+const TERMS_REMINDER_HISTORY_EVENT = 'terms_acceptance_reminder_sent';
+
+let termsReminderInterval = null;
 
 function buildAgentHelpMessage() {
   return 'Pulso support team ഉടൻ തന്നെ താങ്കളെ ബന്ധപ്പെടുന്നതാണ്.';
@@ -107,6 +111,8 @@ async function sendAndLog(phone, kind, body, sender) {
       await sendButtons(phone, body.body, body.buttons);
     } else if (kind === 'list') {
       await sendList(phone, body.body, body.buttonText, body.sections);
+    } else if (kind === 'template') {
+      await sendTemplate(phone, body.name, body.languageCode, body.components);
     } else {
       await sendText(phone, body);
     }
@@ -469,6 +475,141 @@ async function sendTermsButtons(phone) {
       { id: BUTTON_IDS.TERMS_DECLINE, title: 'സ്വീകരിക്കുന്നില്ല' }
     ]
   });
+}
+
+function buildTermsReminderMessage() {
+  const keyword = config.termsReminderResumeKeyword || 'continue';
+  return `താങ്കളുടെ onboarding പൂർത്തിയാക്കാൻ terms and conditions ഇതുവരെ സ്വീകരിച്ചിട്ടില്ല.\nതുടരാൻ ദയവായി "${keyword}" എന്ന് reply ചെയ്യുക.`;
+}
+
+function getTermsSentAt(provider) {
+  if (!provider) {
+    return null;
+  }
+
+  if (provider.termsSentAt) {
+    return provider.termsSentAt;
+  }
+
+  if (provider.verification && provider.verification.reviewedAt) {
+    return provider.verification.reviewedAt;
+  }
+
+  return null;
+}
+
+function hasReminderBeenSent(provider) {
+  return Boolean(provider && provider.termsReminderSentAt);
+}
+
+function isTermsReminderDue(provider, now = Date.now()) {
+  if (!provider || !provider.phone || provider.termsAccepted) {
+    return false;
+  }
+
+  if (provider.status !== STATUS.AWAITING_TERMS_ACCEPTANCE) {
+    return false;
+  }
+
+  if (hasReminderBeenSent(provider)) {
+    return false;
+  }
+
+  const termsSentAt = getTermsSentAt(provider);
+  if (!termsSentAt) {
+    return false;
+  }
+
+  const sentAtMs = Date.parse(termsSentAt);
+  if (Number.isNaN(sentAtMs)) {
+    return false;
+  }
+
+  return now - sentAtMs >= config.termsReminderDelayHours * 60 * 60 * 1000;
+}
+
+async function sendTermsReminder(phone, sender = 'bot') {
+  const templateName = String(config.termsReminderTemplateName || '').trim();
+  if (templateName) {
+    await sendAndLog(phone, 'template', {
+      name: templateName,
+      languageCode: config.termsReminderTemplateLanguage || 'en',
+      components: []
+    }, sender);
+    return 'template';
+  }
+
+  await sendAndLog(phone, 'text', buildTermsReminderMessage(), sender);
+  return 'text';
+}
+
+async function remindProviderToAcceptTerms(provider) {
+  if (!provider || !provider.phone || !isTermsReminderDue(provider)) {
+    return false;
+  }
+
+  const reminderKind = await sendTermsReminder(provider.phone, 'terms-reminder');
+  const sentAt = new Date().toISOString();
+  await updateProvider(provider.phone, {
+    termsReminderSentAt: sentAt,
+    termsReminderCount: Number(provider.termsReminderCount || 0) + 1,
+    termsReminderKind: reminderKind
+  });
+  await appendHistory(provider.phone, { type: 'system', event: TERMS_REMINDER_HISTORY_EVENT, reminderKind });
+  return true;
+}
+
+async function runTermsReminderSweep() {
+  const providers = await listProviders();
+  const dueProviders = providers.filter((provider) => isTermsReminderDue(provider));
+
+  if (!dueProviders.length) {
+    console.log('[TERMS_REMINDER] No providers due for reminder');
+    return { scanned: providers.length, due: 0, sent: 0 };
+  }
+
+  console.log(`[TERMS_REMINDER] Sending reminders to ${dueProviders.length} provider(s)`);
+  let sent = 0;
+
+  for (const provider of dueProviders) {
+    try {
+      const delivered = await remindProviderToAcceptTerms(provider);
+      if (delivered) {
+        sent += 1;
+        console.log(`[TERMS_REMINDER] Reminder sent to ${provider.phone}`);
+      }
+    } catch (error) {
+      console.error(
+        '[TERMS_REMINDER_ERROR]',
+        JSON.stringify(
+          {
+            phone: provider.phone,
+            message: error.message,
+            response: error.response ? error.response.data : null
+          },
+          null,
+          2
+        )
+      );
+    }
+  }
+
+  return { scanned: providers.length, due: dueProviders.length, sent };
+}
+
+function startTermsReminderScheduler() {
+  if (termsReminderInterval) {
+    return termsReminderInterval;
+  }
+
+  const intervalMs = Math.max(1, config.termsReminderCheckIntervalMinutes) * 60 * 1000;
+  termsReminderInterval = setInterval(() => {
+    runTermsReminderSweep().catch((error) => {
+      console.error('[TERMS_REMINDER_SCHEDULER_ERROR]', error);
+    });
+  }, intervalMs);
+
+  return termsReminderInterval;
 }
 
 async function sendOptionalAgentHelpButton(phone) {
@@ -1080,15 +1221,28 @@ async function handleDistrict(phone, message) {
 }
 
 async function handleTerms(phone, message) {
+  const provider = await getProvider(phone);
   const action = parseTermsAcceptance(message);
+  const resumeRequested = parseTermsReminderResume(message);
   if (action === 'connect_agent') {
     await handleAgentHelpRequest(phone);
+    return;
+  }
+
+  if (resumeRequested && hasReminderBeenSent(provider)) {
+    await updateProvider(phone, {
+      termsReminderReplyReceivedAt: new Date().toISOString()
+    });
+    await sendAndLog(phone, 'text', MESSAGES.termsReminderResume);
+    await sendAndLog(phone, 'text', MESSAGES.termsIntro);
+    await sendTermsButtons(phone);
     return;
   }
 
   if (action === 'accept') {
     await updateStatus(phone, STATUS.COMPLETED, 15, {
       termsAccepted: true,
+      termsReminderReplyReceivedAt: provider && provider.termsReminderReplyReceivedAt ? provider.termsReminderReplyReceivedAt : null,
       agentHelpRequested: false,
       agentHelpRequestedAt: null,
       completedAt: new Date().toISOString()
@@ -1108,7 +1262,8 @@ async function handleTerms(phone, message) {
     await updateProvider(phone, {
       status: STATUS.NOT_INTERESTED_RESTARTABLE,
       currentStep: 14,
-      termsAccepted: false
+      termsAccepted: false,
+      termsDeclinedAt: new Date().toISOString()
     });
     await sendAndLog(phone, 'text', MESSAGES.termsDeclined);
     return;
@@ -1456,7 +1611,13 @@ async function approveCertificate(phone, reviewedBy, notes) {
 
   await updateProvider(phone, {
     status: STATUS.AWAITING_TERMS_ACCEPTANCE,
-    currentStep: 11,
+    currentStep: 14,
+    termsSentAt: new Date().toISOString(),
+    termsReminderSentAt: null,
+    termsReminderCount: 0,
+    termsReminderKind: null,
+    termsReminderReplyReceivedAt: null,
+    termsDeclinedAt: null,
     verification: {
       status: 'verified',
       notes: notes || '',
@@ -1528,6 +1689,8 @@ module.exports = {
   approveCertificate,
   rejectCertificate,
   requestAdditionalDocument,
+  runTermsReminderSweep,
+  startTermsReminderScheduler,
   startFlow,
   adminUploadCertificateFiles
 };
