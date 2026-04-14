@@ -518,6 +518,22 @@ function isLegacyWaitingForTermsProvider(provider) {
   return true;
 }
 
+function isCurrentWaitingForTermsWithoutReminder(provider) {
+  if (!provider || !provider.phone || provider.termsAccepted) {
+    return false;
+  }
+
+  if (provider.status !== STATUS.AWAITING_TERMS_ACCEPTANCE) {
+    return false;
+  }
+
+  if (hasReminderBeenSent(provider)) {
+    return false;
+  }
+
+  return true;
+}
+
 function isTermsReminderDue(provider, now = Date.now()) {
   if (!provider || !provider.phone || provider.termsAccepted) {
     return false;
@@ -671,6 +687,55 @@ async function runLegacyTermsReminderBackfill() {
   }
 
   return { scanned: providers.length, eligible: legacyProviders.length, sent };
+}
+
+async function runCurrentWaitingTermsReminderBackfill() {
+  const providers = await listProviders();
+  const eligibleProviders = providers.filter((provider) => isCurrentWaitingForTermsWithoutReminder(provider));
+
+  if (!eligibleProviders.length) {
+    console.log('[TERMS_REMINDER_CURRENT_BACKFILL] No current waiting providers need a reminder');
+    return { scanned: providers.length, eligible: 0, sent: 0 };
+  }
+
+  console.log(`[TERMS_REMINDER_CURRENT_BACKFILL] Sending one-time reminders to ${eligibleProviders.length} provider(s)`);
+  let sent = 0;
+
+  for (const provider of eligibleProviders) {
+    try {
+      const reminderKind = await sendTermsReminder(provider.phone, 'terms-reminder-manual-backfill');
+      const sentAt = new Date().toISOString();
+      await updateProvider(provider.phone, {
+        termsSentAt: getTermsSentAt(provider) || (provider.verification && provider.verification.reviewedAt) || sentAt,
+        termsReminderSentAt: sentAt,
+        termsReminderCount: Number(provider.termsReminderCount || 0) + 1,
+        termsReminderKind: reminderKind
+      });
+      await appendHistory(provider.phone, {
+        type: 'system',
+        event: TERMS_REMINDER_HISTORY_EVENT,
+        reminderKind,
+        source: 'current_backfill'
+      });
+      sent += 1;
+      console.log(`[TERMS_REMINDER_CURRENT_BACKFILL] Reminder sent to ${provider.phone}`);
+    } catch (error) {
+      console.error(
+        '[TERMS_REMINDER_CURRENT_BACKFILL_ERROR]',
+        JSON.stringify(
+          {
+            phone: provider.phone,
+            message: error.message,
+            response: error.response ? error.response.data : null
+          },
+          null,
+          2
+        )
+      );
+    }
+  }
+
+  return { scanned: providers.length, eligible: eligibleProviders.length, sent };
 }
 
 function startTermsReminderScheduler() {
@@ -1765,6 +1830,7 @@ module.exports = {
   approveCertificate,
   rejectCertificate,
   requestAdditionalDocument,
+  runCurrentWaitingTermsReminderBackfill,
   runLegacyTermsReminderBackfill,
   runTermsReminderSweep,
   startTermsReminderScheduler,
