@@ -364,6 +364,14 @@ function formatExpectedDuties(value) {
   return '-';
 }
 
+function formatListSummary(provider) {
+  const name = provider && provider.fullName ? provider.fullName : 'Profile pending';
+  const dutyHour = provider && provider.dutyHourPreference ? formatDutyHourPreference(provider.dutyHourPreference) : '-';
+  const district = provider && provider.district ? provider.district : '-';
+  const sex = provider && provider.sex ? provider.sex : '-';
+  return [name, dutyHour, district, sex].join(' | ');
+}
+
 function formatAgentHelp(value) {
   return value ? 'Requested' : 'Not requested';
 }
@@ -453,7 +461,7 @@ function renderList() {
     ? filtered.map((provider) => `
         <article class="provider-item ${provider.phone === selectedPhone ? 'active' : ''}" data-phone="${provider.phone}">
           <strong>${renderPhoneLink(provider.phone, 'provider-phone-link')}</strong>
-          <p>${provider.fullName || provider.qualification || 'Profile pending'}</p>
+          <p>${shouldShowCompletedListSummary() ? formatListSummary(provider) : (provider.fullName || provider.qualification || 'Profile pending')}</p>
           <p>${formatStatus(getDashboardStatus(provider))}</p>
         </article>
       `).join('')
@@ -471,6 +479,10 @@ function renderList() {
       event.stopPropagation();
     });
   });
+}
+
+function shouldShowCompletedListSummary() {
+  return currentFilter === 'completed' && ['today', 'yesterday'].includes(currentCompletedRange);
 }
 
 function setText(id, value) {
