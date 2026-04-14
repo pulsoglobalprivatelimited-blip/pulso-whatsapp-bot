@@ -4,6 +4,7 @@ let currentFilter = 'all';
 let currentSearch = '';
 let currentCompletedRange = 'all';
 let mobileDetailOpen = false;
+let suppressAutoSelectOnce = false;
 
 const providerList = document.getElementById('provider-list');
 const providerDetail = document.getElementById('provider-detail');
@@ -116,6 +117,11 @@ async function loadProviders() {
   updateDashboardMetrics();
   updateCompletedRangeFilterState();
   renderList();
+
+  if (suppressAutoSelectOnce) {
+    suppressAutoSelectOnce = false;
+    return;
+  }
 
   if (selectedPhone) {
     const selected = getVisibleProviders().find((item) => item.phone === selectedPhone) ||
@@ -279,6 +285,10 @@ function applyCompletedMetricFilter(range) {
   currentFilter = 'completed';
   currentCompletedRange = range;
   mobileDetailOpen = false;
+  selectedPhone = null;
+  suppressAutoSelectOnce = true;
+  providerDetail.classList.add('hidden');
+  updateMobileDetailState();
   document.querySelectorAll('.filter').forEach((item) => {
     item.classList.toggle('active', item.dataset.filter === currentFilter);
   });
