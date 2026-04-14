@@ -482,6 +482,26 @@ function buildTermsReminderMessage() {
   return `താങ്കളുടെ onboarding പൂർത്തിയാക്കാൻ terms and conditions ഇതുവരെ സ്വീകരിച്ചിട്ടില്ല.\nതുടരാൻ ദയവായി "${keyword}" എന്ന് reply ചെയ്യുക.`;
 }
 
+function hasHistoryEvent(provider, predicate) {
+  const history = Array.isArray(provider && provider.history) ? provider.history : [];
+  return history.some(predicate);
+}
+
+function getLastTermsAcceptHistoryEntry(provider) {
+  const history = Array.isArray(provider && provider.history) ? provider.history : [];
+  const acceptEntries = history.filter(
+    (entry) =>
+      entry &&
+      entry.type === 'inbound_message' &&
+      entry.payload &&
+      entry.payload.interactive &&
+      entry.payload.interactive.button_reply &&
+      entry.payload.interactive.button_reply.id === BUTTON_IDS.TERMS_ACCEPT
+  );
+
+  return acceptEntries.length ? acceptEntries[acceptEntries.length - 1] : null;
+}
+
 function getTermsSentAt(provider) {
   if (!provider) {
     return null;
@@ -573,6 +593,59 @@ async function sendTermsReminder(phone, sender = 'bot') {
 
   await sendAndLog(phone, 'text', buildTermsReminderMessage(), sender);
   return 'text';
+}
+
+async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options = {}) {
+  const completionTime = options.completedAt || new Date().toISOString();
+  const currentProvider = provider || (await getProvider(phone));
+  if (!currentProvider) {
+    throw new Error('Provider not found');
+  }
+
+  await updateStatus(phone, STATUS.COMPLETED, 15, {
+    termsAccepted: true,
+    termsReminderReplyReceivedAt:
+      currentProvider && currentProvider.termsReminderReplyReceivedAt
+        ? currentProvider.termsReminderReplyReceivedAt
+        : null,
+    agentHelpRequested: false,
+    agentHelpRequestedAt: null,
+    completedAt: completionTime
+  });
+
+  const completedProvider = await getProvider(phone);
+  const hasCompletedEvent = hasHistoryEvent(
+    completedProvider,
+    (entry) => entry && entry.type === 'system' && entry.event === 'onboarding_completed'
+  );
+  if (!hasCompletedEvent) {
+    await appendHistory(phone, { type: 'system', event: 'onboarding_completed' });
+  }
+
+  const refreshedProvider = await getProvider(phone);
+  const sentTermsAcceptedMessage = hasHistoryEvent(
+    refreshedProvider,
+    (entry) =>
+      entry &&
+      entry.type === 'outbound_message' &&
+      entry.payload &&
+      entry.payload.kind === 'text' &&
+      entry.payload.body === MESSAGES.termsAccepted
+  );
+  if (!sentTermsAcceptedMessage) {
+    await sendAndLog(phone, 'text', MESSAGES.termsAccepted, sender);
+    await sendAndLog(phone, 'text', MESSAGES.postOnboardingSupport, sender);
+    await sendAndLog(phone, 'text', MESSAGES.postOnboardingContactSupport, sender);
+    await sendAndLog(phone, 'text', MESSAGES.postOnboardingLinks, sender);
+    await sendOptionalAgentHelpButton(phone);
+  }
+
+  const finalProvider = await getProvider(phone);
+  if (options.notifyOps !== false) {
+    await notifyOnboardingCompleted(finalProvider);
+  }
+
+  return finalProvider;
 }
 
 async function remindProviderToAcceptTerms(provider) {
@@ -736,6 +809,63 @@ async function runCurrentWaitingTermsReminderBackfill() {
   }
 
   return { scanned: providers.length, eligible: eligibleProviders.length, sent };
+}
+
+async function reconcileAcceptedTermsProviders(targetPhones = null) {
+  const providers = await listProviders();
+  const targetSet = Array.isArray(targetPhones) && targetPhones.length ? new Set(targetPhones) : null;
+  const stuckAcceptedProviders = providers.filter((provider) => {
+    if (!provider || !provider.phone || provider.termsAccepted) {
+      return false;
+    }
+
+    if (provider.status !== STATUS.AWAITING_TERMS_ACCEPTANCE) {
+      return false;
+    }
+
+    if (targetSet && !targetSet.has(provider.phone)) {
+      return false;
+    }
+
+    return Boolean(getLastTermsAcceptHistoryEntry(provider));
+  });
+
+  if (!stuckAcceptedProviders.length) {
+    console.log('[TERMS_ACCEPT_RECONCILE] No stuck accepted providers found');
+    return { scanned: providers.length, fixed: 0 };
+  }
+
+  console.log(`[TERMS_ACCEPT_RECONCILE] Reconciling ${stuckAcceptedProviders.length} accepted provider(s)`);
+  let fixed = 0;
+
+  for (const provider of stuckAcceptedProviders) {
+    try {
+      const lastAcceptEntry = getLastTermsAcceptHistoryEntry(provider);
+      await finalizeTermsAcceptance(
+        provider.phone,
+        provider,
+        'bot',
+        { completedAt: lastAcceptEntry && lastAcceptEntry.at ? lastAcceptEntry.at : new Date().toISOString() }
+      );
+      fixed += 1;
+      console.log(`[TERMS_ACCEPT_RECONCILE] Completed ${provider.phone}`);
+    } catch (error) {
+      console.error(
+        '[TERMS_ACCEPT_RECONCILE_ERROR]',
+        JSON.stringify(
+          {
+            phone: provider.phone,
+            message: error.message,
+            response: error.response ? error.response.data : null
+          },
+          null,
+          2
+        )
+      );
+    }
+  }
+
+  return { scanned: providers.length, fixed };
 }
 
 function startTermsReminderScheduler() {
@@ -1381,21 +1511,7 @@ async function handleTerms(phone, message) {
   }
 
   if (action === 'accept') {
-    await updateStatus(phone, STATUS.COMPLETED, 15, {
-      termsAccepted: true,
-      termsReminderReplyReceivedAt: provider && provider.termsReminderReplyReceivedAt ? provider.termsReminderReplyReceivedAt : null,
-      agentHelpRequested: false,
-      agentHelpRequestedAt: null,
-      completedAt: new Date().toISOString()
-    });
-    await appendHistory(phone, { type: 'system', event: 'onboarding_completed' });
-    await sendAndLog(phone, 'text', MESSAGES.termsAccepted);
-    await sendAndLog(phone, 'text', MESSAGES.postOnboardingSupport);
-    await sendAndLog(phone, 'text', MESSAGES.postOnboardingContactSupport);
-    await sendAndLog(phone, 'text', MESSAGES.postOnboardingLinks);
-    await sendOptionalAgentHelpButton(phone);
-    const provider = await getProvider(phone);
-    await notifyOnboardingCompleted(provider);
+    await finalizeTermsAcceptance(phone, provider, 'bot');
     return;
   }
 
@@ -1830,6 +1946,7 @@ module.exports = {
   approveCertificate,
   rejectCertificate,
   requestAdditionalDocument,
+  reconcileAcceptedTermsProviders,
   runCurrentWaitingTermsReminderBackfill,
   runLegacyTermsReminderBackfill,
   runTermsReminderSweep,

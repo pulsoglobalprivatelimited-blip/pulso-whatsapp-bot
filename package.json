@@ -6,6 +6,7 @@
   "scripts": {
     "db:init": "node src/scripts/initDb.js",
     "media:backfill": "node src/scripts/backfillMediaToStorage.js",
+    "terms:accept:reconcile": "node src/scripts/reconcileAcceptedTermsProviders.js",
     "terms:reminder:current-backfill": "node src/scripts/sendCurrentWaitingTermsReminderBackfill.js",
     "terms:reminder:backfill": "node src/scripts/sendLegacyTermsReminderBackfill.js",
     "start": "node src/server.js",
