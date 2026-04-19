@@ -468,7 +468,7 @@ function attachPreferredWhatsAppHandlers(root = document) {
     }
 
     link.dataset.chatHandlerAttached = 'true';
-    link.addEventListener('click', () => {
+    link.addEventListener('click', (event) => {
       const fallbackHref = link.dataset.chatFallbackHref;
       const href = link.getAttribute('href') || '';
 
@@ -476,11 +476,40 @@ function attachPreferredWhatsAppHandlers(root = document) {
         return;
       }
 
-      window.setTimeout(() => {
-        if (document.hasFocus()) {
-          window.open(fallbackHref, '_blank', 'noopener,noreferrer');
+      event.preventDefault();
+      event.stopPropagation();
+
+      let appOpened = false;
+      let fallbackTimer = null;
+      const markAppOpened = () => {
+        appOpened = true;
+      };
+      const clearListeners = () => {
+        if (fallbackTimer) {
+          window.clearTimeout(fallbackTimer);
         }
-      }, 700);
+        window.removeEventListener('blur', markAppOpened);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        window.removeEventListener('pagehide', markAppOpened);
+      };
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'hidden') {
+          markAppOpened();
+        }
+      };
+
+      window.addEventListener('blur', markAppOpened, { once: true });
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('pagehide', markAppOpened, { once: true });
+
+      fallbackTimer = window.setTimeout(() => {
+        clearListeners();
+        if (!appOpened) {
+          window.location.href = fallbackHref;
+        }
+      }, 1200);
+
+      window.location.href = href;
     });
   });
 }
