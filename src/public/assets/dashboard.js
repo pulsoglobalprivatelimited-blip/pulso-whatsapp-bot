@@ -431,6 +431,22 @@ function buildProviderBusinessChatLink(phone) {
   return normalized ? `whatsapp://send?phone=${normalized}` : null;
 }
 
+function buildProviderAndroidBusinessIntentLink(phone, fallbackUrl, text) {
+  const normalized = normalizePhone(phone);
+  if (!normalized) {
+    return null;
+  }
+
+  const params = new URLSearchParams();
+  params.set('phone', normalized);
+  if (text) {
+    params.set('text', text);
+  }
+
+  const fallback = fallbackUrl || buildProviderChatLink(normalized);
+  return `intent://send?${params.toString()}#Intent;scheme=whatsapp;package=com.whatsapp.w4b;S.browser_fallback_url=${encodeURIComponent(fallback)};end`;
+}
+
 function renderPhoneLink(phone, className = '') {
   const normalized = normalizePhone(phone);
   if (!normalized) {
@@ -440,7 +456,8 @@ function renderPhoneLink(phone, className = '') {
   const classes = ['phone-link', className].filter(Boolean).join(' ');
   const chatLink = buildProviderChatLink(normalized);
   const businessChatLink = buildProviderBusinessChatLink(normalized);
-  return `<a class="${classes}" href="${businessChatLink}" data-chat-fallback-href="${chatLink}" rel="noreferrer">${escapeHtml(phone || normalized)}</a>`;
+  const androidBusinessIntentLink = buildProviderAndroidBusinessIntentLink(normalized, chatLink);
+  return `<a class="${classes}" href="${businessChatLink}" data-chat-fallback-href="${chatLink}" data-chat-android-intent-href="${androidBusinessIntentLink}" rel="noreferrer">${escapeHtml(phone || normalized)}</a>`;
 }
 
 function buildProviderPrefilledChatLink(provider) {
@@ -461,6 +478,10 @@ function buildProviderBusinessPrefilledChatLink(provider) {
   return `whatsapp://send?phone=${normalized}&text=${encodeURIComponent(buildProviderIntroMessage(provider))}`;
 }
 
+function isAndroidDevice() {
+  return /Android/i.test(window.navigator.userAgent || '');
+}
+
 function attachPreferredWhatsAppHandlers(root = document) {
   root.querySelectorAll('[data-chat-fallback-href]').forEach((link) => {
     if (link.dataset.chatHandlerAttached === 'true') {
@@ -471,8 +492,10 @@ function attachPreferredWhatsAppHandlers(root = document) {
     link.addEventListener('click', (event) => {
       const fallbackHref = link.dataset.chatFallbackHref;
       const href = link.getAttribute('href') || '';
+      const androidIntentHref = link.dataset.chatAndroidIntentHref || '';
+      const targetHref = isAndroidDevice() && androidIntentHref ? androidIntentHref : href;
 
-      if (!fallbackHref || !href.startsWith('whatsapp://')) {
+      if (!fallbackHref || (!href.startsWith('whatsapp://') && !targetHref.startsWith('intent://'))) {
         return;
       }
 
@@ -509,7 +532,7 @@ function attachPreferredWhatsAppHandlers(root = document) {
         }
       }, 1200);
 
-      window.location.href = href;
+      window.location.href = targetHref;
     });
   });
 }
@@ -692,6 +715,12 @@ function renderProviderChatActions(provider) {
   const businessChatLink = buildProviderBusinessChatLink(provider && provider.phone);
   const introLink = buildProviderPrefilledChatLink(provider);
   const businessIntroLink = buildProviderBusinessPrefilledChatLink(provider);
+  const androidBusinessChatIntentLink = buildProviderAndroidBusinessIntentLink(provider && provider.phone, chatLink);
+  const androidBusinessIntroIntentLink = buildProviderAndroidBusinessIntentLink(
+    provider && provider.phone,
+    introLink,
+    buildProviderIntroMessage(provider)
+  );
   const introMessage = buildProviderIntroMessage(provider);
 
   if (!chatLink) {
@@ -703,8 +732,8 @@ function renderProviderChatActions(provider) {
     <article class="attachment-card">
       <strong>Quick WhatsApp handoff</strong>
       <div class="attachment-actions">
-        <a class="attachment-action" href="${businessChatLink}" data-chat-fallback-href="${chatLink}" rel="noreferrer">Open chat</a>
-        <a class="attachment-action" href="${businessIntroLink}" data-chat-fallback-href="${introLink}" rel="noreferrer">Open with intro</a>
+        <a class="attachment-action" href="${businessChatLink}" data-chat-fallback-href="${chatLink}" data-chat-android-intent-href="${androidBusinessChatIntentLink}" rel="noreferrer">Open chat</a>
+        <a class="attachment-action" href="${businessIntroLink}" data-chat-fallback-href="${introLink}" data-chat-android-intent-href="${androidBusinessIntroIntentLink}" rel="noreferrer">Open with intro</a>
       </div>
       <p>${escapeHtml(introMessage)}</p>
     </article>
