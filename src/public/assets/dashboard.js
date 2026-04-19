@@ -11,8 +11,6 @@ const providerDetail = document.getElementById('provider-detail');
 const listPanel = document.getElementById('list-panel');
 const detailPanel = document.getElementById('detail-panel');
 const pendingCount = document.getElementById('pending-count');
-const awaitingTermsCount = document.getElementById('awaiting-terms-count');
-const awaitingTermsMetric = document.getElementById('awaiting-terms-metric');
 const completedTotalCount = document.getElementById('completed-total-count');
 const completedTotalMetric = document.getElementById('completed-total-metric');
 const completedCount = document.getElementById('completed-count');
@@ -55,21 +53,6 @@ completedYesterdayMetric.addEventListener('click', () => {
 });
 completedTotalMetric.addEventListener('click', () => {
   applyCompletedMetricFilter('all');
-});
-awaitingTermsMetric.addEventListener('click', () => {
-  currentFilter = 'awaiting_terms_acceptance';
-  currentCompletedRange = 'all';
-  mobileDetailOpen = false;
-  selectedPhone = null;
-  suppressAutoSelectOnce = true;
-  providerDetail.classList.add('hidden');
-  updateMobileDetailState();
-  document.querySelectorAll('.filter').forEach((item) => {
-    item.classList.toggle('active', item.dataset.filter === currentFilter);
-  });
-  updateCompletedRangeFilterState();
-  renderList();
-  document.querySelector('.board')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 document.querySelectorAll('[data-completed-range]').forEach((button) => {
   button.addEventListener('click', () => {
@@ -552,7 +535,6 @@ function getVisibleProviders() {
 
 function updateDashboardMetrics() {
   pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
-  awaitingTermsCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'awaiting_terms_acceptance').length;
   completedTotalCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'completed').length;
   completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
   completedYesterdayCount.textContent = providers.filter((item) => isCompletedYesterday(item)).length;
