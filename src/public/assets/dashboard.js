@@ -13,6 +13,8 @@ const detailPanel = document.getElementById('detail-panel');
 const pendingCount = document.getElementById('pending-count');
 const awaitingTermsCount = document.getElementById('awaiting-terms-count');
 const awaitingTermsMetric = document.getElementById('awaiting-terms-metric');
+const completedTotalCount = document.getElementById('completed-total-count');
+const completedTotalMetric = document.getElementById('completed-total-metric');
 const completedCount = document.getElementById('completed-count');
 const completedYesterdayCount = document.getElementById('completed-yesterday-count');
 const completedTodayMetric = document.getElementById('completed-today-metric');
@@ -50,6 +52,9 @@ completedTodayMetric.addEventListener('click', () => {
 });
 completedYesterdayMetric.addEventListener('click', () => {
   applyCompletedMetricFilter('yesterday');
+});
+completedTotalMetric.addEventListener('click', () => {
+  applyCompletedMetricFilter('all');
 });
 awaitingTermsMetric.addEventListener('click', () => {
   currentFilter = 'awaiting_terms_acceptance';
@@ -421,6 +426,11 @@ function buildProviderChatLink(phone) {
   return normalized ? `https://wa.me/${normalized}` : null;
 }
 
+function buildProviderBusinessChatLink(phone) {
+  const normalized = normalizePhone(phone);
+  return normalized ? `whatsapp://send?phone=${normalized}` : null;
+}
+
 function renderPhoneLink(phone, className = '') {
   const normalized = normalizePhone(phone);
   if (!normalized) {
@@ -428,7 +438,9 @@ function renderPhoneLink(phone, className = '') {
   }
 
   const classes = ['phone-link', className].filter(Boolean).join(' ');
-  return `<a class="${classes}" href="https://wa.me/${normalized}" target="_blank" rel="noreferrer">${escapeHtml(phone || normalized)}</a>`;
+  const chatLink = buildProviderChatLink(normalized);
+  const businessChatLink = buildProviderBusinessChatLink(normalized);
+  return `<a class="${classes}" href="${businessChatLink}" data-chat-fallback-href="${chatLink}" rel="noreferrer">${escapeHtml(phone || normalized)}</a>`;
 }
 
 function buildProviderPrefilledChatLink(provider) {
@@ -438,6 +450,39 @@ function buildProviderPrefilledChatLink(provider) {
   }
 
   return `${chatLink}?text=${encodeURIComponent(buildProviderIntroMessage(provider))}`;
+}
+
+function buildProviderBusinessPrefilledChatLink(provider) {
+  const normalized = normalizePhone(provider && provider.phone);
+  if (!normalized) {
+    return null;
+  }
+
+  return `whatsapp://send?phone=${normalized}&text=${encodeURIComponent(buildProviderIntroMessage(provider))}`;
+}
+
+function attachPreferredWhatsAppHandlers(root = document) {
+  root.querySelectorAll('[data-chat-fallback-href]').forEach((link) => {
+    if (link.dataset.chatHandlerAttached === 'true') {
+      return;
+    }
+
+    link.dataset.chatHandlerAttached = 'true';
+    link.addEventListener('click', () => {
+      const fallbackHref = link.dataset.chatFallbackHref;
+      const href = link.getAttribute('href') || '';
+
+      if (!fallbackHref || !href.startsWith('whatsapp://')) {
+        return;
+      }
+
+      window.setTimeout(() => {
+        if (document.hasFocus()) {
+          window.open(fallbackHref, '_blank', 'noopener,noreferrer');
+        }
+      }, 700);
+    });
+  });
 }
 
 function getVisibleProviders() {
@@ -456,6 +501,7 @@ function getVisibleProviders() {
 function updateDashboardMetrics() {
   pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
   awaitingTermsCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'awaiting_terms_acceptance').length;
+  completedTotalCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'completed').length;
   completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
   completedYesterdayCount.textContent = providers.filter((item) => isCompletedYesterday(item)).length;
   newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
@@ -506,6 +552,7 @@ function renderList() {
       event.stopPropagation();
     });
   });
+  attachPreferredWhatsAppHandlers(providerList);
 }
 
 function shouldShowCompletedListSummary() {
@@ -613,7 +660,9 @@ function renderAdditionalDocumentRequest(provider) {
 function renderProviderChatActions(provider) {
   const target = document.getElementById('detail-provider-chat-actions');
   const chatLink = buildProviderChatLink(provider && provider.phone);
+  const businessChatLink = buildProviderBusinessChatLink(provider && provider.phone);
   const introLink = buildProviderPrefilledChatLink(provider);
+  const businessIntroLink = buildProviderBusinessPrefilledChatLink(provider);
   const introMessage = buildProviderIntroMessage(provider);
 
   if (!chatLink) {
@@ -625,12 +674,13 @@ function renderProviderChatActions(provider) {
     <article class="attachment-card">
       <strong>Quick WhatsApp handoff</strong>
       <div class="attachment-actions">
-        <a class="attachment-action" href="${chatLink}" target="_blank" rel="noreferrer">Open chat</a>
-        <a class="attachment-action" href="${introLink}" target="_blank" rel="noreferrer">Open with intro</a>
+        <a class="attachment-action" href="${businessChatLink}" data-chat-fallback-href="${chatLink}" rel="noreferrer">Open chat</a>
+        <a class="attachment-action" href="${businessIntroLink}" data-chat-fallback-href="${introLink}" rel="noreferrer">Open with intro</a>
       </div>
       <p>${escapeHtml(introMessage)}</p>
     </article>
   `;
+  attachPreferredWhatsAppHandlers(target);
 }
 
 function formatHistoryTime(value) {
