@@ -12,6 +12,8 @@ const listPanel = document.getElementById('list-panel');
 const detailPanel = document.getElementById('detail-panel');
 const pendingCount = document.getElementById('pending-count');
 const completedTotalCount = document.getElementById('completed-total-count');
+const completedMaleCount = document.getElementById('completed-male-count');
+const completedFemaleCount = document.getElementById('completed-female-count');
 const completedTotalMetric = document.getElementById('completed-total-metric');
 const completedCount = document.getElementById('completed-count');
 const completedYesterdayCount = document.getElementById('completed-yesterday-count');
@@ -533,9 +535,29 @@ function getVisibleProviders() {
   });
 }
 
+function normalizeSex(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+
+  if (['male', 'man', 'm'].includes(normalized)) {
+    return 'male';
+  }
+
+  if (['female', 'woman', 'f'].includes(normalized)) {
+    return 'female';
+  }
+
+  return '';
+}
+
+function isCompletedWithSex(provider, sex) {
+  return getDashboardStatus(provider) === 'completed' && normalizeSex(provider && provider.sex) === sex;
+}
+
 function updateDashboardMetrics() {
   pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
   completedTotalCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'completed').length;
+  completedMaleCount.textContent = providers.filter((item) => isCompletedWithSex(item, 'male')).length;
+  completedFemaleCount.textContent = providers.filter((item) => isCompletedWithSex(item, 'female')).length;
   completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
   completedYesterdayCount.textContent = providers.filter((item) => isCompletedYesterday(item)).length;
   newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
