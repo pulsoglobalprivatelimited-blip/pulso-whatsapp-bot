@@ -25,9 +25,25 @@ const preOnboardedSet = new Set(
     .filter(Boolean)
 );
 
+// Numbers in this set should always be allowed to enter the bot flow,
+// even if they appear in the pre-onboarded suppression list.
+const replyEligibleSet = new Set(
+  ['9207887114']
+    .map(normalizePhone)
+    .filter(Boolean)
+);
+
 function isPreOnboardedPhone(phone) {
   const normalized = normalizePhone(phone);
-  return normalized ? preOnboardedSet.has(normalized) : false;
+  if (!normalized) {
+    return false;
+  }
+
+  if (replyEligibleSet.has(normalized)) {
+    return false;
+  }
+
+  return preOnboardedSet.has(normalized);
 }
 
 module.exports = {
