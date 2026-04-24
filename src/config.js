@@ -35,11 +35,16 @@ module.exports = {
   ownerNotificationPhone: process.env.OWNER_NOTIFICATION_PHONE || '919446600809',
   agentHelpWhatsappNumber: process.env.AGENT_HELP_WHATSAPP_NUMBER || '919446600809',
   secondaryNotificationPhone: process.env.SECONDARY_NOTIFICATION_PHONE || '',
-  termsReminderDelayHours: Number(process.env.TERMS_REMINDER_DELAY_HOURS || 24),
+  termsFirstReminderDelayHours: Number(
+    process.env.TERMS_FIRST_REMINDER_DELAY_HOURS || process.env.TERMS_REMINDER_DELAY_HOURS || 1
+  ),
+  termsSecondReminderDelayHours: Number(process.env.TERMS_SECOND_REMINDER_DELAY_HOURS || 24),
   termsReminderCheckIntervalMinutes: Number(process.env.TERMS_REMINDER_CHECK_INTERVAL_MINUTES || 30),
   termsReminderResumeKeyword: process.env.TERMS_REMINDER_RESUME_KEYWORD || 'continue',
   termsReminderTemplateName: process.env.TERMS_REMINDER_TEMPLATE_NAME || '',
   termsReminderTemplateLanguage: process.env.TERMS_REMINDER_TEMPLATE_LANGUAGE || 'en',
+  pulsoHubBotSyncUrl: process.env.PULSO_HUB_BOT_SYNC_URL || '',
+  pulsoHubBotSyncSecret: process.env.PULSO_HUB_BOT_SYNC_SECRET || '',
   mediaStorageDir: resolveMediaStorageDir(),
   dryRun: process.env.WHATSAPP_DRY_RUN !== 'false',
   publicDir: path.join(__dirname, 'public')

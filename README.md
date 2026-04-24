@@ -87,6 +87,8 @@ ADMIN_USERNAME=admin
 ADMIN_PASSWORD=strong-password
 SESSION_SECRET=long-random-secret
 MEDIA_STORAGE_DIR=./storage/media
+PULSO_HUB_BOT_SYNC_URL=https://<region>-<project>.cloudfunctions.net/syncProviderOnboardingFromBot
+PULSO_HUB_BOT_SYNC_SECRET=shared-secret
 ```
 
 4. Initialize Firestore access:
@@ -200,6 +202,7 @@ Before going live:
 - send a live test message from a test provider number
 - log into `/admin/login` and confirm reviewers can approve/reject providers
 - confirm uploaded CV/certificate files appear inside `MEDIA_STORAGE_DIR`
+- run `npm run pulso-hub:sync:completed` once to backfill already completed providers after enabling the sync endpoint
 
 ## Admin API
 
@@ -255,7 +258,9 @@ This version is set up for Firestore, admin login, and archived media files. Str
 2. Create a new Render Web Service from the repo
 3. Render will detect [render.yaml](/Users/abdulrahoof/Documents/pulso-whatsapp-bot/render.yaml)
 4. Add environment variables from `.env.example`
-5. Add Firebase admin credentials as environment variables
+5. For Firebase auth, do one of the following:
+   - set `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`
+   - or mount a Render secret file and set `GOOGLE_APPLICATION_CREDENTIALS` to that path
 6. Attach a persistent disk and point `MEDIA_STORAGE_DIR` to that mount path
 7. After deploy, set `PUBLIC_BASE_URL` to your Render URL
 8. Use `https://your-render-url/webhook` inside Meta

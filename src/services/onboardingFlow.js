@@ -48,6 +48,7 @@ const {
   classifyDocument
 } = require('./messageParser');
 const { archiveIncomingMedia } = require('./mediaStorage');
+const { syncProviderToPulsoHub } = require('./pulsoHubSyncService');
 
 const pendingCertificatePromptTimers = new Map();
 const pendingCertificateRetryTimers = new Map();
@@ -482,6 +483,31 @@ function buildTermsReminderMessage() {
   return `താങ്കളുടെ onboarding പൂർത്തിയാക്കാൻ terms and conditions ഇതുവരെ സ്വീകരിച്ചിട്ടില്ല.\nതുടരാൻ ദയവായി "${keyword}" എന്ന് reply ചെയ്യുക.`;
 }
 
+function getTermsReminderScheduleHours() {
+  return [config.termsFirstReminderDelayHours, config.termsSecondReminderDelayHours]
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .sort((left, right) => left - right);
+}
+
+function getTermsReminderCount(provider) {
+  const explicitCount = Number(provider && provider.termsReminderCount);
+  if (Number.isFinite(explicitCount) && explicitCount >= 0) {
+    return explicitCount;
+  }
+
+  return provider && provider.termsReminderSentAt ? 1 : 0;
+}
+
+function getNextTermsReminderDelayHours(provider) {
+  const scheduleHours = getTermsReminderScheduleHours();
+  return scheduleHours[getTermsReminderCount(provider)] || null;
+}
+
+function hasReminderCapacityRemaining(provider) {
+  return getNextTermsReminderDelayHours(provider) !== null;
+}
+
 function hasHistoryEvent(provider, predicate) {
   const history = Array.isArray(provider && provider.history) ? provider.history : [];
   return history.some(predicate);
@@ -519,7 +545,7 @@ function getTermsSentAt(provider) {
 }
 
 function hasReminderBeenSent(provider) {
-  return Boolean(provider && provider.termsReminderSentAt);
+  return getTermsReminderCount(provider) > 0;
 }
 
 function isLegacyWaitingForTermsProvider(provider) {
@@ -563,7 +589,7 @@ function isTermsReminderDue(provider, now = Date.now()) {
     return false;
   }
 
-  if (hasReminderBeenSent(provider)) {
+  if (!hasReminderCapacityRemaining(provider)) {
     return false;
   }
 
@@ -577,7 +603,12 @@ function isTermsReminderDue(provider, now = Date.now()) {
     return false;
   }
 
-  return now - sentAtMs >= config.termsReminderDelayHours * 60 * 60 * 1000;
+  const nextReminderDelayHours = getNextTermsReminderDelayHours(provider);
+  if (nextReminderDelayHours === null) {
+    return false;
+  }
+
+  return now - sentAtMs >= nextReminderDelayHours * 60 * 60 * 1000;
 }
 
 async function sendTermsReminder(phone, sender = 'bot') {
@@ -645,7 +676,40 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
     await notifyOnboardingCompleted(finalProvider);
   }
 
-  return finalProvider;
+  try {
+    const syncResult = await syncProviderToPulsoHub(finalProvider);
+    await updateProvider(phone, {
+      appSync: {
+        status: syncResult.ok ? 'synced' : syncResult.skipped ? 'skipped' : 'failed',
+        skipped: syncResult.skipped === true,
+        reason: syncResult.reason || '',
+        syncedAt: new Date().toISOString(),
+        response: syncResult.data || null,
+      },
+    });
+    await appendHistory(phone, {
+      type: 'system',
+      event: syncResult.ok ? 'pulso_hub_sync_completed' : 'pulso_hub_sync_skipped',
+      details: syncResult.data || { reason: syncResult.reason || '' },
+    });
+  } catch (error) {
+    console.error('[PULSO_HUB_SYNC_ERROR]', phone, error.message);
+    await updateProvider(phone, {
+      appSync: {
+        status: 'failed',
+        skipped: false,
+        reason: error.message || 'sync_failed',
+        syncedAt: new Date().toISOString(),
+      },
+    });
+    await appendHistory(phone, {
+      type: 'system',
+      event: 'pulso_hub_sync_failed',
+      details: { message: error.message || 'sync_failed' },
+    });
+  }
+
+  return getProvider(phone);
 }
 
 async function remindProviderToAcceptTerms(provider) {
@@ -657,7 +721,7 @@ async function remindProviderToAcceptTerms(provider) {
   const sentAt = new Date().toISOString();
   await updateProvider(provider.phone, {
     termsReminderSentAt: sentAt,
-    termsReminderCount: Number(provider.termsReminderCount || 0) + 1,
+    termsReminderCount: getTermsReminderCount(provider) + 1,
     termsReminderKind: reminderKind
   });
   await appendHistory(provider.phone, { type: 'system', event: TERMS_REMINDER_HISTORY_EVENT, reminderKind });
@@ -674,7 +738,7 @@ async function sendLegacyTermsReminder(provider) {
   await updateProvider(provider.phone, {
     termsSentAt: getTermsSentAt(provider) || (provider.verification && provider.verification.reviewedAt) || sentAt,
     termsReminderSentAt: sentAt,
-    termsReminderCount: Number(provider.termsReminderCount || 0) + 1,
+    termsReminderCount: getTermsReminderCount(provider) + 1,
     termsReminderKind: reminderKind
   });
   await appendHistory(provider.phone, {
@@ -781,7 +845,7 @@ async function runCurrentWaitingTermsReminderBackfill() {
       await updateProvider(provider.phone, {
         termsSentAt: getTermsSentAt(provider) || (provider.verification && provider.verification.reviewedAt) || sentAt,
         termsReminderSentAt: sentAt,
-        termsReminderCount: Number(provider.termsReminderCount || 0) + 1,
+        termsReminderCount: getTermsReminderCount(provider) + 1,
         termsReminderKind: reminderKind
       });
       await appendHistory(provider.phone, {

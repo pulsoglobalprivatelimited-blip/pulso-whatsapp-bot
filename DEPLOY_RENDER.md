@@ -16,12 +16,16 @@
 - `WHATSAPP_GRAPH_API_VERSION=v23.0`
 - `WORKING_MODEL_AUDIO_MEDIA_ID=<set after voice-note upload>`
 - `TERMS_AND_CONDITIONS_URL=https://www.pulso.co.in/terms-and-conditions`
+- `TERMS_FIRST_REMINDER_DELAY_HOURS=1`
+- `TERMS_SECOND_REMINDER_DELAY_HOURS=24`
 - `WHATSAPP_DRY_RUN=true`
 - `ADMIN_DEFAULT_REVIEWER=ops-team`
 - `ADMIN_USERNAME=admin`
 - `ADMIN_PASSWORD=<strong password>`
 - `SESSION_SECRET=<long random secret>`
 - `SESSION_TTL_HOURS=12`
+- `PULSO_HUB_BOT_SYNC_URL=<pulso-hub sync function url>`
+- `PULSO_HUB_BOT_SYNC_SECRET=<shared secret also configured in pulso-hub functions>`
 - `MEDIA_STORAGE_DIR=/var/data/pulso-media`
 
 ## Secret file
