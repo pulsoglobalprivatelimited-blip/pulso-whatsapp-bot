@@ -339,7 +339,8 @@ initializeStorage()
       console.log(`Webhook callback URL: ${config.baseUrl}/webhook`);
       console.log(`Dry run mode: ${config.dryRun}`);
       console.log(`Media storage dir: ${config.mediaStorageDir}`);
-      console.log(`Terms reminder delay hours: ${config.termsReminderDelayHours}`);
+      console.log(`Terms first reminder delay hours: ${config.termsFirstReminderDelayHours}`);
+      console.log(`Terms second reminder delay hours: ${config.termsSecondReminderDelayHours}`);
       console.log(`Terms reminder check interval minutes: ${config.termsReminderCheckIntervalMinutes}`);
       console.log(`Terms reminder template configured: ${Boolean(config.termsReminderTemplateName)}`);
     });

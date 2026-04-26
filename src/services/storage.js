@@ -25,6 +25,14 @@ function getFirestore() {
       config.firebasePrivateKey &&
       !config.firebasePrivateKey.includes('...');
 
+    const hasCredentialFile = Boolean(config.googleApplicationCredentials);
+
+    if (!hasInlineCredential && !hasCredentialFile) {
+      throw new Error(
+        'Firebase credentials are missing. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY, or set GOOGLE_APPLICATION_CREDENTIALS to a mounted service-account JSON file.'
+      );
+    }
+
     const credential =
       config.googleApplicationCredentials || !hasInlineCredential
         ? admin.credential.applicationDefault()

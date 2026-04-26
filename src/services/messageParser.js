@@ -197,6 +197,28 @@ function parseTermsAcceptance(message) {
   return null;
 }
 
+function parsePulsoAppInstallInterest(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.PULSO_APP_INSTALL_YES) return 'yes';
+  if (replyId === BUTTON_IDS.PULSO_APP_INSTALL_NO) return 'no';
+
+  const normalized = normalizeText(getMessageText(message));
+  if (['yes', 'ok', 'okay', 'install', 'താൽപര്യമുണ്ട്'].includes(normalized)) return 'yes';
+  if (['no', 'വേണ്ട', 'താൽപര്യമില്ല'].includes(normalized)) return 'no';
+  return null;
+}
+
+function parsePulsoAppDevice(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.PULSO_APP_DEVICE_IPHONE) return 'iphone';
+  if (replyId === BUTTON_IDS.PULSO_APP_DEVICE_ANDROID) return 'android';
+
+  const normalized = normalizeText(getMessageText(message));
+  if (['iphone', 'ios', 'apple'].includes(normalized)) return 'iphone';
+  if (['android'].includes(normalized)) return 'android';
+  return null;
+}
+
 function parseTermsReminderResume(message) {
   const normalized = normalizeText(getMessageText(message));
   const configuredKeyword = normalizeText(config.termsReminderResumeKeyword);
@@ -281,6 +303,8 @@ module.exports = {
   parseDistrict,
   parseDistrictListAction,
   parseTermsAcceptance,
+  parsePulsoAppInstallInterest,
+  parsePulsoAppDevice,
   parseTermsReminderResume,
   parseCertificateCollectionAction,
   classifyDocument

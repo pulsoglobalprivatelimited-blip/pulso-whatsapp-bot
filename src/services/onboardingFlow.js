@@ -43,6 +43,8 @@ const {
   parseDistrict,
   parseDistrictListAction,
   parseTermsAcceptance,
+  parsePulsoAppInstallInterest,
+  parsePulsoAppDevice,
   parseTermsReminderResume,
   parseCertificateCollectionAction,
   classifyDocument
@@ -478,6 +480,36 @@ async function sendTermsButtons(phone) {
   });
 }
 
+async function sendPulsoAppInstallInterestButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.pulsoAppInstallQuestion,
+    buttons: [
+      { id: BUTTON_IDS.PULSO_APP_INSTALL_YES, title: 'Yes' },
+      { id: BUTTON_IDS.PULSO_APP_INSTALL_NO, title: 'No' }
+    ]
+  });
+}
+
+async function sendPulsoAppDeviceButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.pulsoAppDeviceQuestion,
+    buttons: [
+      { id: BUTTON_IDS.PULSO_APP_DEVICE_IPHONE, title: 'iPhone' },
+      { id: BUTTON_IDS.PULSO_APP_DEVICE_ANDROID, title: 'Android' }
+    ]
+  });
+}
+
+async function sendPostOnboardingWrapUp(phone, sender = 'bot') {
+  await updateProvider(phone, {
+    pulsoAppPromptStage: null,
+    postOnboardingCompletedAt: new Date().toISOString()
+  });
+  await sendAndLog(phone, 'text', MESSAGES.postOnboardingContactSupport, sender);
+  await sendAndLog(phone, 'text', MESSAGES.postOnboardingLinks, sender);
+  await sendOptionalAgentHelpButton(phone);
+}
+
 function buildTermsReminderMessage() {
   const keyword = config.termsReminderResumeKeyword || 'continue';
   return `താങ്കളുടെ onboarding പൂർത്തിയാക്കാൻ terms and conditions ഇതുവരെ സ്വീകരിച്ചിട്ടില്ല.\nതുടരാൻ ദയവായി "${keyword}" എന്ന് reply ചെയ്യുക.`;
@@ -635,6 +667,7 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
 
   await updateStatus(phone, STATUS.COMPLETED, 15, {
     termsAccepted: true,
+    pulsoAppPromptStage: 'awaiting_install_interest',
     termsReminderReplyReceivedAt:
       currentProvider && currentProvider.termsReminderReplyReceivedAt
         ? currentProvider.termsReminderReplyReceivedAt
@@ -665,10 +698,22 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
   );
   if (!sentTermsAcceptedMessage) {
     await sendAndLog(phone, 'text', MESSAGES.termsAccepted, sender);
+  }
+
+  const sentPulsoAppQuestion = hasHistoryEvent(
+    refreshedProvider,
+    (entry) =>
+      entry &&
+      entry.type === 'outbound_message' &&
+      entry.payload &&
+      entry.payload.kind === 'buttons' &&
+      entry.payload.body &&
+      entry.payload.body.body === MESSAGES.pulsoAppInstallQuestion
+  );
+  if (!sentPulsoAppQuestion) {
     await sendAndLog(phone, 'text', MESSAGES.postOnboardingSupport, sender);
-    await sendAndLog(phone, 'text', MESSAGES.postOnboardingContactSupport, sender);
-    await sendAndLog(phone, 'text', MESSAGES.postOnboardingLinks, sender);
-    await sendOptionalAgentHelpButton(phone);
+    await sendAndLog(phone, 'text', MESSAGES.pulsoAppPreferenceNotice, sender);
+    await sendPulsoAppInstallInterestButtons(phone);
   }
 
   const finalProvider = await getProvider(phone);
@@ -1593,8 +1638,72 @@ async function handleTerms(phone, message) {
   await sendTermsButtons(phone);
 }
 
+async function handlePulsoAppInstallInterest(phone, message) {
+  const action = parsePulsoAppInstallInterest(message);
+
+  if (action === 'yes') {
+    await updateProvider(phone, {
+      pulsoAppInstallInterested: true,
+      pulsoAppPromptStage: 'awaiting_device'
+    });
+    await sendPulsoAppDeviceButtons(phone);
+    return;
+  }
+
+  if (action === 'no') {
+    await updateProvider(phone, {
+      pulsoAppInstallInterested: false,
+      pulsoAppPromptStage: null,
+      pulsoAppInstallDeclinedAt: new Date().toISOString()
+    });
+    await sendAndLog(phone, 'text', MESSAGES.pulsoAppInstallDeclined);
+    await sendPostOnboardingWrapUp(phone);
+    return;
+  }
+
+  await sendAndLog(phone, 'text', MESSAGES.pulsoAppInstallRetry);
+  await sendPulsoAppInstallInterestButtons(phone);
+}
+
+async function handlePulsoAppDevice(phone, message) {
+  const device = parsePulsoAppDevice(message);
+
+  if (device === 'iphone') {
+    await updateProvider(phone, {
+      pulsoAppDevice: 'iphone',
+      pulsoAppLinkSentAt: new Date().toISOString()
+    });
+    await sendAndLog(phone, 'text', MESSAGES.pulsoAppIphoneLink);
+    await sendPostOnboardingWrapUp(phone);
+    return;
+  }
+
+  if (device === 'android') {
+    await updateProvider(phone, {
+      pulsoAppDevice: 'android',
+      pulsoAppLinkSentAt: new Date().toISOString()
+    });
+    await sendAndLog(phone, 'text', MESSAGES.pulsoAppAndroidLink);
+    await sendPostOnboardingWrapUp(phone);
+    return;
+  }
+
+  await sendAndLog(phone, 'text', MESSAGES.pulsoAppDeviceRetry);
+  await sendPulsoAppDeviceButtons(phone);
+}
+
 async function handleCompleted(phone, message) {
   const provider = await getProvider(phone);
+  if (provider && provider.pulsoAppPromptStage === 'awaiting_install_interest') {
+    await handlePulsoAppInstallInterest(phone, message);
+    return;
+  }
+
+  if (provider && provider.pulsoAppPromptStage === 'awaiting_device') {
+    await handlePulsoAppDevice(phone, message);
+    return;
+  }
+
   const action = parseTermsAcceptance(message);
   if (action === 'connect_agent') {
     await handleAgentHelpRequest(phone);
