@@ -81,7 +81,7 @@ function buildProviderChatLink(phone) {
   return normalizedPhone ? `https://wa.me/${normalizedPhone}` : null;
 }
 
-function buildProviderIntroMessage(provider, senderName = 'Abdul') {
+function buildProviderIntroMessage(provider, senderName = 'Ashmila') {
   const name = provider && provider.fullName ? provider.fullName : null;
   return [
     `നമസ്കാരം${name ? ` ${name}` : ''},`,
@@ -91,7 +91,7 @@ function buildProviderIntroMessage(provider, senderName = 'Abdul') {
   ].join(' ');
 }
 
-function buildProviderPrefilledChatLink(provider, senderName = 'Abdul') {
+function buildProviderPrefilledChatLink(provider, senderName = 'Ashmila') {
   const chatLink = buildProviderChatLink(provider && provider.phone);
   if (!chatLink) {
     return null;
@@ -412,7 +412,7 @@ async function notifyAgentHelpRequested(provider) {
   const helpNumber = normalizePhone(config.agentHelpWhatsappNumber);
   const backupHelpNumber = normalizePhone(config.secondaryNotificationPhone);
   const recipients = [
-    { phone: helpNumber, senderName: 'Abdul' },
+    { phone: helpNumber, senderName: 'Ashmila' },
     { phone: backupHelpNumber, senderName: 'Ashmila' }
   ]
     .filter((entry) => entry.phone)
