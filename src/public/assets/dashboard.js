@@ -3,6 +3,8 @@ let selectedPhone = null;
 let currentFilter = 'all';
 let currentSearch = '';
 let currentCompletedRange = 'all';
+let currentCompletedSex = 'all';
+let currentStartedRange = 'all';
 let mobileDetailOpen = false;
 let suppressAutoSelectOnce = false;
 
@@ -11,10 +13,13 @@ const providerDetail = document.getElementById('provider-detail');
 const listPanel = document.getElementById('list-panel');
 const detailPanel = document.getElementById('detail-panel');
 const pendingCount = document.getElementById('pending-count');
+const pendingMetric = document.getElementById('pending-metric');
 const completedTotalCount = document.getElementById('completed-total-count');
 const completedMaleCount = document.getElementById('completed-male-count');
 const completedFemaleCount = document.getElementById('completed-female-count');
 const completedTotalMetric = document.getElementById('completed-total-metric');
+const completedMaleMetric = document.getElementById('completed-male-metric');
+const completedFemaleMetric = document.getElementById('completed-female-metric');
 const completedCount = document.getElementById('completed-count');
 const completedYesterdayCount = document.getElementById('completed-yesterday-count');
 const completedTodayMetric = document.getElementById('completed-today-metric');
@@ -22,8 +27,13 @@ const completedYesterdayMetric = document.getElementById('completed-yesterday-me
 const newConversationsCount = document.getElementById('new-conversations-count');
 const started7dCount = document.getElementById('started-7d-count');
 const started30dCount = document.getElementById('started-30d-count');
+const newConversationsMetric = document.getElementById('new-conversations-metric');
+const started7dMetric = document.getElementById('started-7d-metric');
+const started30dMetric = document.getElementById('started-30d-metric');
 const completed7dCount = document.getElementById('completed-7d-count');
 const completed30dCount = document.getElementById('completed-30d-count');
+const completed7dMetric = document.getElementById('completed-7d-metric');
+const completed30dMetric = document.getElementById('completed-30d-metric');
 const phoneSearchInput = document.getElementById('phone-search');
 const clearSearchButton = document.getElementById('clear-search-button');
 const completedRangeFilters = document.getElementById('completed-range-filters');
@@ -43,9 +53,14 @@ document.querySelectorAll('.filter').forEach((button) => {
     button.classList.add('active');
     currentFilter = button.dataset.filter;
     currentCompletedRange = 'all';
+    currentCompletedSex = 'all';
+    currentStartedRange = 'all';
     updateCompletedRangeFilterState();
     renderList();
   });
+});
+pendingMetric.addEventListener('click', () => {
+  applyStatusMetricFilter('certificate_verification_pending');
 });
 completedTodayMetric.addEventListener('click', () => {
   applyCompletedMetricFilter('today');
@@ -56,11 +71,33 @@ completedYesterdayMetric.addEventListener('click', () => {
 completedTotalMetric.addEventListener('click', () => {
   applyCompletedMetricFilter('all');
 });
+completedMaleMetric.addEventListener('click', () => {
+  applyCompletedMetricFilter('all', 'male');
+});
+completedFemaleMetric.addEventListener('click', () => {
+  applyCompletedMetricFilter('all', 'female');
+});
+newConversationsMetric.addEventListener('click', () => {
+  applyStartedMetricFilter('today');
+});
+started7dMetric.addEventListener('click', () => {
+  applyStartedMetricFilter('7d');
+});
+started30dMetric.addEventListener('click', () => {
+  applyStartedMetricFilter('30d');
+});
+completed7dMetric.addEventListener('click', () => {
+  applyCompletedMetricFilter('7d');
+});
+completed30dMetric.addEventListener('click', () => {
+  applyCompletedMetricFilter('30d');
+});
 document.querySelectorAll('[data-completed-range]').forEach((button) => {
   button.addEventListener('click', () => {
     document.querySelectorAll('[data-completed-range]').forEach((item) => item.classList.remove('active'));
     button.classList.add('active');
     currentCompletedRange = button.dataset.completedRange;
+    currentCompletedSex = 'all';
     renderList();
   });
 });
@@ -287,20 +324,58 @@ function isCompletedInPastDays(provider, days) {
   return completedDate >= cutoff && completedDate <= now;
 }
 
-function applyCompletedMetricFilter(range) {
-  currentFilter = 'completed';
-  currentCompletedRange = range;
+function resetListSelectionForMetric() {
   mobileDetailOpen = false;
   selectedPhone = null;
   suppressAutoSelectOnce = true;
   providerDetail.classList.add('hidden');
   updateMobileDetailState();
+}
+
+function updateStatusFilterButtons() {
   document.querySelectorAll('.filter').forEach((item) => {
     item.classList.toggle('active', item.dataset.filter === currentFilter);
   });
+}
+
+function scrollBoardIntoView() {
+  document.querySelector('.board')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function applyStatusMetricFilter(status) {
+  currentFilter = status;
+  currentCompletedRange = 'all';
+  currentCompletedSex = 'all';
+  currentStartedRange = 'all';
+  resetListSelectionForMetric();
+  updateStatusFilterButtons();
   updateCompletedRangeFilterState();
   renderList();
-  document.querySelector('.board')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  scrollBoardIntoView();
+}
+
+function applyCompletedMetricFilter(range, sex = 'all') {
+  currentFilter = 'completed';
+  currentCompletedRange = range;
+  currentCompletedSex = sex;
+  currentStartedRange = 'all';
+  resetListSelectionForMetric();
+  updateStatusFilterButtons();
+  updateCompletedRangeFilterState();
+  renderList();
+  scrollBoardIntoView();
+}
+
+function applyStartedMetricFilter(range) {
+  currentFilter = 'all';
+  currentCompletedRange = 'all';
+  currentCompletedSex = 'all';
+  currentStartedRange = range;
+  resetListSelectionForMetric();
+  updateStatusFilterButtons();
+  updateCompletedRangeFilterState();
+  renderList();
+  scrollBoardIntoView();
 }
 
 function isCreatedInPastDays(provider, days) {
@@ -351,6 +426,30 @@ function matchesCompletedRange(provider) {
 
   if (currentCompletedRange === '30d') {
     return isCompletedInPastDays(provider, 30);
+  }
+
+  return true;
+}
+
+function matchesCompletedSex(provider) {
+  if (getDashboardStatus(provider) !== 'completed' || currentCompletedSex === 'all') {
+    return true;
+  }
+
+  return isCompletedWithSex(provider, currentCompletedSex);
+}
+
+function matchesStartedRange(provider) {
+  if (currentStartedRange === 'today') {
+    return isSameLocalDate(provider && provider.createdAt);
+  }
+
+  if (currentStartedRange === '7d') {
+    return isCreatedInPastDays(provider, 7);
+  }
+
+  if (currentStartedRange === '30d') {
+    return isCreatedInPastDays(provider, 30);
   }
 
   return true;
@@ -527,11 +626,13 @@ function getVisibleProviders() {
   return providers.filter((item) => {
     const matchesFilter = currentFilter === 'all' || getDashboardStatus(item) === currentFilter;
     const matchesCompletedWindow = currentFilter !== 'completed' || matchesCompletedRange(item);
+    const matchesCompletedSexFilter = currentFilter !== 'completed' || matchesCompletedSex(item);
+    const matchesStartedWindow = matchesStartedRange(item);
     const fullName = normalizeSearchTerm(item && item.fullName);
     const matchesPhone = phoneSearch ? normalizePhone(item.phone).includes(phoneSearch) : false;
     const matchesName = currentSearch ? fullName.includes(currentSearch) : false;
     const matchesSearch = !currentSearch || matchesPhone || matchesName;
-    return matchesFilter && matchesCompletedWindow && matchesSearch;
+    return matchesFilter && matchesCompletedWindow && matchesCompletedSexFilter && matchesStartedWindow && matchesSearch;
   });
 }
 
