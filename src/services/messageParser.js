@@ -214,8 +214,8 @@ function parsePulsoAppDevice(message) {
   if (replyId === BUTTON_IDS.PULSO_APP_DEVICE_ANDROID) return 'android';
 
   const normalized = normalizeText(getMessageText(message));
-  if (['iphone', 'ios', 'apple'].includes(normalized)) return 'iphone';
-  if (['android'].includes(normalized)) return 'android';
+  if (['iphone', 'i phone', 'ios', 'apple'].includes(normalized)) return 'iphone';
+  if (['android', 'android phone'].includes(normalized)) return 'android';
   return null;
 }
 

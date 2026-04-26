@@ -246,10 +246,12 @@ const MESSAGES = {
     'ശരി. താൽപര്യമുണ്ടെങ്കിൽ പിന്നീട് വീണ്ടും message ചെയ്യാം.',
   postOnboardingSupport:
     'ഇന്ന് മുതൽ ലഭ്യമായ ഡ്യൂട്ടി ഓഫറുകൾ നിങ്ങളെ WhatsApp വഴി 9446600809 എന്ന നമ്പറിൽ നിന്ന് അറിയിക്കുന്നതാണ്.\nഡ്യൂട്ടി മെസേജുകൾ എല്ലാം ഓട്ടോമാറ്റിക്കായി അയക്കുന്നതായിരിക്കും.\nതാങ്കൾക്ക് അനുയോജ്യമല്ലാത്ത ഡ്യൂട്ടികൾ ദയവായി അവഗണിക്കാവുന്നതാണ്.\nസ്വീകരിക്കാൻ താൽപര്യമുള്ള ഡ്യൂട്ടികൾക്ക് മാത്രം ദയവായി reply ചെയ്യുക.',
+  mobileAppCampaignAnnouncement:
+    'Pulso mobile app ഇപ്പോൾ ലഭ്യമാണ്.\n\nPulso mobile app download ചെയ്ത് profile active ആയി ഉപയോഗിക്കുന്ന care providers-ന് duty offers-ൽ first preference ലഭിക്കുന്നതാണ്.\n\nWhatsApp വഴി duty messages ലഭിക്കുമെങ്കിലും, app users-ന് duty accept ചെയ്യാനും confirmation ലഭിക്കാനും കൂടുതൽ priority ഉണ്ടായിരിക്കും.\n\nഅതുകൊണ്ട് ദയവായി Pulso mobile app install ചെയ്ത് നിങ്ങളുടെ profile active ആയി വയ്ക്കുക.',
   pulsoAppPreferenceNotice:
-    'പ്രധാന അറിയിപ്പ്:\n\nPulso App download ചെയ്ത് active ആയി ഉപയോഗിക്കുന്ന care providers-ന് duty offers-ൽ first preference ലഭിക്കുന്നതാണ്.\n\nWhatsApp messages ലഭിക്കുമെങ്കിലും, app users-ന് duty accept ചെയ്യാനും confirmation ലഭിക്കാനും കൂടുതൽ priority ഉണ്ടായിരിക്കും.\n\nദയവായി app install ചെയ്ത് profile active ആക്കി വയ്ക്കുക.',
+    'പ്രധാന അറിയിപ്പ്:\n\nPulso mobile app download ചെയ്ത് active ആയി ഉപയോഗിക്കുന്ന care providers-ന് duty offers-ൽ first preference ലഭിക്കുന്നതാണ്.\n\nWhatsApp messages ലഭിക്കുമെങ്കിലും, app users-ന് duty accept ചെയ്യാനും confirmation ലഭിക്കാനും കൂടുതൽ priority ഉണ്ടായിരിക്കും.\n\nദയവായി Pulso mobile app install ചെയ്ത് profile active ആക്കി വയ്ക്കുക.',
   pulsoAppInstallQuestion:
-    'Pulso App install ചെയ്യാൻ താൽപര്യമുണ്ടോ?',
+    'Pulso mobile app install ചെയ്യാൻ താൽപര്യമുണ്ടോ?',
   pulsoAppInstallRetry:
     'ദയവായി Yes അല്ലെങ്കിൽ No തിരഞ്ഞെടുക്കുക.',
   pulsoAppDeviceQuestion:
@@ -257,11 +259,15 @@ const MESSAGES = {
   pulsoAppDeviceRetry:
     'ദയവായി iPhone അല്ലെങ്കിൽ Android തിരഞ്ഞെടുക്കുക.',
   pulsoAppAndroidLink:
-    'Pulso App Android phone-ൽ install ചെയ്യാൻ താഴെയുള്ള link ഉപയോഗിക്കുക:\n\nhttps://play.google.com/store/apps/details?id=com.pulso.global&pcampaignid=web_share\n\nInstall ചെയ്ത ശേഷം profile active ആക്കി വയ്ക്കുക.',
+    'Pulso mobile app Android phone-ൽ install ചെയ്യാൻ താഴെയുള്ള link ഉപയോഗിക്കുക:\n\nhttps://play.google.com/store/apps/details?id=com.pulso.global&pcampaignid=web_share\n\nInstall ചെയ്ത ശേഷം profile active ആക്കി വയ്ക്കുക.',
   pulsoAppIphoneLink:
-    'Pulso App iPhone-ൽ install ചെയ്യാൻ താഴെയുള്ള link ഉപയോഗിക്കുക:\n\nhttps://apps.apple.com/in/app/pulso/id6757874217\n\nInstall ചെയ്ത ശേഷം profile active ആക്കി വയ്ക്കുക.',
+    'Pulso mobile app iPhone-ൽ install ചെയ്യാൻ താഴെയുള്ള link ഉപയോഗിക്കുക:\n\nhttps://apps.apple.com/in/app/pulso/id6757874217\n\nInstall ചെയ്ത ശേഷം profile active ആക്കി വയ്ക്കുക.',
   pulsoAppInstallDeclined:
-    'ശരി. WhatsApp വഴി duty offers തുടർന്നും ലഭിക്കുന്നതാണ്.\n\nഎന്നാൽ Pulso App ഉപയോഗിക്കുന്ന care providers-ന് duty offers-ൽ first preference ലഭിക്കുന്നതാണ്.',
+    'ശരി. WhatsApp വഴി duty offers തുടർന്നും ലഭിക്കുന്നതാണ്.\n\nഎന്നാൽ Pulso mobile app ഉപയോഗിക്കുന്ന care providers-ന് duty offers-ൽ first preference ലഭിക്കുന്നതാണ്.',
+  mobileAppCampaignThanks:
+    'നന്ദി. കൂടുതൽ സഹായം ആവശ്യമുണ്ടെങ്കിൽ Pulso support team-നെ WhatsApp വഴി ബന്ധപ്പെടാം.',
+  mobileAppLinkHelp:
+    'Pulso mobile app install ചെയ്യാൻ link വീണ്ടും ആവശ്യമുണ്ടെങ്കിൽ ദയവായി Android അല്ലെങ്കിൽ iPhone എന്ന് reply ചെയ്യുക.',
   postOnboardingContactSupport:
     'സഹായത്തിനായി ഓഫീസ് നമ്പർ 8714105333-ൽ രാവിലെ 10 മുതൽ വൈകിട്ട് 6 വരെ വിളിക്കാം.\n9446600809 എന്ന നമ്പറിൽ 24 മണിക്കൂറും WhatsApp സന്ദേശം അയക്കാം.\nനിങ്ങൾക്ക് സഹായം നൽകാൻ ഞങ്ങൾ എപ്പോഴും തയ്യാറാണ്. 👍🏼',
   postOnboardingLinks:

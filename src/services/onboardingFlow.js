@@ -57,6 +57,18 @@ const pendingCertificateRetryTimers = new Map();
 const CERTIFICATE_PROMPT_DEBOUNCE_MS = 5000;
 const AGENT_HELP_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const TERMS_REMINDER_HISTORY_EVENT = 'terms_acceptance_reminder_sent';
+const MOBILE_APP_CAMPAIGN_STATUS = {
+  ANNOUNCEMENT_SENT: 'announcement_sent',
+  INSTALL_INTEREST_YES: 'install_interest_yes',
+  INSTALL_INTEREST_NO: 'install_interest_no',
+  DEVICE_ANDROID: 'device_android',
+  DEVICE_IPHONE: 'device_iphone',
+  ANDROID_LINK_SENT: 'android_link_sent',
+  IPHONE_LINK_SENT: 'iphone_link_sent',
+  COMPLETED: 'completed'
+};
+const MOBILE_APP_STAGE_INSTALL_INTEREST = 'awaiting_install_interest';
+const MOBILE_APP_STAGE_DEVICE = 'awaiting_device';
 
 let termsReminderInterval = null;
 
@@ -503,11 +515,32 @@ async function sendPulsoAppDeviceButtons(phone) {
 async function sendPostOnboardingWrapUp(phone, sender = 'bot') {
   await updateProvider(phone, {
     pulsoAppPromptStage: null,
+    mobileAppCampaignStage: null,
+    mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.COMPLETED,
     postOnboardingCompletedAt: new Date().toISOString()
   });
   await sendAndLog(phone, 'text', MESSAGES.postOnboardingContactSupport, sender);
   await sendAndLog(phone, 'text', MESSAGES.postOnboardingLinks, sender);
   await sendOptionalAgentHelpButton(phone);
+}
+
+async function sendMobileAppCampaignClosing(phone, sender = 'bot') {
+  await updateProvider(phone, {
+    pulsoAppPromptStage: null,
+    mobileAppCampaignStage: null,
+    mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.COMPLETED,
+    mobileAppCampaignCompletedAt: new Date().toISOString()
+  });
+  await sendAndLog(phone, 'text', MESSAGES.mobileAppCampaignThanks, sender);
+}
+
+async function finishMobileAppFlow(phone, provider, sender = 'bot') {
+  if (provider && provider.mobileAppCampaignSource === 'post_onboarding') {
+    await sendPostOnboardingWrapUp(phone, sender);
+    return;
+  }
+
+  await sendMobileAppCampaignClosing(phone, sender);
 }
 
 function buildTermsReminderMessage() {
@@ -667,7 +700,11 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
 
   await updateStatus(phone, STATUS.COMPLETED, 15, {
     termsAccepted: true,
-    pulsoAppPromptStage: 'awaiting_install_interest',
+    pulsoAppPromptStage: MOBILE_APP_STAGE_INSTALL_INTEREST,
+    mobileAppCampaignStage: MOBILE_APP_STAGE_INSTALL_INTEREST,
+    mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.ANNOUNCEMENT_SENT,
+    mobileAppCampaignSource: 'post_onboarding',
+    mobileAppCampaignSentAt: new Date().toISOString(),
     termsReminderReplyReceivedAt:
       currentProvider && currentProvider.termsReminderReplyReceivedAt
         ? currentProvider.termsReminderReplyReceivedAt
@@ -771,6 +808,104 @@ async function remindProviderToAcceptTerms(provider) {
   });
   await appendHistory(provider.phone, { type: 'system', event: TERMS_REMINDER_HISTORY_EVENT, reminderKind });
   return true;
+}
+
+function isCompletedProviderEligibleForMobileAppCampaign(provider) {
+  return Boolean(
+    provider &&
+      provider.phone &&
+      provider.status === STATUS.COMPLETED &&
+      provider.termsAccepted === true &&
+      provider.verification &&
+      provider.verification.status === 'verified' &&
+      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.COMPLETED &&
+      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.ANNOUNCEMENT_SENT &&
+      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.INSTALL_INTEREST_YES &&
+      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.INSTALL_INTEREST_NO &&
+      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.DEVICE_ANDROID &&
+      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.DEVICE_IPHONE &&
+      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.ANDROID_LINK_SENT &&
+      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.IPHONE_LINK_SENT
+  );
+}
+
+async function sendMobileAppCampaignToProvider(provider, sender = 'mobile-app-campaign') {
+  if (!isCompletedProviderEligibleForMobileAppCampaign(provider)) {
+    return false;
+  }
+
+  const sentAt = new Date().toISOString();
+  await sendAndLog(provider.phone, 'text', MESSAGES.mobileAppCampaignAnnouncement, sender);
+  await sendPulsoAppInstallInterestButtons(provider.phone);
+  await updateProvider(provider.phone, {
+    pulsoAppPromptStage: MOBILE_APP_STAGE_INSTALL_INTEREST,
+    mobileAppCampaignStage: MOBILE_APP_STAGE_INSTALL_INTEREST,
+    mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.ANNOUNCEMENT_SENT,
+    mobileAppCampaignSource: 'completed_provider_campaign',
+    mobileAppCampaignSentAt: sentAt
+  });
+  await appendHistory(provider.phone, {
+    type: 'system',
+    event: 'mobile_app_campaign_announcement_sent',
+    sentAt
+  });
+  return true;
+}
+
+async function runMobileAppCampaignForCompletedProviders(targetPhones = null) {
+  const providers = await listProviders();
+  const targetSet = Array.isArray(targetPhones) && targetPhones.length ? new Set(targetPhones) : null;
+  const candidates = providers.filter((provider) => {
+    if (targetSet && (!provider || !targetSet.has(provider.phone))) {
+      return false;
+    }
+
+    return isCompletedProviderEligibleForMobileAppCampaign(provider);
+  });
+
+  if (!candidates.length) {
+    console.log('[MOBILE_APP_CAMPAIGN] No eligible completed providers found');
+    return { scanned: providers.length, eligible: 0, sent: 0, failed: 0, results: [] };
+  }
+
+  console.log(`[MOBILE_APP_CAMPAIGN] Sending to ${candidates.length} completed provider(s)`);
+  const results = [];
+
+  for (const provider of candidates) {
+    try {
+      const sent = await sendMobileAppCampaignToProvider(provider);
+      results.push({ phone: provider.phone, sent });
+      if (sent) {
+        console.log(`[MOBILE_APP_CAMPAIGN] Sent to ${provider.phone}`);
+      }
+    } catch (error) {
+      results.push({
+        phone: provider.phone,
+        sent: false,
+        error: error.message || 'send_failed'
+      });
+      console.error(
+        '[MOBILE_APP_CAMPAIGN_ERROR]',
+        JSON.stringify(
+          {
+            phone: provider.phone,
+            message: error.message,
+            response: error.response ? error.response.data : null
+          },
+          null,
+          2
+        )
+      );
+    }
+  }
+
+  return {
+    scanned: providers.length,
+    eligible: candidates.length,
+    sent: results.filter((item) => item.sent).length,
+    failed: results.filter((item) => !item.sent).length,
+    results
+  };
 }
 
 async function sendLegacyTermsReminder(provider) {
@@ -1639,12 +1774,15 @@ async function handleTerms(phone, message) {
 }
 
 async function handlePulsoAppInstallInterest(phone, message) {
+  const provider = await getProvider(phone);
   const action = parsePulsoAppInstallInterest(message);
 
   if (action === 'yes') {
     await updateProvider(phone, {
       pulsoAppInstallInterested: true,
-      pulsoAppPromptStage: 'awaiting_device'
+      mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.INSTALL_INTEREST_YES,
+      pulsoAppPromptStage: MOBILE_APP_STAGE_DEVICE,
+      mobileAppCampaignStage: MOBILE_APP_STAGE_DEVICE
     });
     await sendPulsoAppDeviceButtons(phone);
     return;
@@ -1654,10 +1792,12 @@ async function handlePulsoAppInstallInterest(phone, message) {
     await updateProvider(phone, {
       pulsoAppInstallInterested: false,
       pulsoAppPromptStage: null,
+      mobileAppCampaignStage: null,
+      mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.INSTALL_INTEREST_NO,
       pulsoAppInstallDeclinedAt: new Date().toISOString()
     });
     await sendAndLog(phone, 'text', MESSAGES.pulsoAppInstallDeclined);
-    await sendPostOnboardingWrapUp(phone);
+    await finishMobileAppFlow(phone, provider);
     return;
   }
 
@@ -1666,25 +1806,40 @@ async function handlePulsoAppInstallInterest(phone, message) {
 }
 
 async function handlePulsoAppDevice(phone, message) {
+  const provider = await getProvider(phone);
   const device = parsePulsoAppDevice(message);
 
   if (device === 'iphone') {
+    await appendHistory(phone, {
+      type: 'system',
+      event: 'mobile_app_campaign_device_selected',
+      device: MOBILE_APP_CAMPAIGN_STATUS.DEVICE_IPHONE
+    });
     await updateProvider(phone, {
       pulsoAppDevice: 'iphone',
+      mobileAppCampaignDevice: 'iphone',
+      mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.IPHONE_LINK_SENT,
       pulsoAppLinkSentAt: new Date().toISOString()
     });
     await sendAndLog(phone, 'text', MESSAGES.pulsoAppIphoneLink);
-    await sendPostOnboardingWrapUp(phone);
+    await finishMobileAppFlow(phone, provider);
     return;
   }
 
   if (device === 'android') {
+    await appendHistory(phone, {
+      type: 'system',
+      event: 'mobile_app_campaign_device_selected',
+      device: MOBILE_APP_CAMPAIGN_STATUS.DEVICE_ANDROID
+    });
     await updateProvider(phone, {
       pulsoAppDevice: 'android',
+      mobileAppCampaignDevice: 'android',
+      mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.ANDROID_LINK_SENT,
       pulsoAppLinkSentAt: new Date().toISOString()
     });
     await sendAndLog(phone, 'text', MESSAGES.pulsoAppAndroidLink);
-    await sendPostOnboardingWrapUp(phone);
+    await finishMobileAppFlow(phone, provider);
     return;
   }
 
@@ -1694,13 +1849,24 @@ async function handlePulsoAppDevice(phone, message) {
 
 async function handleCompleted(phone, message) {
   const provider = await getProvider(phone);
-  if (provider && provider.pulsoAppPromptStage === 'awaiting_install_interest') {
+  const mobileAppStage = provider && (provider.mobileAppCampaignStage || provider.pulsoAppPromptStage);
+  if (mobileAppStage === MOBILE_APP_STAGE_INSTALL_INTEREST) {
     await handlePulsoAppInstallInterest(phone, message);
     return;
   }
 
-  if (provider && provider.pulsoAppPromptStage === 'awaiting_device') {
+  if (mobileAppStage === MOBILE_APP_STAGE_DEVICE) {
     await handlePulsoAppDevice(phone, message);
+    return;
+  }
+
+  const requestedDeviceLink = parsePulsoAppDevice(message);
+  if (requestedDeviceLink === 'iphone') {
+    await sendAndLog(phone, 'text', MESSAGES.pulsoAppIphoneLink);
+    return;
+  }
+  if (requestedDeviceLink === 'android') {
+    await sendAndLog(phone, 'text', MESSAGES.pulsoAppAndroidLink);
     return;
   }
 
@@ -1711,6 +1877,7 @@ async function handleCompleted(phone, message) {
   }
 
   await sendAndLog(phone, 'text', MESSAGES.completed);
+  await sendAndLog(phone, 'text', MESSAGES.mobileAppLinkHelp);
   if (canRequestAgentHelp(provider)) {
     await sendOptionalAgentHelpButton(phone);
     return;
@@ -2119,6 +2286,7 @@ module.exports = {
   approveCertificate,
   rejectCertificate,
   requestAdditionalDocument,
+  runMobileAppCampaignForCompletedProviders,
   reconcileAcceptedTermsProviders,
   runCurrentWaitingTermsReminderBackfill,
   runLegacyTermsReminderBackfill,
