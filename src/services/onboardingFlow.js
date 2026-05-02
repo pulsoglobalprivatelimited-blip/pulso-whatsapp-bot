@@ -1815,14 +1815,17 @@ async function handleSex(phone, message) {
 
 async function handleDistrict(phone, message) {
   const provider = await getProvider(phone);
+  const pageSize = UI_TEXT.districtPageSize || 7;
+  const pageCount = Math.max(1, Math.ceil(DISTRICTS.length / pageSize));
+  const currentPage = Math.min(Math.max(Number(provider && provider.districtListPage) || 1, 1), pageCount);
   const listAction = parseDistrictListAction(message);
   if (listAction === 'next') {
-    await updateProvider(phone, { districtListPage: 2 });
+    await updateProvider(phone, { districtListPage: Math.min(currentPage + 1, pageCount) });
     await sendDistrictList(phone);
     return;
   }
   if (listAction === 'previous') {
-    await updateProvider(phone, { districtListPage: 1 });
+    await updateProvider(phone, { districtListPage: Math.max(currentPage - 1, 1) });
     await sendDistrictList(phone);
     return;
   }

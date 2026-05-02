@@ -582,7 +582,7 @@ const KARNATAKA_UI_TEXT = {
   appHelpInstallTitle: 'Install help',
   appHelpLoginOtpTitle: 'Login / OTP issue',
   appHelpNoSmartphoneTitle: 'No smartphone',
-  districtPageSize: 9
+  districtPageSize: 8
 };
 
 const FLOWS = {
