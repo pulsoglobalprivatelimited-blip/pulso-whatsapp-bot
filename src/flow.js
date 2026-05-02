@@ -282,16 +282,16 @@ const MESSAGES = {
   termsIntro:
     `ഞങ്ങളോടൊപ്പം ചേരുന്നതിന് മുമ്പ് താഴെ നൽകിയിരിക്കുന്ന എല്ലാ നിർദേശങ്ങളും ദയവായി വായിക്കുക.
 
-1. ഡ്യൂട്ടി സ്വീകരിച്ച ശേഷം, ₹1500 വിലയുള്ള യൂണിഫോം കിറ്റ് എടുക്കേണ്ടതാണ്.
+1. ഡ്യൂട്ടി സ്വീകരിച്ച ശേഷം, ₹2000 വിലയുള്ള യൂണിഫോം കിറ്റ് എടുക്കേണ്ടതാണ്.
 ഈ കിറ്റിൽ ഒരു ജോടി യൂണിഫോവും ഒരു ഐഡി കാർഡും ഉൾപ്പെടുന്നതാണ്.
 
-ഞങ്ങളോടൊപ്പം കുറഞ്ഞത് 90 ദിവസം ഡ്യൂട്ടി പൂർത്തിയാക്കിയ ശേഷം, യൂണിഫോം ഓഫിസിൽ തിരികെ നൽകിയാൽ ₹1500 പൂർണ്ണമായി റിഫണ്ട് ലഭിക്കും.
+ഞങ്ങളോടൊപ്പം കുറഞ്ഞത് 90 ദിവസം ഡ്യൂട്ടി പൂർത്തിയാക്കിയ ശേഷം, യൂണിഫോം ഓഫിസിൽ തിരികെ നൽകിയാൽ ₹2000 പൂർണ്ണമായി റിഫണ്ട് ലഭിക്കും.
 
 കൂടുതൽ ഒരു ജോടി യൂണിഫോം ആവശ്യമുണ്ടെങ്കിൽ, ₹950 അടച്ച് വാങ്ങാവുന്നതാണ്.
 ഈ അധിക യൂണിഫോമിന്റെ തുക റിഫണ്ടബിൾ അല്ല.
 
 👉 **പേയ്മെന്റ് ഓപ്ഷൻ:**
-യൂണിഫോം കിറ്റിനുള്ള ₹1500 ഒരുമിച്ച് അടയ്ക്കാൻ കഴിയാത്ത പക്ഷം, ആദ്യ 3 ദിവസത്തെ ഡ്യൂട്ടി പേയ്മെന്റിൽ നിന്ന് ദിവസവും ₹500 വീതം കുറച്ച് ഈ തുക അടയ്ക്കാനുള്ള സൗകര്യവും ലഭ്യമാണ്.
+യൂണിഫോം കിറ്റിനുള്ള ₹2000 ഒരുമിച്ച് അടയ്ക്കാൻ കഴിയാത്ത പക്ഷം, ആദ്യ 4 ദിവസത്തെ ഡ്യൂട്ടി പേയ്മെന്റിൽ നിന്ന് ദിവസവും ₹500 വീതം കുറച്ച് ഈ തുക അടയ്ക്കാനുള്ള സൗകര്യവും ലഭ്യമാണ്.
 
 2. ദയവായി ശ്രദ്ധിക്കുക: നിങ്ങൾ ഞങ്ങളുടെ സ്ഥിരം ശമ്പള ജീവനക്കാരൻ അല്ല. നിങ്ങൾ ജോലി ചെയ്യുന്ന ദിവസങ്ങളിലാണ് നിങ്ങൾക്ക് വരുമാനം ലഭിക്കുക. ഞങ്ങൾ നിങ്ങളിലേക്ക് ഡ്യൂട്ടി/ജോലി അവസരങ്ങൾ നൽകുന്നതാണ്. നിങ്ങൾ ആ സർവീസ് ഏറ്റെടുത്തു വിജയകരമായി പൂർത്തിയാക്കിയാൽ അതിന് അനുയോജ്യമായ പേയ്മെന്റ് ലഭിക്കും. ജോലി ചെയ്യാത്ത ദിവസങ്ങളിൽ ശമ്പളമോ മറ്റ് പേയ്മെന്റുകളോ ലഭിക്കില്ല. നിങ്ങൾ ചെയ്ത ജോലികളുടെ പേയ്മെന്റ് ദിവസേന നൽകുന്നതായിരിക്കും. ഈ സംവിധാനത്തെക്കുറിച്ച് വ്യക്തമായി മനസ്സിലാക്കി സഹകരിക്കണമെന്ന് അഭ്യർത്ഥിക്കുന്നു. നിങ്ങളുടെ സഹകരണത്തിനും വിശ്വാസത്തിനും നന്ദി.
 
@@ -456,7 +456,7 @@ const KARNATAKA_MESSAGES = {
   certificateRejectedPermanent:
     'Sorry, based on the current review, this onboarding application cannot continue. You can contact the office if you need help later.',
   termsIntro:
-    `Before joining Pulso, please read all instructions carefully.\n\n1. After accepting your first duty, you need to collect a uniform kit worth Rs 1500.\nThis kit includes one pair of uniform and one ID card.\n\nAfter completing at least 90 days of duty with us, if you return the uniform to the office, the full Rs 1500 will be refunded.\n\nIf you need one additional pair of uniform, you can buy it by paying Rs 950.\nThis extra uniform amount is not refundable.\n\nPayment option:\nIf you are unable to pay Rs 1500 for the uniform kit at once, you can pay it through deduction from your first 3 days of duty payment. Rs 500 will be deducted per day for the first 3 duty days.\n\n2. Please note: you are not a permanent salaried employee of Pulso. You will receive payment only for the days you work. Pulso shares duty/job opportunities with you. If you accept and complete a duty successfully, you will receive the applicable payment. You will not receive salary or payment for days you do not work. Payment for completed work will be given daily.\n\n3. We will share available duty offers with you. Please read each duty offer carefully. You can accept or decline. But after accepting a duty, last-minute cancellation makes it difficult for us to arrange another provider. Providers who cancel after accepting may be blocked from accepting future duty offers.`,
+    `Before joining Pulso, please read all instructions carefully.\n\n1. After accepting your first duty, you need to collect a uniform kit worth Rs 2000.\nThis kit includes one pair of uniform and one ID card.\n\nAfter completing at least 90 days of duty with us, if you return the uniform to the office, the full Rs 2000 will be refunded.\n\nIf you need one additional pair of uniform, you can buy it by paying Rs 950.\nThis extra uniform amount is not refundable.\n\nPayment option:\nIf you are unable to pay Rs 2000 for the uniform kit at once, you can pay it through deduction from your first 4 days of duty payment. Rs 500 will be deducted per day for the first 4 duty days.\n\n2. Please note: you are not a permanent salaried employee of Pulso. You will receive payment only for the days you work. Pulso shares duty/job opportunities with you. If you accept and complete a duty successfully, you will receive the applicable payment. You will not receive salary or payment for days you do not work. Payment for completed work will be given daily.\n\n3. We will share available duty offers with you. Please read each duty offer carefully. You can accept or decline. But after accepting a duty, last-minute cancellation makes it difficult for us to arrange another provider. Providers who cancel after accepting may be blocked from accepting future duty offers.`,
   termsQuestion: 'Do you accept the terms and conditions?',
   termsReminder:
     'You have not accepted the terms and conditions yet. To complete onboarding, please reply "continue".',
