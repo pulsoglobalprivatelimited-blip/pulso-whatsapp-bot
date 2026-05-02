@@ -287,7 +287,7 @@ const MESSAGES = {
 
 ഞങ്ങളോടൊപ്പം കുറഞ്ഞത് 90 ദിവസം ഡ്യൂട്ടി പൂർത്തിയാക്കിയ ശേഷം, യൂണിഫോം ഓഫിസിൽ തിരികെ നൽകിയാൽ ₹2000 പൂർണ്ണമായി റിഫണ്ട് ലഭിക്കും.
 
-കൂടുതൽ ഒരു ജോടി യൂണിഫോം ആവശ്യമുണ്ടെങ്കിൽ, ₹950 അടച്ച് വാങ്ങാവുന്നതാണ്.
+കൂടുതൽ ഒരു ജോടി യൂണിഫോം ആവശ്യമുണ്ടെങ്കിൽ, ₹1250 അടച്ച് വാങ്ങാവുന്നതാണ്.
 ഈ അധിക യൂണിഫോമിന്റെ തുക റിഫണ്ടബിൾ അല്ല.
 
 👉 **പേയ്മെന്റ് ഓപ്ഷൻ:**
@@ -456,7 +456,7 @@ const KARNATAKA_MESSAGES = {
   certificateRejectedPermanent:
     'Sorry, based on the current review, this onboarding application cannot continue. You can contact the office if you need help later.',
   termsIntro:
-    `Before joining Pulso, please read all instructions carefully.\n\n1. After accepting your first duty, you need to collect a uniform kit worth Rs 2000.\nThis kit includes one pair of uniform and one ID card.\n\nAfter completing at least 90 days of duty with us, if you return the uniform to the office, the full Rs 2000 will be refunded.\n\nIf you need one additional pair of uniform, you can buy it by paying Rs 950.\nThis extra uniform amount is not refundable.\n\nPayment option:\nIf you are unable to pay Rs 2000 for the uniform kit at once, you can pay it through deduction from your first 4 days of duty payment. Rs 500 will be deducted per day for the first 4 duty days.\n\n2. Please note: you are not a permanent salaried employee of Pulso. You will receive payment only for the days you work. Pulso shares duty/job opportunities with you. If you accept and complete a duty successfully, you will receive the applicable payment. You will not receive salary or payment for days you do not work. Payment for completed work will be given daily.\n\n3. We will share available duty offers with you. Please read each duty offer carefully. You can accept or decline. But after accepting a duty, last-minute cancellation makes it difficult for us to arrange another provider. Providers who cancel after accepting may be blocked from accepting future duty offers.`,
+    `Before joining Pulso, please read all instructions carefully.\n\n1. After accepting your first duty, you need to collect a uniform kit worth Rs 2000.\nThis kit includes one pair of uniform and one ID card.\n\nAfter completing at least 90 days of duty with us, if you return the uniform to the office, the full Rs 2000 will be refunded.\n\nIf you need one additional pair of uniform, you can buy it by paying Rs 1250.\nThis extra uniform amount is not refundable.\n\nPayment option:\nIf you are unable to pay Rs 2000 for the uniform kit at once, you can pay it through deduction from your first 4 days of duty payment. Rs 500 will be deducted per day for the first 4 duty days.\n\n2. Please note: you are not a permanent salaried employee of Pulso. You will receive payment only for the days you work. Pulso shares duty/job opportunities with you. If you accept and complete a duty successfully, you will receive the applicable payment. You will not receive salary or payment for days you do not work. Payment for completed work will be given daily.\n\n3. We will share available duty offers with you. Please read each duty offer carefully. You can accept or decline. But after accepting a duty, last-minute cancellation makes it difficult for us to arrange another provider. Providers who cancel after accepting may be blocked from accepting future duty offers.`,
   termsQuestion: 'Do you accept the terms and conditions?',
   termsReminder:
     'You have not accepted the terms and conditions yet. To complete onboarding, please reply "continue".',
