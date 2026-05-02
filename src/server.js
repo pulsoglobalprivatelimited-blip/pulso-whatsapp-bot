@@ -9,6 +9,7 @@ const {
   approveCertificate,
   rejectCertificate,
   requestAdditionalDocument,
+  markPulsoAppActivationVerified,
   adminUploadCertificateFiles,
   runTermsReminderSweep,
   startTermsReminderScheduler
@@ -268,6 +269,15 @@ app.post('/admin/providers/:phone/reject-certificate', async (req, res) => {
 app.post('/admin/providers/:phone/request-additional-document', async (req, res) => {
   try {
     const provider = await requestAdditionalDocument(req.params.phone, req.body.reviewedBy, req.body.note);
+    res.json(provider);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post('/admin/providers/:phone/verify-app-activation', async (req, res) => {
+  try {
+    const provider = await markPulsoAppActivationVerified(req.params.phone, req.body.verifiedBy || req.body.reviewedBy);
     res.json(provider);
   } catch (error) {
     res.status(400).json({ error: error.message });

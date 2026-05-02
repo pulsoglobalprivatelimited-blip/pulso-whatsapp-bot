@@ -1,5 +1,8 @@
+const { AsyncLocalStorage } = require('async_hooks');
+
 const STEPS = {
   1: 'incoming_lead',
+  1.5: 'awaiting_region_selection',
   2: 'awaiting_qualification',
   3: 'working_model_sent',
   4: 'awaiting_interest_confirmation',
@@ -18,6 +21,7 @@ const STEPS = {
 
 const STATUS = {
   NEW: 'new_lead',
+  AWAITING_REGION_SELECTION: 'awaiting_region_selection',
   AWAITING_QUALIFICATION: 'awaiting_qualification',
   AWAITING_INTEREST: 'awaiting_interest_confirmation',
   AWAITING_DUTY_HOUR_PREFERENCE: 'awaiting_duty_hour_preference',
@@ -40,6 +44,8 @@ const STATUS = {
 };
 
 const BUTTON_IDS = {
+  REGION_KERALA: 'region_kerala',
+  REGION_KARNATAKA: 'region_karnataka',
   QUALIFICATION_GDA: 'qualification_gda',
   QUALIFICATION_GNM: 'qualification_gnm',
   QUALIFICATION_ANM: 'qualification_anm',
@@ -72,6 +78,12 @@ const BUTTON_IDS = {
   TERMS_DECLINE: 'terms_decline',
   PULSO_APP_INSTALL_YES: 'pulso_app_install_yes',
   PULSO_APP_INSTALL_NO: 'pulso_app_install_no',
+  PULSO_APP_INSTALLED: 'pulso_app_installed',
+  PULSO_APP_LATER: 'pulso_app_later',
+  PULSO_APP_NEED_HELP: 'pulso_app_need_help',
+  PULSO_APP_HELP_INSTALL: 'pulso_app_help_install',
+  PULSO_APP_HELP_LOGIN_OTP: 'pulso_app_help_login_otp',
+  PULSO_APP_HELP_NO_SMARTPHONE: 'pulso_app_help_no_smartphone',
   PULSO_APP_DEVICE_IPHONE: 'pulso_app_device_iphone',
   PULSO_APP_DEVICE_ANDROID: 'pulso_app_device_android'
 };
@@ -93,6 +105,23 @@ const QUALIFICATIONS = [
   }
 ];
 
+const ENGLISH_QUALIFICATIONS = [
+  { id: BUTTON_IDS.QUALIFICATION_GDA, title: 'GDA' },
+  { id: BUTTON_IDS.QUALIFICATION_GNM, title: 'GNM' },
+  { id: BUTTON_IDS.QUALIFICATION_ANM, title: 'ANM' },
+  { id: BUTTON_IDS.QUALIFICATION_HCA, title: 'HCA' },
+  { id: BUTTON_IDS.QUALIFICATION_BSC_NURSING, title: 'BSc Nursing' },
+  {
+    id: BUTTON_IDS.QUALIFICATION_OTHER_CAREGIVING,
+    title: 'Other',
+    description: 'Experience in caregiving'
+  },
+  {
+    id: BUTTON_IDS.QUALIFICATION_NONE_OF_THESE,
+    title: 'None of these'
+  }
+];
+
 const DISTRICTS = [
   { id: 'district_thiruvananthapuram', title: 'തിരുവനന്തപുരം', value: 'Thiruvananthapuram' },
   { id: 'district_kollam', title: 'കൊല്ലം', value: 'Kollam' },
@@ -108,6 +137,39 @@ const DISTRICTS = [
   { id: 'district_wayanad', title: 'വയനാട്', value: 'Wayanad' },
   { id: 'district_kannur', title: 'കണ്ണൂർ', value: 'Kannur' },
   { id: 'district_kasaragod', title: 'കാസർഗോഡ്', value: 'Kasaragod' }
+];
+
+const KARNATAKA_DISTRICTS = [
+  { id: 'district_bengaluru_urban', title: 'Bengaluru Urban', value: 'Bengaluru Urban' },
+  { id: 'district_bengaluru_rural', title: 'Bengaluru Rural', value: 'Bengaluru Rural' },
+  { id: 'district_mysuru', title: 'Mysuru', value: 'Mysuru' },
+  { id: 'district_dakshina_kannada', title: 'Dakshina Kannada', value: 'Dakshina Kannada' },
+  { id: 'district_udupi', title: 'Udupi', value: 'Udupi' },
+  { id: 'district_belagavi', title: 'Belagavi', value: 'Belagavi' },
+  { id: 'district_dharwad', title: 'Dharwad', value: 'Dharwad' },
+  { id: 'district_kalaburagi', title: 'Kalaburagi', value: 'Kalaburagi' },
+  { id: 'district_shivamogga', title: 'Shivamogga', value: 'Shivamogga' },
+  { id: 'district_tumakuru', title: 'Tumakuru', value: 'Tumakuru' },
+  { id: 'district_mandya', title: 'Mandya', value: 'Mandya' },
+  { id: 'district_hassan', title: 'Hassan', value: 'Hassan' },
+  { id: 'district_davangere', title: 'Davangere', value: 'Davangere' },
+  { id: 'district_ballari', title: 'Ballari', value: 'Ballari' },
+  { id: 'district_vijayapura', title: 'Vijayapura', value: 'Vijayapura' },
+  { id: 'district_bidar', title: 'Bidar', value: 'Bidar' },
+  { id: 'district_raichur', title: 'Raichur', value: 'Raichur' },
+  { id: 'district_kolar', title: 'Kolar', value: 'Kolar' },
+  { id: 'district_ramanagara', title: 'Ramanagara', value: 'Ramanagara' },
+  { id: 'district_chikkamagaluru', title: 'Chikkamagaluru', value: 'Chikkamagaluru' },
+  { id: 'district_kodagu', title: 'Kodagu', value: 'Kodagu' },
+  { id: 'district_chitradurga', title: 'Chitradurga', value: 'Chitradurga' },
+  { id: 'district_uttara_kannada', title: 'Uttara Kannada', value: 'Uttara Kannada' },
+  { id: 'district_yadgir', title: 'Yadgir', value: 'Yadgir' },
+  { id: 'district_koppal', title: 'Koppal', value: 'Koppal' },
+  { id: 'district_gadag', title: 'Gadag', value: 'Gadag' },
+  { id: 'district_haveri', title: 'Haveri', value: 'Haveri' },
+  { id: 'district_bagalkot', title: 'Bagalkot', value: 'Bagalkot' },
+  { id: 'district_chamarajanagar', title: 'Chamarajanagar', value: 'Chamarajanagar' },
+  { id: 'district_vijayanagara', title: 'Vijayanagara', value: 'Vijayanagara' }
 ];
 
 const MESSAGES = {
@@ -249,25 +311,41 @@ const MESSAGES = {
   mobileAppCampaignAnnouncement:
     'Pulso mobile app ഇപ്പോൾ ലഭ്യമാണ്.\n\nPulso mobile app download ചെയ്ത് profile active ആയി ഉപയോഗിക്കുന്ന care providers-ന് duty offers-ൽ first preference ലഭിക്കുന്നതാണ്.\n\nWhatsApp വഴി duty messages ലഭിക്കുമെങ്കിലും, app users-ന് duty accept ചെയ്യാനും confirmation ലഭിക്കാനും കൂടുതൽ priority ഉണ്ടായിരിക്കും.\n\nഅതുകൊണ്ട് ദയവായി Pulso mobile app install ചെയ്ത് നിങ്ങളുടെ profile active ആയി വയ്ക്കുക.',
   pulsoAppPreferenceNotice:
-    'പ്രധാന അറിയിപ്പ്:\n\nPulso mobile app download ചെയ്ത് active ആയി ഉപയോഗിക്കുന്ന care providers-ന് duty offers-ൽ first preference ലഭിക്കുന്നതാണ്.\n\nWhatsApp messages ലഭിക്കുമെങ്കിലും, app users-ന് duty accept ചെയ്യാനും confirmation ലഭിക്കാനും കൂടുതൽ priority ഉണ്ടായിരിക്കും.\n\nദയവായി Pulso mobile app install ചെയ്ത് profile active ആക്കി വയ്ക്കുക.',
+    'പ്രധാന അറിയിപ്പ്:\n\nPulso mobile app duty confirmation, check-in, check-out, attendance tracking, duty completion, payment processing എന്നിവയ്ക്കായി നിർബന്ധമാണ്.\n\nDuty ലഭിക്കാനും complete ചെയ്യാനും Pulso mobile app install ചെയ്ത് profile active ആയി വയ്ക്കണം.\n\nWhatsApp onboarding-ൽ ഉപയോഗിച്ച അതേ phone number ഉപയോഗിച്ച് app-ൽ login ചെയ്യുക.\n\nApp activation ഇല്ലെങ്കിൽ duty allocation വൈകുകയോ ലഭിക്കാതിരിക്കുകയോ ചെയ്യാം.',
   pulsoAppInstallQuestion:
-    'Pulso mobile app install ചെയ്യാൻ താൽപര്യമുണ്ടോ?',
+    'താങ്കൾ ഏത് phone ആണ് ഉപയോഗിക്കുന്നത്?',
   pulsoAppInstallRetry:
-    'ദയവായി Yes അല്ലെങ്കിൽ No തിരഞ്ഞെടുക്കുക.',
+    'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും തിരഞ്ഞെടുക്കുക.',
   pulsoAppDeviceQuestion:
     'താങ്കൾ ഏത് phone ആണ് ഉപയോഗിക്കുന്നത്?',
   pulsoAppDeviceRetry:
-    'ദയവായി iPhone അല്ലെങ്കിൽ Android തിരഞ്ഞെടുക്കുക.',
+    'ദയവായി Android / iPhone / സഹായം വേണം എന്നിവയിൽ ഒന്നിനെ തിരഞ്ഞെടുക്കുക.',
   pulsoAppAndroidLink:
-    'Pulso mobile app Android phone-ൽ install ചെയ്യാൻ താഴെയുള്ള link ഉപയോഗിക്കുക:\n\nhttps://play.google.com/store/apps/details?id=com.pulso.global&pcampaignid=web_share\n\nInstall ചെയ്ത ശേഷം profile active ആക്കി വയ്ക്കുക.',
+    'Pulso mobile app Android phone-ൽ install ചെയ്യാൻ താഴെയുള്ള link ഉപയോഗിക്കുക:\n\nhttps://play.google.com/store/apps/details?id=com.pulso.global&pcampaignid=web_share\n\nInstall ചെയ്ത ശേഷം WhatsApp onboarding-ൽ ഉപയോഗിച്ച അതേ phone number ഉപയോഗിച്ച് login ചെയ്യുക.',
   pulsoAppIphoneLink:
-    'Pulso mobile app iPhone-ൽ install ചെയ്യാൻ താഴെയുള്ള link ഉപയോഗിക്കുക:\n\nhttps://apps.apple.com/in/app/pulso/id6757874217\n\nInstall ചെയ്ത ശേഷം profile active ആക്കി വയ്ക്കുക.',
+    'Pulso mobile app iPhone-ൽ install ചെയ്യാൻ താഴെയുള്ള link ഉപയോഗിക്കുക:\n\nhttps://apps.apple.com/in/app/pulso/id6757874217\n\nInstall ചെയ്ത ശേഷം WhatsApp onboarding-ൽ ഉപയോഗിച്ച അതേ phone number ഉപയോഗിച്ച് login ചെയ്യുക.',
+  pulsoAppInstalledQuestion:
+    'App install ചെയ്ത് login ചെയ്തോ?',
+  pulsoAppInstalledPending:
+    'നന്ദി.\n\nതാങ്കളുടെ Pulso app activation ഞങ്ങൾ verify ചെയ്യുന്നതാണ്.\n\nApp profile active ആയതിന് ശേഷം താങ്കൾക്ക് duty opportunities ലഭിക്കാനും complete ചെയ്യാനും eligible ആയിരിക്കും.\n\nദയവായി app install ചെയ്ത നിലയിൽ വയ്ക്കുകയും notifications on ആക്കുകയും ചെയ്യുക.',
+  pulsoAppActivationVerified:
+    'താങ്കളുടെ Pulso app profile active ആണ്.\n\nഇനി duty opportunities receive ചെയ്യാൻ താങ്കൾ ready ആണ്.\n\nഓരോ duty-ക്കും Pulso app ഉപയോഗിക്കേണ്ടതാണ്:\n\nDuty confirmation\nCheck-in\nCheck-out\nAttendance tracking\nDuty completion\n\nദയവായി app notifications on ആക്കി വയ്ക്കുക.',
+  pulsoAppLater:
+    'ശരി.\n\nതാങ്കളുടെ onboarding പൂർത്തിയായിട്ടുണ്ട്. പക്ഷേ app activation ഇപ്പോഴും pending ആണ്.\n\nDuty allocation-ന് മുമ്പ് Pulso app activation നിർബന്ധമാണ്.\n\nശരിയായ link ഉപയോഗിച്ച് app പിന്നീട് install ചെയ്യാം.',
+  pulsoAppHelpQuestion:
+    'ശരി. എന്തിലാണ് സഹായം വേണ്ടത്?',
+  pulsoAppInstallHelp:
+    'Pulso app install ചെയ്യാൻ ഞങ്ങളുടെ support team സഹായിക്കും.\n\nദയവായി phone ready ആയി വയ്ക്കുക. Internet connection ഉണ്ടെന്ന് ഉറപ്പാക്കുക.\n\nPulso support team ഉടൻ തന്നെ ബന്ധപ്പെടുന്നതാണ്.',
+  pulsoAppLoginOtpHelp:
+    'Login അല്ലെങ്കിൽ OTP issue പരിഹരിക്കാൻ support team സഹായിക്കും.\n\nWhatsApp onboarding-ൽ ഉപയോഗിച്ച അതേ phone number ആണ് ഉപയോഗിക്കുന്നതെന്ന് ഉറപ്പാക്കുക.\n\nPulso support team ഉടൻ ബന്ധപ്പെടുന്നതാണ്.',
+  pulsoAppNoSmartphone:
+    'Pulso app duty confirmation, check-in, check-out, attendance tracking, duty completion എന്നിവയ്ക്കായി നിർബന്ധമാണ്.\n\nApp ഇല്ലാതെ duty allocation സാധ്യമാകില്ല.\n\nTemporary support option ഉണ്ടോ എന്ന് പരിശോധിക്കാൻ support team താങ്കളെ ബന്ധപ്പെടുന്നതാണ്.',
   pulsoAppInstallDeclined:
-    'ശരി. WhatsApp വഴി duty offers തുടർന്നും ലഭിക്കുന്നതാണ്.\n\nഎന്നാൽ Pulso mobile app ഉപയോഗിക്കുന്ന care providers-ന് duty offers-ൽ first preference ലഭിക്കുന്നതാണ്.',
+    'ശരി. താങ്കളുടെ onboarding പൂർത്തിയായിട്ടുണ്ട്. പക്ഷേ app activation pending ആണ്.\n\nDuty allocation-ന് Pulso app activation നിർബന്ധമാണ്.',
   mobileAppCampaignThanks:
     'നന്ദി. കൂടുതൽ സഹായം ആവശ്യമുണ്ടെങ്കിൽ Pulso support team-നെ WhatsApp വഴി ബന്ധപ്പെടാം.',
   mobileAppLinkHelp:
-    'Pulso mobile app install ചെയ്യാൻ link വീണ്ടും ആവശ്യമുണ്ടെങ്കിൽ ദയവായി Android അല്ലെങ്കിൽ iPhone എന്ന് reply ചെയ്യുക.',
+    'Pulso app activation pending ആണ്. App install link അല്ലെങ്കിൽ support ആവശ്യമെങ്കിൽ താഴെയുള്ള options ഉപയോഗിക്കുക.',
   postOnboardingContactSupport:
     'സഹായത്തിനായി ഓഫീസ് നമ്പർ 8714105333-ൽ രാവിലെ 10 മുതൽ വൈകിട്ട് 6 വരെ വിളിക്കാം.\n9446600809 എന്ന നമ്പറിൽ 24 മണിക്കൂറും WhatsApp സന്ദേശം അയക്കാം.\nനിങ്ങൾക്ക് സഹായം നൽകാൻ ഞങ്ങൾ എപ്പോഴും തയ്യാറാണ്. 👍🏼',
   postOnboardingLinks:
@@ -284,11 +362,326 @@ const MESSAGES = {
     'താങ്കളുടെ onboarding ഇതിനകം പൂർത്തിയായിട്ടുണ്ട്. കൂടുതൽ സഹായം ആവശ്യമെങ്കിൽ വീണ്ടും message ചെയ്യുക.'
 };
 
+const REGION_OPTIONS = [
+  { id: BUTTON_IDS.REGION_KERALA, title: 'Kerala' },
+  { id: BUTTON_IDS.REGION_KARNATAKA, title: 'Karnataka' }
+];
+
+const KARNATAKA_MESSAGES = {
+  ...MESSAGES,
+  regionQuestion: 'Welcome to Pulso.\n\nPlease select your region.',
+  regionRetry: 'Please select Kerala or Karnataka to continue.',
+  welcomeQualification: 'Welcome to Pulso.\nPlease select your qualification.',
+  notEligible:
+    'Sorry, currently we are onboarding only providers with GDA / GNM / ANM / HCA / BSc Nursing qualification or caregiving experience.',
+  qualificationRetry:
+    'Please select one option: GDA / GNM / ANM / HCA / BSc Nursing / Other caregiving experience.',
+  qualificationCertificateRequired:
+    `To join Pulso as a Caregiver / Nursing Staff, a certificate is required.\n\nYou should have at least one of the following:\n- GDA (General Duty Assistant)\n- GNM (General Nursing & Midwifery)\n- ANM (Auxiliary Nurse Midwife)\n- HCA (Health Care Assistant)\n- BSc Nursing\n- Experience Certificate in caregiving\n\nCertificate upload is required to complete onboarding. Providers without a valid certificate cannot complete onboarding.`,
+  qualificationGoBack:
+    'If you have any of the above qualifications, please go back and select the correct option.',
+  workingModel:
+    `**Pulso Global Private Limited** is a home care company. We provide care services for elderly people and bedridden patients at their homes.\n\nGDA staff, caregivers, and nurses can join Pulso. If you are interested, we will send duty offers to you through WhatsApp.\n\n**Duty details:**\n\n1. Duty location will mostly be in Bengaluru or other active Karnataka service areas\n2. Duty timing may be 8 hours or 24 hours\n3. 8-hour duty timing will usually be from morning to evening\n4. Duty duration may be 1 week, 2 weeks, 1 month, or more depending on the case\n5. For 24-hour duty, stay and food will be provided at the patient's home\n6. For 8-hour duty, stay will not be provided\n7. For 8-hour duty, you will receive Rs 900 per day\n8. For 24-hour duty, you will receive Rs 1200 per day\n9. Payment will be credited daily to your account\n10. You will receive payment only for the days you work\n11. There will be no housemaid work. Only patient care duties\n\n**Working model:**\n\n1. Duty offers will be sent through WhatsApp\n2. You can accept only the duties you are interested in\n3. If you are not interested in a duty, you can reject or ignore it\n4. After you accept a duty, the office team will call you for verification and confirmation\n5. The office team will clearly explain all duty details and instructions\n6. After confirmation, you should go directly to the duty location\n7. You should start duty on time and provide care responsibly\n\n**Emergency leave:**\n\nIf you need emergency leave, Pulso will try to arrange another staff member.\n\n**Important:**\n\n- Accepting or rejecting a duty offer is completely your choice\n- You only need to accept duties you are interested in\n- There is no registration fee to join Pulso\n\n**Office Address:**\nPulso Elderlycare, Bengaluru, Karnataka`,
+  interestQuestion: 'Did you understand the working model? Are you interested to continue?',
+  interestRetry: 'If you are interested to continue, please select the button below.',
+  dutyHourPreferenceQuestion: 'Which duty hour do you prefer?',
+  dutyHourPreferenceRetry: 'Please select one duty hour preference: 8 hour / 24 hour / Both.',
+  dutyHourPreference8HourNotice:
+    'Please note: stay and food are not provided for 8-hour duty. Stay and food are available only for 24-hour duty.',
+  dutyHourPaymentSummary: '8 hour - Rs 900 per day\n24 hour - Rs 1200 per day',
+  sampleDutyOfferQuestion: 'Would you like to see how a sample duty offer looks?',
+  sampleDutyOfferRetry: 'Please select one option from below.',
+  sampleDutyOtherOffer8HourQuestion: 'Do you want to see an 8-hour duty sample?',
+  sampleDutyOtherOffer24HourQuestion: 'Do you want to see a 24-hour duty sample?',
+  sampleDutyFinalChoiceQuestion: 'What is your final duty hour preference?',
+  sampleDutyFinalChoiceRetry: 'Please select 8 hour / 24 hour / Both.',
+  sampleDutyOffer24Hour:
+    `Patient: Elderly female, 71 years\nCondition: Supportive care\n\nCare Level: Assisted care with walker support\n\nDuty: 24-hour care\n\nDuration: 1 month\n\nLocation: Bengaluru\n\nCare Needed:\n- Washroom support\n- Bed making\n- Assistance while feeding\n- Helping with medicines\n- Assistance in lifting and walking using walker\n- Assistance during physiotherapy exercises\n\nEarnings:\nRs 1200 per day x 30 days\nRs 36000 total\n\nSafety and Support:\n- Family verified\n- Payment guaranteed\n- Pulso support available during duty`,
+  sampleDutyOffer8Hour:
+    `Patient: Female, 65 years\n\nCondition: Post-surgery recovery\n\nCare Type: Home supportive care\n\nDuty: 8 hours\n\nDuration: Continuous\n\nLocation: Bengaluru\n\nCare Needed:\n- Walking / mobility support\n- Assistance with daily activities\n- Washroom support if needed\n- Helping with medicines\n- General supervision and comfort care\n\nEarnings:\nRs 900 per day\n\nSupport:\n- Family verified\n- Payment guaranteed\n- Pulso support available during duty`,
+  expectedDutiesIntroOne:
+    `Caregiver duties may include the following. Duties may change depending on the patient's condition.\n\n*Personal care*\n- Bathing or sponge bath support\n- Dressing\n- Oral care\n- Grooming\n- Hair combing\n\n*Toileting and hygiene support*\n- Diaper change\n- Bedpan or urinal support\n- Cleaning and maintaining hygiene`,
+  expectedDutiesIntroTwo:
+    `*Mobility and safety*\n- Helping the patient sit, stand, and walk\n- Turning and positioning in bed\n- Fall-risk precautions\n\n*Feeding support*\n- Helping with meals\n- Ensuring enough water intake\n- Following diet instructions given by the family or doctor`,
+  expectedDutiesIntroThree:
+    `*Companionship*\n- Talking to the patient\n- Engaging in simple activities\n- Medicine reminders if schedule is given\n\nPlease continue only if you are willing to do these care duties.`,
+  expectedDutiesQuestion: 'Are you willing to do these care duties?',
+  expectedDutiesRetry: 'Please select one option from below.',
+  expectedDutiesDeclined:
+    'Okay. If you are not interested in these care duties, you can message us later.',
+  notInterested: 'Okay. If you are interested later, you can message us again.',
+  certificateRequest: 'Please upload your certificate as an image or PDF.',
+  certificateRetry:
+    'Please upload your certificate as an image or document. You can send up to 4 image/PDF files.',
+  certificateUploadProgress:
+    'Certificate received. If you have more certificate pages or documents, you can send them now. Do you want to send more files or continue?',
+  certificateUploadLimitReached:
+    'Maximum 4 certificate files received. Moving to the next step.',
+  nameQuestion: 'Please send your full name.',
+  ageQuestion: 'What is your age?',
+  ageRetry: 'Please enter your age in numbers. Example: 32',
+  ageAboveLimit:
+    'Sorry. As per the current onboarding criteria, we cannot proceed with applicants above 50 years of age. If the age was entered wrongly, you can enter it again.',
+  ageAboveLimitOptions:
+    'If the age was entered wrongly, you can correct it. Otherwise, you can stop here.',
+  ageFinalRejection:
+    'Okay. As per the current criteria, the age limit is 50 years. So we cannot continue onboarding now. Thank you for your interest and time.',
+  ageFinalRejectionOptions:
+    'If the age was entered wrongly, you can correct it. Otherwise, you can stop here.',
+  ageRejectionClosed:
+    'Okay. This application has been closed. If you need help later, you can message us again.',
+  sexQuestion: 'Please select your sex.',
+  sexRetry: 'Please select Male or Female.',
+  districtQuestion:
+    'Please select your district from the list below. If your district is not shown, open the next list.',
+  districtRetry: 'Please select your district from the list below.',
+  districtListQuestion: 'Please select your district from the list below.',
+  verificationPending:
+    'Thank you. Your certificate has been sent for verification. We will inform you once it is reviewed.',
+  additionalDocumentRequest:
+    'An additional document is required to continue onboarding.\n\nNote: {{note}}\n\nPlease upload it now as an image or PDF.',
+  additionalDocumentRetry: 'Please upload the requested additional document as an image or PDF.',
+  additionalDocumentReceived:
+    'Thank you. The additional document has been received and sent for review again.',
+  certificateApproved:
+    'Your certificate has been verified.\nYou are eligible to join Pulso.',
+  certificateRejected:
+    'Sorry, we could not verify your certificate. Please upload a clear certificate again.',
+  certificateReuploadRequested:
+    'We could not read your certificate clearly. Please upload a clearer certificate photo or PDF.',
+  certificateCvUploaded:
+    'You have sent a CV. To continue onboarding, please upload your certificate photo or certificate PDF.',
+  certificateWrongImageUploaded:
+    'The image you sent does not look like a certificate. To continue onboarding, please upload your certificate.',
+  certificateRejectedPermanent:
+    'Sorry, based on the current review, this onboarding application cannot continue. You can contact the office if you need help later.',
+  termsIntro:
+    `Before joining Pulso, please read all instructions carefully.\n\n1. After accepting your first duty, you need to collect the required uniform kit as per Pulso policy.\n\n2. Please note: you are not a permanent salaried employee of Pulso. You will receive payment only for the days you work. Pulso shares duty/job opportunities with you. If you accept and complete a duty successfully, you will receive the applicable payment. You will not receive salary or payment for days you do not work. Payment for completed work will be given daily.\n\n3. We will share available duty offers with you. Please read each duty offer carefully. You can accept or decline. But after accepting a duty, last-minute cancellation makes it difficult for us to arrange another provider. Providers who cancel after accepting may be blocked from accepting future duty offers.`,
+  termsQuestion: 'Do you accept the terms and conditions?',
+  termsReminder:
+    'You have not accepted the terms and conditions yet. To complete onboarding, please reply "continue".',
+  termsReminderResume:
+    'Thank you. Sending the terms acceptance options again.',
+  termsAccepted: 'Thank you. Your onboarding is complete.',
+  termsDeclined: 'Okay. If you are interested later, you can message us again.',
+  postOnboardingSupport:
+    'From now onwards, available duty offers will be sent to you through WhatsApp.\nPlease read each duty message carefully.\nIf a duty is suitable for you, reply only to the duty you want to accept.\nIf a duty is not suitable, you can ignore it.',
+  mobileAppCampaignAnnouncement:
+    'Pulso mobile app is required for duty confirmation, check-in, check-out, attendance tracking, duty completion, and payment processing.\n\nTo receive and complete duties, you must install the Pulso mobile app and keep your profile active.\n\nPlease install the app using the same phone number used for WhatsApp onboarding.\n\nWithout app activation, duty allocation may be delayed or unavailable.',
+  pulsoAppPreferenceNotice:
+    'Important notice:\n\nPulso mobile app is required for duty confirmation, check-in, check-out, attendance tracking, duty completion, and payment processing.\n\nTo receive and complete duties, you must install the Pulso mobile app and keep your profile active.\n\nPlease install the app using the same phone number used for WhatsApp onboarding.\n\nWithout app activation, duty allocation may be delayed or unavailable.',
+  pulsoAppInstallQuestion: 'Which phone do you use?',
+  pulsoAppInstallRetry: 'Please select one option from below.',
+  pulsoAppDeviceQuestion: 'Which phone do you use?',
+  pulsoAppDeviceRetry: 'Please select Android / iPhone / Need help.',
+  pulsoAppAndroidLink:
+    'Use the link below to install the Pulso mobile app on Android:\n\nhttps://play.google.com/store/apps/details?id=com.pulso.global&pcampaignid=web_share\n\nAfter installing, log in using the same phone number used for WhatsApp onboarding.',
+  pulsoAppIphoneLink:
+    'Use the link below to install the Pulso mobile app on iPhone:\n\nhttps://apps.apple.com/in/app/pulso/id6757874217\n\nAfter installing, log in using the same phone number used for WhatsApp onboarding.',
+  pulsoAppInstalledQuestion:
+    'Have you installed and logged in to the app?',
+  pulsoAppInstalledPending:
+    'Thank you.\n\nWe will verify your Pulso app activation.\n\nOnce your app profile is active, you will be eligible to receive and complete duty opportunities.\n\nPlease keep the app installed and notifications turned on.',
+  pulsoAppActivationVerified:
+    'Your Pulso app profile is active.\n\nYou are now ready to receive duty opportunities.\n\nFor every duty, you must use the Pulso app for:\n\nDuty confirmation\nCheck-in\nCheck-out\nAttendance tracking\nDuty completion\n\nPlease keep your app notifications turned on.',
+  pulsoAppLater:
+    'Okay.\n\nYour onboarding is complete, but app activation is still pending.\n\nPulso app activation is required before duty allocation.\n\nYou can install the app later using the correct link.',
+  pulsoAppHelpQuestion:
+    'No problem. Please select the issue you are facing.',
+  pulsoAppInstallHelp:
+    'Our support team will help you install the Pulso app.\n\nPlease keep your phone ready and make sure you have internet access.\n\nPulso support team will contact you soon.',
+  pulsoAppLoginOtpHelp:
+    'Our support team will help you with the login or OTP issue.\n\nPlease make sure you are using the same phone number used for WhatsApp onboarding.\n\nPulso support team will contact you soon.',
+  pulsoAppNoSmartphone:
+    'Pulso app is required for duty confirmation, check-in, check-out, attendance tracking, and duty completion.\n\nWithout the app, duty allocation may not be possible.\n\nOur support team will contact you to check if any temporary support option is available.',
+  pulsoAppInstallDeclined:
+    'Okay. Your onboarding is complete, but app activation is still pending.\n\nPulso app activation is required before duty allocation.',
+  mobileAppCampaignThanks:
+    'Thank you. If you need more help, you can contact the Pulso support team through WhatsApp.',
+  mobileAppLinkHelp:
+    'Pulso app activation is pending. Use the options below if you need the install link or support.',
+  postOnboardingContactSupport:
+    'For help, you can contact the Pulso support team.\nYou can message us on WhatsApp anytime.',
+  postOnboardingLinks:
+    'Pulso Elderly Care\nBengaluru, Karnataka\n\nWebsite:\nhttps://www.pulso.co.in/',
+  optionalAgentHelp: 'If you have more questions, you can connect with a Pulso agent.',
+  optionalAgentHelpConfirmed:
+    'Okay. A Pulso agent will contact you soon through WhatsApp.',
+  agentHelpAlreadyRequested:
+    'Our support team has already been informed. If you do not get help, you can select "More help" again after 12 hours.',
+  verificationStillPending:
+    'Your certificate is currently under verification. We will update you after review.',
+  completed:
+    'Your onboarding is already complete. If you need more help, please message again.'
+};
+
+const UI_TEXT = {
+  regionButtonText: 'Select',
+  qualificationButtonText: 'തിരഞ്ഞെടുക്കുക',
+  districtButtonText: 'ജില്ല തിരഞ്ഞെടുക്കുക',
+  qualificationSectionTitle: 'Qualification options',
+  districtSectionTitle: 'District options',
+  nextListTitle: 'അടുത്ത list',
+  nextListDescription: 'ജില്ല ഇവിടെ ഇല്ലെങ്കിൽ തുറക്കുക',
+  previousListTitle: 'ആദ്യ list',
+  previousListDescription: 'മുൻപത്തെ ജില്ലകൾ കാണുക',
+  qualificationGoBackTitle: 'തിരികെ പോകുക',
+  interestYesTitle: 'താൽപര്യമുണ്ട്',
+  interestNoTitle: 'താൽപര്യമില്ല',
+  dutyBothTitle: 'രണ്ടും',
+  sampleYesTitle: 'കാണാം',
+  sampleNoTitle: 'വേണ്ട',
+  expectedDutiesYesTitle: 'തയ്യാറാണ്',
+  expectedDutiesNoTitle: 'താൽപര്യമില്ല',
+  ageRetryTitle: 'വയസ് വീണ്ടും നൽകാം',
+  ageExitTitle: 'ശരി',
+  ageEditTitle: 'വയസ് തിരുത്താം',
+  certificateAddMoreTitle: 'കൂടുതൽ അയക്കാം',
+  certificateContinueTitle: 'തുടരാം',
+  termsAcceptTitle: 'സ്വീകരിക്കുന്നു',
+  termsDeclineTitle: 'സ്വീകരിക്കുന്നില്ല',
+  optionalAgentHelpTitle: 'കൂടുതൽ സഹായം',
+  appDeviceAndroidTitle: 'Android',
+  appDeviceIphoneTitle: 'iPhone',
+  appNeedHelpTitle: 'സഹായം വേണം',
+  appInstalledTitle: 'ചെയ്തു',
+  appLaterTitle: 'പിന്നീട്',
+  appHelpInstallTitle: 'Install help',
+  appHelpLoginOtpTitle: 'Login / OTP issue',
+  appHelpNoSmartphoneTitle: 'Smartphone ഇല്ല',
+  districtPageSize: 7
+};
+
+const KARNATAKA_UI_TEXT = {
+  ...UI_TEXT,
+  qualificationButtonText: 'Select',
+  districtButtonText: 'Select district',
+  nextListTitle: 'Next list',
+  nextListDescription: 'Open if your district is not here',
+  previousListTitle: 'Previous list',
+  previousListDescription: 'See previous districts',
+  qualificationGoBackTitle: 'Go back',
+  interestYesTitle: 'Yes, interested',
+  interestNoTitle: 'Not interested',
+  dutyBothTitle: 'Both',
+  sampleYesTitle: 'Yes',
+  sampleNoTitle: 'No',
+  expectedDutiesYesTitle: 'Yes',
+  expectedDutiesNoTitle: 'No',
+  ageRetryTitle: 'Correct age',
+  ageExitTitle: 'Stop here',
+  ageEditTitle: 'Correct age',
+  certificateAddMoreTitle: 'Send more',
+  certificateContinueTitle: 'Continue',
+  termsAcceptTitle: 'Accept',
+  termsDeclineTitle: 'Decline',
+  optionalAgentHelpTitle: 'More help',
+  appNeedHelpTitle: 'Need help',
+  appInstalledTitle: 'Installed',
+  appLaterTitle: 'Later',
+  appHelpInstallTitle: 'Install help',
+  appHelpLoginOtpTitle: 'Login / OTP issue',
+  appHelpNoSmartphoneTitle: 'No smartphone',
+  districtPageSize: 9
+};
+
+const FLOWS = {
+  kerala_malayalam: {
+    id: 'kerala_malayalam',
+    region: 'kerala',
+    language: 'ml',
+    MESSAGES,
+    QUALIFICATIONS,
+    DISTRICTS,
+    UI_TEXT
+  },
+  karnataka_english: {
+    id: 'karnataka_english',
+    region: 'karnataka',
+    language: 'en',
+    MESSAGES: KARNATAKA_MESSAGES,
+    QUALIFICATIONS: ENGLISH_QUALIFICATIONS,
+    DISTRICTS: KARNATAKA_DISTRICTS,
+    UI_TEXT: KARNATAKA_UI_TEXT
+  }
+};
+
+const DEFAULT_FLOW_ID = 'kerala_malayalam';
+const flowStorage = new AsyncLocalStorage();
+
+function getFlowConfig(flowId) {
+  return FLOWS[flowId] || FLOWS[DEFAULT_FLOW_ID];
+}
+
+function getProviderFlowId(provider) {
+  return provider && provider.flowId ? provider.flowId : DEFAULT_FLOW_ID;
+}
+
+function getActiveFlow() {
+  return getFlowConfig(flowStorage.getStore() || DEFAULT_FLOW_ID);
+}
+
+function runWithFlow(flowId, callback) {
+  return flowStorage.run(getFlowConfig(flowId).id, callback);
+}
+
+function runWithProviderFlow(provider, callback) {
+  return runWithFlow(getProviderFlowId(provider), callback);
+}
+
+function createObjectProxy(key) {
+  return new Proxy(
+    {},
+    {
+      get(_target, property) {
+        return getActiveFlow()[key][property];
+      },
+      ownKeys() {
+        return Reflect.ownKeys(getActiveFlow()[key]);
+      },
+      getOwnPropertyDescriptor(_target, property) {
+        return Object.getOwnPropertyDescriptor(getActiveFlow()[key], property);
+      }
+    }
+  );
+}
+
+function createArrayProxy(key) {
+  return new Proxy(
+    [],
+    {
+      get(_target, property) {
+        const value = getActiveFlow()[key][property];
+        return typeof value === 'function' ? value.bind(getActiveFlow()[key]) : value;
+      },
+      ownKeys() {
+        return Reflect.ownKeys(getActiveFlow()[key]);
+      },
+      getOwnPropertyDescriptor(_target, property) {
+        return Object.getOwnPropertyDescriptor(getActiveFlow()[key], property);
+      }
+    }
+  );
+}
+
+const ACTIVE_MESSAGES = createObjectProxy('MESSAGES');
+const ACTIVE_QUALIFICATIONS = createArrayProxy('QUALIFICATIONS');
+const ACTIVE_DISTRICTS = createArrayProxy('DISTRICTS');
+const ACTIVE_UI_TEXT = createObjectProxy('UI_TEXT');
+
 module.exports = {
   STEPS,
   STATUS,
   BUTTON_IDS,
-  QUALIFICATIONS,
-  DISTRICTS,
-  MESSAGES
+  REGION_OPTIONS,
+  QUALIFICATIONS: ACTIVE_QUALIFICATIONS,
+  DISTRICTS: ACTIVE_DISTRICTS,
+  MESSAGES: ACTIVE_MESSAGES,
+  UI_TEXT: ACTIVE_UI_TEXT,
+  FLOWS,
+  DEFAULT_FLOW_ID,
+  getFlowConfig,
+  getProviderFlowId,
+  runWithFlow,
+  runWithProviderFlow
 };

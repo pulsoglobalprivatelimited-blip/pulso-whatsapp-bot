@@ -1,6 +1,8 @@
 let providers = [];
 let selectedPhone = null;
 let currentFilter = 'all';
+let currentRegionFilter = 'all';
+let currentAppFilter = 'all';
 let currentSearch = '';
 let currentCompletedRange = 'all';
 let currentCompletedSex = 'all';
@@ -56,6 +58,22 @@ document.querySelectorAll('.filter').forEach((button) => {
     currentCompletedSex = 'all';
     currentStartedRange = 'all';
     updateCompletedRangeFilterState();
+    renderList();
+  });
+});
+document.querySelectorAll('[data-region-filter]').forEach((button) => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('[data-region-filter]').forEach((item) => item.classList.remove('active'));
+    button.classList.add('active');
+    currentRegionFilter = button.dataset.regionFilter;
+    renderList();
+  });
+});
+document.querySelectorAll('[data-app-filter]').forEach((button) => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('[data-app-filter]').forEach((item) => item.classList.remove('active'));
+    button.classList.add('active');
+    currentAppFilter = button.dataset.appFilter;
     renderList();
   });
 });
@@ -123,6 +141,9 @@ document.getElementById('reject-button').addEventListener('click', () => submitR
 document
   .getElementById('request-additional-document-button')
   .addEventListener('click', submitAdditionalDocumentRequest);
+document
+  .getElementById('verify-app-activation-button')
+  .addEventListener('click', submitAppActivationVerification);
 document
   .getElementById('manual-certificate-upload-button')
   .addEventListener('click', submitManualCertificateUpload);
@@ -625,14 +646,18 @@ function getVisibleProviders() {
   const phoneSearch = normalizePhone(currentSearch);
   return providers.filter((item) => {
     const matchesFilter = currentFilter === 'all' || getDashboardStatus(item) === currentFilter;
+    const region = String(item && item.region ? item.region : 'kerala').toLowerCase();
+    const matchesRegion = currentRegionFilter === 'all' || region === currentRegionFilter;
+    const matchesApp = matchesAppFilter(item);
     const matchesCompletedWindow = currentFilter !== 'completed' || matchesCompletedRange(item);
     const matchesCompletedSexFilter = currentFilter !== 'completed' || matchesCompletedSex(item);
     const matchesStartedWindow = matchesStartedRange(item);
     const fullName = normalizeSearchTerm(item && item.fullName);
     const matchesPhone = phoneSearch ? normalizePhone(item.phone).includes(phoneSearch) : false;
     const matchesName = currentSearch ? fullName.includes(currentSearch) : false;
-    const matchesSearch = !currentSearch || matchesPhone || matchesName;
-    return matchesFilter && matchesCompletedWindow && matchesCompletedSexFilter && matchesStartedWindow && matchesSearch;
+    const matchesRegionSearch = currentSearch ? region.includes(currentSearch) : false;
+    const matchesSearch = !currentSearch || matchesPhone || matchesName || matchesRegionSearch;
+    return matchesFilter && matchesRegion && matchesApp && matchesCompletedWindow && matchesCompletedSexFilter && matchesStartedWindow && matchesSearch;
   });
 }
 
@@ -652,6 +677,34 @@ function normalizeSex(value) {
 
 function isCompletedWithSex(provider, sex) {
   return getDashboardStatus(provider) === 'completed' && normalizeSex(provider && provider.sex) === sex;
+}
+
+function formatAppStatus(provider) {
+  if (!provider || !provider.termsAccepted) {
+    return '-';
+  }
+
+  const status = provider.pulsoAppActivationStatus || provider.mobileAppCampaignStatus || 'not started';
+  return formatStatus(status);
+}
+
+function matchesAppFilter(provider) {
+  if (currentAppFilter === 'all') {
+    return true;
+  }
+
+  const status = String((provider && provider.pulsoAppActivationStatus) || '').toLowerCase();
+  const campaignStatus = String((provider && provider.mobileAppCampaignStatus) || '').toLowerCase();
+  if (currentAppFilter === 'verified') {
+    return status === 'verified' || campaignStatus === 'app_verified';
+  }
+  if (currentAppFilter === 'help') {
+    return status === 'help_requested' || campaignStatus === 'help_requested';
+  }
+  if (currentAppFilter === 'pending') {
+    return Boolean(provider && provider.termsAccepted) && status !== 'verified';
+  }
+  return true;
 }
 
 function updateDashboardMetrics() {
@@ -692,7 +745,7 @@ function renderList() {
         <article class="provider-item ${provider.phone === selectedPhone ? 'active' : ''}" data-phone="${provider.phone}">
           <strong>${renderPhoneLink(provider.phone, 'provider-phone-link')}</strong>
           <p>${shouldShowCompletedListSummary() ? formatListSummary(provider) : (provider.fullName || provider.qualification || 'Profile pending')}</p>
-          <p>${formatStatus(getDashboardStatus(provider))}</p>
+          <p>${formatStatus(getDashboardStatus(provider))} | ${escapeHtml(provider.region || 'kerala')}</p>
         </article>
       `).join('')
     : '<div class="provider-item"><strong>No providers</strong><p>Nothing matches the selected filter right now.</p></div>';
@@ -988,11 +1041,16 @@ function renderDetail(provider) {
   setText('detail-status', formatStatus(getDashboardStatus(provider)));
   setText('detail-step', `Step ${provider.currentStep}`);
   setText('detail-name', provider.fullName);
+  setText('detail-region', provider.region || 'kerala');
+  setText('detail-language', provider.language || 'ml');
   setText('detail-qualification', provider.qualification);
   setText('detail-interest', provider.interestConfirmed ? 'Yes' : 'No');
   setText('detail-duty-hour', formatDutyHourPreference(provider.dutyHourPreference));
   setText('detail-expected-duties', formatExpectedDuties(provider.expectedDutiesAccepted));
   setText('detail-agent-help', formatAgentHelp(provider.agentHelpRequested));
+  setText('detail-app-status', formatAppStatus(provider));
+  setText('detail-app-device', provider.pulsoAppDevice || provider.mobileAppCampaignDevice || '-');
+  setText('detail-app-help', provider.pulsoAppHelpReason ? formatStatus(provider.pulsoAppHelpReason) : '-');
   setText('detail-age', provider.age);
   setText('detail-sex', provider.sex);
   setText('detail-district', provider.district);
@@ -1051,6 +1109,27 @@ async function submitAdditionalDocumentRequest() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reviewedBy, note })
+    });
+
+    const index = providers.findIndex((item) => item.phone === provider.phone);
+    if (index >= 0) providers[index] = provider;
+    renderDetail(provider);
+    updateDashboardMetrics();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function submitAppActivationVerification() {
+  if (!selectedPhone) return;
+
+  const verifiedBy = document.getElementById('app-activation-reviewer-input').value || 'ops-team';
+
+  try {
+    const provider = await fetchJson(`/admin/providers/${selectedPhone}/verify-app-activation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ verifiedBy })
     });
 
     const index = providers.findIndex((item) => item.phone === provider.phone);

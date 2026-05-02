@@ -1,7 +1,17 @@
 const config = require('../config');
 const fs = require('fs');
 const path = require('path');
-const { MESSAGES, STATUS, BUTTON_IDS, QUALIFICATIONS, DISTRICTS } = require('../flow');
+const {
+  MESSAGES,
+  STATUS,
+  BUTTON_IDS,
+  QUALIFICATIONS,
+  DISTRICTS,
+  REGION_OPTIONS,
+  UI_TEXT,
+  getFlowConfig,
+  runWithProviderFlow
+} = require('../flow');
 const { sendText, sendButtons, sendList, sendTemplate } = require('./metaClient');
 const {
   getOrCreateProvider,
@@ -30,6 +40,7 @@ const {
 const { isPreOnboardedPhone } = require('./preOnboardedService');
 const {
   getMessageText,
+  parseRegion,
   parseQualification,
   isQualificationDeclined,
   isInterested,
@@ -45,6 +56,8 @@ const {
   parseTermsAcceptance,
   parsePulsoAppInstallInterest,
   parsePulsoAppDevice,
+  parsePulsoAppActivationAction,
+  parsePulsoAppHelpReason,
   parseTermsReminderResume,
   parseCertificateCollectionAction,
   classifyDocument
@@ -58,6 +71,7 @@ const CERTIFICATE_PROMPT_DEBOUNCE_MS = 5000;
 const AGENT_HELP_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const TERMS_REMINDER_HISTORY_EVENT = 'terms_acceptance_reminder_sent';
 const MOBILE_APP_CAMPAIGN_STATUS = {
+  REQUIRED: 'required',
   ANNOUNCEMENT_SENT: 'announcement_sent',
   INSTALL_INTEREST_YES: 'install_interest_yes',
   INSTALL_INTEREST_NO: 'install_interest_no',
@@ -65,10 +79,17 @@ const MOBILE_APP_CAMPAIGN_STATUS = {
   DEVICE_IPHONE: 'device_iphone',
   ANDROID_LINK_SENT: 'android_link_sent',
   IPHONE_LINK_SENT: 'iphone_link_sent',
+  ACTIVATION_PENDING: 'activation_pending',
+  HELP_REQUESTED: 'help_requested',
+  LATER_SELECTED: 'later_selected',
+  APP_VERIFIED: 'app_verified',
   COMPLETED: 'completed'
 };
 const MOBILE_APP_STAGE_INSTALL_INTEREST = 'awaiting_install_interest';
 const MOBILE_APP_STAGE_DEVICE = 'awaiting_device';
+const MOBILE_APP_STAGE_INSTALLED_CONFIRMATION = 'awaiting_installed_confirmation';
+const MOBILE_APP_STAGE_HELP_REASON = 'awaiting_help_reason';
+const MOBILE_APP_STAGE_ACTIVATION_PENDING = 'activation_pending_verification';
 
 let termsReminderInterval = null;
 
@@ -174,8 +195,8 @@ async function sendCertificateCollectionButtons(phone, provider) {
   await sendIfChanged(phone, provider, 'buttons', {
     body: MESSAGES.certificateUploadProgress,
     buttons: [
-      { id: BUTTON_IDS.CERTIFICATE_ADD_MORE, title: 'കൂടുതൽ അയക്കാം' },
-      { id: BUTTON_IDS.CERTIFICATE_CONTINUE, title: 'തുടരാം' }
+      { id: BUTTON_IDS.CERTIFICATE_ADD_MORE, title: UI_TEXT.certificateAddMoreTitle },
+      { id: BUTTON_IDS.CERTIFICATE_CONTINUE, title: UI_TEXT.certificateContinueTitle }
     ]
   });
 }
@@ -198,6 +219,7 @@ function scheduleCertificateCollectionPrompt(phone) {
         return;
       }
 
+      await runWithProviderFlow(provider, async () => {
       const attachments = provider.documents && provider.documents.certificateAttachments
         ? provider.documents.certificateAttachments
         : [];
@@ -207,6 +229,7 @@ function scheduleCertificateCollectionPrompt(phone) {
       }
 
       await sendCertificateCollectionButtons(phone, provider);
+      });
     } catch (error) {
       console.error('[CERTIFICATE_PROMPT_SCHEDULE_ERROR]', error);
     }
@@ -233,6 +256,7 @@ function scheduleCertificateRetry(phone) {
         return;
       }
 
+      await runWithProviderFlow(provider, async () => {
       const attachments = provider.documents && provider.documents.certificateAttachments
         ? provider.documents.certificateAttachments
         : [];
@@ -242,6 +266,7 @@ function scheduleCertificateRetry(phone) {
       }
 
       await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
+      });
     } catch (error) {
       console.error('[CERTIFICATE_RETRY_SCHEDULE_ERROR]', error);
     }
@@ -302,10 +327,10 @@ async function sendIfChanged(phone, provider, kind, body) {
 async function sendQualificationList(phone) {
   await sendAndLog(phone, 'list', {
     body: MESSAGES.welcomeQualification,
-    buttonText: 'തിരഞ്ഞെടുക്കുക',
+    buttonText: UI_TEXT.qualificationButtonText,
     sections: [
       {
-        title: 'Qualification options',
+        title: UI_TEXT.qualificationSectionTitle,
         rows: QUALIFICATIONS
       }
     ]
@@ -314,31 +339,35 @@ async function sendQualificationList(phone) {
 
 async function sendDistrictList(phone) {
   const provider = await getProvider(phone);
-  const page = provider && provider.districtListPage === 2 ? 2 : 1;
-  const rows = page === 1
-    ? [
-        ...DISTRICTS.slice(0, 7),
-        {
-          id: BUTTON_IDS.DISTRICT_PAGE_NEXT,
-          title: 'അടുത്ത list',
-          description: 'ജില്ല ഇവിടെ ഇല്ലെങ്കിൽ തുറക്കുക'
-        }
-      ]
-    : [
-        ...DISTRICTS.slice(7, 14),
-        {
-          id: BUTTON_IDS.DISTRICT_PAGE_PREVIOUS,
-          title: 'ആദ്യ list',
-          description: 'മുൻപത്തെ ജില്ലകൾ കാണുക'
-        }
-      ];
+  const pageSize = UI_TEXT.districtPageSize || 7;
+  const pageCount = Math.max(1, Math.ceil(DISTRICTS.length / pageSize));
+  const requestedPage = Number(provider && provider.districtListPage) || 1;
+  const page = Math.min(Math.max(requestedPage, 1), pageCount);
+  const start = (page - 1) * pageSize;
+  const rows = [...DISTRICTS.slice(start, start + pageSize)];
+
+  if (page < pageCount) {
+    rows.push({
+      id: BUTTON_IDS.DISTRICT_PAGE_NEXT,
+      title: UI_TEXT.nextListTitle,
+      description: UI_TEXT.nextListDescription
+    });
+  }
+
+  if (page > 1) {
+    rows.push({
+      id: BUTTON_IDS.DISTRICT_PAGE_PREVIOUS,
+      title: UI_TEXT.previousListTitle,
+      description: UI_TEXT.previousListDescription
+    });
+  }
 
   await sendAndLog(phone, 'list', {
     body: page === 1 ? MESSAGES.districtQuestion : MESSAGES.districtListQuestion,
-    buttonText: 'ജില്ല തിരഞ്ഞെടുക്കുക',
+    buttonText: UI_TEXT.districtButtonText,
     sections: [
       {
-        title: 'District options',
+        title: UI_TEXT.districtSectionTitle,
         rows
       }
     ]
@@ -348,7 +377,7 @@ async function sendDistrictList(phone) {
 async function sendQualificationHelpButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.qualificationGoBack,
-    buttons: [{ id: BUTTON_IDS.QUALIFICATION_GO_BACK, title: 'തിരികെ പോകുക' }]
+    buttons: [{ id: BUTTON_IDS.QUALIFICATION_GO_BACK, title: UI_TEXT.qualificationGoBackTitle }]
   });
 }
 
@@ -356,8 +385,8 @@ async function sendInterestButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.interestQuestion,
     buttons: [
-      { id: BUTTON_IDS.INTEREST_YES, title: 'താൽപര്യമുണ്ട്' },
-      { id: BUTTON_IDS.INTEREST_NO, title: 'താൽപര്യമില്ല' }
+      { id: BUTTON_IDS.INTEREST_YES, title: UI_TEXT.interestYesTitle },
+      { id: BUTTON_IDS.INTEREST_NO, title: UI_TEXT.interestNoTitle }
     ]
   });
 }
@@ -378,18 +407,18 @@ async function sendDutyHourPreferenceButtons(phone) {
     buttons: [
       { id: BUTTON_IDS.DUTY_HOUR_8, title: '8 hour' },
       { id: BUTTON_IDS.DUTY_HOUR_24, title: '24 hour' },
-      { id: BUTTON_IDS.DUTY_HOUR_BOTH, title: 'രണ്ടും' }
+      { id: BUTTON_IDS.DUTY_HOUR_BOTH, title: UI_TEXT.dutyBothTitle }
     ]
   });
-  await sendAndLog(phone, 'text', '8 hour (8 am to 6 pm) - 900rs per day\n24 hour - 1200 rs per day');
+  await sendAndLog(phone, 'text', MESSAGES.dutyHourPaymentSummary || '8 hour (8 am to 6 pm) - 900rs per day\n24 hour - 1200 rs per day');
 }
 
 async function sendSampleDutyOfferPrompt(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.sampleDutyOfferQuestion,
     buttons: [
-      { id: BUTTON_IDS.SAMPLE_DUTY_YES, title: 'കാണാം' },
-      { id: BUTTON_IDS.SAMPLE_DUTY_NO, title: 'വേണ്ട' }
+      { id: BUTTON_IDS.SAMPLE_DUTY_YES, title: UI_TEXT.sampleYesTitle },
+      { id: BUTTON_IDS.SAMPLE_DUTY_NO, title: UI_TEXT.sampleNoTitle }
     ]
   });
 }
@@ -415,8 +444,8 @@ async function sendOtherSamplePrompt(phone, dutyHourPreference) {
   await sendAndLog(phone, 'buttons', {
     body: getOtherSampleQuestion(dutyHourPreference),
     buttons: [
-      { id: BUTTON_IDS.SAMPLE_DUTY_YES, title: 'കാണാം' },
-      { id: BUTTON_IDS.SAMPLE_DUTY_NO, title: 'വേണ്ട' }
+      { id: BUTTON_IDS.SAMPLE_DUTY_YES, title: UI_TEXT.sampleYesTitle },
+      { id: BUTTON_IDS.SAMPLE_DUTY_NO, title: UI_TEXT.sampleNoTitle }
     ]
   });
 }
@@ -427,7 +456,7 @@ async function sendFinalDutyChoiceButtons(phone) {
     buttons: [
       { id: BUTTON_IDS.DUTY_HOUR_8, title: '8 hour' },
       { id: BUTTON_IDS.DUTY_HOUR_24, title: '24 hour' },
-      { id: BUTTON_IDS.DUTY_HOUR_BOTH, title: 'രണ്ടും' }
+      { id: BUTTON_IDS.DUTY_HOUR_BOTH, title: UI_TEXT.dutyBothTitle }
     ]
   });
 }
@@ -456,8 +485,8 @@ async function sendExpectedDutiesFlow(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.expectedDutiesQuestion,
     buttons: [
-      { id: BUTTON_IDS.EXPECTED_DUTIES_YES, title: 'തയ്യാറാണ്' },
-      { id: BUTTON_IDS.EXPECTED_DUTIES_NO, title: 'താൽപര്യമില്ല' }
+      { id: BUTTON_IDS.EXPECTED_DUTIES_YES, title: UI_TEXT.expectedDutiesYesTitle },
+      { id: BUTTON_IDS.EXPECTED_DUTIES_NO, title: UI_TEXT.expectedDutiesNoTitle }
     ]
   });
 }
@@ -466,8 +495,8 @@ async function sendAgeCorrectionButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.ageAboveLimitOptions,
     buttons: [
-      { id: BUTTON_IDS.AGE_RETRY_ENTRY, title: 'വയസ് വീണ്ടും നൽകാം' },
-      { id: BUTTON_IDS.AGE_CONFIRM_EXIT, title: 'ശരി' }
+      { id: BUTTON_IDS.AGE_RETRY_ENTRY, title: UI_TEXT.ageRetryTitle },
+      { id: BUTTON_IDS.AGE_CONFIRM_EXIT, title: UI_TEXT.ageExitTitle }
     ]
   });
 }
@@ -476,8 +505,8 @@ async function sendAgeFinalRejectionButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.ageFinalRejectionOptions,
     buttons: [
-      { id: BUTTON_IDS.AGE_EDIT_AFTER_REJECTION, title: 'വയസ് തിരുത്താം' },
-      { id: BUTTON_IDS.AGE_CLOSE_AFTER_REJECTION, title: 'ശരി' }
+      { id: BUTTON_IDS.AGE_EDIT_AFTER_REJECTION, title: UI_TEXT.ageEditTitle },
+      { id: BUTTON_IDS.AGE_CLOSE_AFTER_REJECTION, title: UI_TEXT.ageExitTitle }
     ]
   });
 }
@@ -486,8 +515,8 @@ async function sendTermsButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.termsQuestion,
     buttons: [
-      { id: BUTTON_IDS.TERMS_ACCEPT, title: 'സ്വീകരിക്കുന്നു' },
-      { id: BUTTON_IDS.TERMS_DECLINE, title: 'സ്വീകരിക്കുന്നില്ല' }
+      { id: BUTTON_IDS.TERMS_ACCEPT, title: UI_TEXT.termsAcceptTitle },
+      { id: BUTTON_IDS.TERMS_DECLINE, title: UI_TEXT.termsDeclineTitle }
     ]
   });
 }
@@ -496,8 +525,9 @@ async function sendPulsoAppInstallInterestButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.pulsoAppInstallQuestion,
     buttons: [
-      { id: BUTTON_IDS.PULSO_APP_INSTALL_YES, title: 'Yes' },
-      { id: BUTTON_IDS.PULSO_APP_INSTALL_NO, title: 'No' }
+      { id: BUTTON_IDS.PULSO_APP_DEVICE_ANDROID, title: UI_TEXT.appDeviceAndroidTitle },
+      { id: BUTTON_IDS.PULSO_APP_DEVICE_IPHONE, title: UI_TEXT.appDeviceIphoneTitle },
+      { id: BUTTON_IDS.PULSO_APP_NEED_HELP, title: UI_TEXT.appNeedHelpTitle }
     ]
   });
 }
@@ -506,8 +536,31 @@ async function sendPulsoAppDeviceButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.pulsoAppDeviceQuestion,
     buttons: [
-      { id: BUTTON_IDS.PULSO_APP_DEVICE_IPHONE, title: 'iPhone' },
-      { id: BUTTON_IDS.PULSO_APP_DEVICE_ANDROID, title: 'Android' }
+      { id: BUTTON_IDS.PULSO_APP_DEVICE_ANDROID, title: UI_TEXT.appDeviceAndroidTitle },
+      { id: BUTTON_IDS.PULSO_APP_DEVICE_IPHONE, title: UI_TEXT.appDeviceIphoneTitle },
+      { id: BUTTON_IDS.PULSO_APP_NEED_HELP, title: UI_TEXT.appNeedHelpTitle }
+    ]
+  });
+}
+
+async function sendPulsoAppInstalledConfirmationButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.pulsoAppInstalledQuestion,
+    buttons: [
+      { id: BUTTON_IDS.PULSO_APP_INSTALLED, title: UI_TEXT.appInstalledTitle },
+      { id: BUTTON_IDS.PULSO_APP_NEED_HELP, title: UI_TEXT.appNeedHelpTitle },
+      { id: BUTTON_IDS.PULSO_APP_LATER, title: UI_TEXT.appLaterTitle }
+    ]
+  });
+}
+
+async function sendPulsoAppHelpReasonButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.pulsoAppHelpQuestion,
+    buttons: [
+      { id: BUTTON_IDS.PULSO_APP_HELP_INSTALL, title: UI_TEXT.appHelpInstallTitle },
+      { id: BUTTON_IDS.PULSO_APP_HELP_LOGIN_OTP, title: UI_TEXT.appHelpLoginOtpTitle },
+      { id: BUTTON_IDS.PULSO_APP_HELP_NO_SMARTPHONE, title: UI_TEXT.appHelpNoSmartphoneTitle }
     ]
   });
 }
@@ -545,7 +598,7 @@ async function finishMobileAppFlow(phone, provider, sender = 'bot') {
 
 function buildTermsReminderMessage() {
   const keyword = config.termsReminderResumeKeyword || 'continue';
-  return `താങ്കളുടെ onboarding പൂർത്തിയാക്കാൻ terms and conditions ഇതുവരെ സ്വീകരിച്ചിട്ടില്ല.\nതുടരാൻ ദയവായി "${keyword}" എന്ന് reply ചെയ്യുക.`;
+  return (MESSAGES.termsReminder || '').replace('"continue"', `"${keyword}"`);
 }
 
 function getTermsReminderScheduleHours() {
@@ -698,11 +751,14 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
     throw new Error('Provider not found');
   }
 
+  return runWithProviderFlow(currentProvider, async () => {
   await updateStatus(phone, STATUS.COMPLETED, 15, {
     termsAccepted: true,
-    pulsoAppPromptStage: MOBILE_APP_STAGE_INSTALL_INTEREST,
-    mobileAppCampaignStage: MOBILE_APP_STAGE_INSTALL_INTEREST,
-    mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.ANNOUNCEMENT_SENT,
+    pulsoAppRequired: true,
+    pulsoAppActivationStatus: 'required',
+    pulsoAppPromptStage: MOBILE_APP_STAGE_DEVICE,
+    mobileAppCampaignStage: MOBILE_APP_STAGE_DEVICE,
+    mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.REQUIRED,
     mobileAppCampaignSource: 'post_onboarding',
     mobileAppCampaignSentAt: new Date().toISOString(),
     termsReminderReplyReceivedAt:
@@ -792,9 +848,11 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
   }
 
   return getProvider(phone);
+  });
 }
 
 async function remindProviderToAcceptTerms(provider) {
+  return runWithProviderFlow(provider, async () => {
   if (!provider || !provider.phone || !isTermsReminderDue(provider)) {
     return false;
   }
@@ -808,6 +866,7 @@ async function remindProviderToAcceptTerms(provider) {
   });
   await appendHistory(provider.phone, { type: 'system', event: TERMS_REMINDER_HISTORY_EVENT, reminderKind });
   return true;
+  });
 }
 
 function isCompletedProviderEligibleForMobileAppCampaign(provider) {
@@ -818,6 +877,7 @@ function isCompletedProviderEligibleForMobileAppCampaign(provider) {
       provider.termsAccepted === true &&
       provider.verification &&
       provider.verification.status === 'verified' &&
+      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.REQUIRED &&
       provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.COMPLETED &&
       provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.ANNOUNCEMENT_SENT &&
       provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.INSTALL_INTEREST_YES &&
@@ -825,11 +885,16 @@ function isCompletedProviderEligibleForMobileAppCampaign(provider) {
       provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.DEVICE_ANDROID &&
       provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.DEVICE_IPHONE &&
       provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.ANDROID_LINK_SENT &&
-      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.IPHONE_LINK_SENT
+      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.IPHONE_LINK_SENT &&
+      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.ACTIVATION_PENDING &&
+      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.HELP_REQUESTED &&
+      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.LATER_SELECTED &&
+      provider.mobileAppCampaignStatus !== MOBILE_APP_CAMPAIGN_STATUS.APP_VERIFIED
   );
 }
 
 async function sendMobileAppCampaignToProvider(provider, sender = 'mobile-app-campaign') {
+  return runWithProviderFlow(provider, async () => {
   if (!isCompletedProviderEligibleForMobileAppCampaign(provider)) {
     return false;
   }
@@ -838,9 +903,11 @@ async function sendMobileAppCampaignToProvider(provider, sender = 'mobile-app-ca
   await sendAndLog(provider.phone, 'text', MESSAGES.mobileAppCampaignAnnouncement, sender);
   await sendPulsoAppInstallInterestButtons(provider.phone);
   await updateProvider(provider.phone, {
-    pulsoAppPromptStage: MOBILE_APP_STAGE_INSTALL_INTEREST,
-    mobileAppCampaignStage: MOBILE_APP_STAGE_INSTALL_INTEREST,
-    mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.ANNOUNCEMENT_SENT,
+    pulsoAppRequired: true,
+    pulsoAppActivationStatus: 'required',
+    pulsoAppPromptStage: MOBILE_APP_STAGE_DEVICE,
+    mobileAppCampaignStage: MOBILE_APP_STAGE_DEVICE,
+    mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.REQUIRED,
     mobileAppCampaignSource: 'completed_provider_campaign',
     mobileAppCampaignSentAt: sentAt
   });
@@ -850,6 +917,7 @@ async function sendMobileAppCampaignToProvider(provider, sender = 'mobile-app-ca
     sentAt
   });
   return true;
+  });
 }
 
 async function runMobileAppCampaignForCompletedProviders(targetPhones = null) {
@@ -1130,14 +1198,68 @@ function startTermsReminderScheduler() {
 async function sendOptionalAgentHelpButton(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.optionalAgentHelp,
-    buttons: [{ id: BUTTON_IDS.CONNECT_PULSO_AGENT, title: 'കൂടുതൽ സഹായം' }]
+    buttons: [{ id: BUTTON_IDS.CONNECT_PULSO_AGENT, title: UI_TEXT.optionalAgentHelpTitle }]
+  });
+}
+
+async function sendRegionSelectionList(phone) {
+  await sendAndLog(phone, 'list', {
+    body: 'Welcome to Pulso.\nPlease select your region.\n\nPulso-ലേക്ക് സ്വാഗതം.\nതാങ്കളുടെ region തിരഞ്ഞെടുക്കുക.',
+    buttonText: UI_TEXT.regionButtonText || 'Select',
+    sections: [
+      {
+        title: 'Region options',
+        rows: REGION_OPTIONS
+      }
+    ]
+  });
+}
+
+async function assignProviderFlow(phone, flowId, assignmentSource = 'user_selection') {
+  const flow = getFlowConfig(flowId);
+  await updateProvider(phone, {
+    region: flow.region,
+    language: flow.language,
+    flowId: flow.id,
+    flowAssignedAt: new Date().toISOString(),
+    flowAssignmentSource: assignmentSource
+  });
+  await appendHistory(phone, {
+    type: 'system',
+    event: 'flow_assigned',
+    flowId: flow.id,
+    region: flow.region,
+    language: flow.language,
+    assignmentSource
   });
 }
 
 async function startFlow(phone) {
-  await getOrCreateProvider(phone);
+  const provider = await getOrCreateProvider(phone);
+  if (!provider.flowId) {
+    await updateStatus(phone, STATUS.AWAITING_REGION_SELECTION, 1.5);
+    await sendRegionSelectionList(phone);
+    return;
+  }
+
   await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2);
   await sendQualificationList(phone);
+}
+
+async function handleRegionSelection(phone, message) {
+  const flowId = parseRegion(message);
+  if (!flowId) {
+    await sendAndLog(phone, 'text', 'Please select Kerala or Karnataka to continue.');
+    await sendRegionSelectionList(phone);
+    return;
+  }
+
+  await assignProviderFlow(phone, flowId);
+  const provider = await getProvider(phone);
+  await runWithProviderFlow(provider, async () => {
+    await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2);
+    await sendQualificationList(phone);
+  });
 }
 
 async function handleQualification(phone, message) {
@@ -1525,6 +1647,7 @@ async function requestAdditionalDocument(phone, requestedBy, note) {
     throw new Error('Provider not found');
   }
 
+  return runWithProviderFlow(provider, async () => {
   const trimmedNote = String(note || '').trim();
   if (!trimmedNote) {
     throw new Error('Custom note is required');
@@ -1552,6 +1675,7 @@ async function requestAdditionalDocument(phone, requestedBy, note) {
   const updatedProvider = await getProvider(phone);
   await notifyAdditionalDocumentRequested(updatedProvider, reviewer, trimmedNote);
   return updatedProvider;
+  });
 }
 
 async function handleAdditionalDocument(phone, message) {
@@ -1774,30 +1898,40 @@ async function handleTerms(phone, message) {
 }
 
 async function handlePulsoAppInstallInterest(phone, message) {
-  const provider = await getProvider(phone);
   const action = parsePulsoAppInstallInterest(message);
+  if (action === 'android' || action === 'iphone') {
+    await handlePulsoAppDeviceSelection(phone, action);
+    return;
+  }
 
-  if (action === 'yes') {
+  if (action === 'need_help' || action === 'yes') {
+    if (action === 'yes') {
+      await sendPulsoAppDeviceButtons(phone);
+      return;
+    }
     await updateProvider(phone, {
-      pulsoAppInstallInterested: true,
-      mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.INSTALL_INTEREST_YES,
-      pulsoAppPromptStage: MOBILE_APP_STAGE_DEVICE,
-      mobileAppCampaignStage: MOBILE_APP_STAGE_DEVICE
+      pulsoAppRequired: true,
+      pulsoAppActivationStatus: 'help_requested',
+      pulsoAppPromptStage: MOBILE_APP_STAGE_HELP_REASON,
+      mobileAppCampaignStage: MOBILE_APP_STAGE_HELP_REASON,
+      mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.HELP_REQUESTED,
+      pulsoAppHelpRequestedAt: new Date().toISOString()
     });
-    await sendPulsoAppDeviceButtons(phone);
+    await sendPulsoAppHelpReasonButtons(phone);
     return;
   }
 
   if (action === 'no') {
     await updateProvider(phone, {
-      pulsoAppInstallInterested: false,
-      pulsoAppPromptStage: null,
-      mobileAppCampaignStage: null,
-      mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.INSTALL_INTEREST_NO,
-      pulsoAppInstallDeclinedAt: new Date().toISOString()
+      pulsoAppRequired: true,
+      pulsoAppActivationStatus: 'later_selected',
+      pulsoAppPromptStage: MOBILE_APP_STAGE_DEVICE,
+      mobileAppCampaignStage: MOBILE_APP_STAGE_DEVICE,
+      mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.LATER_SELECTED,
+      pulsoAppLaterSelectedAt: new Date().toISOString()
     });
     await sendAndLog(phone, 'text', MESSAGES.pulsoAppInstallDeclined);
-    await finishMobileAppFlow(phone, provider);
+    await sendPulsoAppDeviceButtons(phone);
     return;
   }
 
@@ -1806,9 +1940,30 @@ async function handlePulsoAppInstallInterest(phone, message) {
 }
 
 async function handlePulsoAppDevice(phone, message) {
-  const provider = await getProvider(phone);
   const device = parsePulsoAppDevice(message);
+  if (device === 'need_help') {
+    await updateProvider(phone, {
+      pulsoAppRequired: true,
+      pulsoAppActivationStatus: 'help_requested',
+      pulsoAppPromptStage: MOBILE_APP_STAGE_HELP_REASON,
+      mobileAppCampaignStage: MOBILE_APP_STAGE_HELP_REASON,
+      mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.HELP_REQUESTED,
+      pulsoAppHelpRequestedAt: new Date().toISOString()
+    });
+    await sendPulsoAppHelpReasonButtons(phone);
+    return;
+  }
 
+  if (device === 'iphone' || device === 'android') {
+    await handlePulsoAppDeviceSelection(phone, device);
+    return;
+  }
+
+  await sendAndLog(phone, 'text', MESSAGES.pulsoAppDeviceRetry);
+  await sendPulsoAppDeviceButtons(phone);
+}
+
+async function handlePulsoAppDeviceSelection(phone, device) {
   if (device === 'iphone') {
     await appendHistory(phone, {
       type: 'system',
@@ -1816,13 +1971,17 @@ async function handlePulsoAppDevice(phone, message) {
       device: MOBILE_APP_CAMPAIGN_STATUS.DEVICE_IPHONE
     });
     await updateProvider(phone, {
+      pulsoAppRequired: true,
       pulsoAppDevice: 'iphone',
       mobileAppCampaignDevice: 'iphone',
       mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.IPHONE_LINK_SENT,
+      pulsoAppActivationStatus: 'link_sent',
+      pulsoAppPromptStage: MOBILE_APP_STAGE_INSTALLED_CONFIRMATION,
+      mobileAppCampaignStage: MOBILE_APP_STAGE_INSTALLED_CONFIRMATION,
       pulsoAppLinkSentAt: new Date().toISOString()
     });
     await sendAndLog(phone, 'text', MESSAGES.pulsoAppIphoneLink);
-    await finishMobileAppFlow(phone, provider);
+    await sendPulsoAppInstalledConfirmationButtons(phone);
     return;
   }
 
@@ -1833,17 +1992,97 @@ async function handlePulsoAppDevice(phone, message) {
       device: MOBILE_APP_CAMPAIGN_STATUS.DEVICE_ANDROID
     });
     await updateProvider(phone, {
+      pulsoAppRequired: true,
       pulsoAppDevice: 'android',
       mobileAppCampaignDevice: 'android',
       mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.ANDROID_LINK_SENT,
+      pulsoAppActivationStatus: 'link_sent',
+      pulsoAppPromptStage: MOBILE_APP_STAGE_INSTALLED_CONFIRMATION,
+      mobileAppCampaignStage: MOBILE_APP_STAGE_INSTALLED_CONFIRMATION,
       pulsoAppLinkSentAt: new Date().toISOString()
     });
     await sendAndLog(phone, 'text', MESSAGES.pulsoAppAndroidLink);
-    await finishMobileAppFlow(phone, provider);
+    await sendPulsoAppInstalledConfirmationButtons(phone);
+    return;
+  }
+}
+
+async function handlePulsoAppInstalledConfirmation(phone, message) {
+  const action = parsePulsoAppActivationAction(message);
+
+  if (action === 'installed') {
+    const now = new Date().toISOString();
+    await updateProvider(phone, {
+      pulsoAppInstalledConfirmedAt: now,
+      pulsoAppActivationStatus: 'pending_verification',
+      pulsoAppPromptStage: MOBILE_APP_STAGE_ACTIVATION_PENDING,
+      mobileAppCampaignStage: MOBILE_APP_STAGE_ACTIVATION_PENDING,
+      mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.ACTIVATION_PENDING
+    });
+    await appendHistory(phone, { type: 'system', event: 'pulso_app_installed_confirmed' });
+    await sendAndLog(phone, 'text', MESSAGES.pulsoAppInstalledPending);
     return;
   }
 
-  await sendAndLog(phone, 'text', MESSAGES.pulsoAppDeviceRetry);
+  if (action === 'need_help') {
+    await updateProvider(phone, {
+      pulsoAppActivationStatus: 'help_requested',
+      pulsoAppPromptStage: MOBILE_APP_STAGE_HELP_REASON,
+      mobileAppCampaignStage: MOBILE_APP_STAGE_HELP_REASON,
+      mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.HELP_REQUESTED,
+      pulsoAppHelpRequestedAt: new Date().toISOString()
+    });
+    await sendPulsoAppHelpReasonButtons(phone);
+    return;
+  }
+
+  if (action === 'later') {
+    await updateProvider(phone, {
+      pulsoAppActivationStatus: 'later_selected',
+      pulsoAppPromptStage: MOBILE_APP_STAGE_DEVICE,
+      mobileAppCampaignStage: MOBILE_APP_STAGE_DEVICE,
+      mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.LATER_SELECTED,
+      pulsoAppLaterSelectedAt: new Date().toISOString()
+    });
+    await sendAndLog(phone, 'text', MESSAGES.pulsoAppLater);
+    await sendPulsoAppDeviceButtons(phone);
+    return;
+  }
+
+  await sendPulsoAppInstalledConfirmationButtons(phone);
+}
+
+async function handlePulsoAppHelpReason(phone, message) {
+  const reason = parsePulsoAppHelpReason(message);
+  if (!reason) {
+    await sendPulsoAppHelpReasonButtons(phone);
+    return;
+  }
+
+  const messageByReason = {
+    install_help: MESSAGES.pulsoAppInstallHelp,
+    login_otp_issue: MESSAGES.pulsoAppLoginOtpHelp,
+    no_smartphone: MESSAGES.pulsoAppNoSmartphone
+  };
+
+  await updateProvider(phone, {
+    pulsoAppActivationStatus: 'help_requested',
+    pulsoAppHelpReason: reason,
+    pulsoAppHelpRequestedAt: new Date().toISOString(),
+    pulsoAppPromptStage: MOBILE_APP_STAGE_ACTIVATION_PENDING,
+    mobileAppCampaignStage: MOBILE_APP_STAGE_ACTIVATION_PENDING,
+    mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.HELP_REQUESTED,
+    agentHelpRequested: true,
+    agentHelpRequestedAt: new Date().toISOString()
+  });
+  await appendHistory(phone, { type: 'system', event: 'pulso_app_help_requested', reason });
+  await sendAndLog(phone, 'text', messageByReason[reason]);
+  const updatedProvider = await getProvider(phone);
+  await notifyAgentHelpRequested(updatedProvider);
+}
+
+async function sendPulsoAppPendingOptions(phone) {
+  await sendAndLog(phone, 'text', MESSAGES.mobileAppLinkHelp);
   await sendPulsoAppDeviceButtons(phone);
 }
 
@@ -1860,13 +2099,51 @@ async function handleCompleted(phone, message) {
     return;
   }
 
+  if (mobileAppStage === MOBILE_APP_STAGE_INSTALLED_CONFIRMATION) {
+    await handlePulsoAppInstalledConfirmation(phone, message);
+    return;
+  }
+
+  if (mobileAppStage === MOBILE_APP_STAGE_HELP_REASON) {
+    await handlePulsoAppHelpReason(phone, message);
+    return;
+  }
+
+  if (mobileAppStage === MOBILE_APP_STAGE_ACTIVATION_PENDING) {
+    const activationAction = parsePulsoAppActivationAction(message);
+    if (activationAction === 'need_help') {
+      await updateProvider(phone, {
+        pulsoAppActivationStatus: 'help_requested',
+        pulsoAppPromptStage: MOBILE_APP_STAGE_HELP_REASON,
+        mobileAppCampaignStage: MOBILE_APP_STAGE_HELP_REASON,
+        mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.HELP_REQUESTED,
+        pulsoAppHelpRequestedAt: new Date().toISOString()
+      });
+      await sendPulsoAppHelpReasonButtons(phone);
+      return;
+    }
+    await sendPulsoAppPendingOptions(phone);
+    return;
+  }
+
   const requestedDeviceLink = parsePulsoAppDevice(message);
   if (requestedDeviceLink === 'iphone') {
-    await sendAndLog(phone, 'text', MESSAGES.pulsoAppIphoneLink);
+    await handlePulsoAppDeviceSelection(phone, 'iphone');
     return;
   }
   if (requestedDeviceLink === 'android') {
-    await sendAndLog(phone, 'text', MESSAGES.pulsoAppAndroidLink);
+    await handlePulsoAppDeviceSelection(phone, 'android');
+    return;
+  }
+  if (requestedDeviceLink === 'need_help') {
+    await updateProvider(phone, {
+      pulsoAppActivationStatus: 'help_requested',
+      pulsoAppPromptStage: MOBILE_APP_STAGE_HELP_REASON,
+      mobileAppCampaignStage: MOBILE_APP_STAGE_HELP_REASON,
+      mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.HELP_REQUESTED,
+      pulsoAppHelpRequestedAt: new Date().toISOString()
+    });
+    await sendPulsoAppHelpReasonButtons(phone);
     return;
   }
 
@@ -1877,13 +2154,45 @@ async function handleCompleted(phone, message) {
   }
 
   await sendAndLog(phone, 'text', MESSAGES.completed);
-  await sendAndLog(phone, 'text', MESSAGES.mobileAppLinkHelp);
+  if (provider && provider.pulsoAppRequired && provider.pulsoAppActivationStatus !== 'verified') {
+    await sendPulsoAppPendingOptions(phone);
+    return;
+  }
+
   if (canRequestAgentHelp(provider)) {
     await sendOptionalAgentHelpButton(phone);
     return;
   }
 
   await sendAndLog(phone, 'text', MESSAGES.agentHelpAlreadyRequested);
+}
+
+async function markPulsoAppActivationVerified(phone, verifiedBy = config.adminDefaultReviewer) {
+  const provider = await getProvider(phone);
+  if (!provider) {
+    throw new Error('Provider not found');
+  }
+
+  return runWithProviderFlow(provider, async () => {
+    const verifiedAt = new Date().toISOString();
+    await updateProvider(phone, {
+      pulsoAppRequired: true,
+      pulsoAppActivationStatus: 'verified',
+      pulsoAppActivationVerifiedAt: verifiedAt,
+      pulsoAppActivationVerifiedBy: verifiedBy || config.adminDefaultReviewer,
+      pulsoAppPromptStage: null,
+      mobileAppCampaignStage: null,
+      mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.APP_VERIFIED,
+      mobileAppCampaignCompletedAt: verifiedAt
+    });
+    await appendHistory(phone, {
+      type: 'system',
+      event: 'pulso_app_activation_verified',
+      verifiedBy: verifiedBy || config.adminDefaultReviewer
+    });
+    await sendAndLog(phone, 'text', MESSAGES.pulsoAppActivationVerified, verifiedBy || config.adminDefaultReviewer);
+    return getProvider(phone);
+  });
 }
 
 async function clearReviewerWorkflow(phone) {
@@ -2126,11 +2435,17 @@ async function processIncomingMessage(phone, message) {
 
   await recordInbound(phone, message);
 
+  if (provider.status === STATUS.AWAITING_REGION_SELECTION) {
+    await handleRegionSelection(phone, message);
+    return;
+  }
+
   if (provider.status === STATUS.NEW) {
     await startFlow(phone);
     return;
   }
 
+  await runWithProviderFlow(provider, async () => {
   if (provider.status === STATUS.NOT_INTERESTED_RESTARTABLE) {
     await startFlow(phone);
     return;
@@ -2198,6 +2513,7 @@ async function processIncomingMessage(phone, message) {
     default:
       await sendAndLog(phone, 'text', MESSAGES.notInterested);
   }
+  });
 }
 
 async function approveCertificate(phone, reviewedBy, notes) {
@@ -2206,6 +2522,7 @@ async function approveCertificate(phone, reviewedBy, notes) {
     throw new Error('Provider not found');
   }
 
+  return runWithProviderFlow(provider, async () => {
   await updateProvider(phone, {
     status: STATUS.AWAITING_TERMS_ACCEPTANCE,
     currentStep: 14,
@@ -2234,6 +2551,7 @@ async function approveCertificate(phone, reviewedBy, notes) {
     notes || ''
   );
   return updatedProvider;
+  });
 }
 
 async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
@@ -2242,6 +2560,7 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
     throw new Error('Provider not found');
   }
 
+  return runWithProviderFlow(provider, async () => {
   const nextStatus = options.nextStatus || STATUS.AWAITING_CERTIFICATE;
   const nextStep = options.nextStep || 5;
   const resetCertificate = options.resetCertificate !== false;
@@ -2279,6 +2598,7 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
     notes || ''
   );
   return updatedProvider;
+  });
 }
 
 module.exports = {
@@ -2286,6 +2606,7 @@ module.exports = {
   approveCertificate,
   rejectCertificate,
   requestAdditionalDocument,
+  markPulsoAppActivationVerified,
   runMobileAppCampaignForCompletedProviders,
   reconcileAcceptedTermsProviders,
   runCurrentWaitingTermsReminderBackfill,

@@ -91,6 +91,19 @@
         <button class="filter" data-filter="completed">Completed</button>
       </div>
 
+      <div class="filters">
+        <button class="filter active" data-region-filter="all">All regions</button>
+        <button class="filter" data-region-filter="kerala">Kerala</button>
+        <button class="filter" data-region-filter="karnataka">Karnataka</button>
+      </div>
+
+      <div class="filters">
+        <button class="filter active" data-app-filter="all">All app statuses</button>
+        <button class="filter" data-app-filter="pending">App pending</button>
+        <button class="filter" data-app-filter="help">App help</button>
+        <button class="filter" data-app-filter="verified">App verified</button>
+      </div>
+
       <div id="completed-range-filters" class="filters hidden">
         <button class="filter active" data-completed-range="all">All completed</button>
         <button class="filter" data-completed-range="today">Today</button>
@@ -159,11 +172,16 @@
                 <h4>Profile</h4>
                 <dl>
                   <div><dt>Full name</dt><dd id="detail-name">-</dd></div>
+                  <div><dt>Region</dt><dd id="detail-region">-</dd></div>
+                  <div><dt>Language</dt><dd id="detail-language">-</dd></div>
                   <div><dt>Qualification</dt><dd id="detail-qualification">-</dd></div>
                   <div><dt>Interested</dt><dd id="detail-interest">-</dd></div>
                   <div><dt>Duty preference</dt><dd id="detail-duty-hour">-</dd></div>
                   <div><dt>Expected duties</dt><dd id="detail-expected-duties">-</dd></div>
                   <div><dt>Agent help</dt><dd id="detail-agent-help">-</dd></div>
+                  <div><dt>App status</dt><dd id="detail-app-status">-</dd></div>
+                  <div><dt>App device</dt><dd id="detail-app-device">-</dd></div>
+                  <div><dt>App help</dt><dd id="detail-app-help">-</dd></div>
                   <div><dt>Age</dt><dd id="detail-age">-</dd></div>
                   <div><dt>Sex</dt><dd id="detail-sex">-</dd></div>
                   <div><dt>District</dt><dd id="detail-district">-</dd></div>
@@ -207,6 +225,19 @@
 
             <article class="card review-card">
               <div class="review-head">
+                <h4>App activation</h4>
+                <p>Mark this only after confirming that the provider has logged in to the Pulso app with the onboarding phone number.</p>
+              </div>
+              <form id="app-activation-form" class="review-form">
+                <input id="app-activation-reviewer-input" type="text" name="verifiedBy" placeholder="Verified by" value="ops-team">
+                <div class="actions">
+                  <button type="button" id="verify-app-activation-button" class="button approve">Mark app active</button>
+                </div>
+              </form>
+            </article>
+
+            <article class="card review-card">
+              <div class="review-head">
                 <h4>Manual certificate upload</h4>
                 <p>Upload old certificate files from your device and attach them to this provider for review.</p>
               </div>
@@ -225,7 +256,7 @@
     </section>
   </main>
 
-  <script src="/admin/assets/dashboard.js?v=20260426a"></script>
+  <script src="/admin/assets/dashboard.js?v=20260502a"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>
 </html>

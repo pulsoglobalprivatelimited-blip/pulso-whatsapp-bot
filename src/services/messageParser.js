@@ -41,6 +41,19 @@ function getMessageText(message) {
   return '';
 }
 
+function parseRegion(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.REGION_KERALA) return 'kerala_malayalam';
+  if (replyId === BUTTON_IDS.REGION_KARNATAKA) return 'karnataka_english';
+
+  const normalized = normalizeText(getMessageText(message));
+  if (['kerala', 'malayalam', 'ml'].includes(normalized)) return 'kerala_malayalam';
+  if (['karnataka', 'bangalore', 'bengaluru', 'english', 'en'].includes(normalized)) {
+    return 'karnataka_english';
+  }
+  return null;
+}
+
 function parseQualification(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId === BUTTON_IDS.QUALIFICATION_GDA) return 'gda';
@@ -65,7 +78,7 @@ function parseQualification(message) {
   ) {
     return 'other_caregiving';
   }
-  if (['ivayonnumalla', 'ഇവയൊന്നുമല്ല'].includes(normalized)) return 'none_of_these';
+  if (['ivayonnumalla', 'ഇവയൊന്നുമല്ല', 'none', 'none of these'].includes(normalized)) return 'none_of_these';
   return null;
 }
 
@@ -165,9 +178,9 @@ function parseAgeCorrectionAction(message) {
   if (replyId === BUTTON_IDS.AGE_CLOSE_AFTER_REJECTION) return 'close_after_rejection';
 
   const normalized = normalizeText(getMessageText(message));
-  if (['വയസ് വീണ്ടും നൽകാം', 'retry age', 'retry', 'again'].includes(normalized)) return 'retry';
-  if (['വയസ് തിരുത്താം', 'edit age'].includes(normalized)) return 'edit_after_rejection';
-  if (['ശരി', 'ok', 'okay'].includes(normalized)) return 'exit';
+  if (['വയസ് വീണ്ടും നൽകാം', 'retry age', 'retry', 'again', 'correct age'].includes(normalized)) return 'retry';
+  if (['വയസ് തിരുത്താം', 'edit age', 'correct age'].includes(normalized)) return 'edit_after_rejection';
+  if (['ശരി', 'ok', 'okay', 'stop here'].includes(normalized)) return 'exit';
   return null;
 }
 
@@ -201,10 +214,16 @@ function parsePulsoAppInstallInterest(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId === BUTTON_IDS.PULSO_APP_INSTALL_YES) return 'yes';
   if (replyId === BUTTON_IDS.PULSO_APP_INSTALL_NO) return 'no';
+  if (replyId === BUTTON_IDS.PULSO_APP_DEVICE_ANDROID) return 'android';
+  if (replyId === BUTTON_IDS.PULSO_APP_DEVICE_IPHONE) return 'iphone';
+  if (replyId === BUTTON_IDS.PULSO_APP_NEED_HELP) return 'need_help';
 
   const normalized = normalizeText(getMessageText(message));
   if (['yes', 'ok', 'okay', 'install', 'താൽപര്യമുണ്ട്'].includes(normalized)) return 'yes';
   if (['no', 'വേണ്ട', 'താൽപര്യമില്ല'].includes(normalized)) return 'no';
+  if (['android', 'android phone'].includes(normalized)) return 'android';
+  if (['iphone', 'i phone', 'ios', 'apple'].includes(normalized)) return 'iphone';
+  if (['need help', 'help', 'സഹായം വേണം'].includes(normalized)) return 'need_help';
   return null;
 }
 
@@ -212,10 +231,38 @@ function parsePulsoAppDevice(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId === BUTTON_IDS.PULSO_APP_DEVICE_IPHONE) return 'iphone';
   if (replyId === BUTTON_IDS.PULSO_APP_DEVICE_ANDROID) return 'android';
+  if (replyId === BUTTON_IDS.PULSO_APP_NEED_HELP) return 'need_help';
 
   const normalized = normalizeText(getMessageText(message));
   if (['iphone', 'i phone', 'ios', 'apple'].includes(normalized)) return 'iphone';
   if (['android', 'android phone'].includes(normalized)) return 'android';
+  if (['need help', 'help', 'സഹായം വേണം'].includes(normalized)) return 'need_help';
+  return null;
+}
+
+function parsePulsoAppActivationAction(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.PULSO_APP_INSTALLED) return 'installed';
+  if (replyId === BUTTON_IDS.PULSO_APP_NEED_HELP) return 'need_help';
+  if (replyId === BUTTON_IDS.PULSO_APP_LATER) return 'later';
+
+  const normalized = normalizeText(getMessageText(message));
+  if (['installed', 'done', 'ചെയ്തു'].includes(normalized)) return 'installed';
+  if (['need help', 'help', 'സഹായം വേണം'].includes(normalized)) return 'need_help';
+  if (['later', 'പിന്നീട്'].includes(normalized)) return 'later';
+  return null;
+}
+
+function parsePulsoAppHelpReason(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.PULSO_APP_HELP_INSTALL) return 'install_help';
+  if (replyId === BUTTON_IDS.PULSO_APP_HELP_LOGIN_OTP) return 'login_otp_issue';
+  if (replyId === BUTTON_IDS.PULSO_APP_HELP_NO_SMARTPHONE) return 'no_smartphone';
+
+  const normalized = normalizeText(getMessageText(message));
+  if (['install help', 'need help installing app'].includes(normalized)) return 'install_help';
+  if (['login / otp issue', 'login issue', 'otp issue'].includes(normalized)) return 'login_otp_issue';
+  if (['no smartphone', 'smartphone ഇല്ല'].includes(normalized)) return 'no_smartphone';
   return null;
 }
 
@@ -290,6 +337,7 @@ module.exports = {
   normalizeText,
   getMessageText,
   getInteractiveReplyId,
+  parseRegion,
   parseQualification,
   isQualificationDeclined,
   isInterested,
@@ -305,6 +353,8 @@ module.exports = {
   parseTermsAcceptance,
   parsePulsoAppInstallInterest,
   parsePulsoAppDevice,
+  parsePulsoAppActivationAction,
+  parsePulsoAppHelpReason,
   parseTermsReminderResume,
   parseCertificateCollectionAction,
   classifyDocument
