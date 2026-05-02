@@ -247,9 +247,11 @@ function parsePulsoAppActivationAction(message) {
   if (replyId === BUTTON_IDS.PULSO_APP_LATER) return 'later';
 
   const normalized = normalizeText(getMessageText(message));
-  if (['installed', 'done', 'ചെയ്തു'].includes(normalized)) return 'installed';
+  if (['installed', 'yes installed', 'yes, installed', 'done', 'ചെയ്തു'].includes(normalized)) {
+    return 'installed';
+  }
   if (['need help', 'help', 'സഹായം വേണം'].includes(normalized)) return 'need_help';
-  if (['later', 'പിന്നീട്'].includes(normalized)) return 'later';
+  if (['later', 'not installed', 'പിന്നീട്'].includes(normalized)) return 'later';
   return null;
 }
 

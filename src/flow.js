@@ -349,7 +349,7 @@ const MESSAGES = {
   postOnboardingContactSupport:
     'സഹായത്തിനായി ഓഫീസ് നമ്പർ 8714105333-ൽ രാവിലെ 10 മുതൽ വൈകിട്ട് 6 വരെ വിളിക്കാം.\n9446600809 എന്ന നമ്പറിൽ 24 മണിക്കൂറും WhatsApp സന്ദേശം അയക്കാം.\nനിങ്ങൾക്ക് സഹായം നൽകാൻ ഞങ്ങൾ എപ്പോഴും തയ്യാറാണ്. 👍🏼',
   postOnboardingLinks:
-    'Office Details\nPulso Elderly Care\n14/455-N4, 1st Floor,\nAmbeel Galleria, Near BSNL Office,\nKangarappady, Kochi, Kerala – 682021\nPhone: +91 87141 05333\nLocation: https://share.google/MWyrmA6XvDInViFkq\n\nWebsite:\nhttps://www.pulso.co.in/',
+    'Head Office Details\nPulso Elderly Care\n14/455-N4, 1st Floor,\nAmbeel Galleria, Near BSNL Office,\nKangarappady, Kochi, Kerala – 682021\nPhone: +91 87141 05333\nLocation: https://share.google/MWyrmA6XvDInViFkq\n\nWebsite:\nhttps://www.pulso.co.in/',
   optionalAgentHelp:
     'കൂടുതൽ സംശയങ്ങൾ ഉണ്ടെങ്കിൽ Pulso agent-നോട് ബന്ധപ്പെടാം.',
   optionalAgentHelpConfirmed:
@@ -501,9 +501,9 @@ const KARNATAKA_MESSAGES = {
   mobileAppLinkHelp:
     'Pulso app activation is pending. Use the options below if you need the install link or support.',
   postOnboardingContactSupport:
-    'For help, you can contact the Pulso support team.\nYou can message us on WhatsApp anytime.',
+    'For help, you can call the office number 8714105333 between 10 AM and 6 PM.\nYou can send a WhatsApp message to 9446600809 at any time.\nWe are always ready to help you. 👍🏼',
   postOnboardingLinks:
-    'Pulso Elderly Care\nBengaluru, Karnataka\n\nWebsite:\nhttps://www.pulso.co.in/',
+    'Head Office Details\nPulso Elderly Care\n14/455-N4, 1st Floor,\nAmbeel Galleria, Near BSNL Office,\nKangarappady, Kochi, Kerala - 682021\nPhone: +91 87141 05333\nLocation: https://share.google/MWyrmA6XvDInViFkq\n\nWebsite:\nhttps://www.pulso.co.in/',
   optionalAgentHelp: 'If you have more questions, you can connect with a Pulso agent.',
   optionalAgentHelpConfirmed:
     'Okay. A Pulso agent will contact you soon through WhatsApp.',
@@ -544,8 +544,8 @@ const UI_TEXT = {
   appDeviceAndroidTitle: 'Android',
   appDeviceIphoneTitle: 'iPhone',
   appNeedHelpTitle: 'സഹായം വേണം',
-  appInstalledTitle: 'ചെയ്തു',
-  appLaterTitle: 'പിന്നീട്',
+  appInstalledTitle: 'Yes, installed',
+  appLaterTitle: 'Not installed',
   appHelpInstallTitle: 'Install help',
   appHelpLoginOtpTitle: 'Login / OTP issue',
   appHelpNoSmartphoneTitle: 'Smartphone ഇല്ല',
@@ -577,8 +577,8 @@ const KARNATAKA_UI_TEXT = {
   termsDeclineTitle: 'Decline',
   optionalAgentHelpTitle: 'More help',
   appNeedHelpTitle: 'Need help',
-  appInstalledTitle: 'Installed',
-  appLaterTitle: 'Later',
+  appInstalledTitle: 'Yes, installed',
+  appLaterTitle: 'Not installed',
   appHelpInstallTitle: 'Install help',
   appHelpLoginOtpTitle: 'Login / OTP issue',
   appHelpNoSmartphoneTitle: 'No smartphone',

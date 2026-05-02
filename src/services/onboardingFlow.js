@@ -572,9 +572,9 @@ async function sendPostOnboardingWrapUp(phone, sender = 'bot') {
     mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.COMPLETED,
     postOnboardingCompletedAt: new Date().toISOString()
   });
+  await sendAndLog(phone, 'text', MESSAGES.postOnboardingSupport, sender);
   await sendAndLog(phone, 'text', MESSAGES.postOnboardingContactSupport, sender);
   await sendAndLog(phone, 'text', MESSAGES.postOnboardingLinks, sender);
-  await sendOptionalAgentHelpButton(phone);
 }
 
 async function sendMobileAppCampaignClosing(phone, sender = 'bot') {
@@ -2018,37 +2018,42 @@ async function handlePulsoAppInstalledConfirmation(phone, message) {
     await updateProvider(phone, {
       pulsoAppInstalledConfirmedAt: now,
       pulsoAppActivationStatus: 'pending_verification',
-      pulsoAppPromptStage: MOBILE_APP_STAGE_ACTIVATION_PENDING,
-      mobileAppCampaignStage: MOBILE_APP_STAGE_ACTIVATION_PENDING,
+      pulsoAppPromptStage: null,
+      mobileAppCampaignStage: null,
       mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.ACTIVATION_PENDING
     });
     await appendHistory(phone, { type: 'system', event: 'pulso_app_installed_confirmed' });
-    await sendAndLog(phone, 'text', MESSAGES.pulsoAppInstalledPending);
+    await sendPostOnboardingWrapUp(phone);
     return;
   }
 
   if (action === 'need_help') {
     await updateProvider(phone, {
       pulsoAppActivationStatus: 'help_requested',
-      pulsoAppPromptStage: MOBILE_APP_STAGE_HELP_REASON,
-      mobileAppCampaignStage: MOBILE_APP_STAGE_HELP_REASON,
+      pulsoAppPromptStage: null,
+      mobileAppCampaignStage: null,
       mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.HELP_REQUESTED,
-      pulsoAppHelpRequestedAt: new Date().toISOString()
+      pulsoAppHelpRequestedAt: new Date().toISOString(),
+      agentHelpRequested: true,
+      agentHelpRequestedAt: new Date().toISOString()
     });
-    await sendPulsoAppHelpReasonButtons(phone);
+    await appendHistory(phone, { type: 'system', event: 'pulso_app_help_requested', reason: 'general_help' });
+    const updatedProvider = await getProvider(phone);
+    await notifyAgentHelpRequested(updatedProvider);
+    await sendPostOnboardingWrapUp(phone);
     return;
   }
 
   if (action === 'later') {
     await updateProvider(phone, {
       pulsoAppActivationStatus: 'later_selected',
-      pulsoAppPromptStage: MOBILE_APP_STAGE_DEVICE,
-      mobileAppCampaignStage: MOBILE_APP_STAGE_DEVICE,
+      pulsoAppPromptStage: null,
+      mobileAppCampaignStage: null,
       mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.LATER_SELECTED,
       pulsoAppLaterSelectedAt: new Date().toISOString()
     });
-    await sendAndLog(phone, 'text', MESSAGES.pulsoAppLater);
-    await sendPulsoAppDeviceButtons(phone);
+    await appendHistory(phone, { type: 'system', event: 'pulso_app_not_installed_selected' });
+    await sendPostOnboardingWrapUp(phone);
     return;
   }
 
