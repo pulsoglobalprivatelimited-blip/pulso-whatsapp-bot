@@ -15,6 +15,7 @@ const {
   startTermsReminderScheduler
 } = require('./services/onboardingFlow');
 const { listProviders, getProvider, updateProvider } = require('./services/providerService');
+const { inferProviderRegion, normalizeRegion } = require('./services/regionService');
 const { initializeStorage } = require('./services/storage');
 const { notifyCertificateUploaded } = require('./services/opsNotifications');
 const {
@@ -227,6 +228,10 @@ app.get('/admin', (_req, res) => {
   res.sendFile(path.join(config.publicDir, 'admin', 'index.html'));
 });
 
+app.get('/admin/karnataka', (_req, res) => {
+  res.sendFile(path.join(config.publicDir, 'admin', 'index.html'));
+});
+
 app.get('/admin/media/*', (req, res) => {
   const absolutePath = resolveAdminMediaPath(req.params[0]);
   if (!absolutePath || !fs.existsSync(absolutePath) || fs.statSync(absolutePath).isDirectory()) {
@@ -236,8 +241,20 @@ app.get('/admin/media/*', (req, res) => {
   return res.sendFile(absolutePath);
 });
 
-app.get('/admin/providers', async (_req, res) => {
-  res.json({ providers: await listProviders() });
+app.get('/admin/providers', async (req, res) => {
+  const requestedRegion = normalizeRegion(req.query.region);
+  const providers = (await listProviders()).map((provider) => ({
+    ...provider,
+    region: inferProviderRegion(provider) || provider.region || null
+  }));
+
+  if (!requestedRegion) {
+    return res.json({ providers });
+  }
+
+  return res.json({
+    providers: providers.filter((provider) => inferProviderRegion(provider) === requestedRegion)
+  });
 });
 
 app.get('/admin/providers/:phone', async (req, res) => {

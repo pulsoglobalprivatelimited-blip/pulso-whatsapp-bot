@@ -1,8 +1,8 @@
-const CACHE_NAME = 'pulso-admin-v5';
+const CACHE_NAME = 'pulso-admin-v6';
 const STATIC_ASSETS = [
   '/admin/login',
   '/admin/manifest.webmanifest',
-  '/admin/assets/dashboard.css?v=20260419c',
+  '/admin/assets/dashboard.css?v=20260503a',
   '/admin/assets/admin-pwa.js?v=20260419c',
   '/admin/assets/pwa/icon.svg',
   '/admin/assets/pwa/icon-maskable.svg'
@@ -55,7 +55,9 @@ self.addEventListener('fetch', (event) => {
 
   if (
     event.request.mode === 'navigate' &&
-    (requestUrl.pathname === '/admin' || requestUrl.pathname === '/admin/login')
+    (requestUrl.pathname === '/admin' ||
+      requestUrl.pathname === '/admin/karnataka' ||
+      requestUrl.pathname === '/admin/login')
   ) {
     event.respondWith(
       fetch(event.request).catch(async () => {

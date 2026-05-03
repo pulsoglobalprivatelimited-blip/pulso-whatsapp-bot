@@ -8,6 +8,8 @@
     "media:backfill": "node src/scripts/backfillMediaToStorage.js",
     "mobile-app:campaign:completed": "node src/scripts/sendMobileAppCampaignToCompletedProviders.js",
     "pulso-hub:sync:completed": "node src/scripts/syncCompletedProvidersToPulsoHub.js",
+    "providers:regions:audit": "node src/scripts/auditBackfillProviderRegions.js",
+    "providers:regions:backfill": "node src/scripts/auditBackfillProviderRegions.js --write",
     "terms:accept:reconcile": "node src/scripts/reconcileAcceptedTermsProviders.js",
     "terms:reminder:current-backfill": "node src/scripts/sendCurrentWaitingTermsReminderBackfill.js",
     "terms:reminder:backfill": "node src/scripts/sendLegacyTermsReminderBackfill.js",

@@ -1,7 +1,6 @@
 let providers = [];
 let selectedPhone = null;
 let currentFilter = 'all';
-let currentRegionFilter = 'all';
 let currentAppFilter = 'all';
 let currentSearch = '';
 let currentCompletedRange = 'all';
@@ -9,6 +8,9 @@ let currentCompletedSex = 'all';
 let currentStartedRange = 'all';
 let mobileDetailOpen = false;
 let suppressAutoSelectOnce = false;
+
+const dashboardRegion = getDashboardRegionFromPath();
+let currentRegionFilter = dashboardRegion || 'all';
 
 const providerList = document.getElementById('provider-list');
 const providerDetail = document.getElementById('provider-detail');
@@ -43,6 +45,13 @@ const backToListButton = document.getElementById('back-to-list-button');
 const historyBottomButton = document.getElementById('history-bottom-button');
 const manualCertificateUploadButton = document.getElementById('manual-certificate-upload-button');
 const manualCertificateUploadStatus = document.getElementById('manual-certificate-upload-status');
+const dashboardEyebrow = document.getElementById('dashboard-eyebrow');
+const dashboardTitle = document.getElementById('dashboard-title');
+const dashboardSubtitle = document.getElementById('dashboard-subtitle');
+const dashboardSwitchLink = document.getElementById('dashboard-switch-link');
+const regionFilterRow = document.getElementById('region-filter-row');
+
+configureDashboardShell();
 
 document.getElementById('refresh-button').addEventListener('click', loadProviders);
 document.querySelectorAll('.filter').forEach((button) => {
@@ -51,7 +60,7 @@ document.querySelectorAll('.filter').forEach((button) => {
   }
 
   button.addEventListener('click', () => {
-    document.querySelectorAll('.filter').forEach((item) => item.classList.remove('active'));
+    document.querySelectorAll('[data-filter]').forEach((item) => item.classList.remove('active'));
     button.classList.add('active');
     currentFilter = button.dataset.filter;
     currentCompletedRange = 'all';
@@ -66,6 +75,7 @@ document.querySelectorAll('[data-region-filter]').forEach((button) => {
     document.querySelectorAll('[data-region-filter]').forEach((item) => item.classList.remove('active'));
     button.classList.add('active');
     currentRegionFilter = button.dataset.regionFilter;
+    updateDashboardMetrics();
     renderList();
   });
 });
@@ -176,7 +186,8 @@ async function fetchJson(url, options) {
 }
 
 async function loadProviders() {
-  const data = await fetchJson('/admin/providers');
+  const providerUrl = dashboardRegion ? `/admin/providers?region=${encodeURIComponent(dashboardRegion)}` : '/admin/providers';
+  const data = await fetchJson(providerUrl);
   providers = data.providers || [];
   updateDashboardMetrics();
   updateCompletedRangeFilterState();
@@ -205,6 +216,53 @@ async function loadProviders() {
   if (initialProvider) {
     renderDetail(initialProvider);
   }
+}
+
+function getDashboardRegionFromPath() {
+  const path = window.location.pathname.replace(/\/+$/, '').toLowerCase();
+  if (path === '/admin/karnataka') {
+    return 'karnataka';
+  }
+  return '';
+}
+
+function configureDashboardShell() {
+  if (!dashboardRegion) {
+    if (dashboardSwitchLink) {
+      dashboardSwitchLink.href = '/admin/karnataka';
+      dashboardSwitchLink.textContent = 'Karnataka dashboard';
+    }
+    return;
+  }
+
+  const regionLabel = formatRegionLabel(dashboardRegion);
+  document.title = `Pulso ${regionLabel} Ops Dashboard`;
+  document.body.classList.add('region-dashboard', `region-dashboard-${dashboardRegion}`);
+
+  if (dashboardEyebrow) {
+    dashboardEyebrow.textContent = `Pulso Operations | ${regionLabel}`;
+  }
+
+  if (dashboardTitle) {
+    dashboardTitle.textContent = `${regionLabel} Verification Desk`;
+  }
+
+  if (dashboardSubtitle) {
+    dashboardSubtitle.textContent = `Review ${regionLabel} Meta ad leads, verify certificates, and unblock onboarding without leaving WhatsApp context.`;
+  }
+
+  if (dashboardSwitchLink) {
+    dashboardSwitchLink.href = '/admin';
+    dashboardSwitchLink.textContent = 'All-region dashboard';
+  }
+
+  if (regionFilterRow) {
+    regionFilterRow.classList.add('hidden');
+  }
+
+  document.querySelectorAll('[data-region-filter]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.regionFilter === dashboardRegion);
+  });
 }
 
 function formatStatus(status) {
@@ -646,7 +704,7 @@ function getVisibleProviders() {
   const phoneSearch = normalizePhone(currentSearch);
   return providers.filter((item) => {
     const matchesFilter = currentFilter === 'all' || getDashboardStatus(item) === currentFilter;
-    const region = String(item && item.region ? item.region : 'kerala').toLowerCase();
+    const region = getProviderRegion(item);
     const matchesRegion = currentRegionFilter === 'all' || region === currentRegionFilter;
     const matchesApp = matchesAppFilter(item);
     const matchesCompletedWindow = currentFilter !== 'completed' || matchesCompletedRange(item);
@@ -659,6 +717,40 @@ function getVisibleProviders() {
     const matchesSearch = !currentSearch || matchesPhone || matchesName || matchesRegionSearch;
     return matchesFilter && matchesRegion && matchesApp && matchesCompletedWindow && matchesCompletedSexFilter && matchesStartedWindow && matchesSearch;
   });
+}
+
+function normalizeRegion(value) {
+  const normalized = String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
+  if (normalized === 'kerala' || normalized === 'karnataka') {
+    return normalized;
+  }
+  return '';
+}
+
+function getRegionForFlowId(flowId) {
+  if (flowId === 'karnataka_english') {
+    return 'karnataka';
+  }
+
+  if (flowId === 'kerala_malayalam') {
+    return 'kerala';
+  }
+
+  return '';
+}
+
+function getProviderRegion(provider) {
+  return normalizeRegion(provider && provider.region) || getRegionForFlowId(provider && provider.flowId) || 'kerala';
+}
+
+function formatRegionLabel(value) {
+  const region = normalizeRegion(value) || 'kerala';
+  return region === 'karnataka' ? 'Karnataka' : 'Kerala';
+}
+
+function renderRegionBadge(provider) {
+  const region = getProviderRegion(provider);
+  return `<span class="region-badge ${region}">${formatRegionLabel(region)}</span>`;
 }
 
 function normalizeSex(value) {
@@ -708,17 +800,21 @@ function matchesAppFilter(provider) {
 }
 
 function updateDashboardMetrics() {
-  pendingCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
-  completedTotalCount.textContent = providers.filter((item) => getDashboardStatus(item) === 'completed').length;
-  completedMaleCount.textContent = providers.filter((item) => isCompletedWithSex(item, 'male')).length;
-  completedFemaleCount.textContent = providers.filter((item) => isCompletedWithSex(item, 'female')).length;
-  completedCount.textContent = providers.filter((item) => isCompletedToday(item)).length;
-  completedYesterdayCount.textContent = providers.filter((item) => isCompletedYesterday(item)).length;
-  newConversationsCount.textContent = providers.filter((item) => isSameLocalDate(item.createdAt)).length;
-  started7dCount.textContent = providers.filter((item) => isCreatedInPastDays(item, 7)).length;
-  started30dCount.textContent = providers.filter((item) => isCreatedInPastDays(item, 30)).length;
-  completed7dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 7)).length;
-  completed30dCount.textContent = providers.filter((item) => isCompletedInPastDays(item, 30)).length;
+  const metricProviders = providers.filter((item) => (
+    currentRegionFilter === 'all' || getProviderRegion(item) === currentRegionFilter
+  ));
+
+  pendingCount.textContent = metricProviders.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
+  completedTotalCount.textContent = metricProviders.filter((item) => getDashboardStatus(item) === 'completed').length;
+  completedMaleCount.textContent = metricProviders.filter((item) => isCompletedWithSex(item, 'male')).length;
+  completedFemaleCount.textContent = metricProviders.filter((item) => isCompletedWithSex(item, 'female')).length;
+  completedCount.textContent = metricProviders.filter((item) => isCompletedToday(item)).length;
+  completedYesterdayCount.textContent = metricProviders.filter((item) => isCompletedYesterday(item)).length;
+  newConversationsCount.textContent = metricProviders.filter((item) => isSameLocalDate(item.createdAt)).length;
+  started7dCount.textContent = metricProviders.filter((item) => isCreatedInPastDays(item, 7)).length;
+  started30dCount.textContent = metricProviders.filter((item) => isCreatedInPastDays(item, 30)).length;
+  completed7dCount.textContent = metricProviders.filter((item) => isCompletedInPastDays(item, 7)).length;
+  completed30dCount.textContent = metricProviders.filter((item) => isCompletedInPastDays(item, 30)).length;
 }
 
 function renderList() {
@@ -745,7 +841,10 @@ function renderList() {
         <article class="provider-item ${provider.phone === selectedPhone ? 'active' : ''}" data-phone="${provider.phone}">
           <strong>${renderPhoneLink(provider.phone, 'provider-phone-link')}</strong>
           <p>${shouldShowCompletedListSummary() ? formatListSummary(provider) : (provider.fullName || provider.qualification || 'Profile pending')}</p>
-          <p>${formatStatus(getDashboardStatus(provider))} | ${escapeHtml(provider.region || 'kerala')}</p>
+          <p class="provider-meta">
+            <span>${formatStatus(getDashboardStatus(provider))}</span>
+            ${renderRegionBadge(provider)}
+          </p>
         </article>
       `).join('')
     : '<div class="provider-item"><strong>No providers</strong><p>Nothing matches the selected filter right now.</p></div>';
@@ -1039,10 +1138,10 @@ function renderDetail(provider) {
 
   document.getElementById('detail-phone').innerHTML = renderPhoneLink(provider.phone, 'detail-phone-link');
   setText('detail-status', formatStatus(getDashboardStatus(provider)));
-  setText('detail-step', `Step ${provider.currentStep}`);
+  setText('detail-step', `${formatRegionLabel(getProviderRegion(provider))} | Step ${provider.currentStep}`);
   setText('detail-name', provider.fullName);
-  setText('detail-region', provider.region || 'kerala');
-  setText('detail-language', provider.language || 'ml');
+  setText('detail-region', formatRegionLabel(getProviderRegion(provider)));
+  setText('detail-language', provider.language || (getProviderRegion(provider) === 'karnataka' ? 'en' : 'ml'));
   setText('detail-qualification', provider.qualification);
   setText('detail-interest', provider.interestConfirmed ? 'Yes' : 'No');
   setText('detail-duty-hour', formatDutyHourPreference(provider.dutyHourPreference));

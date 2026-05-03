@@ -1,5 +1,6 @@
 const { getProvider, listProviders, saveProvider } = require('./storage');
 const { STATUS } = require('../flow');
+const { applyRegionDefaults, inferProviderRegion, statusRequiresRegion } = require('./regionService');
 
 function now() {
   return new Date().toISOString();
@@ -67,7 +68,7 @@ async function getOrCreateProvider(phone) {
 
 async function updateProvider(phone, patch) {
   const provider = await getOrCreateProvider(phone);
-  const next = {
+  const next = applyRegionDefaults({
     ...provider,
     ...patch,
     documents: {
@@ -79,7 +80,11 @@ async function updateProvider(phone, patch) {
       ...(patch.verification || {})
     },
     updatedAt: now()
-  };
+  });
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'status') && statusRequiresRegion(next.status) && !inferProviderRegion(next)) {
+    throw new Error('Provider region is required before continuing onboarding');
+  }
 
   return saveProvider(phone, next);
 }

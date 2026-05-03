@@ -1,9 +1,16 @@
 const axios = require('axios');
 const config = require('../config');
+const { FLOWS } = require('../flow');
+const { inferProviderRegion } = require('./regionService');
 
 function buildProviderSyncPayload(provider) {
+  const flow = provider && provider.flowId ? FLOWS[provider.flowId] : null;
+
   return {
     phone: provider.phone || '',
+    region: inferProviderRegion(provider) || '',
+    language: provider.language || (flow && flow.language) || '',
+    flowId: provider.flowId || '',
     qualification: provider.qualification || '',
     fullName: provider.fullName || '',
     age: provider.age ?? null,

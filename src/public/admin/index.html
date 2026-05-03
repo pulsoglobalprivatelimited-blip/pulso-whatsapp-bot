@@ -13,14 +13,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260419c">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260503a">
 </head>
 <body>
   <main class="layout">
     <section class="hero">
-      <p class="eyebrow">Pulso Operations</p>
-      <h1>Care Provider Verification Desk</h1>
-      <p class="subtitle">Review Meta ad leads, verify certificates, and unblock onboarding without leaving WhatsApp context.</p>
+      <p class="eyebrow" id="dashboard-eyebrow">Pulso Operations</p>
+      <h1 id="dashboard-title">Care Provider Verification Desk</h1>
+      <p class="subtitle" id="dashboard-subtitle">Review Meta ad leads, verify certificates, and unblock onboarding without leaving WhatsApp context.</p>
       <div class="hero-meta">
         <button class="metric metric-button" id="pending-metric" type="button">
           <span id="pending-count">0</span>
@@ -76,6 +76,7 @@
           <h2>Provider pipeline</h2>
         </div>
         <div class="actions">
+          <a id="dashboard-switch-link" class="button secondary" href="/admin/karnataka">Karnataka dashboard</a>
           <button id="refresh-button" class="button secondary">Refresh</button>
           <form action="/admin/logout" method="post">
             <button class="button secondary" type="submit">Log out</button>
@@ -91,7 +92,7 @@
         <button class="filter" data-filter="completed">Completed</button>
       </div>
 
-      <div class="filters">
+      <div class="filters" id="region-filter-row">
         <button class="filter active" data-region-filter="all">All regions</button>
         <button class="filter" data-region-filter="kerala">Kerala</button>
         <button class="filter" data-region-filter="karnataka">Karnataka</button>
@@ -256,7 +257,7 @@
     </section>
   </main>
 
-  <script src="/admin/assets/dashboard.js?v=20260502a"></script>
+  <script src="/admin/assets/dashboard.js?v=20260503a"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>
 </html>

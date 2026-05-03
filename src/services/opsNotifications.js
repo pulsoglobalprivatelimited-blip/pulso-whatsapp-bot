@@ -69,6 +69,7 @@ function formatProviderSummary(provider) {
     `Phone: ${(provider && provider.phone) || '-'}`,
     `Age: ${(provider && provider.age) || '-'}`,
     `Sex: ${(provider && provider.sex) || '-'}`,
+    `Region: ${(provider && provider.region) || '-'}`,
     `Preferred duty hour: ${formatDutyHourPreference(provider && provider.dutyHourPreference)}`,
     `Qualification: ${provider && provider.qualification ? provider.qualification.toUpperCase() : '-'}`,
     `District: ${(provider && provider.district) || '-'}`,
