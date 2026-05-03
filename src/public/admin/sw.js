@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pulso-admin-v6';
+const CACHE_NAME = 'pulso-admin-v7';
 const STATIC_ASSETS = [
   '/admin/login',
   '/admin/manifest.webmanifest',
@@ -56,6 +56,7 @@ self.addEventListener('fetch', (event) => {
   if (
     event.request.mode === 'navigate' &&
     (requestUrl.pathname === '/admin' ||
+      requestUrl.pathname === '/admin/kerala' ||
       requestUrl.pathname === '/admin/karnataka' ||
       requestUrl.pathname === '/admin/login')
   ) {

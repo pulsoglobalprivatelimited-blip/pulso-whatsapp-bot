@@ -48,7 +48,9 @@ const manualCertificateUploadStatus = document.getElementById('manual-certificat
 const dashboardEyebrow = document.getElementById('dashboard-eyebrow');
 const dashboardTitle = document.getElementById('dashboard-title');
 const dashboardSubtitle = document.getElementById('dashboard-subtitle');
-const dashboardSwitchLink = document.getElementById('dashboard-switch-link');
+const allDashboardLink = document.getElementById('all-dashboard-link');
+const keralaDashboardLink = document.getElementById('kerala-dashboard-link');
+const karnatakaDashboardLink = document.getElementById('karnataka-dashboard-link');
 const regionFilterRow = document.getElementById('region-filter-row');
 
 configureDashboardShell();
@@ -220,6 +222,9 @@ async function loadProviders() {
 
 function getDashboardRegionFromPath() {
   const path = window.location.pathname.replace(/\/+$/, '').toLowerCase();
+  if (path === '/admin/kerala') {
+    return 'kerala';
+  }
   if (path === '/admin/karnataka') {
     return 'karnataka';
   }
@@ -227,11 +232,19 @@ function getDashboardRegionFromPath() {
 }
 
 function configureDashboardShell() {
+  if (allDashboardLink) {
+    allDashboardLink.classList.toggle('hidden', !dashboardRegion);
+  }
+
+  if (keralaDashboardLink) {
+    keralaDashboardLink.classList.toggle('hidden', dashboardRegion === 'kerala');
+  }
+
+  if (karnatakaDashboardLink) {
+    karnatakaDashboardLink.classList.toggle('hidden', dashboardRegion === 'karnataka');
+  }
+
   if (!dashboardRegion) {
-    if (dashboardSwitchLink) {
-      dashboardSwitchLink.href = '/admin/karnataka';
-      dashboardSwitchLink.textContent = 'Karnataka dashboard';
-    }
     return;
   }
 
@@ -249,11 +262,6 @@ function configureDashboardShell() {
 
   if (dashboardSubtitle) {
     dashboardSubtitle.textContent = `Review ${regionLabel} Meta ad leads, verify certificates, and unblock onboarding without leaving WhatsApp context.`;
-  }
-
-  if (dashboardSwitchLink) {
-    dashboardSwitchLink.href = '/admin';
-    dashboardSwitchLink.textContent = 'All-region dashboard';
   }
 
   if (regionFilterRow) {

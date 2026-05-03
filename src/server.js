@@ -228,6 +228,10 @@ app.get('/admin', (_req, res) => {
   res.sendFile(path.join(config.publicDir, 'admin', 'index.html'));
 });
 
+app.get('/admin/kerala', (_req, res) => {
+  res.sendFile(path.join(config.publicDir, 'admin', 'index.html'));
+});
+
 app.get('/admin/karnataka', (_req, res) => {
   res.sendFile(path.join(config.publicDir, 'admin', 'index.html'));
 });
