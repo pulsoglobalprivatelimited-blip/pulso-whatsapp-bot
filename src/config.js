@@ -21,6 +21,8 @@ module.exports = {
   graphApiVersion: process.env.WHATSAPP_GRAPH_API_VERSION || 'v23.0',
   baseUrl: process.env.PUBLIC_BASE_URL || 'http://localhost:3000',
   voiceNoteMediaId: process.env.WORKING_MODEL_AUDIO_MEDIA_ID || '',
+  pulsoDutyAcceptVideoMediaId: process.env.PULSO_DUTY_ACCEPT_VIDEO_MEDIA_ID || '',
+  pulsoAppActivationVideoMediaId: process.env.PULSO_APP_ACTIVATION_VIDEO_MEDIA_ID || '',
   termsAndConditionsUrl: process.env.TERMS_AND_CONDITIONS_URL || '',
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
   firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',

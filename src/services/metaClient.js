@@ -56,6 +56,18 @@ async function sendDocumentById(to, mediaId, filename, caption) {
   });
 }
 
+async function sendVideoById(to, mediaId, caption) {
+  return sendRequest({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'video',
+    video: {
+      id: mediaId,
+      caption
+    }
+  });
+}
+
 async function sendButtons(to, body, buttons) {
   return sendRequest({
     messaging_product: 'whatsapp',
@@ -175,6 +187,7 @@ module.exports = {
   sendText,
   sendImageById,
   sendDocumentById,
+  sendVideoById,
   sendButtons,
   sendList,
   sendTemplate,

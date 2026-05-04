@@ -12,7 +12,7 @@ const {
   getFlowConfig,
   runWithProviderFlow
 } = require('../flow');
-const { sendText, sendButtons, sendList, sendTemplate } = require('./metaClient');
+const { sendText, sendButtons, sendList, sendTemplate, sendVideoById } = require('./metaClient');
 const {
   getOrCreateProvider,
   updateProvider,
@@ -70,6 +70,8 @@ const pendingCertificateRetryTimers = new Map();
 const CERTIFICATE_PROMPT_DEBOUNCE_MS = 5000;
 const AGENT_HELP_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const TERMS_REMINDER_HISTORY_EVENT = 'terms_acceptance_reminder_sent';
+const DUTY_ACCEPT_VIDEO_HISTORY_EVENT = 'pulso_duty_accept_video_sent';
+const APP_ACTIVATION_VIDEO_HISTORY_EVENT = 'pulso_app_activation_video_sent';
 const MOBILE_APP_CAMPAIGN_STATUS = {
   REQUIRED: 'required',
   ANNOUNCEMENT_SENT: 'announcement_sent',
@@ -149,6 +151,8 @@ async function sendAndLog(phone, kind, body, sender) {
       await sendList(phone, body.body, body.buttonText, body.sections);
     } else if (kind === 'template') {
       await sendTemplate(phone, body.name, body.languageCode, body.components);
+    } else if (kind === 'video') {
+      await sendVideoById(phone, body.mediaId, body.caption);
     } else {
       await sendText(phone, body);
     }
@@ -631,6 +635,63 @@ function hasHistoryEvent(provider, predicate) {
   return history.some(predicate);
 }
 
+function hasVideoSendHistory(provider, event, mediaId) {
+  return hasHistoryEvent(
+    provider,
+    (entry) =>
+      (entry && entry.type === 'system' && entry.event === event) ||
+      (entry &&
+        entry.type === 'outbound_message' &&
+        entry.payload &&
+        entry.payload.kind === 'video' &&
+        entry.payload.body &&
+        entry.payload.body.mediaId === mediaId)
+  );
+}
+
+async function sendVideoOnce(phone, provider, mediaId, caption, event, sender = 'bot') {
+  if (!mediaId) {
+    console.warn(`[VIDEO_SEND_SKIPPED] ${event} media id is not configured`);
+    return false;
+  }
+
+  const currentProvider = provider || (await getProvider(phone));
+  if (hasVideoSendHistory(currentProvider, event, mediaId)) {
+    return false;
+  }
+
+  await sendAndLog(phone, 'video', { mediaId, caption }, sender);
+  await appendHistory(phone, {
+    type: 'system',
+    event,
+    mediaId,
+    sentAt: new Date().toISOString()
+  });
+  return true;
+}
+
+async function sendDutyAcceptVideo(phone, provider, sender = 'bot') {
+  return sendVideoOnce(
+    phone,
+    provider,
+    config.pulsoDutyAcceptVideoMediaId,
+    MESSAGES.pulsoDutyAcceptVideoCaption,
+    DUTY_ACCEPT_VIDEO_HISTORY_EVENT,
+    sender
+  );
+}
+
+async function sendPulsoAppActivationVideo(phone, provider, sender = 'bot') {
+  return sendVideoOnce(
+    phone,
+    provider,
+    config.pulsoAppActivationVideoMediaId,
+    MESSAGES.pulsoAppActivationVideoCaption,
+    APP_ACTIVATION_VIDEO_HISTORY_EVENT,
+    sender
+  );
+}
+
 function getLastTermsAcceptHistoryEntry(provider) {
   const history = Array.isArray(provider && provider.history) ? provider.history : [];
   const acceptEntries = history.filter(
@@ -804,8 +865,9 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
       entry.payload.body.body === MESSAGES.pulsoAppInstallQuestion
   );
   if (!sentPulsoAppQuestion) {
-    await sendAndLog(phone, 'text', MESSAGES.postOnboardingSupport, sender);
-    await sendAndLog(phone, 'text', MESSAGES.pulsoAppPreferenceNotice, sender);
+    await sendDutyAcceptVideo(phone, refreshedProvider, sender);
+    await sendAndLog(phone, 'text', MESSAGES.pulsoAppActivationInstruction, sender);
+    await sendPulsoAppActivationVideo(phone, refreshedProvider, sender);
     await sendPulsoAppInstallInterestButtons(phone);
   }
 
@@ -901,6 +963,9 @@ async function sendMobileAppCampaignToProvider(provider, sender = 'mobile-app-ca
 
   const sentAt = new Date().toISOString();
   await sendAndLog(provider.phone, 'text', MESSAGES.mobileAppCampaignAnnouncement, sender);
+  await sendDutyAcceptVideo(provider.phone, provider, sender);
+  await sendAndLog(provider.phone, 'text', MESSAGES.pulsoAppActivationInstruction, sender);
+  await sendPulsoAppActivationVideo(provider.phone, provider, sender);
   await sendPulsoAppInstallInterestButtons(provider.phone);
   await updateProvider(provider.phone, {
     pulsoAppRequired: true,
@@ -2023,6 +2088,8 @@ async function handlePulsoAppInstalledConfirmation(phone, message) {
       mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.ACTIVATION_PENDING
     });
     await appendHistory(phone, { type: 'system', event: 'pulso_app_installed_confirmed' });
+    const provider = await getProvider(phone);
+    await sendDutyAcceptVideo(phone, provider);
     await sendPostOnboardingWrapUp(phone);
     return;
   }

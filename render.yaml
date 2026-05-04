@@ -29,6 +29,10 @@ services:
         sync: false
       - key: WORKING_MODEL_AUDIO_MEDIA_ID
         sync: false
+      - key: PULSO_DUTY_ACCEPT_VIDEO_MEDIA_ID
+        sync: false
+      - key: PULSO_APP_ACTIVATION_VIDEO_MEDIA_ID
+        sync: false
       - key: TERMS_AND_CONDITIONS_URL
         sync: false
       - key: OWNER_NOTIFICATION_PHONE

@@ -312,6 +312,12 @@ const MESSAGES = {
     'പ്രധാന അറിയിപ്പ്:\n\nduty confirmation, check-in, check-out, attendance tracking, duty completion, payment processing എന്നിവയ്ക്കായി Pulso mobile app നിർബന്ധമാണ്.\n\nDuty ലഭിക്കാനും complete ചെയ്യാനും Pulso mobile app install ചെയ്ത് profile active ആയി വയ്ക്കണം.\n\nWhatsApp onboarding-ൽ ഉപയോഗിച്ച അതേ phone number ഉപയോഗിച്ച് app-ൽ login ചെയ്യുക.\n\nApp activation ഇല്ലെങ്കിൽ duty allocation വൈകുകയോ ലഭിക്കാതിരിക്കുകയോ ചെയ്യാം.',
   pulsoAppPreferenceNotice:
     'പ്രധാന അറിയിപ്പ്:\n\nduty confirmation, check-in, check-out, attendance tracking, duty completion, payment processing എന്നിവയ്ക്കായി Pulso mobile app നിർബന്ധമാണ്.\n\nDuty ലഭിക്കാനും complete ചെയ്യാനും Pulso mobile app install ചെയ്ത് profile active ആയി വയ്ക്കണം.\n\nWhatsApp onboarding-ൽ ഉപയോഗിച്ച അതേ phone number ഉപയോഗിച്ച് app-ൽ login ചെയ്യുക.\n\nApp activation ഇല്ലെങ്കിൽ duty allocation വൈകുകയോ ലഭിക്കാതിരിക്കുകയോ ചെയ്യാം.',
+  pulsoDutyAcceptVideoCaption:
+    'Pulso app-ൽ duty offer എങ്ങനെ കാണാം, suitable duty എങ്ങനെ accept ചെയ്യാം എന്ന് ഈ video-ൽ കാണാം.',
+  pulsoAppActivationInstruction:
+    'Duty receive ചെയ്യാനും accept ചെയ്യാനും Pulso app install ചെയ്ത് WhatsApp onboarding-ൽ ഉപയോഗിച്ച അതേ phone number ഉപയോഗിച്ച് login ചെയ്യുക.',
+  pulsoAppActivationVideoCaption:
+    'Pulso app install/login ചെയ്ത് profile active ആക്കുന്നത് എങ്ങനെ എന്ന് ഈ video-ൽ കാണാം.',
   pulsoAppInstallQuestion:
     'താങ്കൾ ഏത് phone ആണ് ഉപയോഗിക്കുന്നത്?',
   pulsoAppInstallRetry:
@@ -470,6 +476,12 @@ const KARNATAKA_MESSAGES = {
     'Important notice:\n\nFor duty confirmation, check-in, check-out, attendance tracking, duty completion, and payment processing, Pulso mobile app is required.\n\nTo receive and complete duties, you must install the Pulso mobile app and keep your profile active.\n\nPlease install the app using the same phone number used for WhatsApp onboarding.\n\nWithout app activation, duty allocation may be delayed or unavailable.',
   pulsoAppPreferenceNotice:
     'Important notice:\n\nFor duty confirmation, check-in, check-out, attendance tracking, duty completion, and payment processing, Pulso mobile app is required.\n\nTo receive and complete duties, you must install the Pulso mobile app and keep your profile active.\n\nPlease install the app using the same phone number used for WhatsApp onboarding.\n\nWithout app activation, duty allocation may be delayed or unavailable.',
+  pulsoDutyAcceptVideoCaption:
+    'Watch this video to see how to check duty offers and accept suitable duties in the Pulso app.',
+  pulsoAppActivationInstruction:
+    'To receive and accept duties, please install the Pulso app and log in using the same phone number used for WhatsApp onboarding.',
+  pulsoAppActivationVideoCaption:
+    'Watch this video to see how to install/login and activate your Pulso app profile.',
   pulsoAppInstallQuestion: 'Which phone do you use?',
   pulsoAppInstallRetry: 'Please select one option from below.',
   pulsoAppDeviceQuestion: 'Which phone do you use?',
