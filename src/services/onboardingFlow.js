@@ -638,14 +638,20 @@ function hasHistoryEvent(provider, predicate) {
 function hasVideoSendHistory(provider, event, mediaId) {
   return hasHistoryEvent(
     provider,
-    (entry) =>
-      (entry && entry.type === 'system' && entry.event === event) ||
-      (entry &&
+    (entry) => {
+      if (entry && entry.type === 'system' && entry.event === event) {
+        return !entry.mediaId || entry.mediaId === mediaId;
+      }
+
+      return (
+        entry &&
         entry.type === 'outbound_message' &&
         entry.payload &&
         entry.payload.kind === 'video' &&
         entry.payload.body &&
-        entry.payload.body.mediaId === mediaId)
+        entry.payload.body.mediaId === mediaId
+      );
+    }
   );
 }
 
