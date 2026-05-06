@@ -95,6 +95,15 @@ function resolveAdminMediaPath(relativePath) {
   return absolutePath;
 }
 
+function summarizeErrorForLog(error) {
+  return {
+    name: error && error.name ? error.name : 'Error',
+    message: error && error.message ? error.message : String(error),
+    status: error && error.response ? error.response.status : null,
+    response: error && error.response ? error.response.data : null
+  };
+}
+
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
@@ -193,7 +202,7 @@ app.post('/webhook', async (req, res) => {
 
     res.sendStatus(200);
   } catch (error) {
-    console.error('Webhook processing failed', error);
+    console.error('Webhook processing failed', JSON.stringify(summarizeErrorForLog(error), null, 2));
     res.sendStatus(500);
   }
 });
