@@ -204,6 +204,15 @@
               </div>
               <form id="review-form" class="review-form">
                 <input id="reviewer-input" type="text" name="reviewedBy" placeholder="Reviewer name" value="ops-team">
+                <select id="review-qualification-input" name="qualification" required>
+                  <option value="">Select qualification from certificate</option>
+                  <option value="gda">GDA</option>
+                  <option value="gnm">GNM</option>
+                  <option value="anm">ANM</option>
+                  <option value="hca">HCA</option>
+                  <option value="bsc_nursing">BSc Nursing</option>
+                  <option value="other_caregiving">Other caregiving experience</option>
+                </select>
                 <textarea id="notes-input" name="notes" placeholder="Review notes"></textarea>
                 <div class="actions">
                   <button type="button" id="approve-button" class="button approve">Approve certificate</button>

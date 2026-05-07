@@ -35,6 +35,7 @@ const {
   requestAdditionalDocumentConfirmation,
   requestRejectNoteOrConfirmation,
   requestRejectReason,
+  requestReviewQualificationSelection,
   requestReviewConfirmation
 } = require('./opsNotifications');
 const { isPreOnboardedPhone } = require('./preOnboardedService');
@@ -183,6 +184,12 @@ async function sendAndLog(phone, kind, body, sender) {
 
 function updateStatus(phone, status, currentStep, extra = {}) {
   return updateProvider(phone, { status, currentStep, ...extra });
+}
+
+function normalizeApprovedQualification(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  const validQualifications = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving'];
+  return validQualifications.includes(normalized) ? normalized : null;
 }
 
 function hasCompletedProfile(provider) {
@@ -2356,7 +2363,36 @@ async function handleReviewerMessage(phone, message) {
   }
 
   if (reviewAction.action === 'approve') {
-    await requestReviewConfirmation(provider, reviewAction.action, phone);
+    await updateProvider(
+      providerPhone,
+      buildReviewerWorkflowPatch(provider.verification && provider.verification.reviewerWorkflow, {
+        reviewerPhone: phone,
+        stage: 'awaiting_approve_qualification',
+        qualification: null
+      })
+    );
+    const refreshedProvider = await getProvider(providerPhone);
+    await requestReviewQualificationSelection(refreshedProvider, phone);
+    return;
+  }
+
+  if (reviewAction.action === 'approve_qualification') {
+    const qualification = normalizeApprovedQualification(reviewAction.qualification);
+    if (!qualification) {
+      await sendText(phone, 'Choose a valid qualification before approving.');
+      return;
+    }
+
+    await updateProvider(
+      providerPhone,
+      buildReviewerWorkflowPatch(provider.verification && provider.verification.reviewerWorkflow, {
+        reviewerPhone: phone,
+        stage: 'awaiting_approve_confirmation',
+        qualification
+      })
+    );
+    const refreshedProvider = await getProvider(providerPhone);
+    await requestReviewConfirmation(refreshedProvider, 'approve', phone, qualification);
     return;
   }
 
@@ -2396,8 +2432,24 @@ async function handleReviewerMessage(phone, message) {
       return;
     }
 
+    const workflow = provider.verification && provider.verification.reviewerWorkflow;
+    const qualification = normalizeApprovedQualification(workflow && workflow.qualification);
+    if (!qualification) {
+      await updateProvider(
+        providerPhone,
+        buildReviewerWorkflowPatch(workflow, {
+          reviewerPhone: phone,
+          stage: 'awaiting_approve_qualification',
+          qualification: null
+        })
+      );
+      const refreshedProvider = await getProvider(providerPhone);
+      await requestReviewQualificationSelection(refreshedProvider, phone);
+      return;
+    }
+
     await clearReviewerWorkflow(providerPhone);
-    await approveCertificate(providerPhone, phone, 'Approved from reviewer WhatsApp');
+    await approveCertificate(providerPhone, phone, 'Approved from reviewer WhatsApp', qualification);
     await sendText(phone, `Approved certificate for ${providerPhone}.`);
     return;
   }
@@ -2597,17 +2649,28 @@ async function processIncomingMessage(phone, message) {
   });
 }
 
-async function approveCertificate(phone, reviewedBy, notes) {
+async function approveCertificate(phone, reviewedBy, notes, qualification) {
   const provider = await getProvider(phone);
   if (!provider) {
     throw new Error('Provider not found');
   }
 
+  const approvedQualification = normalizeApprovedQualification(qualification);
+  if (!approvedQualification) {
+    throw new Error('Approved qualification is required');
+  }
+
   return runWithProviderFlow(provider, async () => {
+  const reviewedAt = new Date().toISOString();
+  const reviewer = reviewedBy || config.adminDefaultReviewer;
+  const qualificationBeforeReview = provider.qualification || null;
+  const candidateSelectedQualification = provider.candidateSelectedQualification || qualificationBeforeReview;
   await updateProvider(phone, {
+    candidateSelectedQualification,
+    qualification: approvedQualification,
     status: STATUS.AWAITING_TERMS_ACCEPTANCE,
     currentStep: 14,
-    termsSentAt: new Date().toISOString(),
+    termsSentAt: reviewedAt,
     termsReminderSentAt: null,
     termsReminderCount: 0,
     termsReminderKind: null,

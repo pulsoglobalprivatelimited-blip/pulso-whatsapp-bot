@@ -455,6 +455,7 @@ dd {
 }
 
 .review-form input,
+.review-form select,
 .review-form textarea {
   width: 100%;
   border: 1px solid var(--line);

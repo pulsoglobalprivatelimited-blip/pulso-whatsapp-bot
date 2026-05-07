@@ -9,6 +9,7 @@ const {
 
 const REVIEW_ACTIONS = {
   APPROVE: 'review_approve_',
+  APPROVE_QUALIFICATION: 'review_approve_qualification_',
   REJECT: 'review_reject_',
   REQUEST_ADDITIONAL_DOCUMENT: 'review_request_additional_document_',
   REASON_REUPLOAD: 'review_reason_reupload_',
@@ -23,6 +24,8 @@ const REVIEW_ACTIONS = {
   CONFIRM_APPROVE: 'review_confirm_approve_',
   CANCEL: 'review_cancel_'
 };
+
+const APPROVABLE_QUALIFICATIONS = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving'];
 
 function normalizePhone(value) {
   return String(value || '').replace(/\D/g, '');
@@ -121,6 +124,28 @@ function buildConfirmationButtons(providerPhone, action) {
     { id: `${REVIEW_ACTIONS.CONFIRM_REJECT}${providerPhone}`, title: 'Confirm reject' },
     { id: `${REVIEW_ACTIONS.CANCEL}${providerPhone}`, title: 'Cancel' }
   ];
+}
+
+function normalizeQualification(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return APPROVABLE_QUALIFICATIONS.includes(normalized) ? normalized : null;
+}
+
+function formatQualification(value) {
+  if (value === 'gda') return 'GDA';
+  if (value === 'gnm') return 'GNM';
+  if (value === 'anm') return 'ANM';
+  if (value === 'hca') return 'HCA';
+  if (value === 'bsc_nursing') return 'BSc Nursing';
+  if (value === 'other_caregiving') return 'Other caregiving';
+  return value ? formatStatus(value) : '-';
+}
+
+function buildApproveQualificationRows(providerPhone) {
+  return APPROVABLE_QUALIFICATIONS.map((qualification) => ({
+    id: `${REVIEW_ACTIONS.APPROVE_QUALIFICATION}${qualification}_${providerPhone}`,
+    title: formatQualification(qualification)
+  }));
 }
 
 function buildRejectReasonButtons(providerPhone) {
@@ -451,7 +476,44 @@ async function notifyAgentHelpRequested(provider) {
   return null;
 }
 
-async function requestReviewConfirmation(provider, action, reviewerPhone) {
+async function requestReviewQualificationSelection(provider, reviewerPhone) {
+  const to = getReviewerDestination(reviewerPhone);
+  if (!to || !provider || !provider.phone) {
+    return null;
+  }
+
+  const body = joinLines([
+    'Select the qualification shown on the certificate.',
+    provider.qualification ? `Candidate selected: ${formatQualification(provider.qualification)}` : null,
+    ...formatProviderSummary(provider)
+  ]);
+
+  try {
+    return await sendList(to, body, 'Select qualification', [
+      {
+        title: 'Approved qualification',
+        rows: buildApproveQualificationRows(provider.phone)
+      }
+    ]);
+  } catch (error) {
+    console.error(
+      '[OPS_APPROVE_QUALIFICATION_ERROR]',
+      JSON.stringify(
+        {
+          to,
+          providerPhone: provider.phone,
+          message: error.message,
+          response: error.response ? error.response.data : null
+        },
+        null,
+        2
+      )
+    );
+    return null;
+  }
+}
+
+async function requestReviewConfirmation(provider, action, reviewerPhone, qualification) {
   const to = getReviewerDestination(reviewerPhone);
   if (!to || !provider || !provider.phone) {
     return null;
@@ -460,6 +522,7 @@ async function requestReviewConfirmation(provider, action, reviewerPhone) {
   const actionLabel = action === 'approve' ? 'approve' : 'reject';
   const body = joinLines([
     `Please confirm: ${actionLabel} certificate?`,
+    action === 'approve' && qualification ? `Approved qualification: ${formatQualification(qualification)}` : null,
     ...formatProviderSummary(provider)
   ]);
 
@@ -683,6 +746,19 @@ function parseReviewerAction(message) {
     message.interactive.list_reply.id;
   const interactiveReplyId = replyId || listReplyId;
 
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.APPROVE_QUALIFICATION)) {
+    const value = interactiveReplyId.slice(REVIEW_ACTIONS.APPROVE_QUALIFICATION.length);
+    const qualification = APPROVABLE_QUALIFICATIONS.find((item) => value.startsWith(`${item}_`));
+
+    if (qualification) {
+      return {
+        action: 'approve_qualification',
+        qualification,
+        phone: value.slice(qualification.length + 1)
+      };
+    }
+  }
+
   if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.APPROVE)) {
     return {
       action: 'approve',
@@ -816,5 +892,6 @@ module.exports = {
   requestAdditionalDocumentConfirmation,
   requestRejectNoteOrConfirmation,
   requestRejectReason,
+  requestReviewQualificationSelection,
   requestReviewConfirmation
 };

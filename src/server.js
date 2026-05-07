@@ -280,7 +280,12 @@ app.get('/admin/providers/:phone', async (req, res) => {
 
 app.post('/admin/providers/:phone/approve-certificate', async (req, res) => {
   try {
-    const provider = await approveCertificate(req.params.phone, req.body.reviewedBy, req.body.notes);
+    const provider = await approveCertificate(
+      req.params.phone,
+      req.body.reviewedBy,
+      req.body.notes,
+      req.body.qualification
+    );
     res.json(provider);
   } catch (error) {
     res.status(400).json({ error: error.message });

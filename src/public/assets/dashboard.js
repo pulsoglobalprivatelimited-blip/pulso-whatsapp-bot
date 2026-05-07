@@ -560,6 +560,40 @@ function formatDutyHourPreference(value) {
   return value || '-';
 }
 
+function normalizeQualification(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  const validQualifications = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving'];
+  return validQualifications.includes(normalized) ? normalized : '';
+}
+
+function formatQualification(value) {
+  if (value === 'gda') return 'GDA';
+  if (value === 'gnm') return 'GNM';
+  if (value === 'anm') return 'ANM';
+  if (value === 'hca') return 'HCA';
+  if (value === 'bsc_nursing') return 'BSc Nursing';
+  if (value === 'other_caregiving') return 'Other caregiving';
+  return value ? formatStatus(value) : '-';
+}
+
+function formatQualificationReview(provider) {
+  const approvedQualification =
+    (provider.verification && provider.verification.qualificationApproved) ||
+    provider.qualification;
+  const candidateQualification = provider.candidateSelectedQualification ||
+    (provider.verification && provider.verification.qualificationBeforeReview);
+
+  if (
+    candidateQualification &&
+    approvedQualification &&
+    candidateQualification !== approvedQualification
+  ) {
+    return `${formatQualification(approvedQualification)} (candidate selected ${formatQualification(candidateQualification)})`;
+  }
+
+  return formatQualification(approvedQualification);
+}
+
 function formatExpectedDuties(value) {
   if (value === true) return 'Accepted';
   if (value === false) return 'Declined';
@@ -1057,6 +1091,9 @@ function describeSystemEvent(entry) {
   if (event === 'provider_created') return 'Conversation started';
   if (event === 'verification_queue_created') return 'Certificate sent for manual verification';
   if (event === 'certificate_verified') return 'Certificate approved by reviewer';
+  if (event === 'qualification_corrected_during_certificate_review') {
+    return `Qualification corrected during certificate review: ${formatQualification(entry.previousQualification)} to ${formatQualification(entry.approvedQualification)}`;
+  }
   if (event === 'certificate_rejected') return 'Certificate rejected by reviewer';
   if (event === 'additional_document_requested') return 'Additional document requested from provider';
   if (event === 'additional_document_received') return 'Requested additional document uploaded';
@@ -1150,7 +1187,7 @@ function renderDetail(provider) {
   setText('detail-name', provider.fullName);
   setText('detail-region', formatRegionLabel(getProviderRegion(provider)));
   setText('detail-language', provider.language || (getProviderRegion(provider) === 'karnataka' ? 'en' : 'ml'));
-  setText('detail-qualification', provider.qualification);
+  setText('detail-qualification', formatQualificationReview(provider));
   setText('detail-interest', provider.interestConfirmed ? 'Yes' : 'No');
   setText('detail-duty-hour', formatDutyHourPreference(provider.dutyHourPreference));
   setText('detail-expected-duties', formatExpectedDuties(provider.expectedDutiesAccepted));
@@ -1170,6 +1207,9 @@ function renderDetail(provider) {
   renderAttachments('detail-additional-document-files', provider.documents.additionalDocumentAttachments);
 
   document.getElementById('reviewer-input').value = provider.verification.reviewedBy || 'ops-team';
+  document.getElementById('review-qualification-input').value = normalizeQualification(
+    (provider.verification && provider.verification.qualificationApproved) || provider.qualification
+  );
   document.getElementById('notes-input').value = provider.verification.notes || '';
   document.getElementById('additional-reviewer-input').value = provider.verification.reviewedBy || 'ops-team';
   document.getElementById('additional-note-input').value =
@@ -1188,12 +1228,17 @@ async function submitReview(action) {
 
   const reviewedBy = document.getElementById('reviewer-input').value || 'ops-team';
   const notes = document.getElementById('notes-input').value || '';
+  const qualification = document.getElementById('review-qualification-input').value || '';
+  if (action === 'approve-certificate' && !qualification) {
+    alert('Select the qualification shown on the certificate before approving.');
+    return;
+  }
 
   try {
     const provider = await fetchJson(`/admin/providers/${selectedPhone}/${action}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reviewedBy, notes })
+      body: JSON.stringify({ reviewedBy, notes, qualification })
     });
 
     const index = providers.findIndex((item) => item.phone === provider.phone);
