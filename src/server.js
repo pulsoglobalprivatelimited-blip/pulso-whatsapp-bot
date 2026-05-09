@@ -19,6 +19,16 @@ const { inferProviderRegion, normalizeRegion } = require('./services/regionServi
 const { initializeStorage } = require('./services/storage');
 const { notifyCertificateUploaded } = require('./services/opsNotifications');
 const {
+  buildWelcomeTwiml,
+  buildMenuTwiml,
+  buildInvalidTwiml,
+  buildDialStaffTwiml,
+  buildJobTwiml,
+  resolveLanguage,
+  resolveMenuAction,
+  sendJobWhatsapp
+} = require('./services/twilioIvrService');
+const {
   requireAdminAuth,
   setSessionCookie,
   clearSessionCookie,
@@ -104,17 +114,120 @@ function summarizeErrorForLog(error) {
   };
 }
 
+function sendTwiml(res, body) {
+  res.type('text/xml');
+  res.send(body);
+}
+
+function getIvrCallerPhone(req) {
+  const source = { ...req.query, ...req.body };
+  return (
+    source.From ||
+    source.from ||
+    source.Caller ||
+    source.caller ||
+    source.caller_id ||
+    source.callerId ||
+    source.CallFrom ||
+    source.phone ||
+    source.mobile ||
+    (source.recipient && source.recipient.phone) ||
+    (source.customer && source.customer.phone) ||
+    ''
+  );
+}
+
+function verifyIvrSecret(req, res) {
+  if (!config.ivrWebhookSecret) {
+    return true;
+  }
+
+  const providedSecret =
+    req.get('x-ivr-secret') || req.body.secret || req.query.secret || '';
+
+  if (providedSecret === config.ivrWebhookSecret) {
+    return true;
+  }
+
+  res.status(401).json({ error: 'Unauthorized' });
+  return false;
+}
+
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
     dryRun: config.dryRun,
     webhookUrl: `${config.baseUrl}/webhook`,
+    ivrUrl: `${config.baseUrl}/ivr/welcome`,
     firestoreConfigured: Boolean(
       config.googleApplicationCredentials ||
         (config.firebaseProjectId && config.firebaseClientEmail && config.firebasePrivateKey)
     ),
     whatsappConfigured: Boolean(config.whatsappToken && config.phoneNumberId)
   });
+});
+
+app.all('/ivr/welcome', (_req, res) => {
+  sendTwiml(res, buildWelcomeTwiml());
+});
+
+app.all('/ivr/language', (req, res) => {
+  const language = resolveLanguage(req.body.Digits || req.query.Digits);
+  if (!language) {
+    return sendTwiml(res, buildInvalidTwiml('en'));
+  }
+
+  return sendTwiml(res, buildMenuTwiml(language));
+});
+
+app.all('/ivr/menu', async (req, res) => {
+  const language = req.query.lang === 'ml' ? 'ml' : 'en';
+  const action = resolveMenuAction(req.body.Digits || req.query.Digits);
+
+  if (action === 'staff') {
+    return sendTwiml(res, buildDialStaffTwiml(language));
+  }
+
+  if (action === 'job') {
+    try {
+      await sendJobWhatsapp(getIvrCallerPhone(req), language);
+    } catch (error) {
+      console.error('[IVR_WHATSAPP_FAILED]', JSON.stringify(summarizeErrorForLog(error), null, 2));
+    }
+    return sendTwiml(res, buildJobTwiml(language));
+  }
+
+  return sendTwiml(res, buildInvalidTwiml(language));
+});
+
+app.all('/ivr/job-whatsapp', async (req, res) => {
+  if (!verifyIvrSecret(req, res)) {
+    return;
+  }
+
+  const language = req.body.lang || req.query.lang || req.body.language || req.query.language;
+  const normalizedLanguage = language === 'ml' || language === '2' ? 'ml' : 'en';
+  const phone = getIvrCallerPhone(req);
+
+  if (!phone) {
+    return res.status(400).json({
+      ok: false,
+      error: 'Missing caller phone number. Send phone, mobile, from, From, caller, caller_id, or recipient.phone.'
+    });
+  }
+
+  try {
+    const result = await sendJobWhatsapp(phone, normalizedLanguage);
+    return res.json({
+      ok: true,
+      phone,
+      language: normalizedLanguage,
+      result
+    });
+  } catch (error) {
+    console.error('[IVR_JOB_WHATSAPP_FAILED]', JSON.stringify(summarizeErrorForLog(error), null, 2));
+    return res.status(500).json({ ok: false, error: error.message });
+  }
 });
 
 app.get('/privacy', (_req, res) => {

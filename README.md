@@ -137,6 +137,45 @@ http://localhost:3000/admin/login
 
 The dashboard uses a signed, http-only session cookie.
 
+## Twilio IVR
+
+The app exposes a Twilio Voice webhook at:
+
+```bash
+https://your-domain.com/ivr/welcome
+```
+
+Configure these environment variables:
+
+```bash
+IVR_STAFF_PHONE=919446600809
+IVR_RECRUITMENT_WHATSAPP_NUMBER=919633108778
+IVR_WEBHOOK_SECRET=long-random-secret
+IVR_JOB_WHATSAPP_TEMPLATE_NAME_EN=pulso_job_enquiry_en
+IVR_JOB_WHATSAPP_TEMPLATE_NAME_ML=pulso_job_enquiry_ml
+IVR_JOB_WHATSAPP_TEMPLATE_LANGUAGE_EN=en
+IVR_JOB_WHATSAPP_TEMPLATE_LANGUAGE_ML=ml
+```
+
+Then point the Twilio voice number to the IVR:
+
+```bash
+twilio phone-numbers:update +918714105666 \
+  --voice-url=https://your-domain.com/ivr/welcome \
+  --voice-method=POST
+```
+
+For providers that do not use TwiML, configure the `press 2` callback to call:
+
+```bash
+curl -X POST https://your-domain.com/ivr/job-whatsapp \
+  -H 'Content-Type: application/json' \
+  -H 'x-ivr-secret: long-random-secret' \
+  -d '{"phone":"919999999999","lang":"en"}'
+```
+
+The press-2 WhatsApp handoff uses the existing Meta WhatsApp Cloud API credentials. For production messages started from a call, use approved Meta WhatsApp templates.
+
 ## Media archival
 
 When a provider uploads a CV or certificate, the app now:
