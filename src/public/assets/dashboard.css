@@ -403,6 +403,13 @@ h1 {
   color: var(--text);
   text-decoration: none;
   font-weight: 600;
+  font: inherit;
+  cursor: pointer;
+}
+
+.attachment-action:disabled {
+  cursor: progress;
+  opacity: 0.7;
 }
 
 .attachment-card p,

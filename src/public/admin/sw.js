@@ -1,9 +1,11 @@
-const CACHE_NAME = 'pulso-admin-v7';
+const CACHE_NAME = 'pulso-admin-v8';
 const STATIC_ASSETS = [
   '/admin/login',
+  '/admin/provider-support',
   '/admin/manifest.webmanifest',
-  '/admin/assets/dashboard.css?v=20260503a',
+  '/admin/assets/dashboard.css?v=20260510b',
   '/admin/assets/admin-pwa.js?v=20260419c',
+  '/admin/assets/provider-support-dashboard.js?v=20260510a',
   '/admin/assets/pwa/icon.svg',
   '/admin/assets/pwa/icon-maskable.svg'
 ];
@@ -58,6 +60,7 @@ self.addEventListener('fetch', (event) => {
     (requestUrl.pathname === '/admin' ||
       requestUrl.pathname === '/admin/kerala' ||
       requestUrl.pathname === '/admin/karnataka' ||
+      requestUrl.pathname === '/admin/provider-support' ||
       requestUrl.pathname === '/admin/login')
   ) {
     event.respondWith(

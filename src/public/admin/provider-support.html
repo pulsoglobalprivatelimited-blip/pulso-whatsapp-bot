@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pulso Provider Support Dashboard</title>
+  <meta name="theme-color" content="#b75d32">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Pulso Support">
+  <link rel="manifest" href="/admin/manifest.webmanifest">
+  <link rel="icon" href="/admin/assets/pwa/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260510b">
+</head>
+<body>
+  <main class="layout">
+    <section class="hero">
+      <p class="eyebrow">Pulso Provider Support</p>
+      <h1>Support Chat Monitor</h1>
+      <p class="subtitle">Watch conversations from +91 77361 29809, understand where providers are getting stuck, and reset a support session when testing is needed.</p>
+      <div class="hero-meta">
+        <button class="metric metric-button" id="total-metric" type="button">
+          <span id="total-count">0</span>
+          <label>Total conversations</label>
+        </button>
+        <button class="metric metric-button" id="updated-today-metric" type="button">
+          <span id="updated-today-count">0</span>
+          <label>Active today</label>
+        </button>
+        <button class="metric metric-button" id="kerala-metric" type="button">
+          <span id="kerala-count">0</span>
+          <label>Kerala sessions</label>
+        </button>
+        <button class="metric metric-button" id="needs-choice-metric" type="button">
+          <span id="needs-choice-count">0</span>
+          <label>Waiting for selection</label>
+        </button>
+      </div>
+    </section>
+
+    <section class="board">
+      <div class="board-header">
+        <div>
+          <p class="eyebrow">Queue</p>
+          <h2>Provider support sessions</h2>
+        </div>
+        <div class="actions">
+          <a class="button secondary" href="/admin">Joining bot dashboard</a>
+          <button id="refresh-button" class="button secondary" type="button">Refresh</button>
+          <form action="/admin/logout" method="post">
+            <button class="button secondary" type="submit">Log out</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="filters">
+        <button class="filter active" data-status-filter="all">All</button>
+        <button class="filter" data-status-filter="awaiting_region">Region pending</button>
+        <button class="filter" data-status-filter="main_menu">Main menu</button>
+        <button class="filter" data-status-filter="awaiting_duty_type">Duty type</button>
+        <button class="filter" data-status-filter="awaiting_app_issue">App issue</button>
+      </div>
+
+      <div class="filters">
+        <button class="filter active" data-region-filter="all">All regions</button>
+        <button class="filter" data-region-filter="kerala">Kerala</button>
+        <button class="filter" data-region-filter="karnataka">Karnataka</button>
+        <button class="filter" data-region-filter="other">Other</button>
+      </div>
+
+      <div class="search-row">
+        <label class="search-field" for="session-search">
+          <span>Phone, region, or intent search</span>
+          <input id="session-search" type="search" placeholder="Search support sessions">
+        </label>
+        <button id="clear-search-button" class="button secondary" type="button">Clear</button>
+      </div>
+
+      <div class="content" id="support-content">
+        <aside id="list-panel" class="list-panel">
+          <div id="session-list" class="provider-list"></div>
+        </aside>
+
+        <section id="detail-panel" class="detail-panel">
+          <div id="session-detail" class="detail hidden">
+            <div class="mobile-detail-bar">
+              <button id="back-to-list-button" class="button secondary" type="button">Back to list</button>
+            </div>
+
+            <div class="detail-header">
+              <div>
+                <p id="detail-phone" class="detail-phone"></p>
+                <h3 id="detail-status"></h3>
+              </div>
+              <span id="detail-step" class="pill"></span>
+            </div>
+
+            <article class="card history-card">
+              <div class="history-card-head">
+                <h4>Chat history</h4>
+                <button id="history-bottom-button" class="button secondary" type="button">Jump to bottom</button>
+              </div>
+              <div id="history-list" class="history-list"></div>
+            </article>
+
+            <div class="detail-grid">
+              <article class="card">
+                <h4>Session</h4>
+                <dl>
+                  <div><dt>Region</dt><dd id="detail-region">-</dd></div>
+                  <div><dt>Language</dt><dd id="detail-language">-</dd></div>
+                  <div><dt>Last intent</dt><dd id="detail-intent">-</dd></div>
+                  <div><dt>Duty type</dt><dd id="detail-duty-type">-</dd></div>
+                  <div><dt>Created</dt><dd id="detail-created">-</dd></div>
+                  <div><dt>Updated</dt><dd id="detail-updated">-</dd></div>
+                </dl>
+              </article>
+
+              <article class="card">
+                <h4>Actions</h4>
+                <p class="attachment-empty">Use reset only when testing or when a provider is stuck in the wrong branch. Their next message will start from region selection.</p>
+                <div class="attachment-actions">
+                  <a id="open-whatsapp-link" class="attachment-action" href="#" target="_blank" rel="noreferrer">Open WhatsApp</a>
+                  <button id="reset-session-button" class="attachment-action" type="button">Reset session</button>
+                </div>
+                <p id="action-status" class="form-status" aria-live="polite"></p>
+              </article>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="/admin/assets/provider-support-dashboard.js?v=20260510a"></script>
+  <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
+</body>
+</html>

@@ -15,6 +15,11 @@ const {
   startTermsReminderScheduler
 } = require('./services/onboardingFlow');
 const { processProviderSupportMessage } = require('./services/providerSupportFlow');
+const {
+  getProviderSupportSessionDetail,
+  listProviderSupportSessions,
+  resetProviderSupportSession
+} = require('./services/providerSupportAdminService');
 const { listProviders, getProvider, updateProvider } = require('./services/providerService');
 const { inferProviderRegion, normalizeRegion } = require('./services/regionService');
 const { initializeStorage } = require('./services/storage');
@@ -392,6 +397,40 @@ app.get('/admin/kerala', (_req, res) => {
 
 app.get('/admin/karnataka', (_req, res) => {
   res.sendFile(path.join(config.publicDir, 'admin', 'index.html'));
+});
+
+app.get('/admin/provider-support', (_req, res) => {
+  res.sendFile(path.join(config.publicDir, 'admin', 'provider-support.html'));
+});
+
+app.get('/admin/provider-support/sessions', async (_req, res) => {
+  try {
+    const sessions = await listProviderSupportSessions();
+    res.json({ sessions });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/admin/provider-support/sessions/:phone', async (req, res) => {
+  try {
+    const session = await getProviderSupportSessionDetail(req.params.phone);
+    if (!session) {
+      return res.status(404).json({ error: 'Provider support session not found' });
+    }
+    return res.json(session);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/admin/provider-support/sessions/:phone/reset', async (req, res) => {
+  try {
+    const result = await resetProviderSupportSession(req.params.phone);
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
 app.get('/admin/media/*', (req, res) => {
