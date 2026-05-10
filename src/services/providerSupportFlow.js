@@ -225,7 +225,12 @@ function parseAppIssue(message) {
 
 function shouldStartOver(message) {
   const text = normalizeText(getMessageText(message));
-  return ['hi', 'hello', 'start', 'restart', 'ഹായ്', 'നമസ്കാരം'].includes(text);
+  return ['start', 'restart', 'change region', 'region'].includes(text);
+}
+
+function shouldGreet(message) {
+  const text = normalizeText(getMessageText(message));
+  return ['hi', 'hello', 'ഹായ്', 'നമസ്കാരം'].includes(text);
 }
 
 function shouldShowMainMenu(message) {
@@ -506,6 +511,11 @@ async function processProviderSupportMessage(phone, message) {
   }
 
   const language = getSessionLanguage(session);
+
+  if (shouldGreet(message) && session.region && session.status !== SUPPORT_STATUS.AWAITING_REGION) {
+    await sendMainMenu(phone, language);
+    return;
+  }
 
   if (shouldShowMainMenu(message)) {
     await sendMainMenu(phone, language);
