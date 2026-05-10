@@ -89,7 +89,28 @@ async function sendAndLog(phone, kind, body) {
   });
 }
 
-function appLinksMessage() {
+function getSessionLanguage(session = {}) {
+  if (session.language) return session.language;
+  return session.region === 'kerala' ? 'ml' : 'en';
+}
+
+function isMalayalam(language) {
+  return language === 'ml';
+}
+
+function appLinksMessage(language = 'en') {
+  if (isMalayalam(language)) {
+    return [
+      'Pulso app download links',
+      '',
+      'Android users:',
+      config.providerSupportAndroidAppUrl,
+      '',
+      'iPhone users:',
+      config.providerSupportIosAppUrl
+    ].join('\n');
+  }
+
   return [
     'Pulso Mobile App Download Links',
     '',
@@ -101,22 +122,29 @@ function appLinksMessage() {
   ].join('\n');
 }
 
-function supportPhoneMessage(prefix) {
+function supportPhoneMessage(prefix, language = 'en') {
+  const timeLines = isMalayalam(language)
+    ? ['Available time:', 'രാവിലെ 10:00 മുതൽ വൈകുന്നേരം 5:00 വരെ']
+    : ['Available time:', '10:00 AM to 5:00 PM'];
+
   return [
     prefix,
     '',
     config.providerSupportPhone,
     '',
-    'Available time:',
-    '10:00 AM to 5:00 PM'
+    ...timeLines
   ].join('\n');
 }
 
-function supportPhoneAndAgentMessage(prefix) {
+function supportPhoneAndAgentMessage(prefix, language = 'en') {
+  const agentLine = isMalayalam(language)
+    ? 'Customer care agent-നോട് WhatsApp chat ചെയ്യാം:'
+    : 'You can also chat with our customer care agent here:';
+
   return [
-    supportPhoneMessage(prefix),
+    supportPhoneMessage(prefix, language),
     '',
-    'You can also chat with our customer care agent here:',
+    agentLine,
     config.providerSupportCustomerCareWhatsappUrl
   ].join('\n');
 }
@@ -197,7 +225,7 @@ function parseAppIssue(message) {
 
 function shouldStartOver(message) {
   const text = normalizeText(getMessageText(message));
-  return ['hi', 'hello', 'start', 'restart'].includes(text);
+  return ['hi', 'hello', 'start', 'restart', 'ഹായ്', 'നമസ്കാരം'].includes(text);
 }
 
 function shouldShowMainMenu(message) {
@@ -205,7 +233,7 @@ function shouldShowMainMenu(message) {
   if (replyId === SUPPORT_BUTTON_IDS.BACK_MAIN) return true;
 
   const text = normalizeText(getMessageText(message));
-  return ['menu', 'main menu'].includes(text);
+  return ['menu', 'main menu', 'മെനു', 'മെയിൻ മെനു'].includes(text);
 }
 
 async function sendRegionPrompt(phone) {
@@ -220,11 +248,13 @@ async function sendRegionPrompt(phone) {
   });
 }
 
-async function sendMainMenu(phone) {
+async function sendMainMenu(phone, language = 'en') {
   await updateSession(phone, { status: SUPPORT_STATUS.MAIN_MENU });
   await sendAndLog(phone, 'list', {
-    body: 'Please choose an option:',
-    buttonText: 'Choose option',
+    body: isMalayalam(language)
+      ? 'ദയവായി ഒരു option തിരഞ്ഞെടുക്കുക:'
+      : 'Please choose an option:',
+    buttonText: isMalayalam(language) ? 'Option' : 'Choose option',
     sections: [
       {
         title: 'Provider Support',
@@ -241,10 +271,12 @@ async function sendMainMenu(phone) {
   });
 }
 
-async function sendDutyTypePrompt(phone) {
+async function sendDutyTypePrompt(phone, language = 'en') {
   await updateSession(phone, { status: SUPPORT_STATUS.AWAITING_DUTY_TYPE });
   await sendAndLog(phone, 'buttons', {
-    body: 'Which duty type are you looking for?',
+    body: isMalayalam(language)
+      ? 'താങ്കൾക്ക് ഏത് duty ആണ് വേണ്ടത്?'
+      : 'Which duty type are you looking for?',
     buttons: [
       { id: SUPPORT_BUTTON_IDS.DUTY_8H, title: '8-hour duty' },
       { id: SUPPORT_BUTTON_IDS.DUTY_24H, title: '24-hour duty' },
@@ -253,11 +285,13 @@ async function sendDutyTypePrompt(phone) {
   });
 }
 
-async function sendAppIssuePrompt(phone) {
+async function sendAppIssuePrompt(phone, language = 'en') {
   await updateSession(phone, { status: SUPPORT_STATUS.AWAITING_APP_ISSUE });
   await sendAndLog(phone, 'list', {
-    body: 'Please choose the issue:',
-    buttonText: 'Choose issue',
+    body: isMalayalam(language)
+      ? 'ദയവായി issue തിരഞ്ഞെടുക്കുക:'
+      : 'Please choose the issue:',
+    buttonText: isMalayalam(language) ? 'Issue' : 'Choose issue',
     sections: [
       {
         title: 'Pulso App Help',
@@ -272,67 +306,104 @@ async function sendAppIssuePrompt(phone) {
   });
 }
 
-async function sendJoinPulso(phone) {
+async function sendJoinPulso(phone, language = 'en') {
+  const lines = isMalayalam(language)
+    ? [
+        'Pulso-യിൽ Caregiver / Nursing Staff ആയി join ചെയ്യാൻ താഴെയുള്ള registration chatbot ഉപയോഗിക്കുക:',
+        '',
+        config.providerSupportJoiningChatbotUrl,
+        '',
+        'ദയവായി registration അവിടെ complete ചെയ്യുക.'
+      ]
+    : [
+        'To join Pulso as a Caregiver / Nursing Staff, please use our registration chatbot:',
+        '',
+        config.providerSupportJoiningChatbotUrl,
+        '',
+        'Please complete your registration there.'
+      ];
+
   await sendAndLog(
     phone,
     'text',
-    [
-      'To join Pulso as a Caregiver / Nursing Staff, please use our registration chatbot:',
-      '',
-      config.providerSupportJoiningChatbotUrl,
-      '',
-      'Please complete your registration there.'
-    ].join('\n')
+    lines.join('\n')
   );
 }
 
-async function sendDutyAvailability(phone, dutyType) {
+async function sendDutyAvailability(phone, dutyType, language = 'en') {
   await updateSession(phone, {
     status: SUPPORT_STATUS.MAIN_MENU,
     lastDutyType: dutyType
   });
+
+  const lines = isMalayalam(language)
+    ? [
+        'പുതിയ duties Pulso app-ൽ ആണ് ലഭിക്കുന്നത്.',
+        '',
+        'ദയവായി Pulso app തുറന്ന് Offer Inbox check ചെയ്യുക.',
+        '',
+        appLinksMessage(language)
+      ]
+    : [
+        'New duties are shared in the Pulso app.',
+        '',
+        'Please open the Pulso app and check your Offer Inbox.',
+        '',
+        appLinksMessage(language)
+      ];
+
   await sendAndLog(
     phone,
     'text',
-    [
-      'New duties are shared in the Pulso app.',
-      '',
-      'Please open the Pulso app and check your Offer Inbox.',
-      '',
-      appLinksMessage()
-    ].join('\n')
+    lines.join('\n')
   );
 }
 
-async function handleMainMenu(phone, message) {
+async function handleMainMenu(phone, message, session = {}) {
+  const language = getSessionLanguage(session);
   const selected = parseMainMenuSelection(message);
   if (!selected) {
-    await sendAndLog(phone, 'text', 'Sorry, I could not understand that. Please choose an option from the menu.');
-    await sendMainMenu(phone);
+    await sendAndLog(
+      phone,
+      'text',
+      isMalayalam(language)
+        ? 'ക്ഷമിക്കണം, മനസ്സിലായില്ല.\n\nദയവായി menu-യിൽ നിന്ന് ഒരു option തിരഞ്ഞെടുക്കുക.'
+        : 'Sorry, I could not understand that. Please choose an option from the menu.'
+    );
+    await sendMainMenu(phone, language);
     return;
   }
 
   await updateSession(phone, { lastIntent: selected });
 
   if (selected === 'join') {
-    await sendJoinPulso(phone);
-    await sendMainMenu(phone);
+    await sendJoinPulso(phone, language);
+    await sendMainMenu(phone, language);
     return;
   }
 
   if (selected === 'duty_availability') {
-    await sendDutyTypePrompt(phone);
+    await sendDutyTypePrompt(phone, language);
     return;
   }
 
   if (selected === 'payment') {
-    await sendAndLog(phone, 'text', supportPhoneMessage('For payment related help, please contact Pulso support:'));
-    await sendMainMenu(phone);
+    await sendAndLog(
+      phone,
+      'text',
+      supportPhoneMessage(
+        isMalayalam(language)
+          ? 'Payment related help-നായി Pulso support-നെ വിളിക്കുക:'
+          : 'For payment related help, please contact Pulso support:',
+        language
+      )
+    );
+    await sendMainMenu(phone, language);
     return;
   }
 
   if (selected === 'app_issue') {
-    await sendAppIssuePrompt(phone);
+    await sendAppIssuePrompt(phone, language);
     return;
   }
 
@@ -340,23 +411,42 @@ async function handleMainMenu(phone, message) {
     await sendAndLog(
       phone,
       'text',
-      supportPhoneAndAgentMessage('For duty issue or family issue, please contact Pulso support:')
+      supportPhoneAndAgentMessage(
+        isMalayalam(language)
+          ? 'Duty issue അല്ലെങ്കിൽ family issue ഉണ്ടെങ്കിൽ Pulso support-നെ വിളിക്കുക:'
+          : 'For duty issue or family issue, please contact Pulso support:',
+        language
+      )
     );
-    await sendMainMenu(phone);
+    await sendMainMenu(phone, language);
     return;
   }
 
   if (selected === 'talk_support') {
-    await sendAndLog(phone, 'text', supportPhoneMessage('Please contact Pulso support:'));
-    await sendMainMenu(phone);
+    await sendAndLog(
+      phone,
+      'text',
+      supportPhoneMessage(
+        isMalayalam(language) ? 'Pulso support-നെ വിളിക്കുക:' : 'Please contact Pulso support:',
+        language
+      )
+    );
+    await sendMainMenu(phone, language);
   }
 }
 
-async function handleAppIssue(phone, message) {
+async function handleAppIssue(phone, message, session = {}) {
+  const language = getSessionLanguage(session);
   const selected = parseAppIssue(message);
   if (!selected) {
-    await sendAndLog(phone, 'text', 'Sorry, I could not understand that. Please choose an issue from the menu.');
-    await sendAppIssuePrompt(phone);
+    await sendAndLog(
+      phone,
+      'text',
+      isMalayalam(language)
+        ? 'ക്ഷമിക്കണം, മനസ്സിലായില്ല.\n\nദയവായി issue menu-യിൽ നിന്ന് തിരഞ്ഞെടുക്കുക.'
+        : 'Sorry, I could not understand that. Please choose an issue from the menu.'
+    );
+    await sendAppIssuePrompt(phone, language);
     return;
   }
 
@@ -366,27 +456,36 @@ async function handleAppIssue(phone, message) {
   });
 
   if (selected === 'download') {
-    await sendAndLog(phone, 'text', appLinksMessage());
-    await sendMainMenu(phone);
+    await sendAndLog(phone, 'text', appLinksMessage(language));
+    await sendMainMenu(phone, language);
     return;
   }
 
   if (selected === 'agent') {
+    const lines = isMalayalam(language)
+      ? ['Customer care agent-നോട് WhatsApp chat ചെയ്യാം:', config.providerSupportCustomerCareWhatsappUrl]
+      : ['You can chat with our customer care agent here:', config.providerSupportCustomerCareWhatsappUrl];
+
     await sendAndLog(
       phone,
       'text',
-      ['You can chat with our customer care agent here:', config.providerSupportCustomerCareWhatsappUrl].join('\n')
+      lines.join('\n')
     );
-    await sendMainMenu(phone);
+    await sendMainMenu(phone, language);
     return;
   }
 
   await sendAndLog(
     phone,
     'text',
-    supportPhoneAndAgentMessage('For Pulso App / Login / OTP issue, please contact Pulso support:')
+    supportPhoneAndAgentMessage(
+      isMalayalam(language)
+        ? 'Pulso App / Login / OTP issue-നായി Pulso support-നെ വിളിക്കുക:'
+        : 'For Pulso App / Login / OTP issue, please contact Pulso support:',
+      language
+    )
   );
-  await sendMainMenu(phone);
+  await sendMainMenu(phone, language);
 }
 
 async function processProviderSupportMessage(phone, message) {
@@ -406,8 +505,10 @@ async function processProviderSupportMessage(phone, message) {
     return;
   }
 
+  const language = getSessionLanguage(session);
+
   if (shouldShowMainMenu(message)) {
-    await sendMainMenu(phone);
+    await sendMainMenu(phone, language);
     return;
   }
 
@@ -419,33 +520,41 @@ async function processProviderSupportMessage(phone, message) {
       return;
     }
 
+    const selectedLanguage = region === 'kerala' ? 'ml' : 'en';
     await updateSession(phone, {
       region,
+      language: selectedLanguage,
       status: SUPPORT_STATUS.MAIN_MENU
     });
-    await sendMainMenu(phone);
+    await sendMainMenu(phone, selectedLanguage);
     return;
   }
 
   if (session.status === SUPPORT_STATUS.AWAITING_DUTY_TYPE) {
     const dutyType = parseDutyType(message);
     if (!dutyType) {
-      await sendAndLog(phone, 'text', 'Please choose 8-hour duty or 24-hour duty.');
-      await sendDutyTypePrompt(phone);
+      await sendAndLog(
+        phone,
+        'text',
+        isMalayalam(language)
+          ? 'ദയവായി 8-hour duty അല്ലെങ്കിൽ 24-hour duty തിരഞ്ഞെടുക്കുക.'
+          : 'Please choose 8-hour duty or 24-hour duty.'
+      );
+      await sendDutyTypePrompt(phone, language);
       return;
     }
 
-    await sendDutyAvailability(phone, dutyType);
-    await sendMainMenu(phone);
+    await sendDutyAvailability(phone, dutyType, language);
+    await sendMainMenu(phone, language);
     return;
   }
 
   if (session.status === SUPPORT_STATUS.AWAITING_APP_ISSUE) {
-    await handleAppIssue(phone, message);
+    await handleAppIssue(phone, message, session);
     return;
   }
 
-  await handleMainMenu(phone, message);
+  await handleMainMenu(phone, message, session);
 }
 
 module.exports = {

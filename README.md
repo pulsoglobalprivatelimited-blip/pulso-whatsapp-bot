@@ -184,6 +184,7 @@ The app can also run a second WhatsApp bot for provider support without changing
 - Provider support bot uses `PROVIDER_SUPPORT_WHATSAPP_PHONE_NUMBER_ID`
 - Both numbers can point to the same Meta webhook callback URL: `https://your-domain.com/webhook`
 - Incoming messages are routed by Meta `metadata.phone_number_id`
+- Kerala sessions use Malayalam/Manglish support copy; Karnataka and Other sessions use English.
 
 Configure:
 
