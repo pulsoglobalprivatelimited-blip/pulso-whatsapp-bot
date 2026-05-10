@@ -264,12 +264,12 @@ async function sendMainMenu(phone, language = 'en') {
       {
         title: 'Provider Support',
         rows: [
-          { id: SUPPORT_BUTTON_IDS.MAIN_JOIN, title: 'Join Pulso' },
           { id: SUPPORT_BUTTON_IDS.MAIN_DUTY, title: 'Check Duty availability' },
           { id: SUPPORT_BUTTON_IDS.MAIN_PAYMENT, title: 'Payment help' },
           { id: SUPPORT_BUTTON_IDS.MAIN_APP, title: 'App/Login/OTP' },
           { id: SUPPORT_BUTTON_IDS.MAIN_DUTY_ISSUE, title: 'Duty/Family issue' },
-          { id: SUPPORT_BUTTON_IDS.MAIN_TALK, title: 'Talk to support' }
+          { id: SUPPORT_BUTTON_IDS.MAIN_TALK, title: 'Talk to support' },
+          { id: SUPPORT_BUTTON_IDS.MAIN_JOIN, title: 'Join Pulso' }
         ]
       }
     ]
