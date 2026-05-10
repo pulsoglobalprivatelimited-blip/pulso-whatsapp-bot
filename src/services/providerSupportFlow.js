@@ -250,64 +250,22 @@ async function sendRegionPrompt(phone) {
 
 async function sendMainMenu(phone, language = 'en') {
   await updateSession(phone, { status: SUPPORT_STATUS.MAIN_MENU });
-  const malayalamMenuBody = [
-    'താങ്കൾക്ക് വേണ്ട സഹായം തിരഞ്ഞെടുക്കുക:',
-    '',
-    '1. Join Pulso / New registration',
-    '2. Duty availability അറിയാൻ',
-    '3. Payment related help',
-    '4. Pulso App / Login / OTP issue',
-    '5. Duty issue / Family issue',
-    '6. Support team-നോട് സംസാരിക്കാൻ'
-  ].join('\n');
-
   await sendAndLog(phone, 'list', {
-    body: isMalayalam(language) ? malayalamMenuBody : 'Please choose an option:',
-    buttonText: isMalayalam(language) ? 'സഹായം' : 'Choose option',
+    body: isMalayalam(language)
+      ? 'താങ്കൾക്ക് വേണ്ട സഹായം തിരഞ്ഞെടുക്കുക:'
+      : 'Please choose an option:',
+    buttonText: isMalayalam(language) ? 'Option' : 'Choose option',
     sections: [
       {
         title: 'Provider Support',
-        rows: isMalayalam(language)
-          ? [
-              {
-                id: SUPPORT_BUTTON_IDS.MAIN_JOIN,
-                title: 'Join Pulso',
-                description: 'New registration'
-              },
-              {
-                id: SUPPORT_BUTTON_IDS.MAIN_DUTY,
-                title: 'Duty availability',
-                description: 'Duty availability അറിയാൻ'
-              },
-              {
-                id: SUPPORT_BUTTON_IDS.MAIN_PAYMENT,
-                title: 'Payment help',
-                description: 'Payment related help'
-              },
-              {
-                id: SUPPORT_BUTTON_IDS.MAIN_APP,
-                title: 'App / Login / OTP',
-                description: 'Pulso App / Login / OTP issue'
-              },
-              {
-                id: SUPPORT_BUTTON_IDS.MAIN_DUTY_ISSUE,
-                title: 'Duty / Family issue',
-                description: 'Duty issue / Family issue'
-              },
-              {
-                id: SUPPORT_BUTTON_IDS.MAIN_TALK,
-                title: 'Support team',
-                description: 'Support team-നോട് സംസാരിക്കാൻ'
-              }
-            ]
-          : [
-              { id: SUPPORT_BUTTON_IDS.MAIN_JOIN, title: 'Join Pulso' },
-              { id: SUPPORT_BUTTON_IDS.MAIN_DUTY, title: 'Duty availability' },
-              { id: SUPPORT_BUTTON_IDS.MAIN_PAYMENT, title: 'Payment help' },
-              { id: SUPPORT_BUTTON_IDS.MAIN_APP, title: 'App/Login/OTP' },
-              { id: SUPPORT_BUTTON_IDS.MAIN_DUTY_ISSUE, title: 'Duty/Family issue' },
-              { id: SUPPORT_BUTTON_IDS.MAIN_TALK, title: 'Talk to support' }
-            ]
+        rows: [
+          { id: SUPPORT_BUTTON_IDS.MAIN_JOIN, title: 'Join Pulso' },
+          { id: SUPPORT_BUTTON_IDS.MAIN_DUTY, title: 'Duty availability' },
+          { id: SUPPORT_BUTTON_IDS.MAIN_PAYMENT, title: 'Payment help' },
+          { id: SUPPORT_BUTTON_IDS.MAIN_APP, title: 'App/Login/OTP' },
+          { id: SUPPORT_BUTTON_IDS.MAIN_DUTY_ISSUE, title: 'Duty/Family issue' },
+          { id: SUPPORT_BUTTON_IDS.MAIN_TALK, title: 'Talk to support' }
+        ]
       }
     ]
   });
