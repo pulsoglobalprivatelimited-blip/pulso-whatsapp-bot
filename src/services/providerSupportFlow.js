@@ -252,7 +252,7 @@ async function sendMainMenu(phone, language = 'en') {
   await updateSession(phone, { status: SUPPORT_STATUS.MAIN_MENU });
   await sendAndLog(phone, 'list', {
     body: isMalayalam(language)
-      ? 'ദയവായി ഒരു option തിരഞ്ഞെടുക്കുക:'
+      ? 'താങ്കൾക്ക് വേണ്ട സഹായം തിരഞ്ഞെടുക്കുക:'
       : 'Please choose an option:',
     buttonText: isMalayalam(language) ? 'Option' : 'Choose option',
     sections: [
