@@ -525,7 +525,6 @@ async function processProviderSupportMessage(phone, message) {
   if (session.status === SUPPORT_STATUS.AWAITING_REGION) {
     const region = parseRegionSelection(message);
     if (!region) {
-      await sendAndLog(phone, 'text', 'Please select your region from the options.');
       await sendRegionPrompt(phone);
       return;
     }
