@@ -280,7 +280,7 @@ async function sendDutyTypePrompt(phone, language = 'en') {
   await updateSession(phone, { status: SUPPORT_STATUS.AWAITING_DUTY_TYPE });
   await sendAndLog(phone, 'buttons', {
     body: isMalayalam(language)
-      ? 'താങ്കൾക്ക് ഏത് duty ആണ് വേണ്ടത്?'
+      ? 'നിങ്ങൾ ഏത് duty availability ആണ് അറിയാൻ ആഗ്രഹിക്കുന്നത്?'
       : 'Which duty type are you looking for?',
     buttons: [
       { id: SUPPORT_BUTTON_IDS.DUTY_8H, title: '8-hour duty' },
