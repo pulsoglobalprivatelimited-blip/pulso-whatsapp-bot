@@ -14,6 +14,7 @@ const {
   runTermsReminderSweep,
   startTermsReminderScheduler
 } = require('./services/onboardingFlow');
+const { processProviderSupportMessage } = require('./services/providerSupportFlow');
 const { listProviders, getProvider, updateProvider } = require('./services/providerService');
 const { inferProviderRegion, normalizeRegion } = require('./services/regionService');
 const { initializeStorage } = require('./services/storage');
@@ -137,6 +138,23 @@ function getIvrCallerPhone(req) {
   );
 }
 
+function normalizeDigits(value) {
+  return (value || '').toString().replace(/\D+/g, '');
+}
+
+function isProviderSupportWebhookValue(value) {
+  const metadata = value && value.metadata ? value.metadata : {};
+  const inboundPhoneNumberId = (metadata.phone_number_id || '').toString();
+  const displayPhoneNumber = normalizeDigits(metadata.display_phone_number);
+  const supportBotNumber = normalizeDigits(config.providerSupportBotWhatsappNumber);
+
+  return Boolean(
+    (config.providerSupportPhoneNumberId &&
+      inboundPhoneNumberId === config.providerSupportPhoneNumberId) ||
+      (supportBotNumber && displayPhoneNumber && displayPhoneNumber.endsWith(supportBotNumber.slice(-10)))
+  );
+}
+
 function verifyIvrSecret(req, res) {
   if (!config.ivrWebhookSecret) {
     return true;
@@ -163,7 +181,11 @@ app.get('/health', (_req, res) => {
       config.googleApplicationCredentials ||
         (config.firebaseProjectId && config.firebaseClientEmail && config.firebasePrivateKey)
     ),
-    whatsappConfigured: Boolean(config.whatsappToken && config.phoneNumberId)
+    whatsappConfigured: Boolean(config.whatsappToken && config.phoneNumberId),
+    providerSupportConfigured: Boolean(
+      config.whatsappToken &&
+        (config.providerSupportPhoneNumberId || config.providerSupportBotWhatsappNumber)
+    )
   });
 });
 
@@ -264,6 +286,7 @@ app.post('/webhook', async (req, res) => {
       for (const change of changes) {
         const value = change.value || {};
         const messages = value.messages || [];
+        const useProviderSupportBot = isProviderSupportWebhookValue(value);
 
         for (const message of messages) {
           if (!message.from) continue;
@@ -298,13 +321,26 @@ app.post('/webhook', async (req, res) => {
                     message.interactive.list_reply &&
                     message.interactive.list_reply.title) ||
                   null,
-                id: message.id || null
+                id: message.id || null,
+                flow: useProviderSupportBot ? 'provider_support' : 'onboarding',
+                phoneNumberId:
+                  value.metadata && value.metadata.phone_number_id
+                    ? value.metadata.phone_number_id
+                    : null,
+                displayPhoneNumber:
+                  value.metadata && value.metadata.display_phone_number
+                    ? value.metadata.display_phone_number
+                    : null
               },
               null,
               2
             )
           );
-          await processIncomingMessage(message.from, message);
+          if (useProviderSupportBot) {
+            await processProviderSupportMessage(message.from, message);
+          } else {
+            await processIncomingMessage(message.from, message);
+          }
         }
       }
     }

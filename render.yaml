@@ -27,6 +27,20 @@ services:
         sync: false
       - key: WHATSAPP_PHONE_NUMBER_ID
         sync: false
+      - key: PROVIDER_SUPPORT_WHATSAPP_PHONE_NUMBER_ID
+        value: "1152619794595125"
+      - key: PROVIDER_SUPPORT_BOT_WHATSAPP_NUMBER
+        value: "917736129809"
+      - key: PROVIDER_SUPPORT_JOINING_CHATBOT_URL
+        value: "https://wa.me/919633108778"
+      - key: PROVIDER_SUPPORT_CUSTOMER_CARE_WHATSAPP_URL
+        value: "https://wa.me/919446600809"
+      - key: PROVIDER_SUPPORT_PHONE
+        value: "8714105333"
+      - key: PROVIDER_SUPPORT_ANDROID_APP_URL
+        value: "https://play.google.com/store/apps/details?id=com.pulso.global"
+      - key: PROVIDER_SUPPORT_IOS_APP_URL
+        value: "https://apps.apple.com/in/app/pulso/id6757874217"
       - key: WORKING_MODEL_AUDIO_MEDIA_ID
         sync: false
       - key: PULSO_DUTY_ACCEPT_VIDEO_MEDIA_ID

@@ -90,6 +90,7 @@ async function saveProvider(phone, provider) {
 
 module.exports = {
   initializeStorage,
+  getFirestore,
   getProvider,
   listProviders,
   saveProvider,

@@ -5,13 +5,15 @@ function logDryRun(payload) {
   console.log('[DRY RUN] WhatsApp send', JSON.stringify(payload, null, 2));
 }
 
-async function sendRequest(payload) {
-  if (config.dryRun || !config.whatsappToken || !config.phoneNumberId) {
+async function sendRequest(payload, options = {}) {
+  const phoneNumberId = options.phoneNumberId || config.phoneNumberId;
+
+  if (config.dryRun || !config.whatsappToken || !phoneNumberId) {
     logDryRun(payload);
     return { dryRun: true, payload };
   }
 
-  const url = `https://graph.facebook.com/${config.graphApiVersion}/${config.phoneNumberId}/messages`;
+  const url = `https://graph.facebook.com/${config.graphApiVersion}/${phoneNumberId}/messages`;
   const response = await axios.post(url, payload, {
     headers: {
       Authorization: `Bearer ${config.whatsappToken}`,
@@ -22,16 +24,16 @@ async function sendRequest(payload) {
   return response.data;
 }
 
-async function sendText(to, body) {
+async function sendText(to, body, options) {
   return sendRequest({
     messaging_product: 'whatsapp',
     to,
     type: 'text',
     text: { body }
-  });
+  }, options);
 }
 
-async function sendImageById(to, mediaId, caption) {
+async function sendImageById(to, mediaId, caption, options) {
   return sendRequest({
     messaging_product: 'whatsapp',
     to,
@@ -40,10 +42,10 @@ async function sendImageById(to, mediaId, caption) {
       id: mediaId,
       caption
     }
-  });
+  }, options);
 }
 
-async function sendDocumentById(to, mediaId, filename, caption) {
+async function sendDocumentById(to, mediaId, filename, caption, options) {
   return sendRequest({
     messaging_product: 'whatsapp',
     to,
@@ -53,10 +55,10 @@ async function sendDocumentById(to, mediaId, filename, caption) {
       filename,
       caption
     }
-  });
+  }, options);
 }
 
-async function sendVideoById(to, mediaId, caption) {
+async function sendVideoById(to, mediaId, caption, options) {
   return sendRequest({
     messaging_product: 'whatsapp',
     to,
@@ -65,10 +67,10 @@ async function sendVideoById(to, mediaId, caption) {
       id: mediaId,
       caption
     }
-  });
+  }, options);
 }
 
-async function sendButtons(to, body, buttons) {
+async function sendButtons(to, body, buttons, options) {
   return sendRequest({
     messaging_product: 'whatsapp',
     to,
@@ -86,10 +88,10 @@ async function sendButtons(to, body, buttons) {
         }))
       }
     }
-  });
+  }, options);
 }
 
-async function sendTemplate(to, name, languageCode, components) {
+async function sendTemplate(to, name, languageCode, components, options) {
   return sendRequest({
     messaging_product: 'whatsapp',
     to,
@@ -101,10 +103,10 @@ async function sendTemplate(to, name, languageCode, components) {
       },
       ...(components && components.length ? { components } : {})
     }
-  });
+  }, options);
 }
 
-async function sendList(to, body, buttonText, sections) {
+async function sendList(to, body, buttonText, sections, options) {
   return sendRequest({
     messaging_product: 'whatsapp',
     to,
@@ -124,10 +126,10 @@ async function sendList(to, body, buttonText, sections) {
         }))
       }
     }
-  });
+  }, options);
 }
 
-async function sendAudio(to, mediaId) {
+async function sendAudio(to, mediaId, options) {
   if (!mediaId) {
     return sendText(to, 'Audio placeholder: configure WORKING_MODEL_AUDIO_MEDIA_ID to send the actual working-model voice note.');
   }
@@ -137,10 +139,10 @@ async function sendAudio(to, mediaId) {
     to,
     type: 'audio',
     audio: { id: mediaId }
-  });
+  }, options);
 }
 
-async function sendTermsAndConditions(to, url) {
+async function sendTermsAndConditions(to, url, options) {
   if (!url) {
     return sendText(to, 'Terms and conditions placeholder: configure TERMS_AND_CONDITIONS_URL to send the final link.');
   }
@@ -150,7 +152,7 @@ async function sendTermsAndConditions(to, url) {
     to,
     type: 'text',
     text: { body: `Terms and conditions: ${url}` }
-  });
+  }, options);
 }
 
 async function getMediaMetadata(mediaId) {

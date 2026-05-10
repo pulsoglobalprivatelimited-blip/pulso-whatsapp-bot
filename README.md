@@ -176,6 +176,50 @@ curl -X POST https://your-domain.com/ivr/job-whatsapp \
 
 The press-2 WhatsApp handoff uses the existing Meta WhatsApp Cloud API credentials. For production messages started from a call, use approved Meta WhatsApp templates.
 
+## Provider Support WhatsApp Bot
+
+The app can also run a second WhatsApp bot for provider support without changing the existing joining/onboarding bot.
+
+- Existing joining bot continues to use `WHATSAPP_PHONE_NUMBER_ID`
+- Provider support bot uses `PROVIDER_SUPPORT_WHATSAPP_PHONE_NUMBER_ID`
+- Both numbers can point to the same Meta webhook callback URL: `https://your-domain.com/webhook`
+- Incoming messages are routed by Meta `metadata.phone_number_id`
+
+Configure:
+
+```bash
+WHATSAPP_BUSINESS_ACCOUNT_ID=your-waba-id
+PROVIDER_SUPPORT_WHATSAPP_PHONE_NUMBER_ID=provider-support-phone-number-id
+PROVIDER_SUPPORT_BOT_WHATSAPP_NUMBER=917736129809
+PROVIDER_SUPPORT_JOINING_CHATBOT_URL=https://wa.me/919633108778
+PROVIDER_SUPPORT_CUSTOMER_CARE_WHATSAPP_URL=https://wa.me/919446600809
+PROVIDER_SUPPORT_PHONE=8714105333
+PROVIDER_SUPPORT_ANDROID_APP_URL=https://play.google.com/store/apps/details?id=com.pulso.global
+PROVIDER_SUPPORT_IOS_APP_URL=https://apps.apple.com/in/app/pulso/id6757874217
+```
+
+To list WhatsApp phone-number IDs after the number is added to the WABA:
+
+```bash
+npm run whatsapp:phone-numbers -- 917736129809
+```
+
+Provider support flow:
+
+```text
+Start
+↓
+Ask region
+↓
+Main menu
+├─ Join Pulso → existing registration chatbot
+├─ Duty availability → ask 8-hour / 24-hour → app Offer Inbox + app links
+├─ Payment help → support phone only
+├─ App/Login/OTP → app links / support phone / customer care WhatsApp
+├─ Duty/Family issue → support phone + customer care WhatsApp
+└─ Talk to support → support phone only
+```
+
 ## Media archival
 
 When a provider uploads a CV or certificate, the app now:

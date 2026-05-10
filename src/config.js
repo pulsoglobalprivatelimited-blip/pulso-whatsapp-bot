@@ -55,6 +55,18 @@ module.exports = {
   ivrJobWhatsappTemplateNameMl: process.env.IVR_JOB_WHATSAPP_TEMPLATE_NAME_ML || '',
   ivrJobWhatsappTemplateLanguageEn: process.env.IVR_JOB_WHATSAPP_TEMPLATE_LANGUAGE_EN || 'en',
   ivrJobWhatsappTemplateLanguageMl: process.env.IVR_JOB_WHATSAPP_TEMPLATE_LANGUAGE_ML || 'ml',
+  providerSupportPhoneNumberId: process.env.PROVIDER_SUPPORT_WHATSAPP_PHONE_NUMBER_ID || '',
+  providerSupportBotWhatsappNumber: process.env.PROVIDER_SUPPORT_BOT_WHATSAPP_NUMBER || '917736129809',
+  providerSupportJoiningChatbotUrl:
+    process.env.PROVIDER_SUPPORT_JOINING_CHATBOT_URL || 'https://wa.me/919633108778',
+  providerSupportCustomerCareWhatsappUrl:
+    process.env.PROVIDER_SUPPORT_CUSTOMER_CARE_WHATSAPP_URL || 'https://wa.me/919446600809',
+  providerSupportPhone: process.env.PROVIDER_SUPPORT_PHONE || '8714105333',
+  providerSupportAndroidAppUrl:
+    process.env.PROVIDER_SUPPORT_ANDROID_APP_URL ||
+    'https://play.google.com/store/apps/details?id=com.pulso.global',
+  providerSupportIosAppUrl:
+    process.env.PROVIDER_SUPPORT_IOS_APP_URL || 'https://apps.apple.com/in/app/pulso/id6757874217',
   mediaStorageDir: resolveMediaStorageDir(),
   dryRun: process.env.WHATSAPP_DRY_RUN !== 'false',
   publicDir: path.join(__dirname, 'public')
