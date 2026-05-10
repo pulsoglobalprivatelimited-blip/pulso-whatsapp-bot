@@ -5,7 +5,7 @@ const STATIC_ASSETS = [
   '/admin/manifest.webmanifest',
   '/admin/assets/dashboard.css?v=20260510b',
   '/admin/assets/admin-pwa.js?v=20260419c',
-  '/admin/assets/provider-support-dashboard.js?v=20260510a',
+  '/admin/assets/provider-support-dashboard.js?v=20260510b',
   '/admin/assets/pwa/icon.svg',
   '/admin/assets/pwa/icon-maskable.svg'
 ];
