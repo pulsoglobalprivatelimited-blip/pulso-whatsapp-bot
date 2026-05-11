@@ -50,6 +50,10 @@ module.exports = {
   ivrStaffPhone: process.env.IVR_STAFF_PHONE || process.env.OWNER_NOTIFICATION_PHONE || '919446600809',
   ivrRecruitmentWhatsappNumber: process.env.IVR_RECRUITMENT_WHATSAPP_NUMBER || '919633108778',
   ivrWebhookSecret: process.env.IVR_WEBHOOK_SECRET || '',
+  ivrWebhookAllowedIps: (process.env.IVR_WEBHOOK_ALLOWED_IPS || '')
+    .split(/[,\s]+/)
+    .map((value) => value.trim())
+    .filter(Boolean),
   ivrJobWhatsappTemplateName: process.env.IVR_JOB_WHATSAPP_TEMPLATE_NAME || '',
   ivrJobWhatsappTemplateNameEn: process.env.IVR_JOB_WHATSAPP_TEMPLATE_NAME_EN || '',
   ivrJobWhatsappTemplateNameMl: process.env.IVR_JOB_WHATSAPP_TEMPLATE_NAME_ML || '',

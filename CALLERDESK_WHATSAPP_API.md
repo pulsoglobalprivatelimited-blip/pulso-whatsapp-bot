@@ -14,8 +14,16 @@ POST https://whatsapp.pulso.co.in/ivr/job-whatsapp
 
 ```text
 Content-Type: application/json
-x-ivr-secret: <IVR_WEBHOOK_SECRET>
 ```
+
+No API secret is required after Pulso whitelists CallerDesk's public static IPs:
+
+```text
+122.176.95.160
+180.179.198.152
+```
+
+Do not use `192.168.3.11` for whitelisting because it is a private LAN IP, not the public internet source IP.
 
 ## English Request
 
@@ -40,13 +48,13 @@ x-ivr-secret: <IVR_WEBHOOK_SECRET>
 If CallerDesk only supports a webhook URL, use:
 
 ```text
-https://whatsapp.pulso.co.in/ivr/job-whatsapp?phone=919999999999&lang=en&secret=<IVR_WEBHOOK_SECRET>
+https://whatsapp.pulso.co.in/ivr/job-whatsapp?phone=919999999999&lang=en
 ```
 
 For Malayalam:
 
 ```text
-https://whatsapp.pulso.co.in/ivr/job-whatsapp?phone=919999999999&lang=ml&secret=<IVR_WEBHOOK_SECRET>
+https://whatsapp.pulso.co.in/ivr/job-whatsapp?phone=919999999999&lang=ml
 ```
 
 ## Accepted Phone Field Names

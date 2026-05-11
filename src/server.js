@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const net = require('net');
 const path = require('path');
 const multer = require('multer');
 const config = require('./config');
@@ -147,6 +148,138 @@ function normalizeDigits(value) {
   return (value || '').toString().replace(/\D+/g, '');
 }
 
+function normalizeIp(value) {
+  let ip = String(value || '').trim().replace(/^"|"$/g, '');
+  if (!ip) {
+    return '';
+  }
+
+  if (ip.startsWith('[')) {
+    const closingBracket = ip.indexOf(']');
+    if (closingBracket > 0) {
+      ip = ip.slice(1, closingBracket);
+    }
+  }
+
+  const ipv4WithPort = ip.match(/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/);
+  if (ipv4WithPort) {
+    ip = ipv4WithPort[1];
+  }
+
+  if (ip.startsWith('::ffff:')) {
+    ip = ip.slice(7);
+  }
+
+  const zoneIndex = ip.indexOf('%');
+  if (zoneIndex > -1) {
+    ip = ip.slice(0, zoneIndex);
+  }
+
+  return net.isIP(ip) ? ip : '';
+}
+
+function ipv4ToNumber(ip) {
+  const parts = ip.split('.').map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    return null;
+  }
+
+  return parts.reduce((acc, part) => ((acc << 8) + part) >>> 0, 0);
+}
+
+function isPrivateOrReservedIpv4(ip) {
+  const value = ipv4ToNumber(ip);
+  if (value === null) {
+    return false;
+  }
+
+  const ranges = [
+    ['0.0.0.0', 8],
+    ['10.0.0.0', 8],
+    ['100.64.0.0', 10],
+    ['127.0.0.0', 8],
+    ['169.254.0.0', 16],
+    ['172.16.0.0', 12],
+    ['192.0.0.0', 24],
+    ['192.168.0.0', 16],
+    ['198.18.0.0', 15],
+    ['224.0.0.0', 4]
+  ];
+
+  return ranges.some(([base, prefix]) => matchesIpv4Cidr(ip, `${base}/${prefix}`));
+}
+
+function matchesIpv4Cidr(ip, cidr) {
+  const [baseIp, prefixText] = cidr.split('/');
+  const normalizedBaseIp = normalizeIp(baseIp);
+  const prefix = Number(prefixText);
+  if (net.isIP(ip) !== 4 || net.isIP(normalizedBaseIp) !== 4 || !Number.isInteger(prefix)) {
+    return false;
+  }
+
+  if (prefix < 0 || prefix > 32) {
+    return false;
+  }
+
+  if (prefix === 0) {
+    return true;
+  }
+
+  const ipNumber = ipv4ToNumber(ip);
+  const baseNumber = ipv4ToNumber(normalizedBaseIp);
+  if (ipNumber === null || baseNumber === null) {
+    return false;
+  }
+
+  const mask = (0xffffffff << (32 - prefix)) >>> 0;
+  return (ipNumber & mask) === (baseNumber & mask);
+}
+
+function splitForwardedFor(value) {
+  const header = Array.isArray(value) ? value.join(',') : String(value || '');
+  return header
+    .split(',')
+    .map((part) => normalizeIp(part))
+    .filter(Boolean);
+}
+
+function getRequestClientIp(req) {
+  const forwardedIps = splitForwardedFor(req.headers['x-forwarded-for']);
+  const publicForwardedIps = forwardedIps.filter(
+    (ip) => net.isIP(ip) !== 4 || !isPrivateOrReservedIpv4(ip)
+  );
+
+  if (publicForwardedIps.length) {
+    return publicForwardedIps[publicForwardedIps.length - 1];
+  }
+
+  return (
+    normalizeIp(req.get('x-real-ip')) ||
+    normalizeIp(req.ip) ||
+    normalizeIp(req.socket && req.socket.remoteAddress)
+  );
+}
+
+function isIpAllowed(ip, allowedIps = []) {
+  const normalizedIp = normalizeIp(ip);
+  if (!normalizedIp) {
+    return false;
+  }
+
+  return allowedIps.some((entry) => {
+    const normalizedEntry = String(entry || '').trim();
+    if (!normalizedEntry) {
+      return false;
+    }
+
+    if (normalizedEntry.includes('/')) {
+      return matchesIpv4Cidr(normalizedIp, normalizedEntry);
+    }
+
+    return normalizedIp === normalizeIp(normalizedEntry);
+  });
+}
+
 function isProviderSupportWebhookValue(value) {
   const metadata = value && value.metadata ? value.metadata : {};
   const inboundPhoneNumberId = (metadata.phone_number_id || '').toString();
@@ -161,17 +294,23 @@ function isProviderSupportWebhookValue(value) {
 }
 
 function verifyIvrSecret(req, res) {
-  if (!config.ivrWebhookSecret) {
+  const clientIp = getRequestClientIp(req);
+  if (isIpAllowed(clientIp, config.ivrWebhookAllowedIps)) {
     return true;
   }
 
   const providedSecret =
     req.get('x-ivr-secret') || req.body.secret || req.query.secret || '';
 
-  if (providedSecret === config.ivrWebhookSecret) {
+  if (config.ivrWebhookSecret && providedSecret === config.ivrWebhookSecret) {
     return true;
   }
 
+  if (!config.ivrWebhookSecret && !config.ivrWebhookAllowedIps.length) {
+    return true;
+  }
+
+  console.warn('[IVR_UNAUTHORIZED]', JSON.stringify({ clientIp }, null, 2));
   res.status(401).json({ error: 'Unauthorized' });
   return false;
 }

@@ -151,6 +151,7 @@ Configure these environment variables:
 IVR_STAFF_PHONE=919446600809
 IVR_RECRUITMENT_WHATSAPP_NUMBER=919633108778
 IVR_WEBHOOK_SECRET=long-random-secret
+IVR_WEBHOOK_ALLOWED_IPS=122.176.95.160,180.179.198.152
 IVR_JOB_WHATSAPP_TEMPLATE_NAME_EN=pulso_job_enquiry_en
 IVR_JOB_WHATSAPP_TEMPLATE_NAME_ML=pulso_job_enquiry_ml
 IVR_JOB_WHATSAPP_TEMPLATE_LANGUAGE_EN=en
@@ -170,9 +171,10 @@ For providers that do not use TwiML, configure the `press 2` callback to call:
 ```bash
 curl -X POST https://your-domain.com/ivr/job-whatsapp \
   -H 'Content-Type: application/json' \
-  -H 'x-ivr-secret: long-random-secret' \
   -d '{"phone":"919999999999","lang":"en"}'
 ```
+
+If the caller desk provider cannot send a secret, set `IVR_WEBHOOK_ALLOWED_IPS` to its public static IPs. Requests from those IPs can call the endpoint without `x-ivr-secret`; other IPs still need `IVR_WEBHOOK_SECRET`.
 
 The press-2 WhatsApp handoff uses the existing Meta WhatsApp Cloud API credentials. For production messages started from a call, use approved Meta WhatsApp templates.
 

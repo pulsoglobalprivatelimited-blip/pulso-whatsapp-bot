@@ -55,6 +55,8 @@ services:
         value: "919633108778"
       - key: IVR_WEBHOOK_SECRET
         sync: false
+      - key: IVR_WEBHOOK_ALLOWED_IPS
+        sync: false
       - key: IVR_JOB_WHATSAPP_TEMPLATE_NAME_EN
         sync: false
       - key: IVR_JOB_WHATSAPP_TEMPLATE_NAME_ML
