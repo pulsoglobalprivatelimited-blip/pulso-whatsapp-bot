@@ -1,6 +1,6 @@
 const config = require('../config');
 const { getFirestore } = require('./storage');
-const { sendText, sendButtons, sendCtaUrl, sendList } = require('./metaClient');
+const { sendText, sendButtons, sendList } = require('./metaClient');
 const { getInteractiveReplyId, getMessageText, normalizeText } = require('./messageParser');
 const { notifyProviderSupportHelpRequested } = require('./providerSupportNotifications');
 
@@ -79,8 +79,6 @@ async function sendAndLog(phone, kind, body) {
 
   if (kind === 'buttons') {
     await sendButtons(phone, body.body, body.buttons, options);
-  } else if (kind === 'cta_url') {
-    await sendCtaUrl(phone, body.body, body.displayText, body.url, options);
   } else if (kind === 'list') {
     await sendList(phone, body.body, body.buttonText, body.sections, options);
   } else {
@@ -138,16 +136,6 @@ function supportPhoneMessage(prefix, language = 'en') {
     '',
     ...timeLines
   ].join('\n');
-}
-
-function customerCareWhatsappCta(language = 'en') {
-  return {
-    body: isMalayalam(language)
-      ? 'Customer care agent-നോട് WhatsApp chat ചെയ്യാൻ താഴെയുള്ള button tap ചെയ്യുക.'
-      : 'Tap the button below to chat with our customer care agent on WhatsApp.',
-    displayText: 'Customer care',
-    url: config.providerSupportCustomerCareWhatsappUrl
-  };
 }
 
 function getSupportHelpCooldownRemainingMs(session) {
@@ -352,7 +340,7 @@ async function sendAppIssuePrompt(phone, language = 'en') {
           { id: SUPPORT_BUTTON_IDS.APP_DOWNLOAD, title: 'Download app' },
           { id: SUPPORT_BUTTON_IDS.APP_LOGIN, title: 'Login issue' },
           { id: SUPPORT_BUTTON_IDS.APP_OTP, title: 'OTP issue' },
-          { id: SUPPORT_BUTTON_IDS.APP_AGENT, title: 'WhatsApp support' }
+          { id: SUPPORT_BUTTON_IDS.APP_AGENT, title: 'Request support' }
         ]
       }
     ]
@@ -525,12 +513,12 @@ async function handleAppIssue(phone, message, session = {}) {
   }
 
   if (selected === 'agent') {
-    await sendAndLog(phone, 'cta_url', customerCareWhatsappCta(language));
+    await requestHumanSupport(phone, session, 'app_chat_with_agent');
     await sendMainMenu(phone, language);
     return;
   }
 
-  await sendAndLog(phone, 'cta_url', customerCareWhatsappCta(language));
+  await requestHumanSupport(phone, session, `app_${selected}`);
   await sendMainMenu(phone, language);
 }
 
