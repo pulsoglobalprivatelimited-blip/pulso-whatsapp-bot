@@ -1,7 +1,9 @@
 const config = require('../config');
+const { STATUS } = require('../flow');
 const { getFirestore } = require('./storage');
 const { sendText, sendButtons, sendList } = require('./metaClient');
 const { getInteractiveReplyId, getMessageText, normalizeText } = require('./messageParser');
+const { getProvider } = require('./providerService');
 const { notifyProviderSupportHelpRequested } = require('./providerSupportNotifications');
 
 const COLLECTION = 'providerSupportSessions';
@@ -183,6 +185,43 @@ function supportHelpAlreadyRequestedMessage(language = 'en') {
   return isMalayalam(language)
     ? 'ഞങ്ങളുടെ support team-നെ ഇതിനകം അറിയിച്ചിട്ടുണ്ട്. സഹായം ലഭിക്കാത്ത പക്ഷം 12 മണിക്കൂറിന് ശേഷം വീണ്ടും request ചെയ്യാം.'
     : 'Our support team has already been informed. If you do not get help, you can request again after 12 hours.';
+}
+
+function registrationRequiredMessage(language = 'en') {
+  if (isMalayalam(language)) {
+    return [
+      'താങ്കൾ Pulso-യിൽ registered provider അല്ല.',
+      '',
+      'Duty ലഭിക്കാൻ, payment support ലഭിക്കാൻ, duty/family issue support ലഭിക്കാൻ ആദ്യം Pulso provider registration complete ചെയ്യണം.',
+      '',
+      'Registration ഇവിടെ തുടങ്ങുക:',
+      config.providerSupportJoiningChatbotUrl
+    ].join('\n');
+  }
+
+  return [
+    'You are not registered with Pulso yet.',
+    '',
+    'To get duties, payment support, or duty-related help, please complete your Pulso provider registration first.',
+    '',
+    'Start registration here:',
+    config.providerSupportJoiningChatbotUrl
+  ].join('\n');
+}
+
+async function isRegisteredProvider(phone) {
+  const provider = await getProvider(phone);
+  return Boolean(provider && provider.status === STATUS.COMPLETED);
+}
+
+async function ensureRegisteredProvider(phone, language = 'en') {
+  if (await isRegisteredProvider(phone)) {
+    return true;
+  }
+
+  await sendAndLog(phone, 'text', registrationRequiredMessage(language));
+  await sendMainMenu(phone, language);
+  return false;
 }
 
 function parseRegionSelection(message) {
@@ -450,11 +489,17 @@ async function handleMainMenu(phone, message, session = {}) {
   }
 
   if (selected === 'duty_availability') {
+    if (!(await ensureRegisteredProvider(phone, language))) {
+      return;
+    }
     await sendDutyTypePrompt(phone, language);
     return;
   }
 
   if (selected === 'payment') {
+    if (!(await ensureRegisteredProvider(phone, language))) {
+      return;
+    }
     await sendAndLog(
       phone,
       'text',
@@ -475,6 +520,9 @@ async function handleMainMenu(phone, message, session = {}) {
   }
 
   if (selected === 'duty_issue') {
+    if (!(await ensureRegisteredProvider(phone, language))) {
+      return;
+    }
     await requestHumanSupport(phone, session, 'duty_family_issue');
     await sendMainMenu(phone, language);
     return;
