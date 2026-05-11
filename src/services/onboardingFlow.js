@@ -65,6 +65,7 @@ const {
 } = require('./messageParser');
 const { archiveIncomingMedia } = require('./mediaStorage');
 const { syncProviderToPulsoHub } = require('./pulsoHubSyncService');
+const { inferProviderRegion, statusRequiresRegion } = require('./regionService');
 
 const pendingCertificatePromptTimers = new Map();
 const pendingCertificateRetryTimers = new Map();
@@ -184,6 +185,27 @@ async function sendAndLog(phone, kind, body, sender) {
 
 function updateStatus(phone, status, currentStep, extra = {}) {
   return updateProvider(phone, { status, currentStep, ...extra });
+}
+
+function getStepForStatus(status) {
+  const statusSteps = {
+    [STATUS.AWAITING_QUALIFICATION]: 2,
+    [STATUS.AWAITING_INTEREST]: 4,
+    [STATUS.AWAITING_DUTY_HOUR_PREFERENCE]: 5,
+    [STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE]: 6,
+    [STATUS.AWAITING_EXPECTED_DUTIES_CONFIRMATION]: 7,
+    [STATUS.AWAITING_CERTIFICATE]: 8,
+    [STATUS.AWAITING_NAME]: 9,
+    [STATUS.AWAITING_AGE]: 10,
+    [STATUS.AWAITING_SEX]: 11,
+    [STATUS.AWAITING_DISTRICT]: 12,
+    [STATUS.VERIFICATION_PENDING]: 13,
+    [STATUS.ADDITIONAL_DOCUMENT_REQUESTED]: 13,
+    [STATUS.AWAITING_TERMS_ACCEPTANCE]: 14,
+    [STATUS.COMPLETED]: 15
+  };
+
+  return statusSteps[status] || 2;
 }
 
 function normalizeApprovedQualification(value) {
@@ -1334,10 +1356,120 @@ async function handleRegionSelection(phone, message) {
 
   await assignProviderFlow(phone, flowId);
   const provider = await getProvider(phone);
+  if (provider && provider.regionResumeStatus) {
+    await resumeProviderAfterRegionSelection(phone, provider);
+    return;
+  }
+
   await runWithProviderFlow(provider, async () => {
     await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2);
     await sendQualificationList(phone);
   });
+}
+
+async function requestRegionBeforeContinuing(phone, provider) {
+  await updateProvider(phone, {
+    status: STATUS.AWAITING_REGION_SELECTION,
+    currentStep: 1.5,
+    regionResumeStatus: provider.status,
+    regionResumeStep: provider.currentStep || getStepForStatus(provider.status)
+  });
+  await appendHistory(phone, {
+    type: 'system',
+    event: 'region_required_before_resume',
+    previousStatus: provider.status,
+    previousStep: provider.currentStep || null
+  });
+  await sendAndLog(
+    phone,
+    'text',
+    'Please select your region to continue onboarding.\n\nOnboarding തുടരാൻ ദയവായി region തിരഞ്ഞെടുക്കുക.'
+  );
+  await sendRegionSelectionList(phone);
+}
+
+async function resumeProviderAfterRegionSelection(phone, provider) {
+  const resumeStatus = provider.regionResumeStatus;
+  const resumeStep = provider.regionResumeStep || getStepForStatus(resumeStatus);
+  await updateProvider(phone, {
+    status: resumeStatus,
+    currentStep: resumeStep,
+    regionResumeStatus: null,
+    regionResumeStep: null
+  });
+
+  const resumedProvider = await getProvider(phone);
+  await appendHistory(phone, {
+    type: 'system',
+    event: 'region_selected_resume_onboarding',
+    resumedStatus: resumeStatus,
+    resumedStep: resumeStep
+  });
+  await sendAndLog(phone, 'text', 'Region saved. Continuing onboarding.');
+  await sendPromptForCurrentStatus(phone, resumedProvider);
+}
+
+async function sendPromptForCurrentStatus(phone, provider) {
+  switch (provider && provider.status) {
+    case STATUS.AWAITING_QUALIFICATION:
+      await sendQualificationList(phone);
+      return;
+    case STATUS.AWAITING_INTEREST:
+      await sendInterestButtons(phone);
+      return;
+    case STATUS.AWAITING_DUTY_HOUR_PREFERENCE:
+      await sendDutyHourPreferenceButtons(phone);
+      return;
+    case STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE:
+      await sendSampleDutyOfferPrompt(phone);
+      return;
+    case STATUS.AWAITING_EXPECTED_DUTIES_CONFIRMATION:
+      await sendExpectedDutiesFlow(phone);
+      return;
+    case STATUS.AWAITING_CERTIFICATE: {
+      const attachments = provider && provider.documents ? provider.documents.certificateAttachments || [] : [];
+      if (attachments.length) {
+        await sendCertificateCollectionButtons(phone, provider);
+      } else {
+        await sendAndLog(phone, 'text', MESSAGES.certificateRequest);
+      }
+      return;
+    }
+    case STATUS.AWAITING_NAME:
+      await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
+      return;
+    case STATUS.AWAITING_AGE:
+      await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
+      return;
+    case STATUS.AWAITING_SEX:
+      await sendSexButtons(phone);
+      return;
+    case STATUS.AWAITING_DISTRICT:
+      await sendDistrictList(phone);
+      return;
+    case STATUS.VERIFICATION_PENDING:
+      await sendAndLog(phone, 'text', MESSAGES.verificationPending);
+      return;
+    case STATUS.ADDITIONAL_DOCUMENT_REQUESTED: {
+      const request = provider && provider.documents ? provider.documents.additionalDocumentRequest : null;
+      await sendAndLog(
+        phone,
+        'text',
+        request && request.note ? buildAdditionalDocumentMessage(request.note) : MESSAGES.verificationPending
+      );
+      return;
+    }
+    case STATUS.AWAITING_TERMS_ACCEPTANCE:
+      await sendAndLog(phone, 'text', MESSAGES.termsIntro);
+      await sendTermsButtons(phone);
+      return;
+    case STATUS.COMPLETED:
+      await sendAndLog(phone, 'text', MESSAGES.completed);
+      return;
+    default:
+      await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2);
+      await sendQualificationList(phone);
+  }
 }
 
 async function handleQualification(phone, message) {
@@ -2575,6 +2707,11 @@ async function processIncomingMessage(phone, message) {
 
   if (provider.status === STATUS.NEW) {
     await startFlow(phone);
+    return;
+  }
+
+  if (statusRequiresRegion(provider.status) && !inferProviderRegion(provider)) {
+    await requestRegionBeforeContinuing(phone, provider);
     return;
   }
 
