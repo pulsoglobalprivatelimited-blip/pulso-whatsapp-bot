@@ -114,7 +114,7 @@ function updateMetrics() {
   const today = new Date().toDateString();
   const updatedToday = sessions.filter((session) => isSameDay(session.updatedAt, today));
   const kerala = sessions.filter((session) => session.region === 'kerala');
-  const needsChoice = sessions.filter((session) => String(session.status || '').startsWith('awaiting_'));
+  const needsChoice = sessions.filter((session) => session.status === 'awaiting_region');
 
   setText('total-count', sessions.length);
   setText('updated-today-count', updatedToday.length);
@@ -144,8 +144,7 @@ function matchesSearch(session, search) {
     session.language,
     session.status,
     session.lastIntent,
-    session.lastDutyType,
-    session.registeredWithPulso
+    session.lastDutyType
   ].map((value) => normalizeSearchTerm(value)).join(' ');
 
   return haystack.includes(search);
@@ -199,7 +198,6 @@ async function renderDetail(phone) {
   setText('detail-step', formatStatus(session.lastIntent || session.status || 'support session'));
   setText('detail-region', session.region ? formatStatus(session.region) : 'Not selected');
   setText('detail-language', session.language || '-');
-  setText('detail-registered', formatBoolean(session.registeredWithPulso));
   setText('detail-intent', session.lastIntent ? formatStatus(session.lastIntent) : '-');
   setText('detail-duty-type', session.lastDutyType || '-');
   setText('detail-created', session.createdAt ? formatTime(session.createdAt) : '-');
@@ -367,12 +365,6 @@ function formatStatus(value) {
   return String(value || '-')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function formatBoolean(value) {
-  if (value === true) return 'Yes';
-  if (value === false) return 'No';
-  return '-';
 }
 
 function formatTime(value) {

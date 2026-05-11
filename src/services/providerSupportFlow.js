@@ -8,7 +8,6 @@ const COLLECTION = 'providerSupportSessions';
 const SUPPORT_STATUS = {
   AWAITING_REGION: 'awaiting_region',
   MAIN_MENU: 'main_menu',
-  AWAITING_PULSO_REGISTRATION: 'awaiting_pulso_registration',
   AWAITING_DUTY_TYPE: 'awaiting_duty_type',
   AWAITING_APP_ISSUE: 'awaiting_app_issue'
 };
@@ -17,8 +16,6 @@ const SUPPORT_BUTTON_IDS = {
   REGION_KERALA: 'ps_region_kerala',
   REGION_KARNATAKA: 'ps_region_karnataka',
   REGION_OTHER: 'ps_region_other',
-  REGISTERED_YES: 'ps_registered_yes',
-  REGISTERED_NO: 'ps_registered_no',
   DUTY_8H: 'ps_duty_8h',
   DUTY_24H: 'ps_duty_24h',
   APP_DOWNLOAD: 'ps_app_download',
@@ -195,24 +192,6 @@ function parseMainMenuSelection(message) {
   return null;
 }
 
-function parsePulsoRegistration(message) {
-  const replyId = getInteractiveReplyId(message);
-  if (replyId === SUPPORT_BUTTON_IDS.REGISTERED_YES) return true;
-  if (replyId === SUPPORT_BUTTON_IDS.REGISTERED_NO) return false;
-
-  const text = normalizeText(getMessageText(message));
-  if (
-    ['1', 'yes', 'y', 'registered', 'already registered', 'i registered', 'അതെ', 'ഉണ്ട്', 'ഞാൻ register ചെയ്തു']
-      .includes(text)
-  ) {
-    return true;
-  }
-  if (['2', 'no', 'n', 'not registered', 'not yet', 'new registration', 'join', 'ഇല്ല'].includes(text)) {
-    return false;
-  }
-  return null;
-}
-
 function parseDutyType(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId === SUPPORT_BUTTON_IDS.DUTY_8H) return '8h';
@@ -293,20 +272,6 @@ async function sendMainMenu(phone, language = 'en') {
           { id: SUPPORT_BUTTON_IDS.MAIN_JOIN, title: 'Join Pulso' }
         ]
       }
-    ]
-  });
-}
-
-async function sendPulsoRegistrationPrompt(phone, language = 'en') {
-  await updateSession(phone, { status: SUPPORT_STATUS.AWAITING_PULSO_REGISTRATION });
-  await sendAndLog(phone, 'buttons', {
-    body: isMalayalam(language)
-      ? 'നിങ്ങൾ Pulso-യിൽ registration പൂർത്തിയാക്കിയിട്ടുണ്ടോ?'
-      : 'Did you register with Pulso?',
-    buttons: [
-      { id: SUPPORT_BUTTON_IDS.REGISTERED_YES, title: 'Yes, registered' },
-      { id: SUPPORT_BUTTON_IDS.REGISTERED_NO, title: 'No, not yet' },
-      { id: SUPPORT_BUTTON_IDS.BACK_MAIN, title: 'Main menu' }
     ]
   });
 }
@@ -423,7 +388,7 @@ async function handleMainMenu(phone, message, session = {}) {
   }
 
   if (selected === 'duty_availability') {
-    await sendPulsoRegistrationPrompt(phone, language);
+    await sendDutyTypePrompt(phone, language);
     return;
   }
 
@@ -473,35 +438,6 @@ async function handleMainMenu(phone, message, session = {}) {
     );
     await sendMainMenu(phone, language);
   }
-}
-
-async function handlePulsoRegistration(phone, message, session = {}) {
-  const language = getSessionLanguage(session);
-  const isRegistered = parsePulsoRegistration(message);
-  if (isRegistered === null) {
-    await sendAndLog(
-      phone,
-      'text',
-      isMalayalam(language)
-        ? 'ദയവായി Yes അല്ലെങ്കിൽ No തിരഞ്ഞെടുക്കുക.'
-        : 'Please choose Yes or No.'
-    );
-    await sendPulsoRegistrationPrompt(phone, language);
-    return;
-  }
-
-  await updateSession(phone, {
-    registeredWithPulso: isRegistered,
-    lastIntent: isRegistered ? 'duty_availability_registered' : 'join'
-  });
-
-  if (isRegistered) {
-    await sendDutyTypePrompt(phone, language);
-    return;
-  }
-
-  await sendJoinPulso(phone, language);
-  await sendMainMenu(phone, language);
 }
 
 async function handleAppIssue(phone, message, session = {}) {
@@ -600,11 +536,6 @@ async function processProviderSupportMessage(phone, message) {
       status: SUPPORT_STATUS.MAIN_MENU
     });
     await sendMainMenu(phone, selectedLanguage);
-    return;
-  }
-
-  if (session.status === SUPPORT_STATUS.AWAITING_PULSO_REGISTRATION) {
-    await handlePulsoRegistration(phone, message, session);
     return;
   }
 
