@@ -138,6 +138,17 @@ function supportPhoneMessage(prefix, language = 'en') {
   ].join('\n');
 }
 
+function customerCareWhatsappMessage(language = 'en') {
+  const prompt = isMalayalam(language)
+    ? 'Customer care agent-നോട് WhatsApp chat ചെയ്യാം:'
+    : 'You can chat with our customer care agent on WhatsApp:';
+
+  return [
+    prompt,
+    config.providerSupportCustomerCareWhatsappUrl
+  ].join('\n');
+}
+
 function getSupportHelpCooldownRemainingMs(session) {
   const requestedAt =
     session && session.supportHelpRequestedAt ? Date.parse(session.supportHelpRequestedAt) : NaN;
@@ -253,7 +264,7 @@ function parseAppIssue(message) {
   if (['1', 'download', 'download app', 'app download'].includes(text)) return 'download';
   if (['2', 'login', 'login issue'].includes(text)) return 'login';
   if (['3', 'otp', 'otp issue'].includes(text)) return 'otp';
-  if (['4', 'agent', 'chat', 'customer care', 'chat with customer care agent'].includes(text)) {
+  if (['4', 'agent', 'chat', 'customer care', 'chat with customer care agent', 'whatsapp support'].includes(text)) {
     return 'agent';
   }
   return null;
@@ -340,7 +351,7 @@ async function sendAppIssuePrompt(phone, language = 'en') {
           { id: SUPPORT_BUTTON_IDS.APP_DOWNLOAD, title: 'Download app' },
           { id: SUPPORT_BUTTON_IDS.APP_LOGIN, title: 'Login issue' },
           { id: SUPPORT_BUTTON_IDS.APP_OTP, title: 'OTP issue' },
-          { id: SUPPORT_BUTTON_IDS.APP_AGENT, title: 'Request support' }
+          { id: SUPPORT_BUTTON_IDS.APP_AGENT, title: 'WhatsApp support' }
         ]
       }
     ]
@@ -513,12 +524,12 @@ async function handleAppIssue(phone, message, session = {}) {
   }
 
   if (selected === 'agent') {
-    await requestHumanSupport(phone, session, 'app_chat_with_agent');
+    await sendAndLog(phone, 'text', customerCareWhatsappMessage(language));
     await sendMainMenu(phone, language);
     return;
   }
 
-  await requestHumanSupport(phone, session, `app_${selected}`);
+  await sendAndLog(phone, 'text', customerCareWhatsappMessage(language));
   await sendMainMenu(phone, language);
 }
 
