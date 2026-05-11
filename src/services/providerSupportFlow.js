@@ -1,6 +1,6 @@
 const config = require('../config');
 const { getFirestore } = require('./storage');
-const { sendText, sendButtons, sendList } = require('./metaClient');
+const { sendText, sendButtons, sendCtaUrl, sendList } = require('./metaClient');
 const { getInteractiveReplyId, getMessageText, normalizeText } = require('./messageParser');
 const { notifyProviderSupportHelpRequested } = require('./providerSupportNotifications');
 
@@ -79,6 +79,8 @@ async function sendAndLog(phone, kind, body) {
 
   if (kind === 'buttons') {
     await sendButtons(phone, body.body, body.buttons, options);
+  } else if (kind === 'cta_url') {
+    await sendCtaUrl(phone, body.body, body.displayText, body.url, options);
   } else if (kind === 'list') {
     await sendList(phone, body.body, body.buttonText, body.sections, options);
   } else {
@@ -138,15 +140,14 @@ function supportPhoneMessage(prefix, language = 'en') {
   ].join('\n');
 }
 
-function customerCareWhatsappMessage(language = 'en') {
-  const prompt = isMalayalam(language)
-    ? 'Customer care agent-നോട് WhatsApp chat ചെയ്യാം:'
-    : 'You can chat with our customer care agent on WhatsApp:';
-
-  return [
-    prompt,
-    config.providerSupportCustomerCareWhatsappUrl
-  ].join('\n');
+function customerCareWhatsappCta(language = 'en') {
+  return {
+    body: isMalayalam(language)
+      ? 'Customer care agent-നോട് WhatsApp chat ചെയ്യാൻ താഴെയുള്ള button tap ചെയ്യുക.'
+      : 'Tap the button below to chat with our customer care agent on WhatsApp.',
+    displayText: 'Customer care',
+    url: config.providerSupportCustomerCareWhatsappUrl
+  };
 }
 
 function getSupportHelpCooldownRemainingMs(session) {
@@ -524,12 +525,12 @@ async function handleAppIssue(phone, message, session = {}) {
   }
 
   if (selected === 'agent') {
-    await sendAndLog(phone, 'text', customerCareWhatsappMessage(language));
+    await sendAndLog(phone, 'cta_url', customerCareWhatsappCta(language));
     await sendMainMenu(phone, language);
     return;
   }
 
-  await sendAndLog(phone, 'text', customerCareWhatsappMessage(language));
+  await sendAndLog(phone, 'cta_url', customerCareWhatsappCta(language));
   await sendMainMenu(phone, language);
 }
 

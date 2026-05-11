@@ -91,6 +91,25 @@ async function sendButtons(to, body, buttons, options) {
   }, options);
 }
 
+async function sendCtaUrl(to, body, displayText, url, options) {
+  return sendRequest({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'cta_url',
+      body: { text: body },
+      action: {
+        name: 'cta_url',
+        parameters: {
+          display_text: displayText,
+          url
+        }
+      }
+    }
+  }, options);
+}
+
 async function sendTemplate(to, name, languageCode, components, options) {
   return sendRequest({
     messaging_product: 'whatsapp',
@@ -191,6 +210,7 @@ module.exports = {
   sendDocumentById,
   sendVideoById,
   sendButtons,
+  sendCtaUrl,
   sendList,
   sendTemplate,
   sendAudio,
