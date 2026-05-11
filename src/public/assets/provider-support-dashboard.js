@@ -144,7 +144,9 @@ function matchesSearch(session, search) {
     session.language,
     session.status,
     session.lastIntent,
-    session.lastDutyType
+    session.lastDutyType,
+    session.supportHelpReason,
+    session.supportHelpRequested
   ].map((value) => normalizeSearchTerm(value)).join(' ');
 
   return haystack.includes(search);
@@ -198,6 +200,8 @@ async function renderDetail(phone) {
   setText('detail-step', formatStatus(session.lastIntent || session.status || 'support session'));
   setText('detail-region', session.region ? formatStatus(session.region) : 'Not selected');
   setText('detail-language', session.language || '-');
+  setText('detail-support-help', formatBoolean(session.supportHelpRequested));
+  setText('detail-support-reason', session.supportHelpReason ? formatStatus(session.supportHelpReason) : '-');
   setText('detail-intent', session.lastIntent ? formatStatus(session.lastIntent) : '-');
   setText('detail-duty-type', session.lastDutyType || '-');
   setText('detail-created', session.createdAt ? formatTime(session.createdAt) : '-');
@@ -256,13 +260,18 @@ function renderHistoryBubble(entry) {
     `;
   }
 
+  const systemLabel = [entry.event, entry.reason]
+    .filter(Boolean)
+    .map((value) => formatStatus(value))
+    .join(': ') || 'System update';
+
   return `
     <article class="history-item history-item-system">
       <div class="history-meta">
         <span class="history-sender">System</span>
         <time>${escapeHtml(formatTime(entry.createdAt))}</time>
       </div>
-      <div class="history-system-note">${escapeHtml(formatStatus(entry.type || 'system update'))}</div>
+      <div class="history-system-note">${escapeHtml(systemLabel)}</div>
     </article>
   `;
 }
@@ -365,6 +374,12 @@ function formatStatus(value) {
   return String(value || '-')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatBoolean(value) {
+  if (value === true) return 'Yes';
+  if (value === false) return 'No';
+  return '-';
 }
 
 function formatTime(value) {

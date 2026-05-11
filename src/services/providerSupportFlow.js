@@ -2,8 +2,10 @@ const config = require('../config');
 const { getFirestore } = require('./storage');
 const { sendText, sendButtons, sendList } = require('./metaClient');
 const { getInteractiveReplyId, getMessageText, normalizeText } = require('./messageParser');
+const { notifyProviderSupportHelpRequested } = require('./providerSupportNotifications');
 
 const COLLECTION = 'providerSupportSessions';
+const SUPPORT_HELP_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 
 const SUPPORT_STATUS = {
   AWAITING_REGION: 'awaiting_region',
@@ -136,17 +138,51 @@ function supportPhoneMessage(prefix, language = 'en') {
   ].join('\n');
 }
 
-function supportPhoneAndAgentMessage(prefix, language = 'en') {
-  const agentLine = isMalayalam(language)
-    ? 'Customer care agent-നോട് WhatsApp chat ചെയ്യാം:'
-    : 'You can also chat with our customer care agent here:';
+function getSupportHelpCooldownRemainingMs(session) {
+  const requestedAt =
+    session && session.supportHelpRequestedAt ? Date.parse(session.supportHelpRequestedAt) : NaN;
+  if (!requestedAt) {
+    return 0;
+  }
+
+  const remainingMs = SUPPORT_HELP_COOLDOWN_MS - (Date.now() - requestedAt);
+  return remainingMs > 0 ? remainingMs : 0;
+}
+
+function canRequestSupportHelp(session) {
+  return getSupportHelpCooldownRemainingMs(session) === 0;
+}
+
+function supportHelpAcceptedMessage(language = 'en') {
+  if (isMalayalam(language)) {
+    return [
+      'ഞങ്ങളുടെ support team-നെ അറിയിച്ചിട്ടുണ്ട്.',
+      'Support team issue പരിശോധിച്ച് ആവശ്യമെങ്കിൽ നിങ്ങളെ ബന്ധപ്പെടും.',
+      '',
+      'Support time:',
+      'രാവിലെ 10:00 മുതൽ വൈകുന്നേരം 5:00 വരെ',
+      '',
+      'Urgent help-നായി വിളിക്കുക:',
+      config.providerSupportPhone
+    ].join('\n');
+  }
 
   return [
-    supportPhoneMessage(prefix, language),
+    'Our support team has been informed.',
+    'The team will review your issue and contact you if needed.',
     '',
-    agentLine,
-    config.providerSupportCustomerCareWhatsappUrl
+    'Support time:',
+    '10:00 AM to 5:00 PM',
+    '',
+    'For urgent help, call:',
+    config.providerSupportPhone
   ].join('\n');
+}
+
+function supportHelpAlreadyRequestedMessage(language = 'en') {
+  return isMalayalam(language)
+    ? 'ഞങ്ങളുടെ support team-നെ ഇതിനകം അറിയിച്ചിട്ടുണ്ട്. സഹായം ലഭിക്കാത്ത പക്ഷം 12 മണിക്കൂറിന് ശേഷം വീണ്ടും request ചെയ്യാം.'
+    : 'Our support team has already been informed. If you do not get help, you can request again after 12 hours.';
 }
 
 function parseRegionSelection(message) {
@@ -304,7 +340,7 @@ async function sendAppIssuePrompt(phone, language = 'en') {
           { id: SUPPORT_BUTTON_IDS.APP_DOWNLOAD, title: 'Download app' },
           { id: SUPPORT_BUTTON_IDS.APP_LOGIN, title: 'Login issue' },
           { id: SUPPORT_BUTTON_IDS.APP_OTP, title: 'OTP issue' },
-          { id: SUPPORT_BUTTON_IDS.APP_AGENT, title: 'Chat with agent' }
+          { id: SUPPORT_BUTTON_IDS.APP_AGENT, title: 'Request support' }
         ]
       }
     ]
@@ -364,6 +400,32 @@ async function sendDutyAvailability(phone, dutyType, language = 'en') {
   );
 }
 
+async function requestHumanSupport(phone, session = {}, reason = 'general_support') {
+  const language = getSessionLanguage(session);
+
+  if (!canRequestSupportHelp(session)) {
+    await sendAndLog(phone, 'text', supportHelpAlreadyRequestedMessage(language));
+    return;
+  }
+
+  const updatedSession = await updateSession(phone, {
+    status: SUPPORT_STATUS.MAIN_MENU,
+    supportHelpRequested: true,
+    supportHelpRequestedAt: nowIso(),
+    supportHelpReason: reason,
+    lastIntent: reason
+  });
+
+  await addSessionEvent(phone, {
+    type: 'system',
+    event: 'support_help_requested',
+    reason
+  });
+
+  await sendAndLog(phone, 'text', supportHelpAcceptedMessage(language));
+  await notifyProviderSupportHelpRequested(updatedSession, reason);
+}
+
 async function handleMainMenu(phone, message, session = {}) {
   const language = getSessionLanguage(session);
   const selected = parseMainMenuSelection(message);
@@ -413,29 +475,13 @@ async function handleMainMenu(phone, message, session = {}) {
   }
 
   if (selected === 'duty_issue') {
-    await sendAndLog(
-      phone,
-      'text',
-      supportPhoneAndAgentMessage(
-        isMalayalam(language)
-          ? 'Duty issue അല്ലെങ്കിൽ family issue ഉണ്ടെങ്കിൽ Pulso support-നെ വിളിക്കുക:'
-          : 'For duty issue or family issue, please contact Pulso support:',
-        language
-      )
-    );
+    await requestHumanSupport(phone, session, 'duty_family_issue');
     await sendMainMenu(phone, language);
     return;
   }
 
   if (selected === 'talk_support') {
-    await sendAndLog(
-      phone,
-      'text',
-      supportPhoneMessage(
-        isMalayalam(language) ? 'Pulso support-നെ വിളിക്കുക:' : 'Please contact Pulso support:',
-        language
-      )
-    );
+    await requestHumanSupport(phone, session, 'talk_support');
     await sendMainMenu(phone, language);
   }
 }
@@ -467,29 +513,12 @@ async function handleAppIssue(phone, message, session = {}) {
   }
 
   if (selected === 'agent') {
-    const lines = isMalayalam(language)
-      ? ['Customer care agent-നോട് WhatsApp chat ചെയ്യാം:', config.providerSupportCustomerCareWhatsappUrl]
-      : ['You can chat with our customer care agent here:', config.providerSupportCustomerCareWhatsappUrl];
-
-    await sendAndLog(
-      phone,
-      'text',
-      lines.join('\n')
-    );
+    await requestHumanSupport(phone, session, 'app_chat_with_agent');
     await sendMainMenu(phone, language);
     return;
   }
 
-  await sendAndLog(
-    phone,
-    'text',
-    supportPhoneAndAgentMessage(
-      isMalayalam(language)
-        ? 'Pulso App / Login / OTP issue-നായി Pulso support-നെ വിളിക്കുക:'
-        : 'For Pulso App / Login / OTP issue, please contact Pulso support:',
-      language
-    )
-  );
+  await requestHumanSupport(phone, session, `app_${selected}`);
   await sendMainMenu(phone, language);
 }
 
