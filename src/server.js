@@ -244,13 +244,18 @@ function splitForwardedFor(value) {
 }
 
 function getRequestClientIp(req) {
+  const cloudflareIp = normalizeIp(req.get('cf-connecting-ip')) || normalizeIp(req.get('true-client-ip'));
+  if (cloudflareIp) {
+    return cloudflareIp;
+  }
+
   const forwardedIps = splitForwardedFor(req.headers['x-forwarded-for']);
   const publicForwardedIps = forwardedIps.filter(
     (ip) => net.isIP(ip) !== 4 || !isPrivateOrReservedIpv4(ip)
   );
 
   if (publicForwardedIps.length) {
-    return publicForwardedIps[publicForwardedIps.length - 1];
+    return publicForwardedIps[0];
   }
 
   return (
