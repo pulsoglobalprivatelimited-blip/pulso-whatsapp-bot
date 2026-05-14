@@ -135,13 +135,15 @@ function getMetaTemplateName(language) {
     return config.ivrJobWhatsappTemplateNameEn;
   }
 
-  return config.ivrJobWhatsappTemplateName;
+  return config.ivrJobWhatsappTemplateName || config.ivrJobWhatsappTemplateNameEn;
 }
 
 function getMetaTemplateLanguage(language) {
-  return language === 'ml'
-    ? config.ivrJobWhatsappTemplateLanguageMl
-    : config.ivrJobWhatsappTemplateLanguageEn;
+  if (language === 'ml' && config.ivrJobWhatsappTemplateNameMl) {
+    return config.ivrJobWhatsappTemplateLanguageMl;
+  }
+
+  return config.ivrJobWhatsappTemplateLanguageEn;
 }
 
 function buildWelcomeTwiml() {
