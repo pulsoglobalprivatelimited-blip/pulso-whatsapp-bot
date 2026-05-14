@@ -146,6 +146,19 @@ function getMetaTemplateLanguage(language) {
   return config.ivrJobWhatsappTemplateLanguageEn;
 }
 
+function summarizeWhatsappSendResult(result) {
+  const message = result && Array.isArray(result.messages) ? result.messages[0] : null;
+  const contact = result && Array.isArray(result.contacts) ? result.contacts[0] : null;
+
+  return {
+    dryRun: Boolean(result && result.dryRun),
+    messageId: message && message.id ? message.id : null,
+    messageStatus: message && message.message_status ? message.message_status : null,
+    contactInput: contact && contact.input ? contact.input : null,
+    waId: contact && contact.wa_id ? contact.wa_id : null
+  };
+}
+
 function buildWelcomeTwiml() {
   const prompt = COPY.welcome.map((line) => say(line.text, { language: line.language })).join('');
   return twiml(gather('/ivr/language', prompt) + redirect('/ivr/welcome'));
@@ -216,7 +229,8 @@ async function sendJobWhatsapp(to, language) {
 
   const templateName = getMetaTemplateName(lang);
   if (templateName) {
-    return sendTemplate(recipient, templateName, getMetaTemplateLanguage(lang), [
+    const templateLanguage = getMetaTemplateLanguage(lang);
+    const result = await sendTemplate(recipient, templateName, templateLanguage, [
       {
         type: 'body',
         parameters: [
@@ -227,10 +241,40 @@ async function sendJobWhatsapp(to, language) {
         ]
       }
     ]);
+    console.log(
+      '[IVR_JOB_WHATSAPP_SENT]',
+      JSON.stringify(
+        {
+          mode: 'template',
+          recipient,
+          language: lang,
+          templateName,
+          templateLanguage,
+          result: summarizeWhatsappSendResult(result)
+        },
+        null,
+        2
+      )
+    );
+    return result;
   }
 
   console.warn('[IVR_WHATSAPP_TEMPLATE_MISSING] Sending free-form text may fail outside a WhatsApp service window.');
-  return sendText(recipient, getWhatsappBody(lang));
+  const result = await sendText(recipient, getWhatsappBody(lang));
+  console.log(
+    '[IVR_JOB_WHATSAPP_SENT]',
+    JSON.stringify(
+      {
+        mode: 'text',
+        recipient,
+        language: lang,
+        result: summarizeWhatsappSendResult(result)
+      },
+      null,
+      2
+    )
+  );
+  return result;
 }
 
 module.exports = {

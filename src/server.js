@@ -429,12 +429,14 @@ app.post('/webhook', async (req, res) => {
   try {
     const entry = req.body.entry || [];
     let processedMessages = 0;
+    let processedStatuses = 0;
 
     for (const item of entry) {
       const changes = item.changes || [];
       for (const change of changes) {
         const value = change.value || {};
         const messages = value.messages || [];
+        const statuses = value.statuses || [];
         const useProviderSupportBot = isProviderSupportWebhookValue(value);
 
         for (const message of messages) {
@@ -491,10 +493,54 @@ app.post('/webhook', async (req, res) => {
             await processIncomingMessage(message.from, message);
           }
         }
+
+        for (const status of statuses) {
+          processedStatuses += 1;
+          console.log(
+            '[WEBHOOK] Message status',
+            JSON.stringify(
+              {
+                id: status.id || null,
+                status: status.status || null,
+                recipientId: status.recipient_id || null,
+                timestamp: status.timestamp || null,
+                conversation:
+                  status.conversation && status.conversation.id
+                    ? {
+                        id: status.conversation.id,
+                        origin:
+                          status.conversation.origin && status.conversation.origin.type
+                            ? status.conversation.origin.type
+                            : null
+                      }
+                    : null,
+                pricing: status.pricing || null,
+                errors: Array.isArray(status.errors)
+                  ? status.errors.map((error) => ({
+                      code: error.code || null,
+                      title: error.title || null,
+                      message: error.message || null,
+                      details: error.error_data || null
+                    }))
+                  : [],
+                phoneNumberId:
+                  value.metadata && value.metadata.phone_number_id
+                    ? value.metadata.phone_number_id
+                    : null,
+                displayPhoneNumber:
+                  value.metadata && value.metadata.display_phone_number
+                    ? value.metadata.display_phone_number
+                    : null
+              },
+              null,
+              2
+            )
+          );
+        }
       }
     }
 
-    if (!processedMessages) {
+    if (!processedMessages && !processedStatuses) {
       console.log('[WEBHOOK] Event received with no message payload');
     }
 
