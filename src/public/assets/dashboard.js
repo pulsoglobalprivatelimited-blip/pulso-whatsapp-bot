@@ -8,6 +8,7 @@ let currentCompletedSex = 'all';
 let currentStartedRange = 'all';
 let mobileDetailOpen = false;
 let suppressAutoSelectOnce = false;
+let detailRequestToken = 0;
 
 const dashboardRegion = getDashboardRegionFromPath();
 let currentRegionFilter = dashboardRegion || 'all';
@@ -914,6 +915,17 @@ function setText(id, value) {
   document.getElementById(id).textContent = value || '-';
 }
 
+function replaceProviderCacheEntry(provider) {
+  if (!provider || !provider.phone) {
+    return;
+  }
+
+  const index = providers.findIndex((item) => item.phone === provider.phone);
+  if (index >= 0) {
+    providers[index] = provider;
+  }
+}
+
 function mediaUrl(file) {
   if (file && file.cloudStorageUrl) {
     return file.cloudStorageUrl;
@@ -1171,7 +1183,44 @@ function scrollHistoryToBottom() {
   });
 }
 
-function renderDetail(provider) {
+function renderDetailLoading(provider) {
+  document.getElementById('detail-phone').innerHTML = renderPhoneLink(provider.phone, 'detail-phone-link');
+  setText('detail-status', formatStatus(getDashboardStatus(provider) || 'loading'));
+  setText('detail-step', `${formatRegionLabel(getProviderRegion(provider))} | Loading`);
+  [
+    'detail-name',
+    'detail-region',
+    'detail-language',
+    'detail-qualification',
+    'detail-interest',
+    'detail-duty-hour',
+    'detail-expected-duties',
+    'detail-agent-help',
+    'detail-app-status',
+    'detail-app-device',
+    'detail-app-help',
+    'detail-age',
+    'detail-sex',
+    'detail-district',
+    'detail-updated',
+    'detail-certificate',
+    'detail-verification'
+  ].forEach((id) => setText(id, 'Loading...'));
+  document.getElementById('history-list').innerHTML = '<p class="attachment-empty">Loading history...</p>';
+  document.getElementById('detail-certificate-files').innerHTML = '<p class="attachment-empty">Loading files...</p>';
+  document.getElementById('detail-additional-request').innerHTML = '<p class="attachment-empty">Loading request...</p>';
+  document.getElementById('detail-additional-document-files').innerHTML = '<p class="attachment-empty">Loading files...</p>';
+  document.getElementById('detail-provider-chat-actions').innerHTML = '<p class="attachment-empty">Loading chat actions...</p>';
+}
+
+function renderDetailError(provider, message) {
+  document.getElementById('detail-phone').innerHTML = renderPhoneLink(provider.phone, 'detail-phone-link');
+  setText('detail-status', 'Unable to load');
+  setText('detail-step', `${formatRegionLabel(getProviderRegion(provider))} | Detail unavailable`);
+  document.getElementById('history-list').innerHTML = `<p class="attachment-empty">${escapeHtml(message || 'Could not load provider detail.')}</p>`;
+}
+
+async function renderDetail(provider) {
   selectedPhone = provider.phone;
   if (isMobileViewport()) {
     mobileDetailOpen = true;
@@ -1181,42 +1230,66 @@ function renderDetail(provider) {
   updateMobileDetailState();
   renderList();
 
-  document.getElementById('detail-phone').innerHTML = renderPhoneLink(provider.phone, 'detail-phone-link');
-  setText('detail-status', formatStatus(getDashboardStatus(provider)));
-  setText('detail-step', `${formatRegionLabel(getProviderRegion(provider))} | Step ${provider.currentStep}`);
-  setText('detail-name', provider.fullName);
-  setText('detail-region', formatRegionLabel(getProviderRegion(provider)));
-  setText('detail-language', provider.language || (getProviderRegion(provider) === 'karnataka' ? 'en' : 'ml'));
-  setText('detail-qualification', formatQualificationReview(provider));
-  setText('detail-interest', provider.interestConfirmed ? 'Yes' : 'No');
-  setText('detail-duty-hour', formatDutyHourPreference(provider.dutyHourPreference));
-  setText('detail-expected-duties', formatExpectedDuties(provider.expectedDutiesAccepted));
-  setText('detail-agent-help', formatAgentHelp(provider.agentHelpRequested));
-  setText('detail-app-status', formatAppStatus(provider));
-  setText('detail-app-device', provider.pulsoAppDevice || provider.mobileAppCampaignDevice || '-');
-  setText('detail-app-help', provider.pulsoAppHelpReason ? formatStatus(provider.pulsoAppHelpReason) : '-');
-  setText('detail-age', provider.age);
-  setText('detail-sex', provider.sex);
-  setText('detail-district', provider.district);
-  setText('detail-updated', new Date(provider.updatedAt).toLocaleString());
-  setText('detail-certificate', provider.documents.certificateReceived ? `${provider.documents.certificateAttachments.length} file(s)` : 'Not received');
-  setText('detail-verification', provider.verification.status);
-  renderProviderChatActions(provider);
-  renderAttachments('detail-certificate-files', provider.documents.certificateAttachments);
-  renderAdditionalDocumentRequest(provider);
-  renderAttachments('detail-additional-document-files', provider.documents.additionalDocumentAttachments);
+  const requestToken = ++detailRequestToken;
+  let detailProvider = provider;
 
-  document.getElementById('reviewer-input').value = provider.verification.reviewedBy || 'ops-team';
+  if (provider.dashboardSummary) {
+    renderDetailLoading(provider);
+    try {
+      detailProvider = await fetchJson(`/admin/providers/${encodeURIComponent(provider.phone)}`);
+      if (requestToken !== detailRequestToken) {
+        return;
+      }
+      replaceProviderCacheEntry(detailProvider);
+    } catch (error) {
+      if (requestToken === detailRequestToken) {
+        renderDetailError(provider, error.message);
+      }
+      return;
+    }
+  }
+
+  const documents = detailProvider.documents || {};
+  const verification = detailProvider.verification || {};
+  const certificateAttachments = documents.certificateAttachments || [];
+  const additionalDocumentAttachments = documents.additionalDocumentAttachments || [];
+
+  document.getElementById('detail-phone').innerHTML = renderPhoneLink(detailProvider.phone, 'detail-phone-link');
+  setText('detail-status', formatStatus(getDashboardStatus(detailProvider)));
+  setText('detail-step', `${formatRegionLabel(getProviderRegion(detailProvider))} | Step ${detailProvider.currentStep}`);
+  setText('detail-name', detailProvider.fullName);
+  setText('detail-region', formatRegionLabel(getProviderRegion(detailProvider)));
+  setText('detail-language', detailProvider.language || (getProviderRegion(detailProvider) === 'karnataka' ? 'en' : 'ml'));
+  setText('detail-qualification', formatQualificationReview(detailProvider));
+  setText('detail-interest', detailProvider.interestConfirmed ? 'Yes' : 'No');
+  setText('detail-duty-hour', formatDutyHourPreference(detailProvider.dutyHourPreference));
+  setText('detail-expected-duties', formatExpectedDuties(detailProvider.expectedDutiesAccepted));
+  setText('detail-agent-help', formatAgentHelp(detailProvider.agentHelpRequested));
+  setText('detail-app-status', formatAppStatus(detailProvider));
+  setText('detail-app-device', detailProvider.pulsoAppDevice || detailProvider.mobileAppCampaignDevice || '-');
+  setText('detail-app-help', detailProvider.pulsoAppHelpReason ? formatStatus(detailProvider.pulsoAppHelpReason) : '-');
+  setText('detail-age', detailProvider.age);
+  setText('detail-sex', detailProvider.sex);
+  setText('detail-district', detailProvider.district);
+  setText('detail-updated', detailProvider.updatedAt ? new Date(detailProvider.updatedAt).toLocaleString() : '-');
+  setText('detail-certificate', documents.certificateReceived ? `${certificateAttachments.length} file(s)` : 'Not received');
+  setText('detail-verification', verification.status);
+  renderProviderChatActions(detailProvider);
+  renderAttachments('detail-certificate-files', certificateAttachments);
+  renderAdditionalDocumentRequest(detailProvider);
+  renderAttachments('detail-additional-document-files', additionalDocumentAttachments);
+
+  document.getElementById('reviewer-input').value = verification.reviewedBy || 'ops-team';
   document.getElementById('review-qualification-input').value = normalizeQualification(
-    (provider.verification && provider.verification.qualificationApproved) || provider.qualification
+    (verification && verification.qualificationApproved) || detailProvider.qualification
   );
-  document.getElementById('notes-input').value = provider.verification.notes || '';
-  document.getElementById('additional-reviewer-input').value = provider.verification.reviewedBy || 'ops-team';
+  document.getElementById('notes-input').value = verification.notes || '';
+  document.getElementById('additional-reviewer-input').value = verification.reviewedBy || 'ops-team';
   document.getElementById('additional-note-input').value =
-    provider.documents && provider.documents.additionalDocumentRequest && provider.documents.additionalDocumentRequest.status === 'pending'
-      ? provider.documents.additionalDocumentRequest.note || ''
+    documents && documents.additionalDocumentRequest && documents.additionalDocumentRequest.status === 'pending'
+      ? documents.additionalDocumentRequest.note || ''
       : '';
-  renderHistory(provider.history);
+  renderHistory(detailProvider.history);
   setTimeout(scrollHistoryToBottom, 0);
   if (isMobileViewport()) {
     window.scrollTo({ top: 0, behavior: 'smooth' });

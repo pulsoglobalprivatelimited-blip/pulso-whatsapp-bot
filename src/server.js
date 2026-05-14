@@ -21,7 +21,7 @@ const {
   listProviderSupportSessions,
   resetProviderSupportSession
 } = require('./services/providerSupportAdminService');
-const { listProviders, getProvider, updateProvider } = require('./services/providerService');
+const { listProviders, listProviderSummaries, getProvider, updateProvider } = require('./services/providerService');
 const { inferProviderRegion, normalizeRegion } = require('./services/regionService');
 const { initializeStorage } = require('./services/storage');
 const { notifyCertificateUploaded } = require('./services/opsNotifications');
@@ -588,8 +588,9 @@ app.get('/admin/media/*', (req, res) => {
 
 app.get('/admin/providers', async (req, res) => {
   const requestedRegion = normalizeRegion(req.query.region);
-  const providers = (await listProviders()).map((provider) => ({
+  const providers = (await listProviderSummaries()).map((provider) => ({
     ...provider,
+    dashboardSummary: true,
     region: inferProviderRegion(provider) || provider.region || null
   }));
 

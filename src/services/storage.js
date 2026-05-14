@@ -83,6 +83,45 @@ async function listProviders() {
   return snapshot.docs.map((doc) => doc.data());
 }
 
+async function listProviderSummaries() {
+  const snapshot = await getFirestore()
+    .collection('providers')
+    .orderBy('updatedAt', 'desc')
+    .select(
+      'phone',
+      'status',
+      'currentStep',
+      'region',
+      'language',
+      'flowId',
+      'qualification',
+      'fullName',
+      'age',
+      'sex',
+      'district',
+      'dutyHourPreference',
+      'expectedDutiesAccepted',
+      'interestConfirmed',
+      'agentHelpRequested',
+      'termsAccepted',
+      'completedAt',
+      'createdAt',
+      'updatedAt',
+      'verification',
+      'pulsoAppActivationStatus',
+      'pulsoAppDevice',
+      'pulsoAppHelpReason',
+      'mobileAppCampaignStatus',
+      'mobileAppCampaignDevice'
+    )
+    .get();
+
+  return snapshot.docs.map((doc) => ({
+    phone: doc.id,
+    ...doc.data()
+  }));
+}
+
 async function saveProvider(phone, provider) {
   await getFirestore().collection('providers').doc(phone).set(provider, { merge: true });
   return provider;
@@ -93,6 +132,7 @@ module.exports = {
   getFirestore,
   getProvider,
   listProviders,
+  listProviderSummaries,
   saveProvider,
   getStorageBucket
 };
