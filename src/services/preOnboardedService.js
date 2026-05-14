@@ -28,7 +28,7 @@ const preOnboardedSet = new Set(
 // Numbers in this set should always be allowed to enter the bot flow,
 // even if they appear in the pre-onboarded suppression list.
 const replyEligibleSet = new Set(
-  ['9207887114']
+  ['9207887114', '919778201783']
     .map(normalizePhone)
     .filter(Boolean)
 );
