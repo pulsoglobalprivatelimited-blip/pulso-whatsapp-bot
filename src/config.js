@@ -56,7 +56,7 @@ module.exports = {
     .filter(Boolean),
   ivrJobWhatsappTemplateName: process.env.IVR_JOB_WHATSAPP_TEMPLATE_NAME || '',
   ivrJobWhatsappTemplateNameEn:
-    process.env.IVR_JOB_WHATSAPP_TEMPLATE_NAME_EN || 'ivr_job_enquiry_en',
+    process.env.IVR_JOB_WHATSAPP_TEMPLATE_NAME_EN || 'ivr_continue_reply_en',
   ivrJobWhatsappTemplateNameMl: process.env.IVR_JOB_WHATSAPP_TEMPLATE_NAME_ML || '',
   ivrJobWhatsappTemplateLanguageEn: process.env.IVR_JOB_WHATSAPP_TEMPLATE_LANGUAGE_EN || 'en',
   ivrJobWhatsappTemplateLanguageMl: process.env.IVR_JOB_WHATSAPP_TEMPLATE_LANGUAGE_ML || 'ml',

@@ -19,7 +19,7 @@ const COPY = {
       'Thank you for your interest in joining Pulso.',
       'Job opportunity enquiries are handled only through WhatsApp.',
       'Please send your name, location, qualification, experience, and certificate photo to our recruitment WhatsApp number.',
-      'We are sending the WhatsApp link to you on WhatsApp.',
+      'We are sending a WhatsApp message to you.',
       'Thank you for calling Pulso.'
     ],
     invalid: 'Sorry, we did not receive a valid selection.',
@@ -43,7 +43,7 @@ const COPY = {
       'Pulso-yil joli cheyyanulla thalparyathinu nanni.',
       'Caregiver allenkil Nursing Staff joli avasarangal WhatsApp vazhi mathramanu kaikaryam cheyyunnathu.',
       'Dayavayi ningalude peru, sthalam, qualification, experience, certificate photo enniva njangalude recruitment WhatsApp numberilekku ayakkuka.',
-      'WhatsApp link WhatsApp message ayi ayachittundu.',
+      'WhatsApp message ayachittundu.',
       'Pulso ilekku vilichathinu nanni.'
     ],
     invalid: 'Kshamikkanam, sariyaya selection labhichilla.',
@@ -159,6 +159,24 @@ function summarizeWhatsappSendResult(result) {
   };
 }
 
+function getMetaTemplateComponents(templateName) {
+  if (templateName === 'ivr_continue_reply_en') {
+    return [];
+  }
+
+  return [
+    {
+      type: 'body',
+      parameters: [
+        {
+          type: 'text',
+          text: buildWaLink()
+        }
+      ]
+    }
+  ];
+}
+
 function buildWelcomeTwiml() {
   const prompt = COPY.welcome.map((line) => say(line.text, { language: line.language })).join('');
   return twiml(gather('/ivr/language', prompt) + redirect('/ivr/welcome'));
@@ -230,17 +248,12 @@ async function sendJobWhatsapp(to, language) {
   const templateName = getMetaTemplateName(lang);
   if (templateName) {
     const templateLanguage = getMetaTemplateLanguage(lang);
-    const result = await sendTemplate(recipient, templateName, templateLanguage, [
-      {
-        type: 'body',
-        parameters: [
-          {
-            type: 'text',
-            text: buildWaLink()
-          }
-        ]
-      }
-    ]);
+    const result = await sendTemplate(
+      recipient,
+      templateName,
+      templateLanguage,
+      getMetaTemplateComponents(templateName)
+    );
     console.log(
       '[IVR_JOB_WHATSAPP_SENT]',
       JSON.stringify(
