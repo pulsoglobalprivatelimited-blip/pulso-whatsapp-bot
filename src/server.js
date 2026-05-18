@@ -31,6 +31,7 @@ const {
   buildInvalidTwiml,
   buildDialStaffTwiml,
   buildJobTwiml,
+  getJobVoiceMessage,
   resolveLanguage,
   resolveMenuAction,
   sendJobWhatsapp
@@ -393,6 +394,8 @@ app.all('/ivr/job-whatsapp', async (req, res) => {
       ok: true,
       phone,
       language: normalizedLanguage,
+      nextAction: 'play_confirmation_and_hangup',
+      confirmationVoiceMessage: getJobVoiceMessage(normalizedLanguage),
       result
     });
   } catch (error) {

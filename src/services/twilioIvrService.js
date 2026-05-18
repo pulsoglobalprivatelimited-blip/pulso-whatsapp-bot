@@ -214,6 +214,11 @@ function buildJobTwiml(language) {
   return twiml(prompt + hangup());
 }
 
+function getJobVoiceMessage(language) {
+  const lang = LANGUAGES.has(language) ? language : 'en';
+  return COPY[lang].jobMessage.join(' ');
+}
+
 function resolveLanguage(digit) {
   if (digit === '1') {
     return 'en';
@@ -296,6 +301,7 @@ module.exports = {
   buildInvalidTwiml,
   buildDialStaffTwiml,
   buildJobTwiml,
+  getJobVoiceMessage,
   resolveLanguage,
   resolveMenuAction,
   sendJobWhatsapp
