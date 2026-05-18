@@ -1,6 +1,12 @@
 require('dotenv').config();
 const path = require('path');
 
+const DEFAULT_IVR_WEBHOOK_ALLOWED_IPS = [
+  '122.176.95.160',
+  '180.179.198.152',
+  '180.179.198.235'
+];
+
 function resolveMediaStorageDir() {
   if (process.env.MEDIA_STORAGE_DIR) {
     return process.env.MEDIA_STORAGE_DIR;
@@ -50,10 +56,15 @@ module.exports = {
   ivrStaffPhone: process.env.IVR_STAFF_PHONE || process.env.OWNER_NOTIFICATION_PHONE || '919446600809',
   ivrRecruitmentWhatsappNumber: process.env.IVR_RECRUITMENT_WHATSAPP_NUMBER || '919633108778',
   ivrWebhookSecret: process.env.IVR_WEBHOOK_SECRET || '',
-  ivrWebhookAllowedIps: (process.env.IVR_WEBHOOK_ALLOWED_IPS || '')
-    .split(/[,\s]+/)
-    .map((value) => value.trim())
-    .filter(Boolean),
+  ivrWebhookAllowedIps: Array.from(
+    new Set(
+      (process.env.IVR_WEBHOOK_ALLOWED_IPS || '')
+        .split(/[,\s]+/)
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .concat(DEFAULT_IVR_WEBHOOK_ALLOWED_IPS)
+    )
+  ),
   ivrJobWhatsappTemplateName: process.env.IVR_JOB_WHATSAPP_TEMPLATE_NAME || '',
   ivrJobWhatsappTemplateNameEn:
     process.env.IVR_JOB_WHATSAPP_TEMPLATE_NAME_EN || 'ivr_continue_reply_en',
