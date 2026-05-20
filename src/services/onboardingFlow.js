@@ -938,6 +938,11 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
       'DUTY_ACCEPT_VIDEO_SEND_ERROR'
     );
     await sendAndLog(phone, 'text', MESSAGES.pulsoAppActivationInstruction, sender);
+    await sendOptionalVideo(
+      () => sendPulsoAppActivationVideo(phone, refreshedProvider, sender),
+      phone,
+      'PULSO_APP_ACTIVATION_VIDEO_SEND_ERROR'
+    );
     await sendPulsoAppInstallInterestButtons(phone);
   }
 
@@ -1039,6 +1044,11 @@ async function sendMobileAppCampaignToProvider(provider, sender = 'mobile-app-ca
     'DUTY_ACCEPT_VIDEO_SEND_ERROR'
   );
   await sendAndLog(provider.phone, 'text', MESSAGES.pulsoAppActivationInstruction, sender);
+  await sendOptionalVideo(
+    () => sendPulsoAppActivationVideo(provider.phone, provider, sender),
+    provider.phone,
+    'PULSO_APP_ACTIVATION_VIDEO_SEND_ERROR'
+  );
   await sendPulsoAppInstallInterestButtons(provider.phone);
   await updateProvider(provider.phone, {
     pulsoAppRequired: true,
