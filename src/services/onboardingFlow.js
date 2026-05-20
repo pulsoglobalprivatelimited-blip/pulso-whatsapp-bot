@@ -739,6 +739,26 @@ async function sendPulsoAppActivationVideo(phone, provider, sender = 'bot') {
   );
 }
 
+async function sendOptionalVideo(sendVideo, phone, label) {
+  try {
+    return await sendVideo();
+  } catch (error) {
+    console.error(
+      `[${label}]`,
+      JSON.stringify(
+        {
+          phone,
+          message: error.message,
+          response: error.response ? error.response.data : null
+        },
+        null,
+        2
+      )
+    );
+    return false;
+  }
+}
+
 function getLastTermsAcceptHistoryEntry(provider) {
   const history = Array.isArray(provider && provider.history) ? provider.history : [];
   const acceptEntries = history.filter(
@@ -912,9 +932,12 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
       entry.payload.body.body === MESSAGES.pulsoAppInstallQuestion
   );
   if (!sentPulsoAppQuestion) {
-    await sendDutyAcceptVideo(phone, refreshedProvider, sender);
+    await sendOptionalVideo(
+      () => sendDutyAcceptVideo(phone, refreshedProvider, sender),
+      phone,
+      'DUTY_ACCEPT_VIDEO_SEND_ERROR'
+    );
     await sendAndLog(phone, 'text', MESSAGES.pulsoAppActivationInstruction, sender);
-    await sendPulsoAppActivationVideo(phone, refreshedProvider, sender);
     await sendPulsoAppInstallInterestButtons(phone);
   }
 
@@ -1010,9 +1033,12 @@ async function sendMobileAppCampaignToProvider(provider, sender = 'mobile-app-ca
 
   const sentAt = new Date().toISOString();
   await sendAndLog(provider.phone, 'text', MESSAGES.mobileAppCampaignAnnouncement, sender);
-  await sendDutyAcceptVideo(provider.phone, provider, sender);
+  await sendOptionalVideo(
+    () => sendDutyAcceptVideo(provider.phone, provider, sender),
+    provider.phone,
+    'DUTY_ACCEPT_VIDEO_SEND_ERROR'
+  );
   await sendAndLog(provider.phone, 'text', MESSAGES.pulsoAppActivationInstruction, sender);
-  await sendPulsoAppActivationVideo(provider.phone, provider, sender);
   await sendPulsoAppInstallInterestButtons(provider.phone);
   await updateProvider(provider.phone, {
     pulsoAppRequired: true,
@@ -2203,6 +2229,12 @@ async function handlePulsoAppDeviceSelection(phone, device) {
       pulsoAppLinkSentAt: new Date().toISOString()
     });
     await sendAndLog(phone, 'text', MESSAGES.pulsoAppIphoneLink);
+    const updatedProvider = await getProvider(phone);
+    await sendOptionalVideo(
+      () => sendPulsoAppActivationVideo(phone, updatedProvider, 'bot'),
+      phone,
+      'PULSO_APP_ACTIVATION_VIDEO_SEND_ERROR'
+    );
     await sendPulsoAppInstalledConfirmationButtons(phone);
     return;
   }
@@ -2224,6 +2256,12 @@ async function handlePulsoAppDeviceSelection(phone, device) {
       pulsoAppLinkSentAt: new Date().toISOString()
     });
     await sendAndLog(phone, 'text', MESSAGES.pulsoAppAndroidLink);
+    const updatedProvider = await getProvider(phone);
+    await sendOptionalVideo(
+      () => sendPulsoAppActivationVideo(phone, updatedProvider, 'bot'),
+      phone,
+      'PULSO_APP_ACTIVATION_VIDEO_SEND_ERROR'
+    );
     await sendPulsoAppInstalledConfirmationButtons(phone);
     return;
   }
