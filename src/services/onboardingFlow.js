@@ -2281,7 +2281,11 @@ async function handlePulsoAppInstalledConfirmation(phone, message) {
     });
     await appendHistory(phone, { type: 'system', event: 'pulso_app_installed_confirmed' });
     const provider = await getProvider(phone);
-    await sendDutyAcceptVideo(phone, provider);
+    await sendOptionalVideo(
+      () => sendDutyAcceptVideo(phone, provider),
+      phone,
+      'DUTY_ACCEPT_VIDEO_SEND_ERROR'
+    );
     await sendPostOnboardingWrapUp(phone);
     return;
   }
