@@ -2429,6 +2429,44 @@ async function clearReviewerWorkflow(phone) {
   await updateProvider(phone, buildReviewerWorkflowPatch(provider && provider.verification && provider.verification.reviewerWorkflow, null));
 }
 
+function isPendingCertificateReview(provider) {
+  return Boolean(
+    provider &&
+      provider.phone &&
+      provider.status === STATUS.VERIFICATION_PENDING &&
+      provider.verification &&
+      provider.verification.status === 'pending'
+  );
+}
+
+async function resendLatestPendingCertificateReview(reviewerPhone) {
+  const candidates = await listProviders();
+  const pendingProvider = candidates.find(isPendingCertificateReview);
+  if (!pendingProvider) {
+    return false;
+  }
+
+  const attachments =
+    pendingProvider && pendingProvider.documents
+      ? pendingProvider.documents.certificateAttachments || []
+      : [];
+  const notificationResult = await notifyCertificateUploaded(pendingProvider, attachments);
+  const notificationPatch = buildVerificationNotificationPatch(notificationResult);
+  if (!notificationPatch) {
+    return false;
+  }
+
+  await updateProvider(pendingProvider.phone, {
+    verification: notificationPatch
+  });
+  await appendHistory(pendingProvider.phone, {
+    type: 'system',
+    event: 'verification_notification_resent_after_reviewer_reply',
+    reviewerPhone
+  });
+  return pendingProvider.phone;
+}
+
 async function handleReviewerMessage(phone, message) {
   const reviewAction = parseReviewerAction(message);
   const providerPhone = reviewAction && reviewAction.phone ? reviewAction.phone : null;
@@ -2445,7 +2483,12 @@ async function handleReviewerMessage(phone, message) {
     );
 
     if (!pendingProvider) {
-      await sendText(phone, 'No reviewer note is pending right now.');
+      const resentProviderPhone = await resendLatestPendingCertificateReview(phone);
+      if (resentProviderPhone) {
+        await sendText(phone, `Sent latest pending certificate review for ${resentProviderPhone}.`);
+      } else {
+        await sendText(phone, 'No reviewer note is pending right now.');
+      }
       return;
     }
 
@@ -2487,7 +2530,12 @@ async function handleReviewerMessage(phone, message) {
   }
 
   if (!reviewAction || !providerPhone) {
-    await sendText(phone, 'Review command not recognized. Use the Approve/Reject button or send APPROVE <provider-phone>.');
+    const resentProviderPhone = await resendLatestPendingCertificateReview(phone);
+    if (resentProviderPhone) {
+      await sendText(phone, `Sent latest pending certificate review for ${resentProviderPhone}.`);
+    } else {
+      await sendText(phone, 'Review command not recognized. Use the Approve/Reject button or send APPROVE <provider-phone>.');
+    }
     return;
   }
 
