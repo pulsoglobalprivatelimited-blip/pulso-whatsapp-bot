@@ -53,7 +53,7 @@ module.exports = {
   termsReminderTemplateLanguage: process.env.TERMS_REMINDER_TEMPLATE_LANGUAGE || 'en',
   pulsoHubBotSyncUrl: process.env.PULSO_HUB_BOT_SYNC_URL || '',
   pulsoHubBotSyncSecret: process.env.PULSO_HUB_BOT_SYNC_SECRET || '',
-  ivrStaffPhone: process.env.IVR_STAFF_PHONE || process.env.OWNER_NOTIFICATION_PHONE || '919446600809',
+  ivrStaffPhone: process.env.IVR_STAFF_PHONE || process.env.OWNER_NOTIFICATION_PHONE || '918714105666',
   ivrRecruitmentWhatsappNumber: process.env.IVR_RECRUITMENT_WHATSAPP_NUMBER || '919633108778',
   ivrWebhookSecret: process.env.IVR_WEBHOOK_SECRET || '',
   ivrWebhookAllowedIps: Array.from(
