@@ -42,9 +42,19 @@ function getCertificateReviewPhone() {
 function getReviewerPhones() {
   return [
     normalizePhone(config.agentHelpWhatsappNumber),
-    normalizePhone(config.ownerNotificationPhone),
-    normalizePhone(config.secondaryNotificationPhone)
+    normalizePhone(config.ownerNotificationPhone)
   ].filter(Boolean);
+}
+
+function uniquePhones(phones) {
+  return phones.filter(Boolean).filter((phone, index, list) => list.indexOf(phone) === index);
+}
+
+function getCertificateReviewPhones() {
+  return uniquePhones([
+    getCertificateReviewPhone(),
+    ...getReviewerPhones()
+  ]);
 }
 
 function isReviewerPhone(phone) {
@@ -243,8 +253,39 @@ function getReviewerDestination(reviewerPhone) {
   return normalizePhone(reviewerPhone) || getCertificateReviewPhone();
 }
 
-async function sendReviewMedia(provider, attachment, index, total) {
-  const to = getCertificateReviewPhone();
+function extractWhatsappMessages(result) {
+  return result && Array.isArray(result.messages)
+    ? result.messages.map((message) => ({
+        id: message.id || null,
+        messageStatus: message.message_status || null
+      }))
+    : [];
+}
+
+function buildNotificationAttempt(to, type, result, error, extra = {}) {
+  const attempt = {
+    to,
+    type,
+    ok: Boolean(result),
+    at: new Date().toISOString(),
+    ...extra
+  };
+
+  if (result) {
+    attempt.messages = extractWhatsappMessages(result);
+  }
+
+  if (error) {
+    attempt.error = {
+      message: error.message,
+      response: error.response ? error.response.data : null
+    };
+  }
+
+  return attempt;
+}
+
+async function sendReviewMediaTo(to, provider, attachment, index, total) {
   if (!to || !attachment || !attachment.id) {
     return null;
   }
@@ -317,9 +358,9 @@ async function sendAdditionalDocumentMedia(provider, attachment) {
 }
 
 async function notifyCertificateUploaded(provider, attachments) {
-  const to = getCertificateReviewPhone();
-  if (!to) {
-    return false;
+  const recipients = getCertificateReviewPhones();
+  if (!recipients.length) {
+    return { sent: false, recipients: [], attempts: [] };
   }
 
   const body = joinLines([
@@ -329,31 +370,44 @@ async function notifyCertificateUploaded(provider, attachments) {
   ]);
 
   let notificationSent = false;
-  try {
-    await sendButtons(to, body, buildReviewButtons(provider.phone));
-    notificationSent = true;
-  } catch (error) {
-    console.error(
-      '[OPS_REVIEW_BUTTON_ERROR]',
-      JSON.stringify(
-        {
-          to,
-          providerPhone: provider && provider.phone,
-          message: error.message,
-          response: error.response ? error.response.data : null
-        },
-        null,
-        2
-      )
-    );
+  const attempts = [];
+  for (const to of recipients) {
+    try {
+      const result = await sendButtons(to, body, buildReviewButtons(provider.phone));
+      attempts.push(buildNotificationAttempt(to, 'review_buttons', result));
+      notificationSent = true;
+    } catch (error) {
+      attempts.push(buildNotificationAttempt(to, 'review_buttons', null, error));
+      console.error(
+        '[OPS_REVIEW_BUTTON_ERROR]',
+        JSON.stringify(
+          {
+            to,
+            providerPhone: provider && provider.phone,
+            message: error.message,
+            response: error.response ? error.response.data : null
+          },
+          null,
+          2
+        )
+      );
+    }
   }
 
   const files = Array.isArray(attachments) ? attachments : attachments ? [attachments] : [];
   for (let index = 0; index < files.length; index += 1) {
-    await sendReviewMedia(provider, files[index], index + 1, files.length);
+    for (const to of recipients) {
+      const result = await sendReviewMediaTo(to, provider, files[index], index + 1, files.length);
+      attempts.push(
+        buildNotificationAttempt(to, 'review_media', result, null, {
+          attachmentId: files[index] && files[index].id ? files[index].id : null,
+          attachmentType: files[index] && files[index].type ? files[index].type : null
+        })
+      );
+    }
   }
 
-  return notificationSent;
+  return { sent: notificationSent, recipients, attempts };
 }
 
 async function notifyCertificateReviewed(provider, decision, reviewedBy, notes) {

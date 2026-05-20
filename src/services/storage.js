@@ -127,6 +127,25 @@ async function saveProvider(phone, provider) {
   return provider;
 }
 
+async function saveWhatsappMessageStatus(status) {
+  const messageId = status && status.id ? String(status.id).replace(/\//g, '_') : null;
+  if (!messageId) {
+    return null;
+  }
+
+  const payload = {
+    ...status,
+    updatedAt: new Date().toISOString()
+  };
+
+  await getFirestore()
+    .collection('whatsappMessageStatuses')
+    .doc(messageId)
+    .set(payload, { merge: true });
+
+  return payload;
+}
+
 module.exports = {
   initializeStorage,
   getFirestore,
@@ -134,5 +153,6 @@ module.exports = {
   listProviders,
   listProviderSummaries,
   saveProvider,
+  saveWhatsappMessageStatus,
   getStorageBucket
 };

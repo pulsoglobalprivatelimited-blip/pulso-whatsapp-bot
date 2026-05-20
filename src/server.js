@@ -23,7 +23,7 @@ const {
 } = require('./services/providerSupportAdminService');
 const { listProviders, listProviderSummaries, getProvider, updateProvider } = require('./services/providerService');
 const { inferProviderRegion, normalizeRegion } = require('./services/regionService');
-const { initializeStorage } = require('./services/storage');
+const { initializeStorage, saveWhatsappMessageStatus } = require('./services/storage');
 const { notifyCertificateUploaded } = require('./services/opsNotifications');
 const {
   buildWelcomeTwiml,
@@ -120,6 +120,58 @@ function summarizeErrorForLog(error) {
     status: error && error.response ? error.response.status : null,
     response: error && error.response ? error.response.data : null
   };
+}
+
+function buildVerificationNotificationPatch(notificationResult) {
+  if (!notificationResult || !notificationResult.sent) {
+    return null;
+  }
+
+  return {
+    notificationSentAt: new Date().toISOString(),
+    notificationRecipients: notificationResult.recipients || [],
+    notificationAttempts: notificationResult.attempts || []
+  };
+}
+
+async function persistWhatsappMessageStatus(status, value) {
+  if (!status || !status.id) {
+    return;
+  }
+
+  try {
+    await saveWhatsappMessageStatus({
+      id: status.id,
+      status: status.status || null,
+      recipientId: status.recipient_id || null,
+      timestamp: status.timestamp || null,
+      conversation: status.conversation || null,
+      pricing: status.pricing || null,
+      errors: Array.isArray(status.errors) ? status.errors : [],
+      phoneNumberId:
+        value.metadata && value.metadata.phone_number_id
+          ? value.metadata.phone_number_id
+          : null,
+      displayPhoneNumber:
+        value.metadata && value.metadata.display_phone_number
+          ? value.metadata.display_phone_number
+          : null
+    });
+  } catch (error) {
+    console.error(
+      '[WEBHOOK_STATUS_SAVE_ERROR]',
+      JSON.stringify(
+        {
+          id: status.id,
+          status: status.status || null,
+          recipientId: status.recipient_id || null,
+          message: error.message
+        },
+        null,
+        2
+      )
+    );
+  }
 }
 
 function sendTwiml(res, body) {
@@ -499,6 +551,7 @@ app.post('/webhook', async (req, res) => {
 
         for (const status of statuses) {
           processedStatuses += 1;
+          await persistWhatsappMessageStatus(status, value);
           console.log(
             '[WEBHOOK] Message status',
             JSON.stringify(
@@ -736,13 +789,12 @@ async function reconcilePendingVerificationNotifications() {
   for (const provider of pendingProviders) {
     const attachments =
       provider && provider.documents ? provider.documents.certificateAttachments || [] : [];
-    const notificationSent = await notifyCertificateUploaded(provider, attachments);
+    const notificationResult = await notifyCertificateUploaded(provider, attachments);
+    const notificationPatch = buildVerificationNotificationPatch(notificationResult);
 
-    if (notificationSent) {
+    if (notificationPatch) {
       await updateProvider(provider.phone, {
-        verification: {
-          notificationSentAt: new Date().toISOString()
-        }
+        verification: notificationPatch
       });
       console.log(`[STARTUP] Resent verification notification for ${provider.phone}`);
     } else {

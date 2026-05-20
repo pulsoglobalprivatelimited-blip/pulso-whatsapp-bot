@@ -119,6 +119,18 @@ function buildAdditionalDocumentMessage(note) {
   return MESSAGES.additionalDocumentRequest.replace('{{note}}', note);
 }
 
+function buildVerificationNotificationPatch(notificationResult) {
+  if (!notificationResult || !notificationResult.sent) {
+    return null;
+  }
+
+  return {
+    notificationSentAt: new Date().toISOString(),
+    notificationRecipients: notificationResult.recipients || [],
+    notificationAttempts: notificationResult.attempts || []
+  };
+}
+
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
@@ -1673,12 +1685,11 @@ async function finalizeCertificateCollection(phone) {
     const attachments = refreshedProvider && refreshedProvider.documents
       ? refreshedProvider.documents.certificateAttachments || []
       : [];
-    const notificationSent = await notifyCertificateUploaded(refreshedProvider, attachments);
-    if (notificationSent) {
+    const notificationResult = await notifyCertificateUploaded(refreshedProvider, attachments);
+    const notificationPatch = buildVerificationNotificationPatch(notificationResult);
+    if (notificationPatch) {
       await updateProvider(phone, {
-        verification: {
-          notificationSentAt: new Date().toISOString()
-        }
+        verification: notificationPatch
       });
     }
     await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
@@ -1773,17 +1784,16 @@ async function adminUploadCertificateFiles(phone, files, uploadedBy = 'admin') {
     }
   });
   const verificationProvider = await getProvider(phone);
-  const notificationSent = await notifyCertificateUploaded(
+  const notificationResult = await notifyCertificateUploaded(
     verificationProvider,
     verificationProvider && verificationProvider.documents
       ? verificationProvider.documents.certificateAttachments || []
       : []
   );
-  if (notificationSent) {
+  const notificationPatch = buildVerificationNotificationPatch(notificationResult);
+  if (notificationPatch) {
     await updateProvider(phone, {
-      verification: {
-        notificationSentAt: new Date().toISOString()
-      }
+      verification: notificationPatch
     });
   }
   await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
@@ -2060,12 +2070,11 @@ async function handleDistrict(phone, message) {
   });
   const updatedProvider = await getProvider(phone);
   const attachments = updatedProvider && updatedProvider.documents ? updatedProvider.documents.certificateAttachments || [] : [];
-  const notificationSent = await notifyCertificateUploaded(updatedProvider, attachments);
-  if (notificationSent) {
+  const notificationResult = await notifyCertificateUploaded(updatedProvider, attachments);
+  const notificationPatch = buildVerificationNotificationPatch(notificationResult);
+  if (notificationPatch) {
     await updateProvider(phone, {
-      verification: {
-        notificationSentAt: new Date().toISOString()
-      }
+      verification: notificationPatch
     });
   }
   await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
