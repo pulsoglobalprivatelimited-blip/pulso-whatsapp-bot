@@ -177,6 +177,14 @@ function getMetaTemplateComponents(templateName) {
   ];
 }
 
+function getIvrWhatsappSendOptions() {
+  if (!config.ivrJobWhatsappPhoneNumberId) {
+    return undefined;
+  }
+
+  return { phoneNumberId: config.ivrJobWhatsappPhoneNumberId };
+}
+
 function buildWelcomeTwiml() {
   const prompt = COPY.welcome.map((line) => say(line.text, { language: line.language })).join('');
   return twiml(gather('/ivr/language', prompt) + redirect('/ivr/welcome'));
@@ -257,7 +265,8 @@ async function sendJobWhatsapp(to, language) {
       recipient,
       templateName,
       templateLanguage,
-      getMetaTemplateComponents(templateName)
+      getMetaTemplateComponents(templateName),
+      getIvrWhatsappSendOptions()
     );
     console.log(
       '[IVR_JOB_WHATSAPP_SENT]',
@@ -268,6 +277,7 @@ async function sendJobWhatsapp(to, language) {
           language: lang,
           templateName,
           templateLanguage,
+          sender: config.ivrJobWhatsappPhoneNumberId ? 'ivr_job_whatsapp_sender' : 'default',
           result: summarizeWhatsappSendResult(result)
         },
         null,
@@ -278,7 +288,7 @@ async function sendJobWhatsapp(to, language) {
   }
 
   console.warn('[IVR_WHATSAPP_TEMPLATE_MISSING] Sending free-form text may fail outside a WhatsApp service window.');
-  const result = await sendText(recipient, getWhatsappBody(lang));
+  const result = await sendText(recipient, getWhatsappBody(lang), getIvrWhatsappSendOptions());
   console.log(
     '[IVR_JOB_WHATSAPP_SENT]',
     JSON.stringify(

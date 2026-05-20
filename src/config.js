@@ -71,6 +71,10 @@ module.exports = {
   ivrJobWhatsappTemplateNameMl: process.env.IVR_JOB_WHATSAPP_TEMPLATE_NAME_ML || '',
   ivrJobWhatsappTemplateLanguageEn: process.env.IVR_JOB_WHATSAPP_TEMPLATE_LANGUAGE_EN || 'en',
   ivrJobWhatsappTemplateLanguageMl: process.env.IVR_JOB_WHATSAPP_TEMPLATE_LANGUAGE_ML || 'ml',
+  ivrJobWhatsappPhoneNumberId:
+    process.env.IVR_JOB_WHATSAPP_PHONE_NUMBER_ID ||
+    process.env.PROVIDER_SUPPORT_WHATSAPP_PHONE_NUMBER_ID ||
+    '1152619794595125',
   providerSupportPhoneNumberId: process.env.PROVIDER_SUPPORT_WHATSAPP_PHONE_NUMBER_ID || '',
   providerSupportBotWhatsappNumber: process.env.PROVIDER_SUPPORT_BOT_WHATSAPP_NUMBER || '917736129809',
   providerSupportJoiningChatbotUrl:
