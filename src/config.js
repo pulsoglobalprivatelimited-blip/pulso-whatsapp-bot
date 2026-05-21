@@ -7,6 +7,21 @@ const DEFAULT_IVR_WEBHOOK_ALLOWED_IPS = [
   '180.179.198.235'
 ];
 
+const DEFAULT_PULSO_DUTY_ACCEPT_VIDEO_MEDIA_ID = '1862764111082996';
+const DEFAULT_PULSO_APP_ACTIVATION_VIDEO_MEDIA_ID = '1661011455048746';
+const STALE_PULSO_VIDEO_MEDIA_IDS = new Set([
+  '969942785736280',
+  '908615228890468'
+]);
+
+function resolveWhatsappMediaId(value, fallback) {
+  const mediaId = (value || '').toString().trim();
+  if (!mediaId || STALE_PULSO_VIDEO_MEDIA_IDS.has(mediaId)) {
+    return fallback;
+  }
+  return mediaId;
+}
+
 function resolveMediaStorageDir() {
   if (process.env.MEDIA_STORAGE_DIR) {
     return process.env.MEDIA_STORAGE_DIR;
@@ -27,8 +42,14 @@ module.exports = {
   graphApiVersion: process.env.WHATSAPP_GRAPH_API_VERSION || 'v23.0',
   baseUrl: process.env.PUBLIC_BASE_URL || 'http://localhost:3000',
   voiceNoteMediaId: process.env.WORKING_MODEL_AUDIO_MEDIA_ID || '',
-  pulsoDutyAcceptVideoMediaId: process.env.PULSO_DUTY_ACCEPT_VIDEO_MEDIA_ID || '',
-  pulsoAppActivationVideoMediaId: process.env.PULSO_APP_ACTIVATION_VIDEO_MEDIA_ID || '',
+  pulsoDutyAcceptVideoMediaId: resolveWhatsappMediaId(
+    process.env.PULSO_DUTY_ACCEPT_VIDEO_MEDIA_ID,
+    DEFAULT_PULSO_DUTY_ACCEPT_VIDEO_MEDIA_ID
+  ),
+  pulsoAppActivationVideoMediaId: resolveWhatsappMediaId(
+    process.env.PULSO_APP_ACTIVATION_VIDEO_MEDIA_ID,
+    DEFAULT_PULSO_APP_ACTIVATION_VIDEO_MEDIA_ID
+  ),
   termsAndConditionsUrl: process.env.TERMS_AND_CONDITIONS_URL || '',
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
   firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
