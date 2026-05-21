@@ -195,6 +195,13 @@ async function sendAndLog(phone, kind, body, sender) {
   });
 }
 
+function buildSendFailureDetails(error) {
+  return {
+    message: error && error.message ? error.message : 'send_failed',
+    response: error && error.response ? error.response.data : null
+  };
+}
+
 function updateStatus(phone, status, currentStep, extra = {}) {
   return updateProvider(phone, { status, currentStep, ...extra });
 }
@@ -564,6 +571,27 @@ async function sendTermsButtons(phone) {
       { id: BUTTON_IDS.TERMS_DECLINE, title: UI_TEXT.termsDeclineTitle }
     ]
   });
+}
+
+function hasSentTermsIntro(provider) {
+  return hasHistoryEvent(
+    provider,
+    (entry) =>
+      entry &&
+      entry.type === 'outbound_message' &&
+      entry.payload &&
+      entry.payload.kind === 'text' &&
+      entry.payload.body === MESSAGES.termsIntro
+  );
+}
+
+async function sendTermsIntroIfMissing(phone, provider, sender = 'bot') {
+  if (hasSentTermsIntro(provider)) {
+    return false;
+  }
+
+  await sendAndLog(phone, 'text', MESSAGES.termsIntro, sender);
+  return true;
 }
 
 async function sendPulsoAppInstallInterestButtons(phone) {
@@ -2152,6 +2180,7 @@ async function handleTerms(phone, message) {
     return;
   }
 
+  await sendTermsIntroIfMissing(phone, provider);
   await sendTermsButtons(phone);
 }
 
@@ -2895,6 +2924,47 @@ async function processIncomingMessage(phone, message) {
   });
 }
 
+async function sendCertificateApprovalFollowup(phone, provider, reviewer) {
+  const steps = [
+    {
+      name: 'certificate_approved_message',
+      send: () => sendAndLog(phone, 'text', MESSAGES.certificateApproved, reviewer)
+    },
+    {
+      name: 'terms_intro_message',
+      send: () => sendTermsIntroIfMissing(phone, provider, reviewer)
+    },
+    {
+      name: 'terms_acceptance_buttons',
+      send: () => sendTermsButtons(phone)
+    }
+  ];
+  const failures = [];
+
+  for (const step of steps) {
+    try {
+      await step.send();
+    } catch (error) {
+      const failure = {
+        step: step.name,
+        ...buildSendFailureDetails(error)
+      };
+      failures.push(failure);
+      console.error('[CERTIFICATE_APPROVAL_FOLLOWUP_SEND_FAILED]', phone, JSON.stringify(failure, null, 2));
+    }
+  }
+
+  if (failures.length) {
+    await appendHistory(phone, {
+      type: 'system',
+      event: 'certificate_approval_followup_send_failed',
+      failures
+    });
+  }
+
+  return failures.length === 0;
+}
+
 async function approveCertificate(phone, reviewedBy, notes, qualification) {
   const provider = await getProvider(phone);
   if (!provider) {
@@ -2930,14 +3000,13 @@ async function approveCertificate(phone, reviewedBy, notes, qualification) {
     }
   });
   await appendHistory(phone, { type: 'system', event: 'certificate_verified' });
-  await sendAndLog(phone, 'text', MESSAGES.certificateApproved, reviewedBy || config.adminDefaultReviewer);
-  await sendAndLog(phone, 'text', MESSAGES.termsIntro, reviewedBy || config.adminDefaultReviewer);
-  await sendTermsButtons(phone);
-  const updatedProvider = await getProvider(phone);
+  let updatedProvider = await getProvider(phone);
+  await sendCertificateApprovalFollowup(phone, updatedProvider, reviewer);
+  updatedProvider = await getProvider(phone);
   await notifyCertificateReviewed(
     updatedProvider,
     'approved',
-    reviewedBy || config.adminDefaultReviewer,
+    reviewer,
     notes || ''
   );
   return updatedProvider;
