@@ -122,6 +122,91 @@ function summarizeErrorForLog(error) {
   };
 }
 
+function durationSince(startedAt) {
+  return Date.now() - startedAt;
+}
+
+function logTiming(label, startedAt, details = {}) {
+  console.log(
+    label,
+    JSON.stringify({
+      ...details,
+      durationMs: durationSince(startedAt)
+    })
+  );
+}
+
+function getWebhookMetadata(value = {}) {
+  return {
+    phoneNumberId:
+      value.metadata && value.metadata.phone_number_id
+        ? value.metadata.phone_number_id
+        : null,
+    displayPhoneNumber:
+      value.metadata && value.metadata.display_phone_number
+        ? value.metadata.display_phone_number
+        : null
+  };
+}
+
+function countByStatus(statuses) {
+  return statuses.reduce((counts, status) => {
+    const key = status && status.status ? status.status : 'unknown';
+    counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+function getStatusErrors(status) {
+  return Array.isArray(status && status.errors) ? status.errors : [];
+}
+
+function summarizeStatus(status, value) {
+  return {
+    id: status.id || null,
+    status: status.status || null,
+    recipientId: status.recipient_id || status.recipientId || null,
+    timestamp: status.timestamp || null,
+    errorCount: getStatusErrors(status).length,
+    ...getWebhookMetadata(value)
+  };
+}
+
+function logStatusBatch(statuses, value) {
+  if (!statuses.length) {
+    return;
+  }
+
+  const errorStatuses = statuses.filter(
+    (status) => status && (status.status === 'failed' || getStatusErrors(status).length)
+  );
+
+  console.log(
+    '[WEBHOOK] Message status batch',
+    JSON.stringify({
+      count: statuses.length,
+      statuses: countByStatus(statuses),
+      errorCount: errorStatuses.length,
+      ...getWebhookMetadata(value)
+    })
+  );
+
+  errorStatuses.forEach((status) => {
+    console.warn(
+      '[WEBHOOK] Message status error',
+      JSON.stringify({
+        ...summarizeStatus(status, value),
+        errors: getStatusErrors(status).map((error) => ({
+          code: error.code || null,
+          title: error.title || null,
+          message: error.message || null,
+          details: error.error_data || null
+        }))
+      })
+    );
+  });
+}
+
 function buildVerificationNotificationPatch(notificationResult) {
   if (!notificationResult || !notificationResult.sent) {
     return null;
@@ -135,8 +220,9 @@ function buildVerificationNotificationPatch(notificationResult) {
 }
 
 async function persistWhatsappMessageStatus(status, value) {
+  const startedAt = Date.now();
   if (!status || !status.id) {
-    return;
+    return { saved: false, skipped: true, durationMs: durationSince(startedAt) };
   }
 
   try {
@@ -148,15 +234,10 @@ async function persistWhatsappMessageStatus(status, value) {
       conversation: status.conversation || null,
       pricing: status.pricing || null,
       errors: Array.isArray(status.errors) ? status.errors : [],
-      phoneNumberId:
-        value.metadata && value.metadata.phone_number_id
-          ? value.metadata.phone_number_id
-          : null,
-      displayPhoneNumber:
-        value.metadata && value.metadata.display_phone_number
-          ? value.metadata.display_phone_number
-          : null
+      ...getWebhookMetadata(value)
     });
+
+    return { saved: true, durationMs: durationSince(startedAt) };
   } catch (error) {
     console.error(
       '[WEBHOOK_STATUS_SAVE_ERROR]',
@@ -171,7 +252,52 @@ async function persistWhatsappMessageStatus(status, value) {
         2
       )
     );
+    return { saved: false, error: true, durationMs: durationSince(startedAt) };
   }
+}
+
+async function processWhatsappStatuses(statuses, value) {
+  const startedAt = Date.now();
+  let saved = 0;
+  let failed = 0;
+  let maxSaveDurationMs = 0;
+
+  for (const status of statuses) {
+    const result = await persistWhatsappMessageStatus(status, value);
+    if (result.saved) {
+      saved += 1;
+    } else if (result.error) {
+      failed += 1;
+    }
+    maxSaveDurationMs = Math.max(maxSaveDurationMs, result.durationMs || 0);
+  }
+
+  logTiming('[WEBHOOK_STATUS_BATCH_TIMING]', startedAt, {
+    count: statuses.length,
+    saved,
+    failed,
+    maxSaveDurationMs,
+    ...getWebhookMetadata(value)
+  });
+}
+
+function processWhatsappStatusesInBackground(statuses, value) {
+  if (!statuses.length) {
+    return;
+  }
+
+  logStatusBatch(statuses, value);
+
+  processWhatsappStatuses(statuses, value).catch((error) => {
+    console.error(
+      '[WEBHOOK_STATUS_BACKGROUND_ERROR]',
+      JSON.stringify({
+        count: statuses.length,
+        message: error.message,
+        ...getWebhookMetadata(value)
+      })
+    );
+  });
 }
 
 function sendTwiml(res, body) {
@@ -481,10 +607,13 @@ app.get('/webhook', (req, res) => {
 });
 
 app.post('/webhook', async (req, res) => {
+  const webhookStartedAt = Date.now();
+  let processedMessages = 0;
+  let processedStatuses = 0;
+  let statusBatches = 0;
+
   try {
     const entry = req.body.entry || [];
-    let processedMessages = 0;
-    let processedStatuses = 0;
 
     for (const item of entry) {
       const changes = item.changes || [];
@@ -529,69 +658,34 @@ app.post('/webhook', async (req, res) => {
                   null,
                 id: message.id || null,
                 flow: useProviderSupportBot ? 'provider_support' : 'onboarding',
-                phoneNumberId:
-                  value.metadata && value.metadata.phone_number_id
-                    ? value.metadata.phone_number_id
-                    : null,
-                displayPhoneNumber:
-                  value.metadata && value.metadata.display_phone_number
-                    ? value.metadata.display_phone_number
-                    : null
+                ...getWebhookMetadata(value)
               },
               null,
               2
             )
           );
-          if (useProviderSupportBot) {
-            await processProviderSupportMessage(message.from, message);
-          } else {
-            await processIncomingMessage(message.from, message);
+          const messageStartedAt = Date.now();
+          try {
+            if (useProviderSupportBot) {
+              await processProviderSupportMessage(message.from, message);
+            } else {
+              await processIncomingMessage(message.from, message);
+            }
+          } finally {
+            logTiming('[WEBHOOK_MESSAGE_TIMING]', messageStartedAt, {
+              id: message.id || null,
+              from: message.from,
+              type: message.type || null,
+              flow: useProviderSupportBot ? 'provider_support' : 'onboarding',
+              ...getWebhookMetadata(value)
+            });
           }
         }
 
-        for (const status of statuses) {
-          processedStatuses += 1;
-          await persistWhatsappMessageStatus(status, value);
-          console.log(
-            '[WEBHOOK] Message status',
-            JSON.stringify(
-              {
-                id: status.id || null,
-                status: status.status || null,
-                recipientId: status.recipient_id || null,
-                timestamp: status.timestamp || null,
-                conversation:
-                  status.conversation && status.conversation.id
-                    ? {
-                        id: status.conversation.id,
-                        origin:
-                          status.conversation.origin && status.conversation.origin.type
-                            ? status.conversation.origin.type
-                            : null
-                      }
-                    : null,
-                pricing: status.pricing || null,
-                errors: Array.isArray(status.errors)
-                  ? status.errors.map((error) => ({
-                      code: error.code || null,
-                      title: error.title || null,
-                      message: error.message || null,
-                      details: error.error_data || null
-                    }))
-                  : [],
-                phoneNumberId:
-                  value.metadata && value.metadata.phone_number_id
-                    ? value.metadata.phone_number_id
-                    : null,
-                displayPhoneNumber:
-                  value.metadata && value.metadata.display_phone_number
-                    ? value.metadata.display_phone_number
-                    : null
-              },
-              null,
-              2
-            )
-          );
+        if (statuses.length) {
+          processedStatuses += statuses.length;
+          statusBatches += 1;
+          processWhatsappStatusesInBackground(statuses, value);
         }
       }
     }
@@ -600,9 +694,21 @@ app.post('/webhook', async (req, res) => {
       console.log('[WEBHOOK] Event received with no message payload');
     }
 
+    logTiming('[WEBHOOK_TIMING]', webhookStartedAt, {
+      result: 'ok',
+      processedMessages,
+      processedStatuses,
+      statusBatches
+    });
     res.sendStatus(200);
   } catch (error) {
     console.error('Webhook processing failed', JSON.stringify(summarizeErrorForLog(error), null, 2));
+    logTiming('[WEBHOOK_TIMING]', webhookStartedAt, {
+      result: 'error',
+      processedMessages,
+      processedStatuses,
+      statusBatches
+    });
     res.sendStatus(500);
   }
 });

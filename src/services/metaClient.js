@@ -5,23 +5,79 @@ function logDryRun(payload) {
   console.log('[DRY RUN] WhatsApp send', JSON.stringify(payload, null, 2));
 }
 
+function durationSince(startedAt) {
+  return Date.now() - startedAt;
+}
+
+function getResponseMessageIds(data) {
+  return data && Array.isArray(data.messages)
+    ? data.messages.map((message) => message.id).filter(Boolean)
+    : [];
+}
+
+function summarizeSend(payload, phoneNumberId, extra = {}) {
+  return {
+    to: payload && payload.to ? payload.to : null,
+    type: payload && payload.type ? payload.type : null,
+    phoneNumberId,
+    ...extra
+  };
+}
+
 async function sendRequest(payload, options = {}) {
+  const startedAt = Date.now();
   const phoneNumberId = options.phoneNumberId || config.phoneNumberId;
 
   if (config.dryRun || !config.whatsappToken || !phoneNumberId) {
     logDryRun(payload);
+    console.log(
+      '[WHATSAPP_SEND_TIMING]',
+      JSON.stringify(
+        summarizeSend(payload, phoneNumberId, {
+          result: 'dry_run',
+          durationMs: durationSince(startedAt)
+        })
+      )
+    );
     return { dryRun: true, payload };
   }
 
   const url = `https://graph.facebook.com/${config.graphApiVersion}/${phoneNumberId}/messages`;
-  const response = await axios.post(url, payload, {
-    headers: {
-      Authorization: `Bearer ${config.whatsappToken}`,
-      'Content-Type': 'application/json'
-    }
-  });
+  try {
+    const response = await axios.post(url, payload, {
+      headers: {
+        Authorization: `Bearer ${config.whatsappToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
 
-  return response.data;
+    console.log(
+      '[WHATSAPP_SEND_TIMING]',
+      JSON.stringify(
+        summarizeSend(payload, phoneNumberId, {
+          result: 'ok',
+          status: response.status,
+          durationMs: durationSince(startedAt),
+          messageIds: getResponseMessageIds(response.data)
+        })
+      )
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error(
+      '[WHATSAPP_SEND_TIMING]',
+      JSON.stringify(
+        summarizeSend(payload, phoneNumberId, {
+          result: 'error',
+          status: error && error.response ? error.response.status : null,
+          durationMs: durationSince(startedAt),
+          message: error && error.message ? error.message : 'send_failed'
+        })
+      )
+    );
+    throw error;
+  }
 }
 
 async function sendText(to, body, options) {
