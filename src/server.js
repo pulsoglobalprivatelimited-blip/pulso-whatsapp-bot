@@ -21,6 +21,10 @@ const {
   listProviderSupportSessions,
   resetProviderSupportSession
 } = require('./services/providerSupportAdminService');
+const {
+  getWhatsappBookingChatDetail,
+  listWhatsappBookingChats
+} = require('./services/bookingAdminService');
 const { listProviders, listProviderSummaries, getProvider, updateProvider } = require('./services/providerService');
 const { inferProviderRegion, normalizeRegion } = require('./services/regionService');
 const { initializeStorage, saveWhatsappMessageStatus } = require('./services/storage');
@@ -755,6 +759,18 @@ app.get('/admin/provider-support', (_req, res) => {
   res.sendFile(path.join(config.publicDir, 'admin', 'provider-support.html'));
 });
 
+app.get('/admin/bookings', (_req, res) => {
+  res.sendFile(path.join(config.publicDir, 'admin', 'booking-dashboard.html'));
+});
+
+app.get('/admin/bookings/kerala', (_req, res) => {
+  res.sendFile(path.join(config.publicDir, 'admin', 'booking-dashboard.html'));
+});
+
+app.get('/admin/bookings/karnataka', (_req, res) => {
+  res.sendFile(path.join(config.publicDir, 'admin', 'booking-dashboard.html'));
+});
+
 app.get('/admin/provider-support/sessions', async (_req, res) => {
   try {
     const sessions = await listProviderSupportSessions();
@@ -780,6 +796,28 @@ app.post('/admin/provider-support/sessions/:phone/reset', async (req, res) => {
   try {
     const result = await resetProviderSupportSession(req.params.phone);
     return res.json(result);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/admin/booking-chats', async (req, res) => {
+  try {
+    const region = normalizeRegion(req.query.region);
+    const chats = await listWhatsappBookingChats({ region });
+    return res.json({ chats });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/admin/booking-chats/:phone', async (req, res) => {
+  try {
+    const chat = await getWhatsappBookingChatDetail(req.params.phone);
+    if (!chat) {
+      return res.status(404).json({ error: 'Booking chat not found' });
+    }
+    return res.json(chat);
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

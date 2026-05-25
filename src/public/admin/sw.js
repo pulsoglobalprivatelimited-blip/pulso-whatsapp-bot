@@ -1,11 +1,15 @@
-const CACHE_NAME = 'pulso-admin-v8';
+const CACHE_NAME = 'pulso-admin-v9';
 const STATIC_ASSETS = [
   '/admin/login',
   '/admin/provider-support',
+  '/admin/bookings',
+  '/admin/bookings/kerala',
+  '/admin/bookings/karnataka',
   '/admin/manifest.webmanifest',
-  '/admin/assets/dashboard.css?v=20260510b',
+  '/admin/assets/dashboard.css?v=20260525a',
   '/admin/assets/admin-pwa.js?v=20260419c',
   '/admin/assets/provider-support-dashboard.js?v=20260511a',
+  '/admin/assets/booking-dashboard.js?v=20260525a',
   '/admin/assets/pwa/icon.svg',
   '/admin/assets/pwa/icon-maskable.svg'
 ];
@@ -61,6 +65,9 @@ self.addEventListener('fetch', (event) => {
       requestUrl.pathname === '/admin/kerala' ||
       requestUrl.pathname === '/admin/karnataka' ||
       requestUrl.pathname === '/admin/provider-support' ||
+      requestUrl.pathname === '/admin/bookings' ||
+      requestUrl.pathname === '/admin/bookings/kerala' ||
+      requestUrl.pathname === '/admin/bookings/karnataka' ||
       requestUrl.pathname === '/admin/login')
   ) {
     event.respondWith(

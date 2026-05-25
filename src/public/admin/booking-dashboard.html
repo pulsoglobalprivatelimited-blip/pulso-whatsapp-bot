@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pulso Booking Chat Dashboard</title>
+  <meta name="theme-color" content="#b75d32">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Pulso Bookings">
+  <link rel="manifest" href="/admin/manifest.webmanifest">
+  <link rel="icon" href="/admin/assets/pwa/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260525a">
+</head>
+<body>
+  <main class="layout">
+    <section class="hero">
+      <p class="eyebrow" id="booking-dashboard-eyebrow">Pulso Customer Booking</p>
+      <h1 id="booking-dashboard-title">Senior Care Booking Chats</h1>
+      <p class="subtitle" id="booking-dashboard-subtitle">Review WhatsApp family booking conversations, booking details, test bookings, and completed request IDs.</p>
+      <div class="hero-meta">
+        <button class="metric metric-button" id="total-metric" type="button">
+          <span id="total-count">0</span>
+          <label>Total chats</label>
+        </button>
+        <button class="metric metric-button" id="completed-metric" type="button">
+          <span id="completed-count">0</span>
+          <label>Completed bookings</label>
+        </button>
+        <button class="metric metric-button" id="active-metric" type="button">
+          <span id="active-count">0</span>
+          <label>Active bookings</label>
+        </button>
+        <button class="metric metric-button" id="test-metric" type="button">
+          <span id="test-count">0</span>
+          <label>Test bookings</label>
+        </button>
+      </div>
+    </section>
+
+    <section class="board">
+      <div class="board-header">
+        <div>
+          <p class="eyebrow">Queue</p>
+          <h2>Booking conversations</h2>
+        </div>
+        <div class="actions">
+          <a id="all-bookings-link" class="button secondary hidden" href="/admin/bookings">All bookings</a>
+          <a id="kerala-bookings-link" class="button secondary" href="/admin/bookings/kerala">Kerala bookings</a>
+          <a id="karnataka-bookings-link" class="button secondary" href="/admin/bookings/karnataka">Karnataka bookings</a>
+          <a class="button secondary" href="/admin">Joining bot dashboard</a>
+          <a class="button secondary" href="/admin/provider-support">Provider support dashboard</a>
+          <button id="refresh-button" class="button secondary" type="button">Refresh</button>
+          <form action="/admin/logout" method="post">
+            <button class="button secondary" type="submit">Log out</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="filters">
+        <button class="filter active" data-status-filter="all">All</button>
+        <button class="filter" data-status-filter="booking_completed">Completed</button>
+        <button class="filter" data-status-filter="active">Active</button>
+        <button class="filter" data-status-filter="test">Test only</button>
+      </div>
+
+      <div class="filters" id="region-filter-row">
+        <button class="filter active" data-region-filter="all">All locations</button>
+        <button class="filter" data-region-filter="kerala">Kerala</button>
+        <button class="filter" data-region-filter="karnataka">Karnataka</button>
+        <button class="filter" data-region-filter="other">Other</button>
+      </div>
+
+      <div class="search-row">
+        <label class="search-field" for="booking-search">
+          <span>Phone, name, request, or location search</span>
+          <input id="booking-search" type="search" placeholder="Search booking chats">
+        </label>
+        <button id="clear-search-button" class="button secondary" type="button">Clear</button>
+      </div>
+
+      <div class="content" id="booking-content">
+        <aside id="list-panel" class="list-panel">
+          <div id="booking-list" class="provider-list"></div>
+        </aside>
+
+        <section id="detail-panel" class="detail-panel">
+          <div id="booking-detail" class="detail hidden">
+            <div class="mobile-detail-bar">
+              <button id="back-to-list-button" class="button secondary" type="button">Back to list</button>
+            </div>
+
+            <div class="detail-header">
+              <div>
+                <p id="detail-phone" class="detail-phone"></p>
+                <h3 id="detail-status"></h3>
+              </div>
+              <span id="detail-step" class="pill"></span>
+            </div>
+
+            <article class="card history-card">
+              <div class="history-card-head">
+                <h4>WhatsApp chat history</h4>
+                <button id="history-bottom-button" class="button secondary" type="button">Jump to bottom</button>
+              </div>
+              <div id="history-list" class="history-list"></div>
+            </article>
+
+            <div class="detail-grid">
+              <article class="card">
+                <h4>Booking</h4>
+                <dl>
+                  <div><dt>Request ID</dt><dd id="detail-request-id">-</dd></div>
+                  <div><dt>Service</dt><dd id="detail-service">-</dd></div>
+                  <div><dt>Care recipient</dt><dd id="detail-recipient">-</dd></div>
+                  <div><dt>Relation</dt><dd id="detail-relation">-</dd></div>
+                  <div><dt>Days</dt><dd id="detail-days">-</dd></div>
+                  <div><dt>Start</dt><dd id="detail-start">-</dd></div>
+                  <div><dt>Caregiver gender</dt><dd id="detail-caregiver-gender">-</dd></div>
+                  <div><dt>Price</dt><dd id="detail-price">-</dd></div>
+                </dl>
+              </article>
+
+              <article class="card">
+                <h4>Family account</h4>
+                <dl>
+                  <div><dt>Family contact</dt><dd id="detail-family-name">-</dd></div>
+                  <div><dt>Family ID</dt><dd id="detail-family-id">-</dd></div>
+                  <div><dt>Location</dt><dd id="detail-location">-</dd></div>
+                  <div><dt>Region</dt><dd id="detail-region">-</dd></div>
+                  <div><dt>Language</dt><dd id="detail-language">-</dd></div>
+                  <div><dt>Test booking</dt><dd id="detail-test">-</dd></div>
+                  <div><dt>Created</dt><dd id="detail-created">-</dd></div>
+                  <div><dt>Updated</dt><dd id="detail-updated">-</dd></div>
+                </dl>
+              </article>
+
+              <article class="card">
+                <h4>Care details</h4>
+                <dl>
+                  <div><dt>Age</dt><dd id="detail-age">-</dd></div>
+                  <div><dt>Gender</dt><dd id="detail-gender">-</dd></div>
+                  <div><dt>Weight</dt><dd id="detail-weight">-</dd></div>
+                  <div><dt>Bedridden</dt><dd id="detail-bedridden">-</dd></div>
+                  <div><dt>Feeding tube</dt><dd id="detail-feeding-tube">-</dd></div>
+                  <div><dt>Catheter</dt><dd id="detail-catheter">-</dd></div>
+                  <div><dt>Stoma</dt><dd id="detail-stoma">-</dd></div>
+                </dl>
+              </article>
+
+              <article class="card">
+                <h4>Actions</h4>
+                <p class="attachment-empty">Open the customer chat or copy the request ID when checking the booking inside the app admin screens.</p>
+                <div class="attachment-actions">
+                  <a id="open-whatsapp-link" class="attachment-action" href="#" target="_blank" rel="noreferrer">Open WhatsApp</a>
+                  <button id="copy-request-button" class="attachment-action" type="button">Copy request ID</button>
+                </div>
+                <p id="action-status" class="form-status" aria-live="polite"></p>
+              </article>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="/admin/assets/booking-dashboard.js?v=20260525a"></script>
+  <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
+</body>
+</html>
