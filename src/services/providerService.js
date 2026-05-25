@@ -4,6 +4,7 @@ const {
   listProviderSummaries,
   listProviderTermsReminderCandidates,
   listPendingVerificationNotificationProviders,
+  listReviewerWorkflowProviders,
   saveProvider
 } = require('./storage');
 const { STATUS } = require('../flow');
@@ -112,5 +113,6 @@ module.exports = {
   listProviderSummaries,
   listProviderTermsReminderCandidates,
   listPendingVerificationNotificationProviders,
+  listReviewerWorkflowProviders,
   getProvider
 };

@@ -19,7 +19,9 @@ const {
   appendHistory,
   getProvider,
   listProviders,
-  listProviderTermsReminderCandidates
+  listProviderTermsReminderCandidates,
+  listPendingVerificationNotificationProviders,
+  listReviewerWorkflowProviders
 } = require('./providerService');
 const {
   getRejectReasonDetails,
@@ -2522,7 +2524,7 @@ function isPendingCertificateReview(provider) {
 }
 
 async function resendLatestPendingCertificateReview(reviewerPhone) {
-  const candidates = await listProviders();
+  const candidates = await listPendingVerificationNotificationProviders();
   const pendingProvider = candidates.find(isPendingCertificateReview);
   if (!pendingProvider) {
     return false;
@@ -2554,7 +2556,7 @@ async function handleReviewerMessage(phone, message) {
   const providerPhone = reviewAction && reviewAction.phone ? reviewAction.phone : null;
 
   if (reviewAction && reviewAction.action === 'note_text') {
-    const candidates = await listProviders();
+    const candidates = await listReviewerWorkflowProviders(phone);
     const pendingProvider = candidates.find(
       (candidate) =>
         candidate &&

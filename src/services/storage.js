@@ -169,6 +169,30 @@ async function listPendingVerificationNotificationProviders() {
   }));
 }
 
+async function listReviewerWorkflowProviders(reviewerPhone) {
+  const snapshot = await getFirestore()
+    .collection('providers')
+    .where('verification.reviewerWorkflow.reviewerPhone', '==', reviewerPhone)
+    .select(
+      'phone',
+      'status',
+      'fullName',
+      'age',
+      'sex',
+      'region',
+      'dutyHourPreference',
+      'qualification',
+      'district',
+      'verification'
+    )
+    .get();
+
+  return snapshot.docs.map((doc) => ({
+    phone: doc.id,
+    ...doc.data()
+  }));
+}
+
 async function saveProvider(phone, provider) {
   await getFirestore().collection('providers').doc(phone).set(provider, { merge: true });
   return provider;
@@ -201,6 +225,7 @@ module.exports = {
   listProviderSummaries,
   listProviderTermsReminderCandidates,
   listPendingVerificationNotificationProviders,
+  listReviewerWorkflowProviders,
   saveProvider,
   saveWhatsappMessageStatus,
   getStorageBucket
