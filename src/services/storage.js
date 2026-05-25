@@ -122,6 +122,53 @@ async function listProviderSummaries() {
   }));
 }
 
+async function listProviderTermsReminderCandidates() {
+  const snapshot = await getFirestore()
+    .collection('providers')
+    .where('status', '==', 'awaiting_terms_acceptance')
+    .select(
+      'phone',
+      'status',
+      'termsAccepted',
+      'termsSentAt',
+      'termsReminderSentAt',
+      'termsReminderCount',
+      'termsReminderKind',
+      'verification'
+    )
+    .get();
+
+  return snapshot.docs.map((doc) => ({
+    phone: doc.id,
+    ...doc.data()
+  }));
+}
+
+async function listPendingVerificationNotificationProviders() {
+  const snapshot = await getFirestore()
+    .collection('providers')
+    .where('status', '==', 'certificate_verification_pending')
+    .select(
+      'phone',
+      'status',
+      'fullName',
+      'age',
+      'sex',
+      'region',
+      'dutyHourPreference',
+      'qualification',
+      'district',
+      'documents',
+      'verification'
+    )
+    .get();
+
+  return snapshot.docs.map((doc) => ({
+    phone: doc.id,
+    ...doc.data()
+  }));
+}
+
 async function saveProvider(phone, provider) {
   await getFirestore().collection('providers').doc(phone).set(provider, { merge: true });
   return provider;
@@ -152,6 +199,8 @@ module.exports = {
   getProvider,
   listProviders,
   listProviderSummaries,
+  listProviderTermsReminderCandidates,
+  listPendingVerificationNotificationProviders,
   saveProvider,
   saveWhatsappMessageStatus,
   getStorageBucket

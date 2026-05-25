@@ -25,7 +25,13 @@ const {
   getWhatsappBookingChatDetail,
   listWhatsappBookingChats
 } = require('./services/bookingAdminService');
-const { listProviders, listProviderSummaries, getProvider, updateProvider } = require('./services/providerService');
+const {
+  listProviders,
+  listProviderSummaries,
+  listPendingVerificationNotificationProviders,
+  getProvider,
+  updateProvider
+} = require('./services/providerService');
 const { inferProviderRegion, normalizeRegion } = require('./services/regionService');
 const { initializeStorage, saveWhatsappMessageStatus } = require('./services/storage');
 const { notifyCertificateUploaded } = require('./services/opsNotifications');
@@ -951,7 +957,7 @@ app.post('/admin/providers/:phone/upload-certificate', upload.array('certificate
 });
 
 async function reconcilePendingVerificationNotifications() {
-  const providers = await listProviders();
+  const providers = await listPendingVerificationNotificationProviders();
   const pendingProviders = providers.filter(
     (provider) =>
       provider &&

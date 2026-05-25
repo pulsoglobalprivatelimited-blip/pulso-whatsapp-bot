@@ -1,4 +1,11 @@
-const { getProvider, listProviders, listProviderSummaries, saveProvider } = require('./storage');
+const {
+  getProvider,
+  listProviders,
+  listProviderSummaries,
+  listProviderTermsReminderCandidates,
+  listPendingVerificationNotificationProviders,
+  saveProvider
+} = require('./storage');
 const { STATUS } = require('../flow');
 const { applyRegionDefaults, inferProviderRegion, statusRequiresRegion } = require('./regionService');
 
@@ -103,5 +110,7 @@ module.exports = {
   appendHistory,
   listProviders,
   listProviderSummaries,
+  listProviderTermsReminderCandidates,
+  listPendingVerificationNotificationProviders,
   getProvider
 };

@@ -18,7 +18,8 @@ const {
   updateProvider,
   appendHistory,
   getProvider,
-  listProviders
+  listProviders,
+  listProviderTermsReminderCandidates
 } = require('./providerService');
 const {
   getRejectReasonDetails,
@@ -1175,7 +1176,7 @@ async function sendLegacyTermsReminder(provider) {
 }
 
 async function runTermsReminderSweep() {
-  const providers = await listProviders();
+  const providers = await listProviderTermsReminderCandidates();
   const dueProviders = providers.filter((provider) => isTermsReminderDue(provider));
 
   if (!dueProviders.length) {
