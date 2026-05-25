@@ -481,6 +481,27 @@ function isProviderSupportWebhookValue(value) {
   );
 }
 
+function isIgnoredWebhookValue(value) {
+  const metadata = value && value.metadata ? value.metadata : {};
+  const inboundPhoneNumberId = (metadata.phone_number_id || '').toString();
+  const displayPhoneNumber = normalizeDigits(metadata.display_phone_number);
+  const ignoredPhoneNumberIds = new Set(
+    (config.ignoredWhatsappPhoneNumberIds || []).map((item) => String(item).trim()).filter(Boolean)
+  );
+  const ignoredDisplayNumbers = (config.ignoredWhatsappDisplayPhoneNumbers || [])
+    .map((item) => normalizeDigits(item))
+    .filter(Boolean);
+
+  return Boolean(
+    (inboundPhoneNumberId && ignoredPhoneNumberIds.has(inboundPhoneNumberId)) ||
+      ignoredDisplayNumbers.some(
+        (ignoredNumber) =>
+          displayPhoneNumber &&
+          (displayPhoneNumber === ignoredNumber || displayPhoneNumber.endsWith(ignoredNumber.slice(-10)))
+      )
+  );
+}
+
 function verifyIvrSecret(req, res) {
   const clientIp = getRequestClientIp(req);
   if (isIpAllowed(clientIp, config.ivrWebhookAllowedIps)) {
@@ -625,6 +646,24 @@ app.post('/webhook', async (req, res) => {
         const value = change.value || {};
         const messages = value.messages || [];
         const statuses = value.statuses || [];
+        const ignoreWebhookValue = isIgnoredWebhookValue(value);
+
+        if (ignoreWebhookValue) {
+          console.log(
+            '[WEBHOOK] Ignoring webhook value for another bot',
+            JSON.stringify(
+              {
+                messageCount: messages.length,
+                statusCount: statuses.length,
+                ...getWebhookMetadata(value)
+              },
+              null,
+              2
+            )
+          );
+          continue;
+        }
+
         const useProviderSupportBot = isProviderSupportWebhookValue(value);
 
         for (const message of messages) {

@@ -13,6 +13,16 @@ const STALE_PULSO_VIDEO_MEDIA_IDS = new Set([
   '969942785736280',
   '908615228890468'
 ]);
+const DEFAULT_IGNORED_WHATSAPP_PHONE_NUMBER_IDS = ['1086315334572855'];
+const DEFAULT_IGNORED_WHATSAPP_DISPLAY_PHONE_NUMBERS = ['917736101039'];
+
+function parseList(value, fallback = []) {
+  const items = (value || '')
+    .split(/[,\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return items.length ? items : fallback;
+}
 
 function resolveWhatsappMediaId(value, fallback) {
   const mediaId = (value || '').toString().trim();
@@ -102,6 +112,14 @@ module.exports = {
     '1152619794595125',
   providerSupportPhoneNumberId: process.env.PROVIDER_SUPPORT_WHATSAPP_PHONE_NUMBER_ID || '',
   providerSupportBotWhatsappNumber: process.env.PROVIDER_SUPPORT_BOT_WHATSAPP_NUMBER || '917736129809',
+  ignoredWhatsappPhoneNumberIds: parseList(
+    process.env.IGNORED_WHATSAPP_PHONE_NUMBER_IDS,
+    DEFAULT_IGNORED_WHATSAPP_PHONE_NUMBER_IDS
+  ),
+  ignoredWhatsappDisplayPhoneNumbers: parseList(
+    process.env.IGNORED_WHATSAPP_DISPLAY_PHONE_NUMBERS,
+    DEFAULT_IGNORED_WHATSAPP_DISPLAY_PHONE_NUMBERS
+  ),
   providerSupportJoiningChatbotUrl:
     process.env.PROVIDER_SUPPORT_JOINING_CHATBOT_URL || 'https://wa.me/919633108778',
   providerSupportCustomerCareWhatsappUrl:
