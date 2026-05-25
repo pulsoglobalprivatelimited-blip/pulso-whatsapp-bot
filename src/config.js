@@ -52,6 +52,10 @@ module.exports = {
   ),
   termsAndConditionsUrl: process.env.TERMS_AND_CONDITIONS_URL || '',
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
+  bookingFirebaseProjectId:
+    process.env.BOOKING_FIREBASE_PROJECT_ID ||
+    process.env.PULSO_HUB_FIREBASE_PROJECT_ID ||
+    'pulso-hub',
   firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
   firebasePrivateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
   firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET || '',

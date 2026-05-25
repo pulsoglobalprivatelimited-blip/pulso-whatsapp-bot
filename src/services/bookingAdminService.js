@@ -1,9 +1,51 @@
+const admin = require('firebase-admin');
+const config = require('../config');
 const { getFirestore } = require('./storage');
 
 const COLLECTION = 'whatsappBookingChats';
+let bookingDb;
+
+function getBookingFirestore() {
+  const projectId = config.bookingFirebaseProjectId || config.firebaseProjectId;
+  if (!projectId || projectId === config.firebaseProjectId) {
+    return getFirestore();
+  }
+
+  if (bookingDb) {
+    return bookingDb;
+  }
+
+  const appName = `booking-${projectId}`;
+  const existingApp = admin.apps.find((item) => item.name === appName);
+  const hasInlineCredential =
+    config.firebaseProjectId &&
+    config.firebaseClientEmail &&
+    config.firebasePrivateKey &&
+    !config.firebasePrivateKey.includes('...');
+
+  const app =
+    existingApp ||
+    admin.initializeApp(
+      {
+        credential:
+          config.googleApplicationCredentials || !hasInlineCredential
+            ? admin.credential.applicationDefault()
+            : admin.credential.cert({
+                projectId: config.firebaseProjectId,
+                clientEmail: config.firebaseClientEmail,
+                privateKey: config.firebasePrivateKey
+              }),
+        projectId
+      },
+      appName
+    );
+
+  bookingDb = admin.firestore(app);
+  return bookingDb;
+}
 
 function collectionRef() {
-  return getFirestore().collection(COLLECTION);
+  return getBookingFirestore().collection(COLLECTION);
 }
 
 function normalizePhone(value) {
