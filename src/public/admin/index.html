@@ -81,6 +81,7 @@
           <a id="karnataka-dashboard-link" class="button secondary" href="/admin/karnataka">Karnataka dashboard</a>
           <a class="button secondary" href="/admin/bookings/kerala">Booking dashboard</a>
           <a class="button secondary" href="/admin/provider-support">Provider support dashboard</a>
+          <a id="admin-management-link" class="button secondary hidden" href="/admin/admins">Admin management</a>
           <button id="refresh-button" class="button secondary">Refresh</button>
           <form action="/admin/logout" method="post">
             <button class="button secondary" type="submit">Log out</button>
@@ -205,7 +206,7 @@
                 <p>Approve only after checking that the certificate is readable, valid, and matches the provider.</p>
               </div>
               <form id="review-form" class="review-form">
-                <input id="reviewer-input" type="text" name="reviewedBy" placeholder="Reviewer name" value="ops-team">
+                <input id="reviewer-input" type="text" name="reviewedBy" placeholder="Signed-in admin" value="ops-team" readonly>
                 <select id="review-qualification-input" name="qualification" required>
                   <option value="">Select qualification from certificate</option>
                   <option value="gda">GDA</option>
@@ -229,7 +230,7 @@
                 <p>Ask the provider to upload one more document with a custom note.</p>
               </div>
               <form id="additional-document-form" class="review-form">
-                <input id="additional-reviewer-input" type="text" name="reviewedBy" placeholder="Requested by" value="ops-team">
+                <input id="additional-reviewer-input" type="text" name="reviewedBy" placeholder="Signed-in admin" value="ops-team" readonly>
                 <textarea id="additional-note-input" name="note" placeholder="Example: Please upload Aadhaar front side"></textarea>
                 <div class="actions">
                   <button type="button" id="request-additional-document-button" class="button">Request additional document</button>
@@ -243,7 +244,7 @@
                 <p>Mark this only after confirming that the provider has logged in to the Pulso app with the onboarding phone number.</p>
               </div>
               <form id="app-activation-form" class="review-form">
-                <input id="app-activation-reviewer-input" type="text" name="verifiedBy" placeholder="Verified by" value="ops-team">
+                <input id="app-activation-reviewer-input" type="text" name="verifiedBy" placeholder="Signed-in admin" value="ops-team" readonly>
                 <div class="actions">
                   <button type="button" id="verify-app-activation-button" class="button approve">Mark app active</button>
                 </div>
@@ -256,7 +257,7 @@
                 <p>Upload old certificate files from your device and attach them to this provider for review.</p>
               </div>
               <form id="manual-certificate-form" class="review-form">
-                <input id="manual-uploaded-by-input" type="text" name="uploadedBy" placeholder="Uploaded by" value="ops-team">
+                <input id="manual-uploaded-by-input" type="text" name="uploadedBy" placeholder="Signed-in admin" value="ops-team" readonly>
                 <input id="manual-certificate-files" type="file" name="certificates" accept=".jpg,.jpeg,.png,.pdf" multiple>
                 <p id="manual-certificate-upload-status" class="form-status" aria-live="polite"></p>
                 <div class="actions">

@@ -71,6 +71,7 @@ module.exports = {
   firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET || '',
   googleApplicationCredentials: process.env.GOOGLE_APPLICATION_CREDENTIALS || '',
   adminDefaultReviewer: process.env.ADMIN_DEFAULT_REVIEWER || 'ops-team',
+  adminUsersJson: process.env.ADMIN_USERS_JSON || '',
   adminUsername: process.env.ADMIN_USERNAME || 'admin',
   adminPassword: process.env.ADMIN_PASSWORD || '',
   sessionSecret: process.env.SESSION_SECRET || 'pulso-session-secret',
@@ -121,7 +122,7 @@ module.exports = {
     DEFAULT_IGNORED_WHATSAPP_DISPLAY_PHONE_NUMBERS
   ),
   providerSupportJoiningChatbotUrl:
-    process.env.PROVIDER_SUPPORT_JOINING_CHATBOT_URL || 'https://wa.me/919633108778',
+    process.env.PROVIDER_SUPPORT_JOINING_CHATBOT_URL || 'https://wa.me/917736167744',
   providerSupportCustomerCareWhatsappUrl:
     process.env.PROVIDER_SUPPORT_CUSTOMER_CARE_WHATSAPP_URL || 'https://wa.me/919446600809',
   providerSupportPhone: process.env.PROVIDER_SUPPORT_PHONE || '8714105333',

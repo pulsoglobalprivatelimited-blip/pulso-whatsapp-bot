@@ -28,7 +28,7 @@ const COPY = {
     whatsappBody:
       'Thank you for contacting Pulso.\n' +
       'For Caregiver / Nursing Staff job opportunities, please WhatsApp your details here:\n' +
-      'https://wa.me/919633108778\n\n' +
+      'https://wa.me/917736167744\n\n' +
       'Send: Name, Location, Qualification, Experience, and Certificate Photo.\n' +
       'Calls are not attended for job enquiries.'
   },
@@ -52,7 +52,7 @@ const COPY = {
     whatsappBody:
       'Pulso-yumayi bandhappedunnathinu nandi.\n' +
       'Caregiver / Nursing Staff joli avasarangalkkayi ningalude details WhatsApp cheyyuka:\n' +
-      'https://wa.me/919633108778\n\n' +
+      'https://wa.me/917736167744\n\n' +
       'Ayakkenda details: Name, Location, Qualification, Experience, Certificate Photo.\n' +
       'Job enquiry calls attend cheyyunnathalla.'
   }
@@ -123,7 +123,7 @@ function buildWaLink() {
 }
 
 function getWhatsappBody(language) {
-  return COPY[language].whatsappBody.replace('https://wa.me/919633108778', buildWaLink());
+  return COPY[language].whatsappBody.replace('https://wa.me/917736167744', buildWaLink());
 }
 
 function getMetaTemplateName(language) {

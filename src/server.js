@@ -47,12 +47,18 @@ const {
   sendJobWhatsapp
 } = require('./services/twilioIvrService');
 const {
+  ADMIN_ROLES,
   requireAdminAuth,
+  requireRole,
+  requireSuperAdminPage,
   setSessionCookie,
   clearSessionCookie,
   validateCredentials,
   parseCookies,
-  verifySessionToken
+  verifySessionToken,
+  listAdminUsers,
+  getAdminActor,
+  getPublicSession
 } = require('./services/authService');
 
 const app = express();
@@ -773,11 +779,12 @@ app.get('/admin/login', (req, res) => {
 
 app.post('/admin/login', (req, res) => {
   const { username, password } = req.body;
-  if (!validateCredentials(username, password)) {
+  const admin = validateCredentials(username, password);
+  if (!admin) {
     return res.status(401).sendFile(path.join(config.publicDir, 'admin', 'login-failed.html'));
   }
 
-  setSessionCookie(res, username);
+  setSessionCookie(res, admin);
   return res.redirect('/admin');
 });
 
@@ -788,8 +795,20 @@ app.post('/admin/logout', (_req, res) => {
 
 app.use('/admin', requireAdminAuth);
 
+app.get('/admin/session', (req, res) => {
+  res.json({ admin: getPublicSession(req) });
+});
+
 app.get('/admin', (_req, res) => {
   res.sendFile(path.join(config.publicDir, 'admin', 'index.html'));
+});
+
+app.get('/admin/admins', requireSuperAdminPage, (_req, res) => {
+  res.sendFile(path.join(config.publicDir, 'admin', 'admins.html'));
+});
+
+app.get('/admin/api/admins', requireRole(ADMIN_ROLES.SUPER_ADMIN), (_req, res) => {
+  res.json({ admins: listAdminUsers() });
 });
 
 app.get('/admin/kerala', (_req, res) => {
@@ -904,9 +923,10 @@ app.get('/admin/providers/:phone', async (req, res) => {
 
 app.post('/admin/providers/:phone/approve-certificate', async (req, res) => {
   try {
+    const actor = getAdminActor(req);
     const provider = await approveCertificate(
       req.params.phone,
-      req.body.reviewedBy,
+      actor,
       req.body.notes,
       req.body.qualification
     );
@@ -918,7 +938,7 @@ app.post('/admin/providers/:phone/approve-certificate', async (req, res) => {
 
 app.post('/admin/providers/:phone/reject-certificate', async (req, res) => {
   try {
-    const provider = await rejectCertificate(req.params.phone, req.body.reviewedBy, req.body.notes);
+    const provider = await rejectCertificate(req.params.phone, getAdminActor(req), req.body.notes);
     res.json(provider);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -927,7 +947,7 @@ app.post('/admin/providers/:phone/reject-certificate', async (req, res) => {
 
 app.post('/admin/providers/:phone/request-additional-document', async (req, res) => {
   try {
-    const provider = await requestAdditionalDocument(req.params.phone, req.body.reviewedBy, req.body.note);
+    const provider = await requestAdditionalDocument(req.params.phone, getAdminActor(req), req.body.note);
     res.json(provider);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -936,7 +956,7 @@ app.post('/admin/providers/:phone/request-additional-document', async (req, res)
 
 app.post('/admin/providers/:phone/verify-app-activation', async (req, res) => {
   try {
-    const provider = await markPulsoAppActivationVerified(req.params.phone, req.body.verifiedBy || req.body.reviewedBy);
+    const provider = await markPulsoAppActivationVerified(req.params.phone, getAdminActor(req));
     res.json(provider);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -948,7 +968,7 @@ app.post('/admin/providers/:phone/upload-certificate', upload.array('certificate
     const provider = await adminUploadCertificateFiles(
       req.params.phone,
       req.files || [],
-      req.body.uploadedBy || req.body.reviewedBy || 'admin'
+      getAdminActor(req)
     );
     res.json(provider);
   } catch (error) {

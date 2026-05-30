@@ -117,6 +117,7 @@ The dashboard lets your ops team:
 - review qualification, document status, and message history
 - approve certificates
 - reject certificates with notes
+- let super admins view admin users and roles at `/admin/admins`
 - sign in using reviewer credentials from `.env`
 
 ## Reviewer authentication
@@ -127,6 +128,25 @@ Set these environment variables:
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=your-strong-password
 SESSION_SECRET=your-long-random-secret
+```
+
+For multiple admin users and roles, set `ADMIN_USERS_JSON` instead:
+
+```bash
+ADMIN_USERS_JSON=[{"username":"admin","password":"your-strong-password","role":"super_admin","active":true},{"username":"ops-team","password":"reviewer-password","role":"reviewer","active":true}]
+```
+
+Supported roles:
+
+- `super_admin`: can view `/admin/admins`
+- `ops_admin`
+- `reviewer`
+- `support_admin`
+
+You can also use `passwordHash` with a `sha256:` prefix instead of `password`:
+
+```bash
+node -e "const { hashPassword } = require('./src/services/authService'); console.log('sha256:' + hashPassword(process.argv[1]))" "your-password"
 ```
 
 Admin users will log in at:
@@ -194,7 +214,7 @@ Configure:
 WHATSAPP_BUSINESS_ACCOUNT_ID=your-waba-id
 PROVIDER_SUPPORT_WHATSAPP_PHONE_NUMBER_ID=provider-support-phone-number-id
 PROVIDER_SUPPORT_BOT_WHATSAPP_NUMBER=917736129809
-PROVIDER_SUPPORT_JOINING_CHATBOT_URL=https://wa.me/919633108778
+PROVIDER_SUPPORT_JOINING_CHATBOT_URL=https://wa.me/917736167744
 PROVIDER_SUPPORT_CUSTOMER_CARE_WHATSAPP_URL=https://wa.me/919446600809
 PROVIDER_SUPPORT_PHONE=8714105333
 PROVIDER_SUPPORT_ANDROID_APP_URL=https://play.google.com/store/apps/details?id=com.pulso.global
@@ -309,7 +329,7 @@ curl http://localhost:3000/admin/providers/919999999999
 ```bash
 curl -X POST http://localhost:3000/admin/providers/919999999999/approve-certificate \
   -H 'Content-Type: application/json' \
-  -d '{"reviewedBy":"ops-team","notes":"Certificate checked and valid"}'
+  -d '{"notes":"Certificate checked and valid","qualification":"gda"}'
 ```
 
 ### Reject certificate
@@ -317,7 +337,15 @@ curl -X POST http://localhost:3000/admin/providers/919999999999/approve-certific
 ```bash
 curl -X POST http://localhost:3000/admin/providers/919999999999/reject-certificate \
   -H 'Content-Type: application/json' \
-  -d '{"reviewedBy":"ops-team","notes":"Blurry certificate, please resend"}'
+  -d '{"notes":"Blurry certificate, please resend"}'
+```
+
+### List admins
+
+Only `super_admin` sessions can access this endpoint:
+
+```bash
+curl http://localhost:3000/admin/api/admins
 ```
 
 ## Manual verification rule
@@ -336,7 +364,7 @@ This version is set up for Firestore, admin login, and archived media files. Str
 - stricter message parsing for multilingual replies
 - deployment on a public server with HTTPS
 - persistent object storage for media backups
-- role-based access control for multiple reviewer types
+- full admin user creation/editing backed by Firestore
 
 ## Deploy on Render
 

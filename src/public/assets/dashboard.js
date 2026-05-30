@@ -9,6 +9,7 @@ let currentStartedRange = 'all';
 let mobileDetailOpen = false;
 let suppressAutoSelectOnce = false;
 let detailRequestToken = 0;
+let currentAdmin = null;
 
 const dashboardRegion = getDashboardRegionFromPath();
 let currentRegionFilter = dashboardRegion || 'all';
@@ -53,8 +54,10 @@ const allDashboardLink = document.getElementById('all-dashboard-link');
 const keralaDashboardLink = document.getElementById('kerala-dashboard-link');
 const karnatakaDashboardLink = document.getElementById('karnataka-dashboard-link');
 const regionFilterRow = document.getElementById('region-filter-row');
+const adminManagementLink = document.getElementById('admin-management-link');
 
 configureDashboardShell();
+loadCurrentAdmin().catch(() => {});
 
 document.getElementById('refresh-button').addEventListener('click', loadProviders);
 document.querySelectorAll('.filter').forEach((button) => {
@@ -186,6 +189,30 @@ async function fetchJson(url, options) {
     throw new Error(payload.error || 'Request failed');
   }
   return response.json();
+}
+
+function getCurrentAdminName() {
+  return currentAdmin && currentAdmin.username ? currentAdmin.username : 'signed-in admin';
+}
+
+async function loadCurrentAdmin() {
+  const data = await fetchJson('/admin/session');
+  currentAdmin = data.admin || null;
+
+  if (adminManagementLink) {
+    adminManagementLink.classList.toggle(
+      'hidden',
+      !currentAdmin || currentAdmin.role !== 'super_admin'
+    );
+  }
+
+  ['reviewer-input', 'additional-reviewer-input', 'app-activation-reviewer-input', 'manual-uploaded-by-input']
+    .forEach((id) => {
+      const field = document.getElementById(id);
+      if (field) {
+        field.value = getCurrentAdminName();
+      }
+    });
 }
 
 async function loadProviders() {
@@ -1279,12 +1306,12 @@ async function renderDetail(provider) {
   renderAdditionalDocumentRequest(detailProvider);
   renderAttachments('detail-additional-document-files', additionalDocumentAttachments);
 
-  document.getElementById('reviewer-input').value = verification.reviewedBy || 'ops-team';
+  document.getElementById('reviewer-input').value = getCurrentAdminName();
   document.getElementById('review-qualification-input').value = normalizeQualification(
     (verification && verification.qualificationApproved) || detailProvider.qualification
   );
   document.getElementById('notes-input').value = verification.notes || '';
-  document.getElementById('additional-reviewer-input').value = verification.reviewedBy || 'ops-team';
+  document.getElementById('additional-reviewer-input').value = getCurrentAdminName();
   document.getElementById('additional-note-input').value =
     documents && documents.additionalDocumentRequest && documents.additionalDocumentRequest.status === 'pending'
       ? documents.additionalDocumentRequest.note || ''
@@ -1299,7 +1326,6 @@ async function renderDetail(provider) {
 async function submitReview(action) {
   if (!selectedPhone) return;
 
-  const reviewedBy = document.getElementById('reviewer-input').value || 'ops-team';
   const notes = document.getElementById('notes-input').value || '';
   const qualification = document.getElementById('review-qualification-input').value || '';
   if (action === 'approve-certificate' && !qualification) {
@@ -1311,7 +1337,7 @@ async function submitReview(action) {
     const provider = await fetchJson(`/admin/providers/${selectedPhone}/${action}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reviewedBy, notes, qualification })
+      body: JSON.stringify({ notes, qualification })
     });
 
     const index = providers.findIndex((item) => item.phone === provider.phone);
@@ -1326,14 +1352,13 @@ async function submitReview(action) {
 async function submitAdditionalDocumentRequest() {
   if (!selectedPhone) return;
 
-  const reviewedBy = document.getElementById('additional-reviewer-input').value || 'ops-team';
   const note = document.getElementById('additional-note-input').value || '';
 
   try {
     const provider = await fetchJson(`/admin/providers/${selectedPhone}/request-additional-document`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reviewedBy, note })
+      body: JSON.stringify({ note })
     });
 
     const index = providers.findIndex((item) => item.phone === provider.phone);
@@ -1348,13 +1373,11 @@ async function submitAdditionalDocumentRequest() {
 async function submitAppActivationVerification() {
   if (!selectedPhone) return;
 
-  const verifiedBy = document.getElementById('app-activation-reviewer-input').value || 'ops-team';
-
   try {
     const provider = await fetchJson(`/admin/providers/${selectedPhone}/verify-app-activation`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ verifiedBy })
+      body: JSON.stringify({})
     });
 
     const index = providers.findIndex((item) => item.phone === provider.phone);
@@ -1372,7 +1395,6 @@ async function submitManualCertificateUpload() {
   }
 
   const fileInput = document.getElementById('manual-certificate-files');
-  const uploadedBy = document.getElementById('manual-uploaded-by-input').value || 'ops-team';
   const files = Array.from(fileInput.files || []);
   if (!files.length) {
     setManualUploadStatus('Choose at least one certificate file first.', 'error');
@@ -1380,7 +1402,6 @@ async function submitManualCertificateUpload() {
   }
 
   const formData = new FormData();
-  formData.append('uploadedBy', uploadedBy);
   files.forEach((file) => formData.append('certificates', file));
 
   try {

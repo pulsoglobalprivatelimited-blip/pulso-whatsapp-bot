@@ -76,6 +76,22 @@ function formatDutyHourPreference(value) {
   return value || '-';
 }
 
+function formatPulsoAppHelpReason(value) {
+  if (value === 'install_help') return 'Pulso app install help';
+  if (value === 'login_otp_issue') return 'Pulso app login / OTP issue';
+  if (value === 'no_smartphone') return 'Pulso app no smartphone';
+  return value ? formatStatus(value) : null;
+}
+
+function getHelpRequestedAt(provider) {
+  return (
+    (provider && provider.pulsoAppHelpRequestedAt) ||
+    (provider && provider.agentHelpRequestedAt) ||
+    (provider && provider.updatedAt) ||
+    null
+  );
+}
+
 function formatProviderSummary(provider) {
   return [
     `Name: ${(provider && provider.fullName) || '-'}`,
@@ -514,14 +530,16 @@ async function notifyAgentHelpRequested(provider) {
   );
 
   for (const recipient of recipients) {
+    const chatLink = buildProviderChatLink(provider && provider.phone);
+    const introLink = buildProviderPrefilledChatLink(provider, recipient.senderName);
+    const helpReason = formatPulsoAppHelpReason(provider && provider.pulsoAppHelpReason);
     const body = joinLines([
       'Pulso alert: provider requested additional help',
+      helpReason ? `Help type: ${helpReason}` : 'Help type: General support',
+      getHelpRequestedAt(provider) ? `Requested at: ${getHelpRequestedAt(provider)}` : null,
+      chatLink ? `Reply now: ${chatLink}` : null,
+      introLink ? `Reply with intro: ${introLink}` : null,
       ...formatProviderSummary(provider),
-      provider && provider.updatedAt ? `Requested at: ${provider.updatedAt}` : null,
-      buildProviderChatLink(provider && provider.phone) ? `Open chat: ${buildProviderChatLink(provider.phone)}` : null,
-      buildProviderPrefilledChatLink(provider, recipient.senderName)
-        ? `Open chat with intro: ${buildProviderPrefilledChatLink(provider, recipient.senderName)}`
-        : null,
       `Intro message: ${buildProviderIntroMessage(provider, recipient.senderName)}`
     ]);
     await sendNotificationTo(recipient.phone, body, 'AGENT_HELP_NOTIFICATION_ERROR');

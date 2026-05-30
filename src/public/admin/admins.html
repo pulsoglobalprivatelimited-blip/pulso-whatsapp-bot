@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pulso Admin Management</title>
+  <meta name="theme-color" content="#b75d32">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Pulso Admin">
+  <link rel="manifest" href="/admin/manifest.webmanifest">
+  <link rel="icon" href="/admin/assets/pwa/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260530a">
+</head>
+<body>
+  <main class="layout">
+    <section class="hero admin-hero">
+      <p class="eyebrow">Pulso Operations</p>
+      <h1>Admin Management</h1>
+      <p class="subtitle">View admin access, roles, and account status.</p>
+      <div class="hero-meta">
+        <div class="metric">
+          <span id="admin-total-count">0</span>
+          <label>Total admins</label>
+        </div>
+        <div class="metric">
+          <span id="admin-active-count">0</span>
+          <label>Active</label>
+        </div>
+        <div class="metric">
+          <span id="admin-super-count">0</span>
+          <label>Super admins</label>
+        </div>
+      </div>
+    </section>
+
+    <section class="board">
+      <div class="board-header">
+        <div>
+          <p class="eyebrow">Access</p>
+          <h2>Admins and roles</h2>
+        </div>
+        <div class="actions">
+          <a class="button secondary" href="/admin">Provider dashboard</a>
+          <button id="refresh-admins-button" class="button secondary" type="button">Refresh</button>
+          <form action="/admin/logout" method="post">
+            <button class="button secondary" type="submit">Log out</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="admin-toolbar">
+        <label class="search-field" for="admin-search">
+          <span>Search admin</span>
+          <input id="admin-search" type="search" placeholder="Search username or role">
+        </label>
+        <label class="search-field" for="admin-role-filter">
+          <span>Role</span>
+          <select id="admin-role-filter">
+            <option value="all">All roles</option>
+            <option value="super_admin">Super admin</option>
+            <option value="ops_admin">Ops admin</option>
+            <option value="reviewer">Reviewer</option>
+            <option value="support_admin">Support admin</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="admin-management-grid">
+        <section class="admin-table-card">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-table-body">
+              <tr>
+                <td colspan="4">Loading admins...</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <aside class="admin-detail-card">
+          <p class="eyebrow">Selected Admin</p>
+          <h3 id="selected-admin-title">No admin selected</h3>
+          <dl>
+            <div><dt>Username</dt><dd id="selected-admin-username">-</dd></div>
+            <div><dt>Role</dt><dd id="selected-admin-role">-</dd></div>
+            <div><dt>Status</dt><dd id="selected-admin-status">-</dd></div>
+          </dl>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script src="/admin/assets/admin-management.js?v=20260530a"></script>
+  <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
+</body>
+</html>

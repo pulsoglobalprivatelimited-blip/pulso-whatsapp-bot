@@ -36,7 +36,7 @@ services:
       - key: IGNORED_WHATSAPP_DISPLAY_PHONE_NUMBERS
         value: "917736101039"
       - key: PROVIDER_SUPPORT_JOINING_CHATBOT_URL
-        value: "https://wa.me/919633108778"
+        value: "https://wa.me/917736167744"
       - key: PROVIDER_SUPPORT_CUSTOMER_CARE_WHATSAPP_URL
         value: "https://wa.me/919446600809"
       - key: PROVIDER_SUPPORT_PHONE
@@ -56,7 +56,7 @@ services:
       - key: IVR_STAFF_PHONE
         sync: false
       - key: IVR_RECRUITMENT_WHATSAPP_NUMBER
-        value: "919633108778"
+        value: "917736167744"
       - key: IVR_WEBHOOK_SECRET
         sync: false
       - key: IVR_WEBHOOK_ALLOWED_IPS
@@ -90,6 +90,8 @@ services:
       - key: ADMIN_USERNAME
         sync: false
       - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_USERS_JSON
         sync: false
       - key: SESSION_SECRET
         sync: false
