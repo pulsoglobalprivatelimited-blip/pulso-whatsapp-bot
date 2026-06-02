@@ -983,6 +983,8 @@ async function reconcilePendingVerificationNotifications() {
       provider &&
       provider.phone &&
       provider.status === STATUS.VERIFICATION_PENDING &&
+      !provider.termsAccepted &&
+      !provider.completedAt &&
       provider.verification &&
       provider.verification.status === 'pending' &&
       !provider.verification.notificationSentAt

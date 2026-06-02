@@ -158,6 +158,8 @@ async function listPendingVerificationNotificationProviders() {
       'dutyHourPreference',
       'qualification',
       'district',
+      'termsAccepted',
+      'completedAt',
       'documents',
       'verification'
     )
@@ -183,6 +185,8 @@ async function listReviewerWorkflowProviders(reviewerPhone) {
       'dutyHourPreference',
       'qualification',
       'district',
+      'termsAccepted',
+      'completedAt',
       'verification'
     )
     .get();

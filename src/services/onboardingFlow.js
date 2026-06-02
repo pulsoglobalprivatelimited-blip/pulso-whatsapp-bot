@@ -2518,6 +2518,8 @@ function isPendingCertificateReview(provider) {
     provider &&
       provider.phone &&
       provider.status === STATUS.VERIFICATION_PENDING &&
+      !provider.termsAccepted &&
+      !provider.completedAt &&
       provider.verification &&
       provider.verification.status === 'pending'
   );
@@ -2559,6 +2561,7 @@ async function handleReviewerMessage(phone, message) {
     const candidates = await listReviewerWorkflowProviders(phone);
     const pendingProvider = candidates.find(
       (candidate) =>
+        isPendingCertificateReview(candidate) &&
         candidate &&
         candidate.verification &&
         candidate.verification.reviewerWorkflow &&
@@ -2626,6 +2629,14 @@ async function handleReviewerMessage(phone, message) {
   const provider = await getProvider(providerPhone);
   if (!provider) {
     await sendText(phone, `Provider not found for ${providerPhone}.`);
+    return;
+  }
+
+  if (
+    !isPendingCertificateReview(provider) &&
+    ['approve', 'approve_qualification', 'request_additional_document', 'reject'].includes(reviewAction.action)
+  ) {
+    await sendText(phone, `Certificate review is not pending for ${providerPhone}.`);
     return;
   }
 
