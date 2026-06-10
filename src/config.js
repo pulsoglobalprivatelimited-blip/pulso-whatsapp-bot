@@ -9,6 +9,7 @@ const DEFAULT_IVR_WEBHOOK_ALLOWED_IPS = [
 
 const DEFAULT_PULSO_DUTY_ACCEPT_VIDEO_MEDIA_ID = '1862764111082996';
 const DEFAULT_PULSO_APP_ACTIVATION_VIDEO_MEDIA_ID = '1661011455048746';
+const DEFAULT_CERTIFICATE_REVIEW_TEMPLATE_NAME = 'certificate_review_alert';
 const STALE_PULSO_VIDEO_MEDIA_IDS = new Set([
   '969942785736280',
   '908615228890468'
@@ -79,6 +80,9 @@ module.exports = {
   ownerNotificationPhone: process.env.OWNER_NOTIFICATION_PHONE || '919446600809',
   agentHelpWhatsappNumber: process.env.AGENT_HELP_WHATSAPP_NUMBER || '919446600809',
   secondaryNotificationPhone: process.env.SECONDARY_NOTIFICATION_PHONE || '',
+  certificateReviewTemplateName:
+    process.env.CERTIFICATE_REVIEW_TEMPLATE_NAME || DEFAULT_CERTIFICATE_REVIEW_TEMPLATE_NAME,
+  certificateReviewTemplateLanguage: process.env.CERTIFICATE_REVIEW_TEMPLATE_LANGUAGE || 'en',
   termsFirstReminderDelayHours: Number(
     process.env.TERMS_FIRST_REMINDER_DELAY_HOURS || process.env.TERMS_REMINDER_DELAY_HOURS || 1
   ),

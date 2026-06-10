@@ -75,6 +75,10 @@ services:
         value: "919446600809"
       - key: SECONDARY_NOTIFICATION_PHONE
         value: "917736129809"
+      - key: CERTIFICATE_REVIEW_TEMPLATE_NAME
+        value: "certificate_review_alert"
+      - key: CERTIFICATE_REVIEW_TEMPLATE_LANGUAGE
+        value: "en"
       - key: TERMS_REMINDER_DELAY_HOURS
         value: "24"
       - key: TERMS_REMINDER_CHECK_INTERVAL_MINUTES

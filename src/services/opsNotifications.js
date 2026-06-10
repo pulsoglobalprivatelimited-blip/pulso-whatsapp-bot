@@ -3,6 +3,7 @@ const {
   sendText,
   sendButtons,
   sendList,
+  sendTemplate,
   sendImageById,
   sendDocumentById
 } = require('./metaClient');
@@ -301,6 +302,54 @@ function buildNotificationAttempt(to, type, result, error, extra = {}) {
   return attempt;
 }
 
+function getCertificateReviewTemplateName() {
+  return String(config.certificateReviewTemplateName || '').trim();
+}
+
+function getCertificateReviewTemplateLanguage() {
+  return String(config.certificateReviewTemplateLanguage || 'en').trim() || 'en';
+}
+
+async function sendCertificateReviewTemplate(to, provider) {
+  const templateName = getCertificateReviewTemplateName();
+  if (!templateName || !to) {
+    return null;
+  }
+
+  try {
+    const result = await sendTemplate(to, templateName, getCertificateReviewTemplateLanguage(), []);
+    console.log(
+      '[OPS_REVIEW_TEMPLATE_SENT]',
+      JSON.stringify(
+        {
+          to,
+          providerPhone: provider && provider.phone ? provider.phone : null,
+          templateName
+        },
+        null,
+        2
+      )
+    );
+    return result;
+  } catch (error) {
+    console.error(
+      '[OPS_REVIEW_TEMPLATE_ERROR]',
+      JSON.stringify(
+        {
+          to,
+          providerPhone: provider && provider.phone ? provider.phone : null,
+          templateName,
+          message: error.message,
+          response: error.response ? error.response.data : null
+        },
+        null,
+        2
+      )
+    );
+    throw error;
+  }
+}
+
 async function sendReviewMediaTo(to, provider, attachment, index, total) {
   if (!to || !attachment || !attachment.id) {
     return null;
@@ -388,6 +437,24 @@ async function notifyCertificateUploaded(provider, attachments) {
   let notificationSent = false;
   const attempts = [];
   for (const to of recipients) {
+    try {
+      const result = await sendCertificateReviewTemplate(to, provider);
+      if (result) {
+        attempts.push(
+          buildNotificationAttempt(to, 'review_template', result, null, {
+            templateName: getCertificateReviewTemplateName()
+          })
+        );
+        notificationSent = true;
+      }
+    } catch (error) {
+      attempts.push(
+        buildNotificationAttempt(to, 'review_template', null, error, {
+          templateName: getCertificateReviewTemplateName()
+        })
+      );
+    }
+
     try {
       const result = await sendButtons(to, body, buildReviewButtons(provider.phone));
       attempts.push(buildNotificationAttempt(to, 'review_buttons', result));

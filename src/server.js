@@ -1082,6 +1082,7 @@ initializeStorage()
       console.log(`Terms second reminder delay hours: ${config.termsSecondReminderDelayHours}`);
       console.log(`Terms reminder check interval minutes: ${config.termsReminderCheckIntervalMinutes}`);
       console.log(`Terms reminder template configured: ${Boolean(config.termsReminderTemplateName)}`);
+      console.log(`Certificate review template configured: ${Boolean(config.certificateReviewTemplateName)}`);
     });
   })
   .catch((error) => {

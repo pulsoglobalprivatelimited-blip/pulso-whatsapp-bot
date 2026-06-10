@@ -219,6 +219,8 @@ PROVIDER_SUPPORT_CUSTOMER_CARE_WHATSAPP_URL=https://wa.me/919446600809
 PROVIDER_SUPPORT_PHONE=8714105333
 PROVIDER_SUPPORT_ANDROID_APP_URL=https://play.google.com/store/apps/details?id=com.pulso.global
 PROVIDER_SUPPORT_IOS_APP_URL=https://apps.apple.com/in/app/pulso/id6757874217
+CERTIFICATE_REVIEW_TEMPLATE_NAME=certificate_review_alert
+CERTIFICATE_REVIEW_TEMPLATE_LANGUAGE=en
 ```
 
 To list WhatsApp phone-number IDs after the number is added to the WABA:
@@ -355,6 +357,8 @@ The bot does not proceed to duty preference or onboarding confirmation until the
 - Document upload only means `received`
 - Team review changes verification status to `verified` or `rejected`
 - Only `verified` resumes the flow
+- Reviewer WhatsApp alerts use the approved Meta template configured by `CERTIFICATE_REVIEW_TEMPLATE_NAME`.
+  Suggested template body: `New provider certificate is pending review. Reply REVIEW to open the latest review.`
 
 ## Notes for production
 
