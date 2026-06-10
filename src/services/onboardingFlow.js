@@ -283,7 +283,7 @@ function scheduleCertificateCollectionPrompt(phone) {
         return;
       }
 
-      await sendCertificateCollectionButtons(phone, provider);
+      await finalizeCertificateCollection(phone);
       });
     } catch (error) {
       console.error('[CERTIFICATE_PROMPT_SCHEDULE_ERROR]', error);
@@ -1899,6 +1899,7 @@ async function handleCertificate(phone, message) {
   const kind = classifyDocument(message);
   if (kind !== 'certificate') {
     if (attachments.length) {
+      await finalizeCertificateCollection(phone);
       return;
     }
     scheduleCertificateRetry(phone);
