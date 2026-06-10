@@ -35,6 +35,7 @@ const {
 const { inferProviderRegion, normalizeRegion } = require('./services/regionService');
 const { initializeStorage, saveWhatsappMessageStatus } = require('./services/storage');
 const { notifyCertificateUploaded } = require('./services/opsNotifications');
+const { getMediaMetadata, downloadMediaFile } = require('./services/metaClient');
 const {
   buildWelcomeTwiml,
   buildMenuTwiml,
@@ -79,6 +80,7 @@ app.get('/admin/sw.js', (_req, res) => {
 });
 
 const recentlyProcessedMessageIds = new Map();
+const currentlyProcessingMessageIds = new Set();
 const MESSAGE_DEDUPE_TTL_MS = 5 * 60 * 1000;
 
 function hasRecentlyProcessedMessage(messageId) {
@@ -113,6 +115,22 @@ function markMessageProcessed(messageId) {
         recentlyProcessedMessageIds.delete(id);
       }
     }
+  }
+}
+
+function isMessageCurrentlyProcessing(messageId) {
+  return Boolean(messageId && currentlyProcessingMessageIds.has(messageId));
+}
+
+function markMessageProcessing(messageId) {
+  if (messageId) {
+    currentlyProcessingMessageIds.add(messageId);
+  }
+}
+
+function clearMessageProcessing(messageId) {
+  if (messageId) {
+    currentlyProcessingMessageIds.delete(messageId);
   }
 }
 
@@ -681,12 +699,12 @@ app.post('/webhook', async (req, res) => {
         for (const message of messages) {
           if (!message.from) continue;
 
-          if (hasRecentlyProcessedMessage(message.id)) {
+          if (hasRecentlyProcessedMessage(message.id) || isMessageCurrentlyProcessing(message.id)) {
             console.log('[WEBHOOK] Skipping duplicate message', message.id);
             continue;
           }
 
-          markMessageProcessed(message.id);
+          markMessageProcessing(message.id);
           processedMessages += 1;
           console.log(
             '[WEBHOOK] Incoming message',
@@ -726,7 +744,9 @@ app.post('/webhook', async (req, res) => {
             } else {
               await processIncomingMessage(message.from, message);
             }
+            markMessageProcessed(message.id);
           } finally {
+            clearMessageProcessing(message.id);
             logTiming('[WEBHOOK_MESSAGE_TIMING]', messageStartedAt, {
               id: message.id || null,
               from: message.from,
@@ -894,6 +914,35 @@ app.get('/admin/media/*', (req, res) => {
   }
 
   return res.sendFile(absolutePath);
+});
+
+app.get('/admin/whatsapp-media/:mediaId', async (req, res) => {
+  try {
+    const metadata = await getMediaMetadata(req.params.mediaId);
+    const fileBuffer = await downloadMediaFile(metadata.url);
+    const mimeType = metadata.mime_type || 'application/octet-stream';
+    const extension =
+      mimeType === 'application/pdf'
+        ? 'pdf'
+        : mimeType.startsWith('image/')
+          ? mimeType.split('/')[1] || 'jpg'
+          : 'bin';
+
+    res.type(mimeType);
+    res.set('Cache-Control', 'private, max-age=300');
+    res.set('Content-Disposition', `inline; filename="${req.params.mediaId}.${extension}"`);
+    return res.send(fileBuffer);
+  } catch (error) {
+    console.error(
+      '[ADMIN_WHATSAPP_MEDIA_ERROR]',
+      JSON.stringify({
+        mediaId: req.params.mediaId,
+        message: error.message,
+        response: error.response ? error.response.data : null
+      })
+    );
+    return res.status(404).json({ error: 'Media unavailable' });
+  }
 });
 
 app.get('/admin/providers', async (req, res) => {

@@ -350,9 +350,29 @@ function hasProcessedMessage(provider, messageId) {
     return false;
   }
 
-  return provider.history.some(
+  const inboundEntry = provider.history.find(
     (event) => event.type === 'inbound_message' && event.payload && event.payload.id === messageId
   );
+  if (!inboundEntry) {
+    return false;
+  }
+
+  const payload = inboundEntry.payload || {};
+  const mediaId = payload.document ? payload.document.id : payload.image ? payload.image.id : null;
+  if (mediaId && payload.type && ['document', 'image'].includes(payload.type)) {
+    const documents = provider.documents || {};
+    if (provider.status === STATUS.AWAITING_CERTIFICATE) {
+      const attachments = documents.certificateAttachments || [];
+      return attachments.some((attachment) => attachment && attachment.id === mediaId);
+    }
+
+    if (provider.status === STATUS.ADDITIONAL_DOCUMENT_REQUESTED) {
+      const attachments = documents.additionalDocumentAttachments || [];
+      return attachments.some((attachment) => attachment && attachment.id === mediaId);
+    }
+  }
+
+  return true;
 }
 
 function lastOutboundSignature(provider) {

@@ -959,11 +959,13 @@ function mediaUrl(file) {
   }
 
   const storagePath = file && file.storagePath ? file.storagePath : null;
-  if (!storagePath) return null;
+  if (!storagePath) {
+    return file && file.id ? `/admin/whatsapp-media/${encodeURIComponent(file.id)}` : null;
+  }
   const normalizedPath = String(storagePath).replaceAll('\\', '/');
   const pathParts = normalizedPath.split('/').filter(Boolean);
   if (pathParts.length < 3) {
-    return null;
+    return file && file.id ? `/admin/whatsapp-media/${encodeURIComponent(file.id)}` : null;
   }
 
   const relativePath = pathParts.slice(-3).join('/');

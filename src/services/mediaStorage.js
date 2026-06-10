@@ -91,9 +91,6 @@ async function archiveIncomingMedia(phone, message, category) {
     };
   }
 
-  const providerDir = path.join(config.mediaStorageDir, phone, category);
-  ensureDir(providerDir);
-
   if (config.dryRun || !config.whatsappToken) {
     return {
       id: mediaId,
@@ -112,11 +109,34 @@ async function archiveIncomingMedia(phone, message, category) {
     const metadata = await getMediaMetadata(mediaId);
     const extension = path.extname(originalFileName || '') || extensionFromMime(metadata.mime_type);
     const finalFileName = originalFileName || `${mediaId}${extension}`;
-    const targetPath = path.join(providerDir, finalFileName);
     const fileBuffer = await downloadMediaFile(metadata.url);
     const cloudUpload = await uploadBufferToFirebaseStorage(phone, category, finalFileName, fileBuffer, metadata.mime_type);
+    const providerDir = path.join(config.mediaStorageDir, phone, category);
+    const targetPath = path.join(providerDir, finalFileName);
+    let localArchive = {
+      archived: false,
+      archiveStatus: 'local_archive_not_attempted',
+      storagePath: null,
+      error: null
+    };
 
-    fs.writeFileSync(targetPath, fileBuffer);
+    try {
+      ensureDir(providerDir);
+      fs.writeFileSync(targetPath, fileBuffer);
+      localArchive = {
+        archived: true,
+        archiveStatus: 'downloaded',
+        storagePath: targetPath,
+        error: null
+      };
+    } catch (error) {
+      localArchive = {
+        archived: false,
+        archiveStatus: 'local_archive_failed',
+        storagePath: null,
+        error: error.message
+      };
+    }
 
     return {
       id: mediaId,
@@ -126,9 +146,10 @@ async function archiveIncomingMedia(phone, message, category) {
       mimeType: metadata.mime_type,
       sha256: metadata.sha256 || null,
       bytes: fileBuffer.length,
-      storagePath: targetPath,
-      archived: true,
-      archiveStatus: 'downloaded',
+      storagePath: localArchive.storagePath,
+      archived: localArchive.archived,
+      archiveStatus: localArchive.archiveStatus,
+      error: localArchive.error,
       cloudArchived: cloudUpload.uploaded,
       cloudArchiveStatus: cloudUpload.cloudArchiveStatus,
       cloudStorageBucket: cloudUpload.cloudStorageBucket || null,
