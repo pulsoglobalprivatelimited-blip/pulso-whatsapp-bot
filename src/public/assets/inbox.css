@@ -1,0 +1,447 @@
+/* WhatsApp-style read-only inbox. Loaded on top of dashboard.css, which
+   provides the theme variables (--bg, --accent, ...) and the .history-* bubble
+   styles reused inside the thread pane. */
+
+.inbox-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  overflow-x: hidden;
+}
+
+/* Top bar ------------------------------------------------------------------ */
+.inbox-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  background: var(--panel-strong);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.inbox-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.inbox-brand .eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.inbox-brand h1 {
+  margin: 0;
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.5rem;
+  line-height: 1.1;
+}
+
+.inbox-topbar .actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.inbox-topbar .actions form {
+  margin: 0;
+}
+
+/* Two-pane body ------------------------------------------------------------ */
+.inbox-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+  min-height: 0;
+  min-width: 0;
+}
+
+.inbox-list-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  border-right: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.inbox-search-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: var(--panel-strong);
+  z-index: 2;
+}
+
+.inbox-search-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font: inherit;
+  color: var(--text);
+}
+
+.inbox-count {
+  padding: 6px 14px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.inbox-list {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Chat list row ------------------------------------------------------------ */
+.chat-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.chat-row:hover {
+  background: rgba(240, 196, 156, 0.18);
+}
+
+.chat-row.active {
+  background: rgba(240, 196, 156, 0.34);
+}
+
+.chat-avatar {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent);
+  text-transform: uppercase;
+}
+
+.chat-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.chat-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-time {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.chat-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.chat-preview {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-status-pill {
+  flex: 0 0 auto;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: rgba(89, 66, 43, 0.08);
+  color: var(--muted);
+}
+
+.chat-status-pill.attention {
+  background: rgba(165, 61, 47, 0.14);
+  color: var(--danger);
+}
+
+.chat-status-pill.done {
+  background: rgba(45, 122, 88, 0.14);
+  color: var(--success);
+}
+
+.chat-dot {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.chat-dot.hidden {
+  display: none;
+}
+
+/* Thread pane -------------------------------------------------------------- */
+.inbox-thread-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  background:
+    radial-gradient(circle at top left, rgba(252, 214, 173, 0.35), transparent 40%),
+    var(--bg);
+}
+
+.thread-empty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.thread-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  background: var(--panel-strong);
+  border-bottom: 1px solid var(--line);
+}
+
+.inbox-app .thread-header .thread-back {
+  display: none;
+}
+
+.thread-header .chat-avatar {
+  width: 40px;
+  height: 40px;
+}
+
+.thread-id {
+  flex: 1;
+  min-width: 0;
+}
+
+.thread-id strong {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thread-id .thread-status {
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-transform: capitalize;
+}
+
+.thread-step {
+  flex: 0 0 auto;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(240, 196, 156, 0.4);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* min-width:0 lets these flex children shrink below their content's
+   intrinsic width instead of forcing the whole pane wider than the viewport. */
+.thread-view {
+  min-width: 0;
+}
+
+.thread-scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 18px 22px;
+}
+
+.thread-scroll .history-list,
+.thread-scroll .history-item {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.thread-scroll .history-list {
+  margin-top: 0;
+}
+
+.thread-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: var(--panel-strong);
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.thread-footer .reply-hint {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+/* Reuse dashboard button look, with a primary WhatsApp action.
+   `width: auto` + `text-align` reset the dashboard.css mobile rules
+   (.button { width: 100% }) that would otherwise stack the header buttons. */
+.inbox-app .button {
+  display: inline-flex;
+  width: auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.inbox-app .button.secondary {
+  background: transparent;
+}
+
+.inbox-app .button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.inbox-app .button:hover {
+  filter: brightness(0.98);
+}
+
+.is-loading {
+  color: var(--muted);
+  padding: 18px 16px;
+  font-size: 0.9rem;
+}
+
+/* Mobile: single pane ------------------------------------------------------ */
+@media (max-width: 860px) {
+  .inbox-topbar {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  .inbox-brand h1 {
+    font-size: 1.25rem;
+  }
+
+  .inbox-topbar .actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .inbox-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .inbox-list-pane {
+    border-right: 0;
+  }
+
+  .inbox-thread-pane {
+    display: none;
+  }
+
+  .inbox-app.thread-open .inbox-list-pane {
+    display: none;
+  }
+
+  .inbox-app.thread-open .inbox-thread-pane {
+    display: flex;
+  }
+
+  .inbox-app .thread-header .thread-back {
+    display: inline-flex;
+  }
+
+  .thread-step {
+    display: none;
+  }
+
+  .thread-scroll {
+    padding: 14px 16px;
+  }
+
+  .thread-scroll .history-bubble {
+    max-width: 86%;
+  }
+
+  .thread-scroll .history-meta {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+
+  .thread-scroll .history-meta time {
+    white-space: nowrap;
+  }
+
+  .thread-footer {
+    position: sticky;
+    bottom: 0;
+    padding: 12px 16px;
+  }
+
+  .thread-footer .reply-hint {
+    flex-basis: 100%;
+  }
+}

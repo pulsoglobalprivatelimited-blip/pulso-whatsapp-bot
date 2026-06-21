@@ -823,6 +823,10 @@ app.get('/admin', (_req, res) => {
   res.sendFile(path.join(config.publicDir, 'admin', 'index.html'));
 });
 
+app.get('/admin/inbox', (_req, res) => {
+  res.sendFile(path.join(config.publicDir, 'admin', 'inbox.html'));
+});
+
 app.get('/admin/admins', requireSuperAdminPage, (_req, res) => {
   res.sendFile(path.join(config.publicDir, 'admin', 'admins.html'));
 });

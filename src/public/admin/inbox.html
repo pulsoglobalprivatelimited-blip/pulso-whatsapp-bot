@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Pulso Inbox</title>
+  <meta name="theme-color" content="#b75d32">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Pulso Inbox">
+  <link rel="manifest" href="/admin/manifest.webmanifest">
+  <link rel="icon" href="/admin/assets/pwa/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260510b">
+  <link rel="stylesheet" href="/admin/assets/inbox.css?v=20260622a">
+</head>
+<body>
+  <div class="inbox-app" id="inbox-app">
+    <header class="inbox-topbar">
+      <div class="inbox-brand">
+        <p class="eyebrow">Pulso Operations</p>
+        <h1>Inbox</h1>
+      </div>
+      <div class="actions">
+        <button id="inbox-refresh" class="button secondary" type="button">Refresh</button>
+        <a class="button secondary" href="/admin">Verification Desk</a>
+        <a class="button secondary" href="/admin/bookings/kerala">Bookings</a>
+        <form action="/admin/logout" method="post">
+          <button class="button secondary" type="submit">Log out</button>
+        </form>
+      </div>
+    </header>
+
+    <div class="inbox-body">
+      <aside class="inbox-list-pane">
+        <div class="inbox-search-row">
+          <input id="inbox-search" type="search" placeholder="Search by name or phone" autocomplete="off">
+          <button id="inbox-clear" class="button secondary" type="button">Clear</button>
+        </div>
+        <p class="inbox-count" id="inbox-count">Loading conversations…</p>
+        <div class="inbox-list" id="inbox-list">
+          <p class="is-loading">Loading conversations…</p>
+        </div>
+      </aside>
+
+      <section class="inbox-thread-pane" id="thread-pane">
+        <div class="thread-empty" id="thread-empty">
+          <p>Select a conversation to read the full WhatsApp history.</p>
+        </div>
+
+        <div class="thread-view hidden" id="thread-view" style="display:flex; flex-direction:column; min-height:0; flex:1;">
+          <div class="thread-header">
+            <button class="button secondary thread-back" id="thread-back" type="button">Back</button>
+            <span class="chat-avatar" id="thread-avatar"></span>
+            <div class="thread-id">
+              <strong id="thread-name"></strong>
+              <span class="thread-status" id="thread-status"></span>
+            </div>
+            <span class="thread-step" id="thread-step"></span>
+          </div>
+
+          <div class="thread-scroll" id="thread-scroll">
+            <div class="history-list" id="thread-history"></div>
+          </div>
+
+          <div class="thread-footer">
+            <span class="reply-hint">Read-only — reply in WhatsApp to keep the bot in sync.</span>
+            <a class="button secondary" id="thread-open-intro" rel="noreferrer">Open with intro</a>
+            <a class="button primary" id="thread-open-chat" rel="noreferrer">Open in WhatsApp</a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="/admin/assets/chat-history.js?v=20260622a"></script>
+  <script src="/admin/assets/inbox.js?v=20260622a"></script>
+  <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
+</body>
+</html>
