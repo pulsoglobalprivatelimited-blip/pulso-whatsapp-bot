@@ -851,6 +851,10 @@ app.get('/admin/bookings', (_req, res) => {
   res.sendFile(path.join(config.publicDir, 'admin', 'booking-dashboard.html'));
 });
 
+app.get('/admin/bookings/inbox', (_req, res) => {
+  res.sendFile(path.join(config.publicDir, 'admin', 'booking-inbox.html'));
+});
+
 app.get('/admin/bookings/kerala', (_req, res) => {
   res.sendFile(path.join(config.publicDir, 'admin', 'booking-dashboard.html'));
 });

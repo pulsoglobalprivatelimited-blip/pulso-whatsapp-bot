@@ -374,6 +374,75 @@
   font-size: 0.9rem;
 }
 
+/* Booking inbox: filter chips + booking facts bar -------------------------- */
+.inbox-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 14px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.inbox-chip {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.inbox-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.booking-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  padding: 12px 18px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+.booking-fact {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  font-size: 0.82rem;
+}
+
+.bf-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bf-value {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.booking-fact.warn {
+  background: rgba(165, 61, 47, 0.12);
+  border-color: rgba(165, 61, 47, 0.25);
+}
+
+.booking-fact.warn .bf-value {
+  color: var(--danger);
+}
+
 /* Mobile: single pane ------------------------------------------------------ */
 @media (max-width: 860px) {
   .inbox-topbar {
@@ -420,6 +489,11 @@
 
   .thread-scroll {
     padding: 14px 16px;
+  }
+
+  .booking-facts {
+    padding: 10px 14px;
+    max-height: 108px;
   }
 
   .thread-scroll .history-bubble {
