@@ -355,6 +355,65 @@ h1 {
   color: #4d6e44;
 }
 
+.enquiry-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 9px;
+  border: 1px solid transparent;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* Caregiver service booking */
+.enquiry-badge.care {
+  border-color: rgba(77, 110, 68, 0.26);
+  background: rgba(77, 110, 68, 0.12);
+  color: #4d6e44;
+}
+
+/* Recruitment / job enquiry */
+.enquiry-badge.job {
+  border-color: rgba(183, 93, 50, 0.28);
+  background: rgba(183, 93, 50, 0.14);
+  color: #b75d32;
+}
+
+/* Hasn't chosen booking vs job yet */
+.enquiry-badge.partner {
+  background: #e3f1ee;
+  color: #0b5d5a;
+  border-color: #a8d8cf;
+}
+
+.enquiry-badge.undecided {
+  border-color: rgba(90, 90, 90, 0.22);
+  background: rgba(90, 90, 90, 0.08);
+  color: #6b6b6b;
+}
+
+.detail-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pill.enquiry-pill.care {
+  background: rgba(77, 110, 68, 0.14);
+  color: #4d6e44;
+}
+
+.pill.enquiry-pill.job {
+  background: rgba(183, 93, 50, 0.16);
+  color: #b75d32;
+}
+
+.pill.enquiry-pill.undecided {
+  background: rgba(90, 90, 90, 0.1);
+  color: #6b6b6b;
+}
+
 .phone-link {
   color: var(--accent);
   text-decoration: none;

@@ -19,6 +19,7 @@
     refresh: document.getElementById('inbox-refresh'),
     regionFilters: document.getElementById('region-filters'),
     statusFilters: document.getElementById('status-filters'),
+    enquiryFilters: document.getElementById('enquiry-filters'),
     empty: document.getElementById('thread-empty'),
     view: document.getElementById('thread-view'),
     back: document.getElementById('thread-back'),
@@ -39,6 +40,7 @@
   let searchTerm = '';
   let regionFilter = 'all';
   let statusFilter = 'all';
+  let enquiryFilter = 'all';
   let renderedMessageCount = -1;
 
   /* ---- data ------------------------------------------------------------- */
@@ -106,7 +108,8 @@
 
   function resolveEnquiryType(chat) {
     const tagged = String(chat.enquiryType || '').toLowerCase();
-    if (tagged === 'care' || tagged === 'job') return tagged;
+    if (tagged === 'care' || tagged === 'job' || tagged === 'partner') return tagged;
+    if (String(chat.currentStep || '').startsWith('partner_')) return 'partner';
     const step = String(chat.currentStep || '').toLowerCase();
     if (step && !PRE_CHOICE_STEPS.includes(step)) return 'care';
     return 'undecided';
@@ -115,6 +118,7 @@
   function enquiryMeta(type) {
     if (type === 'care') return { label: 'Booking', className: 'care' };
     if (type === 'job') return { label: 'Job enquiry', className: 'job' };
+    if (type === 'partner') return { label: 'Agency', className: 'partner' };
     return { label: 'Undecided', className: 'undecided' };
   }
 
@@ -152,6 +156,8 @@
         (statusFilter === 'test' && chat.isTestBooking === true) ||
         (statusFilter === 'active' && !isCompleted(chat)) ||
         chat.status === statusFilter;
+      const enquiryMatch =
+        enquiryFilter === 'all' || resolveEnquiryType(chat) === enquiryFilter;
       let searchMatch = true;
       if (term) {
         const haystack = [
@@ -160,7 +166,7 @@
         ].map((v) => String(v || '').toLowerCase()).join(' ');
         searchMatch = haystack.includes(term) || (digits && normalizePhone(chatPhone(chat)).includes(digits));
       }
-      return regionMatch && statusMatch && searchMatch;
+      return regionMatch && statusMatch && enquiryMatch && searchMatch;
     });
   }
 
@@ -187,11 +193,30 @@
     `;
   }
 
+  function partnerSummary(visible) {
+    if (enquiryFilter !== 'partner' && enquiryFilter !== 'all') return '';
+    const byAd = {};
+    chats.forEach((chat) => {
+      const type = resolveEnquiryType(chat);
+      const fromAd = chat.partnerAdId || (chat.personaFromPartnerAd ? 'partner ad' : '');
+      if (!fromAd && type !== 'partner') return;
+      const key = fromAd || 'organic';
+      byAd[key] = byAd[key] || { agency: 0, job: 0, other: 0 };
+      if (type === 'partner') byAd[key].agency += 1;
+      else if (type === 'job') byAd[key].job += 1;
+      else byAd[key].other += 1;
+    });
+    const rows = Object.entries(byAd);
+    if (!rows.length) return '';
+    return ' · ' + rows.map(([ad, c]) => `${ad === 'organic' ? 'organic' : `ad ${ad}`}: ${c.agency} agencies, ${c.job} job-seekers`).join(' · ');
+  }
+
   function renderList() {
     const visible = getVisibleChats();
     els.count.textContent = (searchTerm || regionFilter !== 'all' || statusFilter !== 'all')
       ? `${visible.length} of ${chats.length} conversations`
       : `${chats.length} conversations`;
+    if (enquiryFilter === 'partner') els.count.textContent += partnerSummary();
 
     els.list.innerHTML = visible.length
       ? visible.map(renderRow).join('')
@@ -263,8 +288,26 @@
     return [chat.careRecipientName, chat.careRecipientRelation && `(${chat.careRecipientRelation})`].filter(Boolean).join(' ');
   }
 
+  function partnerFacts(chat) {
+    if (resolveEnquiryType(chat) !== 'partner' && !chat.persona) return [];
+    const entry = chat.partnerEntry === 'ad' ? `Meta ad ${chat.partnerAdId || ''}`.trim() : chat.partnerEntry ? `WhatsApp (${chat.partnerEntry})` : '';
+    return [
+      fact('Agency', chat.partnerAgencyName),
+      fact('Who', chat.persona === 'job' ? 'Job-seeker (from partner ad)' : chat.persona === 'agency' ? 'Home care agency' : ''),
+      fact('Partner status', chat.partnerStatus && Chat.formatStatus(chat.partnerStatus)),
+      fact('Came from', entry),
+      fact('Region', chat.region && Chat.formatStatus(chat.region)),
+      fact('Language', chat.language)
+    ];
+  }
+
   function renderFacts(chat) {
     const price = Number(chat.price || 0) ? `Rs ${Number(chat.price).toLocaleString('en-IN')}` : '';
+    if (resolveEnquiryType(chat) === 'partner') {
+      const facts = partnerFacts(chat).filter(Boolean).join('');
+      els.facts.innerHTML = facts || '<span class="booking-fact"><span class="bf-value">Agency enquiry — no details yet</span></span>';
+      return;
+    }
     const facts = [
       fact('Request', chat.requestId || (isCompleted(chat) ? '-' : 'Not completed yet')),
       fact('Service', serviceText(chat)),
@@ -388,6 +431,14 @@
     if (!chip) return;
     statusFilter = chip.dataset.status;
     els.statusFilters.querySelectorAll('.inbox-chip').forEach((c) => c.classList.toggle('active', c === chip));
+    renderList();
+  });
+
+  els.enquiryFilters.addEventListener('click', (event) => {
+    const chip = event.target.closest('[data-enquiry]');
+    if (!chip) return;
+    enquiryFilter = chip.dataset.enquiry;
+    els.enquiryFilters.querySelectorAll('.inbox-chip').forEach((c) => c.classList.toggle('active', c === chip));
     renderList();
   });
 
