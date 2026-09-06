@@ -296,6 +296,7 @@
       fact('Who', chat.persona === 'job' ? 'Job-seeker (from partner ad)' : chat.persona === 'agency' ? 'Home care agency' : ''),
       fact('Partner status', chat.partnerStatus && Chat.formatStatus(chat.partnerStatus)),
       fact('Read up to', chat.partnerPitchStep ? `piece ${chat.partnerPitchStep} of 4` : ''),
+      fact('District', chat.partnerDistrict && Chat.formatStatus(chat.partnerDistrict)),
       fact('Came from', entry),
       fact('Region', chat.region && Chat.formatStatus(chat.region)),
       fact('Language', chat.language)
