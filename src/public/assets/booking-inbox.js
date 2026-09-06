@@ -245,7 +245,10 @@
   function renderMessageBubble(message) {
     const outbound = message.direction === 'outbound';
     const directionClass = outbound ? 'history-item-outbound' : 'history-item-inbound';
-    const sender = outbound ? 'Booking bot' : 'Customer';
+    const kindLabel = { ask_again: 'Ask again', invitation: 'Invitation', reviewer_message: 'Reply' }[message.kind] || '';
+    const sender = outbound
+      ? (message.sentBy ? `Pulso${kindLabel ? ' · ' + kindLabel : ''} · ${message.sentBy}` : 'Booking bot')
+      : 'Customer';
     const content = getMessageContent(message);
     const label = outbound && message.kind && message.kind !== 'text' ? message.kind : '';
 
