@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260510b">
-  <link rel="stylesheet" href="/admin/assets/inbox.css?v=20260622b">
+  <link rel="stylesheet" href="/admin/assets/inbox.css?v=20260911a">
 </head>
 <body>
   <div class="inbox-app" id="inbox-app">
@@ -25,38 +25,57 @@
       </div>
       <div class="actions">
         <button id="inbox-refresh" class="button secondary" type="button">Refresh</button>
-        <a class="button secondary" href="/admin/bookings/kerala">Booking dashboard</a>
-        <a class="button secondary" href="/admin/inbox">Provider inbox</a>
-        <form action="/admin/logout" method="post">
-          <button class="button secondary" type="submit">Log out</button>
-        </form>
+        <div class="inbox-menu" id="inbox-menu">
+          <button class="button secondary inbox-menu-toggle" id="inbox-menu-toggle" type="button"
+                  aria-expanded="false" aria-haspopup="true" aria-label="More actions">&#8943;</button>
+          <div class="inbox-menu-panel">
+            <a class="button secondary" href="/admin/bookings/kerala">Booking dashboard</a>
+            <a class="button secondary" href="/admin/inbox">Provider inbox</a>
+            <form action="/admin/logout" method="post">
+              <button class="button secondary" type="submit">Log out</button>
+            </form>
+          </div>
+        </div>
       </div>
     </header>
 
     <div class="inbox-body">
       <aside class="inbox-list-pane">
-        <div class="inbox-search-row">
-          <input id="inbox-search" type="search" placeholder="Search name, phone, request ID" autocomplete="off">
-          <button id="inbox-clear" class="button secondary" type="button">Clear</button>
+        <div class="inbox-sticky">
+          <div class="inbox-search-row">
+            <input id="inbox-search" type="search" placeholder="Search name, phone, request ID" autocomplete="off">
+            <button id="inbox-clear" class="button secondary" type="button">Clear</button>
+          </div>
+          <div class="inbox-filter-strip">
+            <span class="inbox-filter-group" id="region-filters">
+              <button class="inbox-chip active" data-region="all" type="button">All regions</button>
+              <button class="inbox-chip" data-region="kerala" type="button">Kerala</button>
+              <button class="inbox-chip" data-region="karnataka" type="button">Karnataka</button>
+            </span>
+            <span class="inbox-filter-sep" aria-hidden="true"></span>
+            <span class="inbox-filter-group" id="status-filters">
+              <button class="inbox-chip active" data-status="all" type="button">All</button>
+              <button class="inbox-chip" data-status="active" type="button">Active</button>
+              <button class="inbox-chip" data-status="booking_completed" type="button">Completed</button>
+              <button class="inbox-chip" data-status="test" type="button">Test</button>
+            </span>
+            <span class="inbox-filter-sep" aria-hidden="true"></span>
+            <span class="inbox-filter-group" id="enquiry-filters">
+              <button class="inbox-chip active" data-enquiry="all" type="button">All enquiries</button>
+              <button class="inbox-chip" data-enquiry="care" type="button">Booking</button>
+              <button class="inbox-chip" data-enquiry="job" type="button">Job enquiry</button>
+              <button class="inbox-chip" data-enquiry="partner" type="button">Agencies</button>
+            </span>
+          </div>
         </div>
-        <div class="inbox-filter-row" id="region-filters">
-          <button class="inbox-chip active" data-region="all" type="button">All regions</button>
-          <button class="inbox-chip" data-region="kerala" type="button">Kerala</button>
-          <button class="inbox-chip" data-region="karnataka" type="button">Karnataka</button>
+
+        <div class="inbox-summary">
+          <p class="inbox-count" id="inbox-count">Loading conversations…</p>
+          <button class="inbox-breakdown-toggle hidden" id="breakdown-toggle" type="button" aria-expanded="false">
+            <span class="caret" aria-hidden="true">&#9656;</span><span>Ad breakdown</span>
+          </button>
+          <div class="inbox-breakdown hidden" id="breakdown-panel"></div>
         </div>
-        <div class="inbox-filter-row" id="status-filters">
-          <button class="inbox-chip active" data-status="all" type="button">All</button>
-          <button class="inbox-chip" data-status="active" type="button">Active</button>
-          <button class="inbox-chip" data-status="booking_completed" type="button">Completed</button>
-          <button class="inbox-chip" data-status="test" type="button">Test</button>
-        </div>
-        <div class="inbox-filter-row" id="enquiry-filters">
-          <button class="inbox-chip active" data-enquiry="all" type="button">All enquiries</button>
-          <button class="inbox-chip" data-enquiry="care" type="button">Booking</button>
-          <button class="inbox-chip" data-enquiry="job" type="button">Job enquiry</button>
-          <button class="inbox-chip" data-enquiry="partner" type="button">Agencies</button>
-        </div>
-        <p class="inbox-count" id="inbox-count">Loading conversations…</p>
         <div class="inbox-list" id="inbox-list">
           <p class="is-loading">Loading conversations…</p>
         </div>
@@ -94,8 +113,8 @@
     </div>
   </div>
 
-  <script src="/admin/assets/chat-history.js?v=20260622b"></script>
-  <script src="/admin/assets/booking-inbox.js?v=20260622c"></script>
+  <script src="/admin/assets/chat-history.js?v=20260911a"></script>
+  <script src="/admin/assets/booking-inbox.js?v=20260911a"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>
 </html>

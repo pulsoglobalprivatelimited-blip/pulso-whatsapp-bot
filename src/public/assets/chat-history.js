@@ -150,6 +150,39 @@
     return describeSystemEvent(entry);
   }
 
+  /* Topbar overflow menu. Shared by both inbox pages: on wide screens the CSS
+     dissolves the wrapper and the links sit inline, so this only matters at the
+     mobile breakpoint where they collapse behind one button. */
+  function initTopbarMenu() {
+    const menu = document.getElementById('inbox-menu');
+    const toggle = document.getElementById('inbox-menu-toggle');
+    if (!menu || !toggle) return;
+
+    function setOpen(open) {
+      menu.classList.toggle('open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+    }
+
+    toggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      setOpen(!menu.classList.contains('open'));
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!menu.contains(event.target)) setOpen(false);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTopbarMenu);
+  } else {
+    initTopbarMenu();
+  }
+
   global.PulsoChat = {
     escapeHtml,
     formatStatus,

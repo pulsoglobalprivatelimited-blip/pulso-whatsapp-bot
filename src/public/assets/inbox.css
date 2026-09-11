@@ -59,6 +59,18 @@
   margin: 0;
 }
 
+/* Overflow menu. On wide screens `display: contents` dissolves the wrapper so
+   the links stay inline in .actions; the mobile block below turns it into a
+   real dropdown behind a single button. */
+.inbox-menu,
+.inbox-menu-panel {
+  display: contents;
+}
+
+.inbox-app .button.inbox-menu-toggle {
+  display: none;
+}
+
 /* Two-pane body ------------------------------------------------------------ */
 .inbox-body {
   flex: 1;
@@ -82,10 +94,7 @@
   gap: 8px;
   padding: 12px 14px;
   border-bottom: 1px solid var(--line);
-  position: sticky;
-  top: 0;
   background: var(--panel-strong);
-  z-index: 2;
 }
 
 .inbox-search-row input {
@@ -110,6 +119,99 @@
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Count line + the per-ad breakdown it used to inline. The counts for a dozen
+   ads ran to ~10 lines on a phone, so the line is clamped to one row and the
+   detail moved into the collapsed panel below it. */
+.inbox-summary {
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.inbox-summary .inbox-count {
+  padding: 8px 14px 0;
+  border-bottom: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inbox-breakdown-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 14px 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.inbox-breakdown-toggle .caret {
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.inbox-breakdown-toggle[aria-expanded="true"] .caret {
+  transform: rotate(90deg);
+}
+
+.inbox-breakdown {
+  margin: 0 14px 10px;
+  max-height: 240px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-strong);
+}
+
+.breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.breakdown-table th,
+.breakdown-table td {
+  padding: 6px 10px;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+
+.breakdown-table th {
+  position: sticky;
+  top: 0;
+  background: var(--panel-strong);
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.breakdown-table th:first-child,
+.breakdown-table td:first-child {
+  text-align: left;
+}
+
+.breakdown-table td:first-child {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+}
+
+.breakdown-table td {
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown-table tr:last-child td {
+  border-bottom: 0;
 }
 
 /* Chat list row ------------------------------------------------------------ */
@@ -375,15 +477,39 @@
 }
 
 /* Booking inbox: filter chips + booking facts bar -------------------------- */
-.inbox-filter-row {
+
+/* One strip instead of three stacked rows: the groups never wrap, they scroll
+   sideways, so the chrome above the list stays a single 44px band. The group
+   wrappers keep the ids the click handlers are bound to. */
+.inbox-filter-strip {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
   padding: 0 14px 10px;
   border-bottom: 1px solid var(--line);
 }
 
+.inbox-filter-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.inbox-filter-group {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.inbox-filter-sep {
+  display: none;
+  flex: 0 0 auto;
+  width: 1px;
+  height: 18px;
+  background: var(--line);
+}
+
 .inbox-chip {
+  flex: 0 0 auto;
   padding: 5px 12px;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -391,6 +517,7 @@
   color: var(--muted);
   font: inherit;
   font-size: 0.82rem;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -445,26 +572,129 @@
 
 /* Mobile: single pane ------------------------------------------------------ */
 @media (max-width: 860px) {
+  /* --- Topbar: one compact row. The eyebrow goes, and every link except
+         Refresh moves behind the overflow button, so the header stops
+         wrapping onto a second row. --- */
   .inbox-topbar {
-    padding: 10px 14px;
+    padding: 8px 12px;
     gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .inbox-brand .eyebrow {
+    display: none;
   }
 
   .inbox-brand h1 {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
   }
 
   .inbox-topbar .actions {
+    width: auto;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+  }
+
+  .inbox-menu {
+    display: block;
+    position: relative;
+  }
+
+  .inbox-menu-panel {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 30;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    min-width: 190px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--panel-strong);
+    box-shadow: 0 12px 30px rgba(60, 40, 25, 0.18);
+  }
+
+  .inbox-menu.open .inbox-menu-panel {
+    display: flex;
+  }
+
+  .inbox-menu-panel form {
+    margin: 0;
+  }
+
+  .inbox-app .inbox-menu-panel .button {
     width: 100%;
     justify-content: flex-start;
+    border-color: transparent;
+  }
+
+  /* --- List mode: the app itself becomes the scroll container, so the topbar
+         and the summary scroll away and the list owns the full viewport after
+         one swipe. Only the search + filter bar stays pinned. Previously only
+         .inbox-list scrolled, which permanently reserved ~2/3 of a phone
+         screen for chrome. --- */
+  .inbox-app {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .inbox-body {
+    display: block;
+    flex: 0 0 auto;
     grid-template-columns: minmax(0, 1fr);
   }
 
   .inbox-list-pane {
+    display: block;
+    overflow: visible;
     border-right: 0;
+  }
+
+  .inbox-list {
+    flex: none;
+    overflow: visible;
+  }
+
+  .inbox-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    background: var(--panel-strong);
+  }
+
+  .inbox-filter-strip {
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .inbox-filter-sep {
+    display: block;
+  }
+
+  .inbox-app .button.inbox-menu-toggle {
+    display: inline-flex;
+    padding: 9px 13px;
+    font-size: 1.05rem;
+    line-height: 1;
+  }
+
+  /* --- Thread mode: back to the fixed shell, so the thread body scrolls
+         between its own header and footer. --- */
+  .inbox-app.thread-open {
+    overflow: hidden;
+  }
+
+  .inbox-app.thread-open .inbox-body {
+    display: grid;
+    flex: 1;
+    min-height: 0;
   }
 
   .inbox-thread-pane {

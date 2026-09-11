@@ -20,6 +20,8 @@
     regionFilters: document.getElementById('region-filters'),
     statusFilters: document.getElementById('status-filters'),
     enquiryFilters: document.getElementById('enquiry-filters'),
+    breakdownToggle: document.getElementById('breakdown-toggle'),
+    breakdownPanel: document.getElementById('breakdown-panel'),
     empty: document.getElementById('thread-empty'),
     view: document.getElementById('thread-view'),
     back: document.getElementById('thread-back'),
@@ -41,6 +43,7 @@
   let regionFilter = 'all';
   let statusFilter = 'all';
   let enquiryFilter = 'all';
+  let breakdownOpen = false;
   let renderedMessageCount = -1;
 
   /* ---- data ------------------------------------------------------------- */
@@ -193,8 +196,10 @@
     `;
   }
 
-  function partnerSummary(visible) {
-    if (enquiryFilter !== 'partner' && enquiryFilter !== 'all') return '';
+  /* Per-ad agency/job-seeker counts, busiest ad first. Returned as rows rather
+     than a joined string: inlining a dozen ads into the count line pushed the
+     chat list off the bottom of a phone screen. */
+  function partnerBreakdown() {
     const byAd = {};
     chats.forEach((chat) => {
       const type = resolveEnquiryType(chat);
@@ -206,9 +211,44 @@
       else if (type === 'job') byAd[key].job += 1;
       else byAd[key].other += 1;
     });
-    const rows = Object.entries(byAd);
-    if (!rows.length) return '';
-    return ' · ' + rows.map(([ad, c]) => `${ad === 'organic' ? 'organic' : `ad ${ad}`}: ${c.agency} agencies, ${c.job} job-seekers`).join(' · ');
+    return Object.entries(byAd)
+      .map(([ad, c]) => Object.assign({ ad, total: c.agency + c.job + c.other }, c))
+      .sort((a, b) => b.total - a.total);
+  }
+
+  function adLabel(ad) {
+    if (ad === 'organic') return 'Organic';
+    if (ad === 'partner ad') return 'Partner ad';
+    return ad;
+  }
+
+  function renderBreakdown(rows) {
+    if (!rows.length) {
+      els.breakdownToggle.classList.add('hidden');
+      els.breakdownPanel.classList.add('hidden');
+      els.breakdownPanel.innerHTML = '';
+      return;
+    }
+    els.breakdownToggle.classList.remove('hidden');
+    els.breakdownToggle.setAttribute('aria-expanded', String(breakdownOpen));
+    els.breakdownPanel.classList.toggle('hidden', !breakdownOpen);
+    if (!breakdownOpen) return;
+    els.breakdownPanel.innerHTML = `
+      <table class="breakdown-table">
+        <thead>
+          <tr><th>Ad</th><th>Agencies</th><th>Job-seekers</th></tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <td>${Chat.escapeHtml(adLabel(row.ad))}</td>
+              <td>${row.agency}</td>
+              <td>${row.job}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
   }
 
   function renderList() {
@@ -216,7 +256,10 @@
     els.count.textContent = (searchTerm || regionFilter !== 'all' || statusFilter !== 'all')
       ? `${visible.length} of ${chats.length} conversations`
       : `${chats.length} conversations`;
-    if (enquiryFilter === 'partner') els.count.textContent += partnerSummary();
+
+    const rows = enquiryFilter === 'partner' ? partnerBreakdown() : [];
+    if (rows.length) els.count.textContent += ` · ${rows.length} ${rows.length === 1 ? 'ad' : 'ads'}`;
+    renderBreakdown(rows);
 
     els.list.innerHTML = visible.length
       ? visible.map(renderRow).join('')
@@ -423,11 +466,24 @@
     els.search.focus();
   });
 
+  function revealChip(chip) {
+    const strip = chip.closest('.inbox-filter-strip');
+    if (!strip) return;
+    const chipBox = chip.getBoundingClientRect();
+    const stripBox = strip.getBoundingClientRect();
+    if (chipBox.left < stripBox.left) {
+      strip.scrollLeft -= (stripBox.left - chipBox.left) + 12;
+    } else if (chipBox.right > stripBox.right) {
+      strip.scrollLeft += (chipBox.right - stripBox.right) + 12;
+    }
+  }
+
   els.regionFilters.addEventListener('click', (event) => {
     const chip = event.target.closest('[data-region]');
     if (!chip) return;
     regionFilter = chip.dataset.region;
     els.regionFilters.querySelectorAll('.inbox-chip').forEach((c) => c.classList.toggle('active', c === chip));
+    revealChip(chip);
     renderList();
   });
 
@@ -436,6 +492,7 @@
     if (!chip) return;
     statusFilter = chip.dataset.status;
     els.statusFilters.querySelectorAll('.inbox-chip').forEach((c) => c.classList.toggle('active', c === chip));
+    revealChip(chip);
     renderList();
   });
 
@@ -444,7 +501,13 @@
     if (!chip) return;
     enquiryFilter = chip.dataset.enquiry;
     els.enquiryFilters.querySelectorAll('.inbox-chip').forEach((c) => c.classList.toggle('active', c === chip));
+    revealChip(chip);
     renderList();
+  });
+
+  els.breakdownToggle.addEventListener('click', () => {
+    breakdownOpen = !breakdownOpen;
+    renderBreakdown(partnerBreakdown());
   });
 
   els.refresh.addEventListener('click', async () => {
