@@ -183,7 +183,11 @@ function parseCookies(header) {
 }
 
 function wantsJson(req) {
-  return req.path.startsWith('/providers') || req.path.startsWith('/api');
+  return (
+    req.path.startsWith('/providers') ||
+    req.path.startsWith('/api') ||
+    req.path.startsWith('/booking-chats')
+  );
 }
 
 function requireAdminAuth(req, res, next) {

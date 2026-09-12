@@ -215,6 +215,114 @@
 }
 
 /* Chat list row ------------------------------------------------------------ */
+
+/* The row is a <button>, so the call toggle cannot nest inside it: the two sit
+   side by side in this wrapper, which owns the row separator. */
+.chat-row-wrap {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
+}
+
+.chat-row-wrap .chat-row {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  border-bottom: 0;
+}
+
+.chat-row-wrap.is-called {
+  background: rgba(45, 122, 88, 0.07);
+}
+
+.call-toggle {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 62px;
+  padding: 0 6px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.call-toggle .mark {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  background: #fff;
+}
+
+.call-toggle .mark svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.call-toggle .mark svg path {
+  stroke: var(--muted);
+}
+
+.call-toggle .label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.call-toggle.on {
+  color: var(--success);
+}
+
+.call-toggle.on .mark {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.call-toggle.on .mark svg path {
+  stroke: #fff;
+}
+
+.call-toggle:hover .mark {
+  border-color: var(--success);
+}
+
+.called-meta {
+  flex: 1;
+  min-width: 0;
+  color: var(--success);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Failed writes revert the row, so say so rather than failing silently. */
+.inbox-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  z-index: 50;
+  transform: translateX(-50%);
+  max-width: min(92vw, 420px);
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(60, 40, 25, 0.28);
+}
+
 .chat-row {
   display: flex;
   align-items: center;

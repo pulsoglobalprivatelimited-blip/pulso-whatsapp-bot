@@ -1,6 +1,7 @@
 const admin = require('firebase-admin');
 const config = require('../config');
 const { getFirestore } = require('./storage');
+const { EMPTY_LOG, listCallLogs, getCallLog, setCallLog } = require('./bookingCallLogService');
 
 const COLLECTION = 'whatsappBookingChats';
 let bookingDb;
@@ -95,10 +96,17 @@ function mapChatDoc(doc) {
   };
 }
 
+function withCallStatus(chat, callLogs) {
+  return { ...chat, callStatus: callLogs[chat.id] || { ...EMPTY_LOG } };
+}
+
 async function listWhatsappBookingChats(options = {}) {
   const requestedRegion = normalizeRegion(options.region);
-  const snapshot = await collectionRef().orderBy('updatedAt', 'desc').limit(500).get();
-  const chats = snapshot.docs.map(mapChatDoc);
+  const [snapshot, callLogs] = await Promise.all([
+    collectionRef().orderBy('updatedAt', 'desc').limit(500).get(),
+    listCallLogs()
+  ]);
+  const chats = snapshot.docs.map((doc) => withCallStatus(mapChatDoc(doc), callLogs));
 
   if (!requestedRegion) {
     return chats;
@@ -153,13 +161,32 @@ async function getWhatsappBookingChatDetail(phone) {
     return null;
   }
 
-  return {
-    ...chat,
-    messages: await listWhatsappBookingMessages(chat.id)
-  };
+  const [messages, callStatus] = await Promise.all([
+    listWhatsappBookingMessages(chat.id),
+    getCallLog(chat.id)
+  ]);
+
+  return { ...chat, messages, callStatus };
+}
+
+/* Resolves whatever phone shape the inbox row carries to the real chat doc,
+   then records the call against that doc id. */
+async function setWhatsappBookingChatCalled(phone, options = {}) {
+  const chat = await getWhatsappBookingChat(phone);
+  if (!chat) {
+    return null;
+  }
+
+  const callStatus = await setCallLog(chat.id, {
+    called: options.called === true,
+    actor: options.actor
+  });
+
+  return { id: chat.id, phone: chat.phone || chat.id, callStatus };
 }
 
 module.exports = {
   getWhatsappBookingChatDetail,
-  listWhatsappBookingChats
+  listWhatsappBookingChats,
+  setWhatsappBookingChatCalled
 };

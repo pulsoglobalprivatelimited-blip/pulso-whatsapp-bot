@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260510b">
-  <link rel="stylesheet" href="/admin/assets/inbox.css?v=20260911a">
+  <link rel="stylesheet" href="/admin/assets/inbox.css?v=20260912a">
 </head>
 <body>
   <div class="inbox-app" id="inbox-app">
@@ -66,16 +66,23 @@
               <button class="inbox-chip" data-enquiry="job" type="button">Job enquiry</button>
               <button class="inbox-chip" data-enquiry="partner" type="button">Agencies</button>
             </span>
+            <span class="inbox-filter-sep" aria-hidden="true"></span>
+            <span class="inbox-filter-group" id="call-filters">
+              <button class="inbox-chip active" data-call="all" type="button">All</button>
+              <button class="inbox-chip" data-call="pending" type="button">To call</button>
+              <button class="inbox-chip" data-call="called" type="button">Called</button>
+            </span>
           </div>
         </div>
 
         <div class="inbox-summary">
           <p class="inbox-count" id="inbox-count">Loading conversations…</p>
           <button class="inbox-breakdown-toggle hidden" id="breakdown-toggle" type="button" aria-expanded="false">
-            <span class="caret" aria-hidden="true">&#9656;</span><span>Ad breakdown</span>
+            <span class="caret" aria-hidden="true">&#9656;</span><span id="breakdown-label">Ad breakdown</span>
           </button>
           <div class="inbox-breakdown hidden" id="breakdown-panel"></div>
         </div>
+        <div class="inbox-toast hidden" id="inbox-toast" role="status" aria-live="polite"></div>
         <div class="inbox-list" id="inbox-list">
           <p class="is-loading">Loading conversations…</p>
         </div>
@@ -114,7 +121,7 @@
   </div>
 
   <script src="/admin/assets/chat-history.js?v=20260911a"></script>
-  <script src="/admin/assets/booking-inbox.js?v=20260911a"></script>
+  <script src="/admin/assets/booking-inbox.js?v=20260912a"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>
 </html>

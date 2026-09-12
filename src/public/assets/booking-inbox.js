@@ -20,7 +20,10 @@
     regionFilters: document.getElementById('region-filters'),
     statusFilters: document.getElementById('status-filters'),
     enquiryFilters: document.getElementById('enquiry-filters'),
+    callFilters: document.getElementById('call-filters'),
+    toast: document.getElementById('inbox-toast'),
     breakdownToggle: document.getElementById('breakdown-toggle'),
+    breakdownLabel: document.getElementById('breakdown-label'),
     breakdownPanel: document.getElementById('breakdown-panel'),
     empty: document.getElementById('thread-empty'),
     view: document.getElementById('thread-view'),
@@ -43,7 +46,10 @@
   let regionFilter = 'all';
   let statusFilter = 'all';
   let enquiryFilter = 'all';
+  let callFilter = 'all';
   let breakdownOpen = false;
+  let currentAdmin = '';
+  let toastTimer = null;
   let renderedMessageCount = -1;
 
   /* ---- data ------------------------------------------------------------- */
@@ -161,6 +167,10 @@
         chat.status === statusFilter;
       const enquiryMatch =
         enquiryFilter === 'all' || resolveEnquiryType(chat) === enquiryFilter;
+      const callMatch =
+        callFilter === 'all' ||
+        (callFilter === 'called' && isCalled(chat)) ||
+        (callFilter === 'pending' && !isCalled(chat));
       let searchMatch = true;
       if (term) {
         const haystack = [
@@ -169,8 +179,66 @@
         ].map((v) => String(v || '').toLowerCase()).join(' ');
         searchMatch = haystack.includes(term) || (digits && normalizePhone(chatPhone(chat)).includes(digits));
       }
-      return regionMatch && statusMatch && enquiryMatch && searchMatch;
+      return regionMatch && statusMatch && enquiryMatch && callMatch && searchMatch;
     });
+  }
+
+  /* ---- call status ------------------------------------------------------ */
+  const CALL_ICON_PHONE =
+    '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>';
+  const CALL_ICON_CHECK =
+    '<svg viewBox="0 0 24 24" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M20 6 9 17l-5-5"/></svg>';
+
+  function callStatusOf(chat) {
+    return chat && chat.callStatus ? chat.callStatus : { called: false, calledBy: '', calledAt: null };
+  }
+
+  function isCalled(chat) {
+    return callStatusOf(chat).called === true;
+  }
+
+  function calledSummary(chat) {
+    const status = callStatusOf(chat);
+    const who = status.calledBy || 'called';
+    const when = status.calledAt ? shortTime(status.calledAt) : '';
+    return when ? `${who} \u00b7 ${when}` : who;
+  }
+
+  function showToast(message) {
+    if (!els.toast) return;
+    els.toast.textContent = message;
+    els.toast.classList.remove('hidden');
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => els.toast.classList.add('hidden'), 3200);
+  }
+
+  async function toggleCalled(phone) {
+    const chat = chats.find((item) => chatPhone(item) === phone);
+    if (!chat) return;
+
+    const previous = chat.callStatus;
+    const next = !isCalled(chat);
+    // Optimistic: the list is worked through fast, so it must not wait on the
+    // round trip. Reverted below if the write fails.
+    chat.callStatus = next
+      ? { called: true, calledBy: currentAdmin || 'you', calledAt: new Date().toISOString() }
+      : { called: false, calledBy: '', calledAt: null };
+    renderList();
+
+    try {
+      const result = await fetchJson(`/admin/booking-chats/${encodeURIComponent(phone)}/called`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ called: next })
+      });
+      chat.callStatus = result.callStatus || chat.callStatus;
+    } catch (error) {
+      chat.callStatus = previous;
+      showToast(error.message || 'Could not save. Try again.');
+    }
+    renderList();
   }
 
   function renderRow(chat) {
@@ -178,21 +246,36 @@
     const enquiry = enquiryMeta(resolveEnquiryType(chat));
     const done = isCompleted(chat);
 
+    const called = isCalled(chat);
+    // Every row is an agency on the Agencies filter, so the badge is dead
+    // weight there - dropping it buys the width the called-by line needs.
+    const showEnquiryBadge = enquiryFilter !== 'partner';
+
     return `
-      <button class="chat-row${phone === selectedPhone ? ' active' : ''}" type="button" data-phone="${Chat.escapeHtml(phone)}">
-        <span class="chat-avatar">${Chat.escapeHtml(initials(chat))}</span>
-        <span class="chat-main">
-          <span class="chat-line">
-            <span class="chat-name">${Chat.escapeHtml(displayName(chat))}${chat.isTestBooking ? ' · Test' : ''}</span>
-            <span class="chat-time">${Chat.escapeHtml(shortTime(rowTime(chat)))}</span>
+      <div class="chat-row-wrap${called ? ' is-called' : ''}">
+        <button class="chat-row${phone === selectedPhone ? ' active' : ''}" type="button" data-phone="${Chat.escapeHtml(phone)}">
+          <span class="chat-avatar">${Chat.escapeHtml(initials(chat))}</span>
+          <span class="chat-main">
+            <span class="chat-line">
+              <span class="chat-name">${Chat.escapeHtml(displayName(chat))}${chat.isTestBooking ? ' · Test' : ''}</span>
+              <span class="chat-time">${Chat.escapeHtml(shortTime(rowTime(chat)))}</span>
+            </span>
+            <span class="chat-sub">
+              ${called
+                ? `<span class="called-meta">&#10003; ${Chat.escapeHtml(calledSummary(chat))}</span>`
+                : `<span class="chat-preview">${Chat.escapeHtml(rowPreview(chat))}</span>`}
+              <span class="chat-status-pill ${done ? 'done' : ''}">${Chat.escapeHtml(statusLabel(chat))}</span>
+              ${showEnquiryBadge ? `<span class="enquiry-badge ${enquiry.className}">${Chat.escapeHtml(enquiry.label)}</span>` : ''}
+            </span>
           </span>
-          <span class="chat-sub">
-            <span class="chat-preview">${Chat.escapeHtml(rowPreview(chat))}</span>
-            <span class="chat-status-pill ${done ? 'done' : ''}">${Chat.escapeHtml(statusLabel(chat))}</span>
-            <span class="enquiry-badge ${enquiry.className}">${Chat.escapeHtml(enquiry.label)}</span>
-          </span>
-        </span>
-      </button>
+        </button>
+        <button class="call-toggle${called ? ' on' : ''}" type="button"
+                data-call-phone="${Chat.escapeHtml(phone)}" aria-pressed="${called}"
+                title="${called ? `Called by ${Chat.escapeHtml(calledSummary(chat))} - tap to undo` : 'Mark as called'}">
+          <span class="mark">${called ? CALL_ICON_CHECK : CALL_ICON_PHONE}</span>
+          <span class="label">Called</span>
+        </button>
+      </div>
     `;
   }
 
@@ -231,6 +314,7 @@
     }
     els.breakdownToggle.classList.remove('hidden');
     els.breakdownToggle.setAttribute('aria-expanded', String(breakdownOpen));
+    els.breakdownLabel.textContent = `Ad breakdown (${rows.length})`;
     els.breakdownPanel.classList.toggle('hidden', !breakdownOpen);
     if (!breakdownOpen) return;
     els.breakdownPanel.innerHTML = `
@@ -257,8 +341,12 @@
       ? `${visible.length} of ${chats.length} conversations`
       : `${chats.length} conversations`;
 
+    const called = visible.filter(isCalled).length;
+    if (called || callFilter !== 'all' || enquiryFilter === 'partner') {
+      els.count.textContent += ` · ${called} called · ${visible.length - called} to call`;
+    }
+
     const rows = enquiryFilter === 'partner' ? partnerBreakdown() : [];
-    if (rows.length) els.count.textContent += ` · ${rows.length} ${rows.length === 1 ? 'ad' : 'ads'}`;
     renderBreakdown(rows);
 
     els.list.innerHTML = visible.length
@@ -450,6 +538,14 @@
 
   /* ---- events ----------------------------------------------------------- */
   els.list.addEventListener('click', (event) => {
+    // The toggle is a sibling of .chat-row, not a child, so a tap on it must
+    // not fall through to opening the thread.
+    const toggle = event.target.closest('.call-toggle');
+    if (toggle && toggle.dataset.callPhone) {
+      event.stopPropagation();
+      toggleCalled(toggle.dataset.callPhone);
+      return;
+    }
     const row = event.target.closest('.chat-row');
     if (row && row.dataset.phone) selectChat(row.dataset.phone);
   });
@@ -505,6 +601,15 @@
     renderList();
   });
 
+  els.callFilters.addEventListener('click', (event) => {
+    const chip = event.target.closest('[data-call]');
+    if (!chip) return;
+    callFilter = chip.dataset.call;
+    els.callFilters.querySelectorAll('.inbox-chip').forEach((c) => c.classList.toggle('active', c === chip));
+    revealChip(chip);
+    renderList();
+  });
+
   els.breakdownToggle.addEventListener('click', () => {
     breakdownOpen = !breakdownOpen;
     renderBreakdown(partnerBreakdown());
@@ -541,5 +646,15 @@
     refreshOpenThread();
   }, REFRESH_MS);
 
+  async function loadSession() {
+    try {
+      const data = await fetchJson('/admin/session');
+      currentAdmin = (data.admin && data.admin.username) || '';
+    } catch (error) {
+      /* the optimistic label falls back to "you" */
+    }
+  }
+
+  loadSession();
   loadList();
 })();
