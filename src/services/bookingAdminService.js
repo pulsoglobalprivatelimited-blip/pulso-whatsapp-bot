@@ -1,7 +1,15 @@
 const admin = require('firebase-admin');
 const config = require('../config');
 const { getFirestore } = require('./storage');
-const { EMPTY_LOG, listCallLogs, getCallLog, setCallLog } = require('./bookingCallLogService');
+const {
+  EMPTY_LOG,
+  listCallLogs,
+  getCallLog,
+  setCallLog,
+  setShortlisted,
+  appendNote,
+  deleteNote
+} = require('./bookingCallLogService');
 
 const COLLECTION = 'whatsappBookingChats';
 let bookingDb;
@@ -96,8 +104,13 @@ function mapChatDoc(doc) {
   };
 }
 
+function summarizeCallStatus(status) {
+  const { notes, ...rest } = status;
+  return { ...rest, noteCount: Array.isArray(notes) ? notes.length : 0 };
+}
+
 function withCallStatus(chat, callLogs) {
-  return { ...chat, callStatus: callLogs[chat.id] || { ...EMPTY_LOG } };
+  return { ...chat, callStatus: summarizeCallStatus(callLogs[chat.id] || { ...EMPTY_LOG }) };
 }
 
 async function listWhatsappBookingChats(options = {}) {
@@ -185,8 +198,47 @@ async function setWhatsappBookingChatCalled(phone, options = {}) {
   return { id: chat.id, phone: chat.phone || chat.id, callStatus };
 }
 
+async function resolveChatId(phone) {
+  const chat = await getWhatsappBookingChat(phone);
+  return chat ? { id: chat.id, phone: chat.phone || chat.id } : null;
+}
+
+async function getWhatsappBookingChatCallLog(phone) {
+  const chat = await resolveChatId(phone);
+  if (!chat) return null;
+  return { ...chat, callStatus: await getCallLog(chat.id) };
+}
+
+async function setWhatsappBookingChatShortlisted(phone, options = {}) {
+  const chat = await resolveChatId(phone);
+  if (!chat) return null;
+  await setShortlisted(chat.id, {
+    shortlisted: options.shortlisted === true,
+    actor: options.actor
+  });
+  return { ...chat, callStatus: await getCallLog(chat.id) };
+}
+
+async function addWhatsappBookingChatNote(phone, options = {}) {
+  const chat = await resolveChatId(phone);
+  if (!chat) return null;
+  await appendNote(chat.id, { text: options.text, actor: options.actor });
+  return { ...chat, callStatus: await getCallLog(chat.id) };
+}
+
+async function deleteWhatsappBookingChatNote(phone, noteId) {
+  const chat = await resolveChatId(phone);
+  if (!chat) return null;
+  const removed = await deleteNote(chat.id, noteId);
+  return { ...chat, removed, callStatus: await getCallLog(chat.id) };
+}
+
 module.exports = {
   getWhatsappBookingChatDetail,
   listWhatsappBookingChats,
-  setWhatsappBookingChatCalled
+  setWhatsappBookingChatCalled,
+  getWhatsappBookingChatCallLog,
+  setWhatsappBookingChatShortlisted,
+  addWhatsappBookingChatNote,
+  deleteWhatsappBookingChatNote
 };

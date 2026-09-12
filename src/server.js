@@ -24,7 +24,11 @@ const {
 const {
   getWhatsappBookingChatDetail,
   listWhatsappBookingChats,
-  setWhatsappBookingChatCalled
+  setWhatsappBookingChatCalled,
+  getWhatsappBookingChatCallLog,
+  setWhatsappBookingChatShortlisted,
+  addWhatsappBookingChatNote,
+  deleteWhatsappBookingChatNote
 } = require('./services/bookingAdminService');
 const {
   listProviders,
@@ -922,6 +926,60 @@ app.post('/admin/booking-chats/:phone/called', async (req, res) => {
       called: req.body.called !== false,
       actor: getAdminActor(req)
     });
+    if (!result) {
+      return res.status(404).json({ error: 'Booking chat not found' });
+    }
+    return res.json(result);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+app.get('/admin/booking-chats/:phone/call-log', async (req, res) => {
+  try {
+    const result = await getWhatsappBookingChatCallLog(req.params.phone);
+    if (!result) {
+      return res.status(404).json({ error: 'Booking chat not found' });
+    }
+    return res.json(result);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+app.post('/admin/booking-chats/:phone/shortlist', async (req, res) => {
+  try {
+    const result = await setWhatsappBookingChatShortlisted(req.params.phone, {
+      shortlisted: req.body.shortlisted !== false,
+      actor: getAdminActor(req)
+    });
+    if (!result) {
+      return res.status(404).json({ error: 'Booking chat not found' });
+    }
+    return res.json(result);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+app.post('/admin/booking-chats/:phone/notes', async (req, res) => {
+  try {
+    const result = await addWhatsappBookingChatNote(req.params.phone, {
+      text: req.body.text,
+      actor: getAdminActor(req)
+    });
+    if (!result) {
+      return res.status(404).json({ error: 'Booking chat not found' });
+    }
+    return res.json(result);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+app.delete('/admin/booking-chats/:phone/notes/:noteId', async (req, res) => {
+  try {
+    const result = await deleteWhatsappBookingChatNote(req.params.phone, req.params.noteId);
     if (!result) {
       return res.status(404).json({ error: 'Booking chat not found' });
     }

@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260510b">
-  <link rel="stylesheet" href="/admin/assets/inbox.css?v=20260912a">
+  <link rel="stylesheet" href="/admin/assets/inbox.css?v=20260912b">
 </head>
 <body>
   <div class="inbox-app" id="inbox-app">
@@ -71,6 +71,7 @@
               <button class="inbox-chip active" data-call="all" type="button">All</button>
               <button class="inbox-chip" data-call="pending" type="button">To call</button>
               <button class="inbox-chip" data-call="called" type="button">Called</button>
+              <button class="inbox-chip" data-call="shortlisted" type="button">Shortlisted</button>
             </span>
           </div>
         </div>
@@ -118,10 +119,33 @@
         </div>
       </section>
     </div>
+    <div class="sheet-backdrop hidden" id="call-sheet-backdrop">
+      <div class="call-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+        <div class="sheet-grab" aria-hidden="true"></div>
+        <div class="sheet-head">
+          <h2 id="sheet-title"></h2>
+          <p class="sheet-called" id="sheet-called"></p>
+        </div>
+        <button class="shortlist-btn" id="sheet-shortlist" type="button" aria-pressed="false">
+          <span class="s" aria-hidden="true">&#9733;</span>
+          <span id="sheet-shortlist-label">Shortlist</span>
+          <span class="sub" id="sheet-shortlist-sub"></span>
+        </button>
+        <p class="sheet-label">Call notes</p>
+        <div id="sheet-notes"></div>
+        <textarea class="note-box" id="sheet-note-text" maxlength="1000"
+                  placeholder="Add a note about this call&hellip;"></textarea>
+        <div class="sheet-actions">
+          <button class="button secondary" id="sheet-close" type="button">Close</button>
+          <button class="button primary" id="sheet-save" type="button">Save note</button>
+        </div>
+        <button class="sheet-undo" id="sheet-uncall" type="button">Mark as not called</button>
+      </div>
+    </div>
   </div>
 
   <script src="/admin/assets/chat-history.js?v=20260911a"></script>
-  <script src="/admin/assets/booking-inbox.js?v=20260912a"></script>
+  <script src="/admin/assets/booking-inbox.js?v=20260912b"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>
 </html>

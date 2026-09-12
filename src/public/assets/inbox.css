@@ -306,6 +306,211 @@
   text-overflow: ellipsis;
 }
 
+/* Call sheet: shortlist + call notes, opened from a called row so the list
+   never has to be left. Lives inside .inbox-app so the scoped .button rules
+   apply to its actions. */
+/* Stop the list scrolling behind the open sheet. */
+.inbox-app.sheet-open {
+  overflow: hidden;
+}
+
+.inbox-app.sheet-open .inbox-list,
+.inbox-app.sheet-open .thread-scroll {
+  overflow: hidden;
+}
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(40, 26, 16, 0.44);
+}
+
+.call-sheet {
+  width: 100%;
+  max-width: 520px;
+  max-height: 88dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 10px 18px 22px;
+  border-radius: 20px 20px 0 0;
+  background: var(--panel-strong);
+  box-shadow: 0 -10px 40px rgba(40, 26, 16, 0.3);
+}
+
+.sheet-grab {
+  width: 40px;
+  height: 4px;
+  margin: 0 auto 14px;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.sheet-head {
+  margin-bottom: 14px;
+}
+
+.sheet-head h2 {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 700;
+}
+
+.sheet-called {
+  margin: 4px 0 0;
+  color: var(--success);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.shortlist-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.shortlist-btn .s {
+  font-size: 1.15rem;
+  color: var(--muted);
+}
+
+.shortlist-btn .sub {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 500;
+}
+
+.shortlist-btn.on {
+  border-color: #c08a2e;
+  background: rgba(192, 138, 46, 0.1);
+}
+
+.shortlist-btn.on .s {
+  color: #c08a2e;
+}
+
+.sheet-label {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.note-entry {
+  position: relative;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.note-entry .who {
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.note-entry .txt {
+  font-size: 0.87rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.note-del {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 4px 9px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Deletion is open to anyone and cannot be undone, so it takes two taps. */
+.note-del.confirm {
+  background: rgba(165, 61, 47, 0.14);
+  color: var(--danger);
+}
+
+.note-empty {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.note-box {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 76px;
+  margin-top: 4px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+  resize: vertical;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 11px;
+}
+
+.inbox-app .sheet-actions .button {
+  flex: 1;
+}
+
+.sheet-undo {
+  display: block;
+  width: 100%;
+  margin-top: 18px;
+  padding: 11px;
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.called-meta .star,
+.chat-preview .star {
+  color: #c08a2e;
+}
+
+.called-meta .notes-count {
+  color: var(--muted);
+  font-weight: 500;
+}
+
 /* Failed writes revert the row, so say so rather than failing silently. */
 .inbox-toast {
   position: fixed;

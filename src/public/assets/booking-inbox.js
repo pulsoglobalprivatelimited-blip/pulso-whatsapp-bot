@@ -22,6 +22,17 @@
     enquiryFilters: document.getElementById('enquiry-filters'),
     callFilters: document.getElementById('call-filters'),
     toast: document.getElementById('inbox-toast'),
+    sheetBackdrop: document.getElementById('call-sheet-backdrop'),
+    sheetTitle: document.getElementById('sheet-title'),
+    sheetCalled: document.getElementById('sheet-called'),
+    sheetShortlist: document.getElementById('sheet-shortlist'),
+    sheetShortlistLabel: document.getElementById('sheet-shortlist-label'),
+    sheetShortlistSub: document.getElementById('sheet-shortlist-sub'),
+    sheetNotes: document.getElementById('sheet-notes'),
+    sheetNoteText: document.getElementById('sheet-note-text'),
+    sheetSave: document.getElementById('sheet-save'),
+    sheetClose: document.getElementById('sheet-close'),
+    sheetUncall: document.getElementById('sheet-uncall'),
     breakdownToggle: document.getElementById('breakdown-toggle'),
     breakdownLabel: document.getElementById('breakdown-label'),
     breakdownPanel: document.getElementById('breakdown-panel'),
@@ -49,6 +60,9 @@
   let callFilter = 'all';
   let breakdownOpen = false;
   let currentAdmin = '';
+  let sheetPhone = '';
+  let sheetLog = null;
+  let pendingDeleteId = '';
   let toastTimer = null;
   let renderedMessageCount = -1;
 
@@ -71,6 +85,7 @@
       const data = await fetchJson('/admin/booking-chats');
       chats = Array.isArray(data.chats) ? data.chats : [];
       renderList();
+      if (isSheetOpen()) refreshSheet();
     } catch (error) {
       els.list.innerHTML = `<p class="is-loading">${Chat.escapeHtml(error.message || 'Could not load conversations.')}</p>`;
       els.count.textContent = '';
@@ -170,7 +185,8 @@
       const callMatch =
         callFilter === 'all' ||
         (callFilter === 'called' && isCalled(chat)) ||
-        (callFilter === 'pending' && !isCalled(chat));
+        (callFilter === 'pending' && !isCalled(chat)) ||
+        (callFilter === 'shortlisted' && isShortlisted(chat));
       let searchMatch = true;
       if (term) {
         const haystack = [
@@ -199,11 +215,32 @@
     return callStatusOf(chat).called === true;
   }
 
+  function isShortlisted(chat) {
+    return callStatusOf(chat).shortlisted === true;
+  }
+
+  function noteCountOf(chat) {
+    const status = callStatusOf(chat);
+    if (Number.isFinite(status.noteCount)) return status.noteCount;
+    return Array.isArray(status.notes) ? status.notes.length : 0;
+  }
+
+  /* The row has ~260px for this line at 412px wide, so the note count replaces
+     the timestamp rather than sitting alongside it. The sheet shows both. */
   function calledSummary(chat) {
     const status = callStatusOf(chat);
     const who = status.calledBy || 'called';
+    const count = noteCountOf(chat);
+    if (count) return `${who}__NOTES__${count} note${count === 1 ? '' : 's'}`;
     const when = status.calledAt ? shortTime(status.calledAt) : '';
     return when ? `${who} \u00b7 ${when}` : who;
+  }
+
+  function calledMetaHtml(chat) {
+    const star = isShortlisted(chat) ? '<span class="star" aria-hidden="true">&#9733;</span> ' : '';
+    const [who, notes] = Chat.escapeHtml(calledSummary(chat)).split('__NOTES__');
+    const notesHtml = notes ? ` <span class="notes-count">\u00b7 ${notes}</span>` : '';
+    return `<span class="called-meta">${star}&#10003; ${who}${notesHtml}</span>`;
   }
 
   function showToast(message) {
@@ -241,6 +278,105 @@
     renderList();
   }
 
+  /* ---- call sheet -------------------------------------------------------- */
+  function isSheetOpen() {
+    return !els.sheetBackdrop.classList.contains('hidden');
+  }
+
+  function noteTime(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const today = new Date();
+    const sameDay = date.toDateString() === today.toDateString();
+    const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return sameDay ? `today ${time}` : `${date.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${time}`;
+  }
+
+  /* Redraws everything in the sheet EXCEPT the textarea: the 25s list refresh
+     calls through here, and clobbering a half-typed note would be brutal. */
+  function renderSheet() {
+    if (!sheetLog) return;
+    const status = sheetLog.callStatus || {};
+    els.sheetTitle.textContent = formatPhone(sheetLog.phone || sheetPhone);
+    els.sheetCalled.textContent = status.called
+      ? `\u2713 Called by ${status.calledBy || 'unknown'}${status.calledAt ? ` \u00b7 ${noteTime(status.calledAt)}` : ''}`
+      : 'Not marked as called';
+
+    const shortlisted = status.shortlisted === true;
+    els.sheetShortlist.classList.toggle('on', shortlisted);
+    els.sheetShortlist.setAttribute('aria-pressed', String(shortlisted));
+    els.sheetShortlistLabel.textContent = shortlisted ? 'Shortlisted' : 'Shortlist';
+    els.sheetShortlistSub.textContent = shortlisted
+      ? `by ${status.shortlistedBy || 'unknown'} \u00b7 tap to remove`
+      : 'tap to shortlist';
+
+    const notes = Array.isArray(status.notes) ? status.notes : [];
+    els.sheetNotes.innerHTML = notes.length
+      ? notes.map((note) => `
+          <div class="note-entry">
+            <div class="who">${Chat.escapeHtml(note.by || 'unknown')} \u00b7 ${Chat.escapeHtml(noteTime(note.at))}</div>
+            <div class="txt">${Chat.escapeHtml(note.text || '')}</div>
+            <button class="note-del${pendingDeleteId === note.id ? ' confirm' : ''}" type="button"
+                    data-note-id="${Chat.escapeHtml(note.id)}">${pendingDeleteId === note.id ? 'Delete?' : 'Delete'}</button>
+          </div>
+        `).join('')
+      : '<p class="note-empty">No notes yet.</p>';
+  }
+
+  async function openSheet(phone) {
+    sheetPhone = phone;
+    pendingDeleteId = '';
+    const chat = chats.find((item) => chatPhone(item) === phone);
+    // Seed from the row so the sheet paints immediately, then fill in the notes
+    // (the list payload carries only a count).
+    sheetLog = { phone, callStatus: { ...callStatusOf(chat), notes: [] } };
+    els.sheetNoteText.value = '';
+    els.sheetBackdrop.classList.remove('hidden');
+    els.app.classList.add('sheet-open');
+    renderSheet();
+
+    try {
+      const data = await fetchJson(`/admin/booking-chats/${encodeURIComponent(phone)}/call-log`);
+      if (sheetPhone !== phone) return;
+      sheetLog = data;
+      renderSheet();
+    } catch (error) {
+      showToast(error.message || 'Could not load call notes.');
+    }
+  }
+
+  function closeSheet() {
+    sheetPhone = '';
+    sheetLog = null;
+    pendingDeleteId = '';
+    els.sheetBackdrop.classList.add('hidden');
+    els.app.classList.remove('sheet-open');
+  }
+
+  /* Keeps the row in the list in step with what the sheet just changed. */
+  function syncRowFromSheet() {
+    const chat = chats.find((item) => chatPhone(item) === sheetPhone);
+    if (!chat || !sheetLog) return;
+    const { notes, ...rest } = sheetLog.callStatus || {};
+    chat.callStatus = { ...rest, noteCount: Array.isArray(notes) ? notes.length : 0 };
+    renderList();
+  }
+
+  async function sheetRequest(url, options, failureMessage) {
+    try {
+      const data = await fetchJson(url, options);
+      sheetLog = data;
+      pendingDeleteId = '';
+      renderSheet();
+      syncRowFromSheet();
+      return true;
+    } catch (error) {
+      showToast(error.message || failureMessage);
+      return false;
+    }
+  }
+
   function renderRow(chat) {
     const phone = chatPhone(chat);
     const enquiry = enquiryMeta(resolveEnquiryType(chat));
@@ -262,8 +398,8 @@
             </span>
             <span class="chat-sub">
               ${called
-                ? `<span class="called-meta">&#10003; ${Chat.escapeHtml(calledSummary(chat))}</span>`
-                : `<span class="chat-preview">${Chat.escapeHtml(rowPreview(chat))}</span>`}
+                ? calledMetaHtml(chat)
+                : `<span class="chat-preview">${isShortlisted(chat) ? '<span class="star" aria-hidden="true">&#9733;</span> ' : ''}${Chat.escapeHtml(rowPreview(chat))}</span>`}
               <span class="chat-status-pill ${done ? 'done' : ''}">${Chat.escapeHtml(statusLabel(chat))}</span>
               ${showEnquiryBadge ? `<span class="enquiry-badge ${enquiry.className}">${Chat.escapeHtml(enquiry.label)}</span>` : ''}
             </span>
@@ -271,7 +407,7 @@
         </button>
         <button class="call-toggle${called ? ' on' : ''}" type="button"
                 data-call-phone="${Chat.escapeHtml(phone)}" aria-pressed="${called}"
-                title="${called ? `Called by ${Chat.escapeHtml(calledSummary(chat))} - tap to undo` : 'Mark as called'}">
+                title="${called ? 'Open call notes' : 'Mark as called'}">
           <span class="mark">${called ? CALL_ICON_CHECK : CALL_ICON_PHONE}</span>
           <span class="label">Called</span>
         </button>
@@ -342,8 +478,11 @@
       : `${chats.length} conversations`;
 
     const called = visible.filter(isCalled).length;
+    const shortlisted = visible.filter(isShortlisted).length;
     if (called || callFilter !== 'all' || enquiryFilter === 'partner') {
-      els.count.textContent += ` · ${called} called · ${visible.length - called} to call`;
+      els.count.textContent += ` · ${called} called`;
+      if (shortlisted) els.count.textContent += ` · ${shortlisted} shortlisted`;
+      els.count.textContent += ` · ${visible.length - called} to call`;
     }
 
     const rows = enquiryFilter === 'partner' ? partnerBreakdown() : [];
@@ -543,7 +682,12 @@
     const toggle = event.target.closest('.call-toggle');
     if (toggle && toggle.dataset.callPhone) {
       event.stopPropagation();
-      toggleCalled(toggle.dataset.callPhone);
+      const phone = toggle.dataset.callPhone;
+      const chat = chats.find((item) => chatPhone(item) === phone);
+      // First tap marks the call; once marked, the toggle opens the sheet so
+      // un-marking is a deliberate choice inside it rather than a stray tap.
+      if (chat && isCalled(chat)) openSheet(phone);
+      else toggleCalled(phone);
       return;
     }
     const row = event.target.closest('.chat-row');
@@ -601,6 +745,65 @@
     renderList();
   });
 
+  els.sheetClose.addEventListener('click', closeSheet);
+
+  els.sheetBackdrop.addEventListener('click', (event) => {
+    if (event.target === els.sheetBackdrop) closeSheet();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && isSheetOpen()) closeSheet();
+  });
+
+  els.sheetShortlist.addEventListener('click', () => {
+    if (!sheetLog) return;
+    const next = !(sheetLog.callStatus && sheetLog.callStatus.shortlisted);
+    sheetRequest(
+      `/admin/booking-chats/${encodeURIComponent(sheetPhone)}/shortlist`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shortlisted: next }) },
+      'Could not update the shortlist.'
+    );
+  });
+
+  els.sheetSave.addEventListener('click', async () => {
+    const text = els.sheetNoteText.value.trim();
+    if (!text) return;
+    els.sheetSave.disabled = true;
+    els.sheetSave.textContent = 'Saving…';
+    const ok = await sheetRequest(
+      `/admin/booking-chats/${encodeURIComponent(sheetPhone)}/notes`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) },
+      'Could not save the note.'
+    );
+    // Only clear on success - a failed write must not throw away what was typed.
+    if (ok) els.sheetNoteText.value = '';
+    els.sheetSave.disabled = false;
+    els.sheetSave.textContent = 'Save note';
+  });
+
+  els.sheetNotes.addEventListener('click', (event) => {
+    const button = event.target.closest('.note-del');
+    if (!button) return;
+    const id = button.dataset.noteId;
+    // Two taps: deletion is open to anyone here and cannot be undone.
+    if (pendingDeleteId !== id) {
+      pendingDeleteId = id;
+      renderSheet();
+      return;
+    }
+    sheetRequest(
+      `/admin/booking-chats/${encodeURIComponent(sheetPhone)}/notes/${encodeURIComponent(id)}`,
+      { method: 'DELETE' },
+      'Could not delete the note.'
+    );
+  });
+
+  els.sheetUncall.addEventListener('click', async () => {
+    const phone = sheetPhone;
+    closeSheet();
+    await toggleCalled(phone);
+  });
+
   els.callFilters.addEventListener('click', (event) => {
     const chip = event.target.closest('[data-call]');
     if (!chip) return;
@@ -645,6 +848,21 @@
     loadList();
     refreshOpenThread();
   }, REFRESH_MS);
+
+  /* Pulls fresh notes for the open sheet. renderSheet() never touches the
+     textarea, so a half-typed note survives the refresh. */
+  async function refreshSheet() {
+    const phone = sheetPhone;
+    if (!phone) return;
+    try {
+      const data = await fetchJson(`/admin/booking-chats/${encodeURIComponent(phone)}/call-log`);
+      if (sheetPhone !== phone) return;
+      sheetLog = data;
+      renderSheet();
+    } catch (error) {
+      /* keep what is on screen on a transient refresh error */
+    }
+  }
 
   async function loadSession() {
     try {
