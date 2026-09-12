@@ -2,6 +2,15 @@
    provides the theme variables (--bg, --accent, ...) and the .history-* bubble
    styles reused inside the thread pane. */
 
+/* dashboard.css defines `.hidden { display: none }` at the same specificity as
+   the plain class rules in this file, and this file loads after it - so any
+   rule here that sets `display` silently beats it and the element never hides.
+   Re-assert it with enough specificity to win. */
+.inbox-app .hidden,
+.sheet-backdrop.hidden {
+  display: none;
+}
+
 .inbox-app {
   display: flex;
   flex-direction: column;
