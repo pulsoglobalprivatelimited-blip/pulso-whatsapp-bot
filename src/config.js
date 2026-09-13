@@ -135,6 +135,16 @@ module.exports = {
     'https://play.google.com/store/apps/details?id=com.pulso.global',
   providerSupportIosAppUrl:
     process.env.PROVIDER_SUPPORT_IOS_APP_URL || 'https://apps.apple.com/in/app/pulso/id6757874217',
+  // Care partner (home care agency) help on the provider support number. Off by
+  // default so the branch can ship before the hub credentials are in place.
+  partnerHelpEnabled: process.env.PARTNER_HELP_ENABLED === 'true',
+  partnerConsoleUrl: process.env.PARTNER_CONSOLE_URL || 'https://admin.pulso.co.in',
+  // Opens the existing partner deck on +91 77361 01039 with the PARTNER ENQUIRY
+  // text pre-filled, so no pitch is duplicated in this bot.
+  partnerJoinUrl: process.env.PARTNER_JOIN_URL || 'https://admin.pulso.co.in/join',
+  partnerHelpWhatsappNumber: process.env.PARTNER_HELP_WHATSAPP_NUMBER || '',
+  partnerSupportPhone:
+    process.env.PARTNER_SUPPORT_PHONE || process.env.PROVIDER_SUPPORT_PHONE || '8714105333',
   mediaStorageDir: resolveMediaStorageDir(),
   dryRun: process.env.WHATSAPP_DRY_RUN !== 'false',
   publicDir: path.join(__dirname, 'public')

@@ -94,6 +94,100 @@ async function notifyProviderSupportHelpRequested(session, reason) {
   return { recipients };
 }
 
+function buildPartnerIntroMessage(session) {
+  const name = session && session.partner && session.partner.name ? session.partner.name : null;
+  const isMalayalam = session && session.language === 'ml';
+
+  if (isMalayalam) {
+    return [
+      `നമസ്കാരം${name ? ` ${name}` : ''},`,
+      'ഞാൻ Pulso partner team-ിൽ നിന്നാണ് message ചെയ്യുന്നത്.',
+      'താങ്കൾ Partner Support-ൽ സഹായം ആവശ്യപ്പെട്ടതായി കണ്ടു.',
+      'എങ്ങനെ സഹായിക്കാം?'
+    ].join(' ');
+  }
+
+  return [
+    `Hello${name ? ` ${name}` : ''},`,
+    'this is the Pulso partner team.',
+    'We saw that you asked for help in Partner Support.',
+    'How can we help?'
+  ].join(' ');
+}
+
+function getCarePartnerNotificationRecipients(session) {
+  const partnerPhone = normalizePhone(session && session.phone);
+  const supportBotPhone = normalizePhone(config.providerSupportBotWhatsappNumber);
+
+  // The partner manager first, then the ordinary ops chain, so a missing
+  // PARTNER_HELP_WHATSAPP_NUMBER can never make an alert undeliverable.
+  return [
+    normalizePhone(config.partnerHelpWhatsappNumber),
+    normalizePhone(config.agentHelpWhatsappNumber),
+    normalizePhone(config.ownerNotificationPhone),
+    normalizePhone(config.secondaryNotificationPhone)
+  ]
+    .filter(Boolean)
+    .filter((phone) => phone !== partnerPhone && phone !== supportBotPhone)
+    .filter((phone, index, list) => list.indexOf(phone) === index);
+}
+
+async function notifyCarePartnerHelpRequested(session, reason) {
+  const recipients = getCarePartnerNotificationRecipients(session);
+  if (!recipients.length) {
+    return null;
+  }
+
+  const partner = (session && session.partner) || {};
+  const partnerPhone = session && session.phone ? session.phone : null;
+  const chatLink = buildProviderChatLink(partnerPhone);
+  const introMessage = buildPartnerIntroMessage(session);
+  const introLink = chatLink ? `${chatLink}?text=${encodeURIComponent(introMessage)}` : null;
+  const body = joinLines([
+    'Pulso alert: care partner requested help',
+    `Help type: ${formatStatus(reason || 'partner_support')}`,
+    partner.name ? `Agency: ${partner.name}` : null,
+    partner.bureauId ? `Bureau ID: ${partner.bureauId}` : null,
+    partner.status ? `Partner status: ${formatStatus(partner.status)}` : null,
+    partner.role ? `Role: ${formatStatus(partner.role)}` : null,
+    partner.district ? `District: ${formatStatus(partner.district)}` : null,
+    partnerPhone ? `Partner phone: ${partnerPhone}` : null,
+    session && session.region ? `Region: ${formatStatus(session.region)}` : null,
+    session && session.language ? `Language: ${session.language}` : null,
+    session && session.lastIntent ? `Last intent: ${formatStatus(session.lastIntent)}` : null,
+    session && session.supportHelpRequestedAt ? `Requested at: ${session.supportHelpRequestedAt}` : null,
+    chatLink ? `Reply now: ${chatLink}` : null,
+    introLink ? `Reply with intro: ${introLink}` : null
+  ]);
+
+  for (const phone of recipients) {
+    try {
+      await sendText(phone, body);
+      console.log(
+        '[CARE_PARTNER_HELP_NOTIFICATION_SENT]',
+        JSON.stringify({ to: phone, partnerPhone, bureauId: partner.bureauId || null }, null, 2)
+      );
+    } catch (error) {
+      console.error(
+        '[CARE_PARTNER_HELP_NOTIFICATION_ERROR]',
+        JSON.stringify(
+          {
+            to: phone,
+            partnerPhone,
+            message: error.message,
+            response: error.response ? error.response.data : null
+          },
+          null,
+          2
+        )
+      );
+    }
+  }
+
+  return { recipients };
+}
+
 module.exports = {
-  notifyProviderSupportHelpRequested
+  notifyProviderSupportHelpRequested,
+  notifyCarePartnerHelpRequested
 };

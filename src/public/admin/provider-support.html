@@ -38,6 +38,10 @@
           <span id="needs-choice-count">0</span>
           <label>Waiting for selection</label>
         </button>
+        <button class="metric metric-button" id="partner-metric" type="button">
+          <span id="partner-count">0</span>
+          <label>Care partners</label>
+        </button>
       </div>
     </section>
 
@@ -63,6 +67,15 @@
         <button class="filter" data-status-filter="main_menu">Main menu</button>
         <button class="filter" data-status-filter="awaiting_duty_type">Duty type</button>
         <button class="filter" data-status-filter="awaiting_app_issue">App issue</button>
+        <button class="filter" data-status-filter="awaiting_partner_topic">Partner menu</button>
+        <button class="filter" data-status-filter="awaiting_partner_app_issue">Partner console</button>
+      </div>
+
+      <div class="filters">
+        <button class="filter active" data-audience-filter="all">Everyone</button>
+        <button class="filter" data-audience-filter="provider">Caregiver / nurse</button>
+        <button class="filter" data-audience-filter="partner">Care partner</button>
+        <button class="filter" data-audience-filter="partner_unverified">Unverified agency</button>
       </div>
 
       <div class="filters">
@@ -74,7 +87,7 @@
 
       <div class="search-row">
         <label class="search-field" for="session-search">
-          <span>Phone, region, or intent search</span>
+          <span>Phone, agency, region, or intent search</span>
           <input id="session-search" type="search" placeholder="Search support sessions">
         </label>
         <button id="clear-search-button" class="button secondary" type="button">Clear</button>
@@ -111,6 +124,9 @@
               <article class="card">
                 <h4>Session</h4>
                 <dl>
+                  <div><dt>Says they are</dt><dd id="detail-audience">-</dd></div>
+                  <div><dt>Agency</dt><dd id="detail-agency">-</dd></div>
+                  <div><dt>Partner status</dt><dd id="detail-partner-status">-</dd></div>
                   <div><dt>Region</dt><dd id="detail-region">-</dd></div>
                   <div><dt>Language</dt><dd id="detail-language">-</dd></div>
                   <div><dt>Support help</dt><dd id="detail-support-help">-</dd></div>

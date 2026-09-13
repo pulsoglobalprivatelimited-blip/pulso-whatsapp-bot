@@ -4,6 +4,9 @@
   "description": "Pulso WhatsApp onboarding bot for care providers from Meta ads",
   "main": "src/server.js",
   "scripts": {
+    "partner:dry-run": "node src/scripts/dryRunCarePartnerSupport.js",
+    "partner:hub-check": "node src/scripts/checkCarePartnerHubAccess.js",
+    "support:audience:backfill": "node src/scripts/backfillSupportAudience.js",
     "db:init": "node src/scripts/initDb.js",
     "media:backfill": "node src/scripts/backfillMediaToStorage.js",
     "mobile-app:campaign:completed": "node src/scripts/sendMobileAppCampaignToCompletedProviders.js",
