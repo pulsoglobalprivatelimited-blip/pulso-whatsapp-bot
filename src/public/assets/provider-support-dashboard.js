@@ -2,6 +2,7 @@ let sessions = [];
 let selectedPhone = null;
 let currentStatusFilter = 'all';
 let currentRegionFilter = 'all';
+let currentAudienceFilter = 'all';
 let currentSearch = '';
 let mobileDetailOpen = false;
 
@@ -38,6 +39,15 @@ document.querySelectorAll('[data-status-filter]').forEach((button) => {
   });
 });
 
+document.querySelectorAll('[data-audience-filter]').forEach((button) => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('[data-audience-filter]').forEach((item) => item.classList.remove('active'));
+    button.classList.add('active');
+    currentAudienceFilter = button.dataset.audienceFilter;
+    renderList();
+  });
+});
+
 document.querySelectorAll('[data-region-filter]').forEach((button) => {
   button.addEventListener('click', () => {
     document.querySelectorAll('[data-region-filter]').forEach((item) => item.classList.remove('active'));
@@ -58,6 +68,9 @@ document.getElementById('kerala-metric').addEventListener('click', () => {
 });
 document.getElementById('needs-choice-metric').addEventListener('click', () => {
   applyMetricFilters('awaiting_region', 'all');
+});
+document.getElementById('partner-metric').addEventListener('click', () => {
+  applyMetricFilters('all', 'all', undefined, 'partner');
 });
 window.addEventListener('resize', updateMobileDetailState);
 
@@ -96,15 +109,19 @@ async function loadSessions() {
   }
 }
 
-function applyMetricFilters(statusFilter, regionFilter, activeRange) {
+function applyMetricFilters(statusFilter, regionFilter, activeRange, audienceFilter = 'all') {
   document.querySelectorAll('[data-status-filter]').forEach((item) => {
     item.classList.toggle('active', item.dataset.statusFilter === statusFilter);
   });
   document.querySelectorAll('[data-region-filter]').forEach((item) => {
     item.classList.toggle('active', item.dataset.regionFilter === regionFilter);
   });
+  document.querySelectorAll('[data-audience-filter]').forEach((item) => {
+    item.classList.toggle('active', item.dataset.audienceFilter === audienceFilter);
+  });
   currentStatusFilter = statusFilter;
   currentRegionFilter = regionFilter;
+  currentAudienceFilter = audienceFilter;
   currentSearch = activeRange === 'today' ? 'active:today' : '';
   sessionSearchInput.value = currentSearch;
   renderList();
@@ -115,19 +132,48 @@ function updateMetrics() {
   const updatedToday = sessions.filter((session) => isSameDay(session.updatedAt, today));
   const kerala = sessions.filter((session) => session.region === 'kerala');
   const needsChoice = sessions.filter((session) => session.status === 'awaiting_region');
+  const partners = sessions.filter((session) => sessionAudience(session) === 'partner');
+
 
   setText('total-count', sessions.length);
   setText('updated-today-count', updatedToday.length);
   setText('kerala-count', kerala.length);
   setText('needs-choice-count', needsChoice.length);
+  setText('partner-count', String(partners.length));
+}
+
+// What they said they are. Sessions from before the question existed came from
+// a provider-only line, so they read as caregivers.
+function sessionAudience(session) {
+  return session.audience === 'partner' ? 'partner' : 'provider';
+}
+
+// What pulso-hub actually knows about the number. The gap between this and the
+// declared audience is the useful signal: an agency we have no record of is an
+// inbound partner lead.
+function partnerKind(session) {
+  return (session.partner && session.partner.kind) || '';
+}
+
+function agencyName(session) {
+  return (session.partner && session.partner.name) || '';
+}
+
+function matchesAudienceFilter(session) {
+  if (currentAudienceFilter === 'all') return true;
+  if (currentAudienceFilter === 'partner_unverified') {
+    return sessionAudience(session) === 'partner' && partnerKind(session) !== 'partner';
+  }
+  return sessionAudience(session) === currentAudienceFilter;
 }
 
 function getVisibleSessions() {
   return sessions.filter((session) => {
     const statusMatch = currentStatusFilter === 'all' || session.status === currentStatusFilter;
     const regionMatch = currentRegionFilter === 'all' || session.region === currentRegionFilter;
+    const audienceMatch = matchesAudienceFilter(session);
     const searchMatch = matchesSearch(session, currentSearch);
-    return statusMatch && regionMatch && searchMatch;
+    return statusMatch && regionMatch && audienceMatch && searchMatch;
   });
 }
 
@@ -146,7 +192,11 @@ function matchesSearch(session, search) {
     session.lastIntent,
     session.lastDutyType,
     session.supportHelpReason,
-    session.supportHelpRequested
+    session.supportHelpRequested,
+    session.audience,
+    agencyName(session),
+    partnerKind(session),
+    session.partner && session.partner.bureauId
   ].map((value) => normalizeSearchTerm(value)).join(' ');
 
   return haystack.includes(search);
@@ -166,6 +216,9 @@ function renderList() {
           <strong>${escapeHtml(formatPhone(phone))}</strong>
           <span class="region-badge ${escapeAttr(session.region || '')}">${escapeHtml(region)}</span>
         </div>
+        <p>${escapeHtml(sessionAudience(session) === 'partner'
+          ? `Care partner${agencyName(session) ? `: ${agencyName(session)}` : ' (no hub record)'}`
+          : 'Caregiver / nurse')}</p>
         <p>${escapeHtml(formatStatus(session.status || 'unknown'))}</p>
         <p>${escapeHtml(session.lastIntent ? `Last intent: ${formatStatus(session.lastIntent)}` : 'No intent yet')}</p>
         <p>${escapeHtml(updated)}</p>
@@ -198,6 +251,16 @@ async function renderDetail(phone) {
   document.getElementById('detail-phone').innerHTML = renderPhoneLink(selectedPhone);
   setText('detail-status', formatStatus(session.status || 'unknown'));
   setText('detail-step', formatStatus(session.lastIntent || session.status || 'support session'));
+  setText('detail-audience', sessionAudience(session) === 'partner' ? 'Care partner' : 'Caregiver / nurse');
+  setText('detail-agency', agencyName(session) || '-');
+  setText(
+    'detail-partner-status',
+    session.partner
+      ? `${formatStatus(session.partner.status || partnerKind(session) || 'not found')}${
+          session.partner.bureauId ? ` (${session.partner.bureauId})` : ''
+        }`
+      : '-'
+  );
   setText('detail-region', session.region ? formatStatus(session.region) : 'Not selected');
   setText('detail-language', session.language || '-');
   setText('detail-support-help', formatBoolean(session.supportHelpRequested));

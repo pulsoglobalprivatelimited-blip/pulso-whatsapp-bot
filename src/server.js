@@ -573,7 +573,9 @@ app.get('/health', (_req, res) => {
     providerSupportConfigured: Boolean(
       config.whatsappToken &&
         (config.providerSupportPhoneNumberId || config.providerSupportBotWhatsappNumber)
-    )
+    ),
+    carePartnerHelpEnabled: config.partnerHelpEnabled,
+    carePartnerHubProject: config.bookingFirebaseProjectId
   });
 });
 

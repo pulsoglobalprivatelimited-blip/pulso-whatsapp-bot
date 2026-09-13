@@ -1,6 +1,4 @@
-const admin = require('firebase-admin');
-const config = require('../config');
-const { getFirestore } = require('./storage');
+const { getHubFirestore } = require('./hubStorage');
 const {
   EMPTY_LOG,
   listCallLogs,
@@ -12,46 +10,10 @@ const {
 } = require('./bookingCallLogService');
 
 const COLLECTION = 'whatsappBookingChats';
-let bookingDb;
 
-function getBookingFirestore() {
-  const projectId = config.bookingFirebaseProjectId || config.firebaseProjectId;
-  if (!projectId || projectId === config.firebaseProjectId) {
-    return getFirestore();
-  }
-
-  if (bookingDb) {
-    return bookingDb;
-  }
-
-  const appName = `booking-${projectId}`;
-  const existingApp = admin.apps.find((item) => item.name === appName);
-  const hasInlineCredential =
-    config.firebaseProjectId &&
-    config.firebaseClientEmail &&
-    config.firebasePrivateKey &&
-    !config.firebasePrivateKey.includes('...');
-
-  const app =
-    existingApp ||
-    admin.initializeApp(
-      {
-        credential:
-          config.googleApplicationCredentials || !hasInlineCredential
-            ? admin.credential.applicationDefault()
-            : admin.credential.cert({
-                projectId: config.firebaseProjectId,
-                clientEmail: config.firebaseClientEmail,
-                privateKey: config.firebasePrivateKey
-              }),
-        projectId
-      },
-      appName
-    );
-
-  bookingDb = admin.firestore(app);
-  return bookingDb;
-}
+// Kept as a named alias so the rest of this module (and its importers) read the
+// same as before the handle moved to hubStorage.
+const getBookingFirestore = getHubFirestore;
 
 function collectionRef() {
   return getBookingFirestore().collection(COLLECTION);
@@ -234,6 +196,7 @@ async function deleteWhatsappBookingChatNote(phone, noteId) {
 }
 
 module.exports = {
+  getBookingFirestore,
   getWhatsappBookingChatDetail,
   listWhatsappBookingChats,
   setWhatsappBookingChatCalled,

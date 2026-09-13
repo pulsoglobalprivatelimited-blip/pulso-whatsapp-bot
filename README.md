@@ -229,6 +229,102 @@ To list WhatsApp phone-number IDs after the number is added to the WABA:
 npm run whatsapp:phone-numbers -- 917736129809
 ```
 
+## Care partner help on the support number
+
+The support number (917736129809) serves two audiences. Every new conversation
+starts with one bilingual question — **Caregiver / Nurse** or **Home care
+agency** — and the answer decides everything after it.
+
+A caregiver gets the region question and today's provider menu, unchanged.
+
+An agency is looked up in the **pulso-hub** project before the region question,
+so a partner never sees a word of provider copy:
+
+| Lookup | What happens |
+| --- | --- |
+| `bureaus.status` is `pilot` or `active` | Greeted by brand name, then the Partner Support menu |
+| `bureaus.status` is `prospect` | Told their account is still being set up; the partner team is alerted once |
+| No match, or the lookup failed | Sent the join link, with **I am a caregiver** and **Talk to support** as one-tap escapes |
+
+The lookup cascade, in `src/services/carePartnerService.js`:
+
+1. `bureauInvites/{phone}` — the doc id is the same digits WhatsApp sends
+2. `users` where `phone` matches, then that user's `bureauId`
+3. `bureaus` where `phone` matches — best effort only, because that field is
+   free text in the hub and may carry spaces
+
+The result is cached on the session for 24 hours, so a terminated partner stops
+being one within a day. A failed lookup is never cached.
+
+Partner menu: payout and settlement (answered from `billingDay`, `partnerPct`
+and `gstRegistered` on their own record), client and booking status, console and
+app login, caregiver or duty issue, talk to the partner manager.
+
+Human handoffs are rate limited **per reason** for 12 hours, so a payout
+question asked in the morning cannot mute a caregiver emergency in the evening.
+Partner handoffs alert `PARTNER_HELP_WHATSAPP_NUMBER` with the agency, bureau
+id, partner status, role and district, falling back to the ordinary ops chain.
+
+Configure:
+
+```bash
+PARTNER_HELP_ENABLED=false
+PARTNER_CONSOLE_URL=https://admin.pulso.co.in
+PARTNER_JOIN_URL=https://admin.pulso.co.in/join
+PARTNER_HELP_WHATSAPP_NUMBER=
+PARTNER_SUPPORT_PHONE=8714105333
+```
+
+`PARTNER_HELP_ENABLED=false` is today's behaviour exactly: no audience question,
+no partner branch. Before turning it on, confirm this deployment can read the
+hub collections, then walk the conversations:
+
+```bash
+npm run partner:hub-check -- 919847012345   # needs production credentials
+npm run partner:dry-run                     # no credentials, no network
+npm run support:audience:backfill -- --write
+```
+
+Sessions written before the audience question read as caregivers, in the flow
+and in the dashboard, without being asked again. The backfill only stamps the
+field so the dashboard filters can count them.
+
+Mockups of every screen are in `docs/mockups/`.
+
+### Making sure the alert actually arrives
+
+WhatsApp accepts a free-form message to a number that has not written to the bot
+in 24 hours, and then never delivers it. There is no error to catch. That is why
+certificate reviews use a template, and why the help alerts can too.
+
+Name an approved template and it is sent **first**, so ops is told whatever the
+window is doing; the detailed text follows and carries everything when the
+window is open. Leave the name empty and behaviour is text-only, as before.
+
+```bash
+PARTNER_HELP_TEMPLATE_NAME=care_partner_help_alert
+PARTNER_HELP_TEMPLATE_LANGUAGE=en
+PARTNER_HELP_TEMPLATE_VARIABLES=3        # must match what Meta approved: 0 or 3
+PROVIDER_SUPPORT_HELP_TEMPLATE_NAME=     # same knob for the provider alert
+```
+
+Submit in Meta Business Manager, category **Utility**:
+
+- **0 variables** — `care_partner_help_alert`:
+
+  > A care partner has asked for help in Pulso Partner Support. Open the partner
+  > support dashboard for the details.
+
+- **3 variables**, if you want the agency named on the lock screen:
+
+  > Care partner help request. Type: {{1}}. Agency: {{2}}. Phone: {{3}}. Open the
+  > partner support dashboard for the details.
+
+  Filled with help type, agency name and the partner's phone, in that order.
+
+`PARTNER_HELP_TEMPLATE_VARIABLES` must match the approved template exactly — a
+mismatch is rejected by Meta. A rejected template never blocks the detail text.
+
 Provider support flow:
 
 ```text

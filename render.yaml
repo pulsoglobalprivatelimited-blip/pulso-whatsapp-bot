@@ -39,6 +39,28 @@ services:
         value: "https://wa.me/917736167744"
       - key: PROVIDER_SUPPORT_CUSTOMER_CARE_WHATSAPP_URL
         value: "https://wa.me/919446600809"
+      - key: PARTNER_HELP_ENABLED
+        value: "true"
+      - key: PARTNER_CONSOLE_URL
+        value: "https://admin.pulso.co.in"
+      - key: PARTNER_JOIN_URL
+        value: "https://admin.pulso.co.in/join"
+      - key: PARTNER_HELP_WHATSAPP_NUMBER
+        value: "919446600809"
+      - key: PARTNER_SUPPORT_PHONE
+        value: "8714105333"
+      - key: PARTNER_HELP_TEMPLATE_NAME
+        value: "care_partner_help_alert"
+      - key: PARTNER_HELP_TEMPLATE_LANGUAGE
+        value: "en"
+      - key: PARTNER_HELP_TEMPLATE_VARIABLES
+        value: "3"
+      - key: PROVIDER_SUPPORT_HELP_TEMPLATE_NAME
+        value: ""
+      - key: PROVIDER_SUPPORT_HELP_TEMPLATE_LANGUAGE
+        value: "en"
+      - key: PROVIDER_SUPPORT_HELP_TEMPLATE_VARIABLES
+        value: "0"
       - key: PROVIDER_SUPPORT_PHONE
         value: "8714105333"
       - key: PROVIDER_SUPPORT_ANDROID_APP_URL
