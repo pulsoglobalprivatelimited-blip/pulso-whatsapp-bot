@@ -1,5 +1,5 @@
 const config = require('../config');
-const { sendText } = require('./metaClient');
+const { sendText, sendTemplate } = require('./metaClient');
 
 function normalizePhone(value) {
   return String(value || '').replace(/\D/g, '');
@@ -11,6 +11,90 @@ function joinLines(lines) {
 
 function formatStatus(value) {
   return String(value || '-').replace(/_/g, ' ');
+}
+
+/**
+ * Get an alert to ops, whether or not the 24-hour window is open.
+ *
+ * Meta accepts a free-form send outside that window and then silently does not
+ * deliver it — there is no error to catch. That is what happened to certificate
+ * reviews before they moved to templates. So when a template is configured it
+ * is sent first and IS the alert; the detailed text follows as best effort, and
+ * carries everything when the window happens to be open.
+ *
+ * With no template configured this is exactly the old behaviour: text only.
+ */
+async function deliverOpsAlert(to, body, template = {}, logContext = {}) {
+  const templateName = String(template.name || '').trim();
+  let templateSent = false;
+
+  if (templateName) {
+    try {
+      await sendTemplate(
+        to,
+        templateName,
+        String(template.language || 'en').trim() || 'en',
+        template.components || []
+      );
+      templateSent = true;
+      console.log('[OPS_ALERT_TEMPLATE_SENT]', JSON.stringify({ to, templateName, ...logContext }, null, 2));
+    } catch (error) {
+      console.error(
+        '[OPS_ALERT_TEMPLATE_ERROR]',
+        JSON.stringify(
+          {
+            to,
+            templateName,
+            ...logContext,
+            message: error.message,
+            response: error.response ? error.response.data : null
+          },
+          null,
+          2
+        )
+      );
+    }
+  }
+
+  try {
+    await sendText(to, body);
+    return { templateSent, textSent: true };
+  } catch (error) {
+    console.error(
+      '[OPS_ALERT_TEXT_ERROR]',
+      JSON.stringify(
+        {
+          to,
+          ...logContext,
+          templateSent,
+          message: error.message,
+          response: error.response ? error.response.data : null
+        },
+        null,
+        2
+      )
+    );
+    return { templateSent, textSent: false };
+  }
+}
+
+/**
+ * Body parameters for a template that was approved with variables.
+ *
+ * The count has to match what Meta approved or the send is rejected, so it is
+ * configured rather than guessed: 0 (a fixed "someone needs you" nudge) or 3.
+ */
+function templateComponents(variableCount, values) {
+  const count = Number(variableCount) || 0;
+  if (count !== 3) {
+    return [];
+  }
+  return [
+    {
+      type: 'body',
+      parameters: values.slice(0, 3).map((value) => ({ type: 'text', text: String(value || '-') }))
+    }
+  ];
 }
 
 function buildProviderChatLink(phone) {
@@ -67,28 +151,22 @@ async function notifyProviderSupportHelpRequested(session, reason) {
     `Intro message: ${introMessage}`
   ]);
 
+  const template = {
+    name: config.providerSupportHelpTemplateName,
+    language: config.providerSupportHelpTemplateLanguage,
+    components: templateComponents(config.providerSupportHelpTemplateVariables, [
+      formatStatus(reason || 'general_support'),
+      (session && session.region) || '-',
+      providerPhone || '-'
+    ])
+  };
+
   for (const phone of recipients) {
-    try {
-      await sendText(phone, body);
-      console.log(
-        '[PROVIDER_SUPPORT_HELP_NOTIFICATION_SENT]',
-        JSON.stringify({ to: phone, providerPhone }, null, 2)
-      );
-    } catch (error) {
-      console.error(
-        '[PROVIDER_SUPPORT_HELP_NOTIFICATION_ERROR]',
-        JSON.stringify(
-          {
-            to: phone,
-            providerPhone,
-            message: error.message,
-            response: error.response ? error.response.data : null
-          },
-          null,
-          2
-        )
-      );
-    }
+    const result = await deliverOpsAlert(phone, body, template, { providerPhone });
+    console.log(
+      '[PROVIDER_SUPPORT_HELP_NOTIFICATION_SENT]',
+      JSON.stringify({ to: phone, providerPhone, ...result }, null, 2)
+    );
   }
 
   return { recipients };
@@ -160,34 +238,33 @@ async function notifyCarePartnerHelpRequested(session, reason) {
     introLink ? `Reply with intro: ${introLink}` : null
   ]);
 
+  const template = {
+    name: config.partnerHelpTemplateName,
+    language: config.partnerHelpTemplateLanguage,
+    components: templateComponents(config.partnerHelpTemplateVariables, [
+      formatStatus(reason || 'partner_support'),
+      partner.name || 'an agency',
+      partnerPhone || '-'
+    ])
+  };
+
   for (const phone of recipients) {
-    try {
-      await sendText(phone, body);
-      console.log(
-        '[CARE_PARTNER_HELP_NOTIFICATION_SENT]',
-        JSON.stringify({ to: phone, partnerPhone, bureauId: partner.bureauId || null }, null, 2)
-      );
-    } catch (error) {
-      console.error(
-        '[CARE_PARTNER_HELP_NOTIFICATION_ERROR]',
-        JSON.stringify(
-          {
-            to: phone,
-            partnerPhone,
-            message: error.message,
-            response: error.response ? error.response.data : null
-          },
-          null,
-          2
-        )
-      );
-    }
+    const result = await deliverOpsAlert(phone, body, template, {
+      partnerPhone,
+      bureauId: partner.bureauId || null
+    });
+    console.log(
+      '[CARE_PARTNER_HELP_NOTIFICATION_SENT]',
+      JSON.stringify({ to: phone, partnerPhone, bureauId: partner.bureauId || null, ...result }, null, 2)
+    );
   }
 
   return { recipients };
 }
 
 module.exports = {
+  deliverOpsAlert,
+  templateComponents,
   notifyProviderSupportHelpRequested,
   notifyCarePartnerHelpRequested
 };

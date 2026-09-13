@@ -49,6 +49,18 @@ services:
         value: "919446600809"
       - key: PARTNER_SUPPORT_PHONE
         value: "8714105333"
+      - key: PARTNER_HELP_TEMPLATE_NAME
+        value: ""
+      - key: PARTNER_HELP_TEMPLATE_LANGUAGE
+        value: "en"
+      - key: PARTNER_HELP_TEMPLATE_VARIABLES
+        value: "0"
+      - key: PROVIDER_SUPPORT_HELP_TEMPLATE_NAME
+        value: ""
+      - key: PROVIDER_SUPPORT_HELP_TEMPLATE_LANGUAGE
+        value: "en"
+      - key: PROVIDER_SUPPORT_HELP_TEMPLATE_VARIABLES
+        value: "0"
       - key: PROVIDER_SUPPORT_PHONE
         value: "8714105333"
       - key: PROVIDER_SUPPORT_ANDROID_APP_URL

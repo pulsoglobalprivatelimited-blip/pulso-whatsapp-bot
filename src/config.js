@@ -145,6 +145,16 @@ module.exports = {
   partnerHelpWhatsappNumber: process.env.PARTNER_HELP_WHATSAPP_NUMBER || '',
   partnerSupportPhone:
     process.env.PARTNER_SUPPORT_PHONE || process.env.PROVIDER_SUPPORT_PHONE || '8714105333',
+  // Ops alerts are free-form text, which Meta accepts but silently does not
+  // deliver outside the 24-hour window. Name an approved template here and it is
+  // sent first, so the alert lands whatever the window is doing. Empty = today's
+  // text-only behaviour. Variables must match what Meta approved: 0 or 3.
+  partnerHelpTemplateName: process.env.PARTNER_HELP_TEMPLATE_NAME || '',
+  partnerHelpTemplateLanguage: process.env.PARTNER_HELP_TEMPLATE_LANGUAGE || 'en',
+  partnerHelpTemplateVariables: Number(process.env.PARTNER_HELP_TEMPLATE_VARIABLES || 0),
+  providerSupportHelpTemplateName: process.env.PROVIDER_SUPPORT_HELP_TEMPLATE_NAME || '',
+  providerSupportHelpTemplateLanguage: process.env.PROVIDER_SUPPORT_HELP_TEMPLATE_LANGUAGE || 'en',
+  providerSupportHelpTemplateVariables: Number(process.env.PROVIDER_SUPPORT_HELP_TEMPLATE_VARIABLES || 0),
   mediaStorageDir: resolveMediaStorageDir(),
   dryRun: process.env.WHATSAPP_DRY_RUN !== 'false',
   publicDir: path.join(__dirname, 'public')

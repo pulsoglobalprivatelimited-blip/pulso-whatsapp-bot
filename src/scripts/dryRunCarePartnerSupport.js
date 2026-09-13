@@ -26,6 +26,11 @@ metaClient.sendText = async (to, body) => recordOutbound('text', to, { body });
 metaClient.sendButtons = async (to, body, buttons) => recordOutbound('buttons', to, { body, buttons });
 metaClient.sendList = async (to, body, buttonText, sections) =>
   recordOutbound('list', to, { body, buttonText, sections });
+let templateSendFails = false;
+metaClient.sendTemplate = async (to, name, language, components) => {
+  if (templateSendFails) throw new Error('template rejected');
+  recordOutbound('template', to, { body: name, language, components });
+};
 
 function createFakeFirestore() {
   const docs = new Map();
@@ -336,6 +341,31 @@ async function main() {
     bureauDisplayName({ name: 'legal name pvt ltd', brandName: 'Sneha Home Care' }) === 'Sneha Home Care');
   check('a nameless bureau still reads sensibly',
     bureauDisplayName({}) === 'your agency');
+
+  console.log('\n=== 14. Ops alerts land even outside the 24-hour window');
+  const { deliverOpsAlert, templateComponents } = notifications;
+
+  sent.length = 0;
+  await deliverOpsAlert('919446600809', 'detail body', {});
+  check('no template configured sends text only',
+    sent.length === 1 && sent[0].kind === 'text');
+
+  sent.length = 0;
+  await deliverOpsAlert('919446600809', 'detail body', { name: 'care_partner_help_alert', language: 'en' });
+  check('template goes first so the alert is delivered', sent[0].kind === 'template');
+  check('detail text still follows', sent[1].kind === 'text');
+
+  sent.length = 0;
+  templateSendFails = true;
+  const result = await deliverOpsAlert('919446600809', 'detail body', { name: 'bad_template' });
+  templateSendFails = false;
+  check('a rejected template never blocks the detail text',
+    sent.length === 1 && sent[0].kind === 'text' && result.textSent === true);
+  check('and the failure is reported back', result.templateSent === false);
+
+  check('0 variables means a fixed nudge', templateComponents(0, ['a', 'b', 'c']).length === 0);
+  check('3 variables are filled in order',
+    templateComponents(3, ['duty issue', 'Global Home Care', '919847012345'])[0].parameters[1].text === 'Global Home Care');
 
   console.log(`\n${failures ? 'FAILED' : 'PASSED'}: ${checks - failures}/${checks} checks`);
   process.exit(failures ? 1 : 0);

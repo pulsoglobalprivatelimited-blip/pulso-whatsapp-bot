@@ -291,6 +291,40 @@ field so the dashboard filters can count them.
 
 Mockups of every screen are in `docs/mockups/`.
 
+### Making sure the alert actually arrives
+
+WhatsApp accepts a free-form message to a number that has not written to the bot
+in 24 hours, and then never delivers it. There is no error to catch. That is why
+certificate reviews use a template, and why the help alerts can too.
+
+Name an approved template and it is sent **first**, so ops is told whatever the
+window is doing; the detailed text follows and carries everything when the
+window is open. Leave the name empty and behaviour is text-only, as before.
+
+```bash
+PARTNER_HELP_TEMPLATE_NAME=care_partner_help_alert
+PARTNER_HELP_TEMPLATE_LANGUAGE=en
+PARTNER_HELP_TEMPLATE_VARIABLES=3        # must match what Meta approved: 0 or 3
+PROVIDER_SUPPORT_HELP_TEMPLATE_NAME=     # same knob for the provider alert
+```
+
+Submit in Meta Business Manager, category **Utility**:
+
+- **0 variables** — `care_partner_help_alert`:
+
+  > A care partner has asked for help in Pulso Partner Support. Open the partner
+  > support dashboard for the details.
+
+- **3 variables**, if you want the agency named on the lock screen:
+
+  > Care partner help request. Type: {{1}}. Agency: {{2}}. Phone: {{3}}. Open the
+  > partner support dashboard for the details.
+
+  Filled with help type, agency name and the partner's phone, in that order.
+
+`PARTNER_HELP_TEMPLATE_VARIABLES` must match the approved template exactly — a
+mismatch is rejected by Meta. A rejected template never blocks the detail text.
+
 Provider support flow:
 
 ```text
