@@ -126,8 +126,30 @@
     return chat.status === 'booking_completed';
   }
 
+  // Where an agency has got to with the terms matters more than which step the
+  // bot is on, so it takes the pill once the terms have been sent.
+  const TERMS_LABELS = {
+    terms_sent: 'Terms sent',
+    terms_accepted: 'Terms accepted',
+    terms_declined: 'Terms declined'
+  };
+
+  function termsState(chat) {
+    return TERMS_LABELS[String(chat.partnerStatus || '')] ? String(chat.partnerStatus) : '';
+  }
+
   function statusLabel(chat) {
+    const terms = termsState(chat);
+    if (terms) return TERMS_LABELS[terms];
     return isCompleted(chat) ? 'Completed' : Chat.formatStatus(chat.currentStep || 'active');
+  }
+
+  function statusPillClass(chat) {
+    const terms = termsState(chat);
+    if (terms === 'terms_accepted') return 'done';
+    if (terms === 'terms_declined') return 'attention';
+    if (terms === 'terms_sent') return 'waiting';
+    return isCompleted(chat) ? 'done' : '';
   }
 
   function resolveEnquiryType(chat) {
@@ -400,7 +422,7 @@
               ${called
                 ? calledMetaHtml(chat)
                 : `<span class="chat-preview">${isShortlisted(chat) ? '<span class="star" aria-hidden="true">&#9733;</span> ' : ''}${Chat.escapeHtml(rowPreview(chat))}</span>`}
-              <span class="chat-status-pill ${done ? 'done' : ''}">${Chat.escapeHtml(statusLabel(chat))}</span>
+              <span class="chat-status-pill ${statusPillClass(chat)}">${Chat.escapeHtml(statusLabel(chat))}</span>
               ${showEnquiryBadge ? `<span class="enquiry-badge ${enquiry.className}">${Chat.escapeHtml(enquiry.label)}</span>` : ''}
             </span>
           </span>

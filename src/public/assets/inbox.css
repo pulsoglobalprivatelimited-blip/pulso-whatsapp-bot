@@ -636,6 +636,12 @@
   color: var(--success);
 }
 
+/* An agency sitting on unanswered terms is worth spotting at a glance. */
+.chat-status-pill.waiting {
+  background: rgba(183, 93, 50, 0.14);
+  color: var(--accent);
+}
+
 .chat-dot {
   flex: 0 0 auto;
   width: 10px;
