@@ -326,6 +326,17 @@ async function main() {
     check('session is no longer a partner', (await session(PHONE)).audience === 'provider');
   });
 
+  console.log('\n=== 13. Agency names as the hub actually stores them');
+  const { bureauDisplayName } = carePartnerService;
+  check('an all-lowercase name is capitalised for the greeting',
+    bureauDisplayName({ name: 'global home care' }) === 'Global Home Care');
+  check('a deliberately styled name is left alone',
+    bureauDisplayName({ name: 'Maxpro' }) === 'Maxpro');
+  check('brandName still wins over the legal name',
+    bureauDisplayName({ name: 'legal name pvt ltd', brandName: 'Sneha Home Care' }) === 'Sneha Home Care');
+  check('a nameless bureau still reads sensibly',
+    bureauDisplayName({}) === 'your agency');
+
   console.log(`\n${failures ? 'FAILED' : 'PASSED'}: ${checks - failures}/${checks} checks`);
   process.exit(failures ? 1 : 0);
 }

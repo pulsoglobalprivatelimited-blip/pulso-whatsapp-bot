@@ -46,7 +46,7 @@ services:
       - key: PARTNER_JOIN_URL
         value: "https://admin.pulso.co.in/join"
       - key: PARTNER_HELP_WHATSAPP_NUMBER
-        value: ""
+        value: "919446600809"
       - key: PARTNER_SUPPORT_PHONE
         value: "8714105333"
       - key: PROVIDER_SUPPORT_PHONE

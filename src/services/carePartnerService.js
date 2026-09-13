@@ -39,12 +39,23 @@ function phoneCandidates(value) {
   return Array.from(new Set([normalized, `+${normalized}`, last10, `+91${last10}`, `91${last10}`]));
 }
 
+// Agency names are typed into the admin console and stored as typed, which in
+// practice means all lower case ("global home care"). Capitalise those for the
+// greeting, but leave a name that was deliberately styled ("Maxpro") alone.
+function presentName(value) {
+  const name = String(value || '').trim();
+  if (!name || name !== name.toLowerCase()) {
+    return name;
+  }
+  return name.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+}
+
 function bureauDisplayName(bureau = {}) {
   const brand = bureau.brand && typeof bureau.brand === 'object' ? bureau.brand : {};
   return (
-    String(bureau.brandName || '').trim() ||
-    String(brand.displayName || '').trim() ||
-    String(bureau.name || '').trim() ||
+    presentName(bureau.brandName) ||
+    presentName(brand.displayName) ||
+    presentName(bureau.name) ||
     'your agency'
   );
 }
@@ -168,6 +179,7 @@ module.exports = {
   normalizeHubPhone,
   phoneCandidates,
   bureauDisplayName,
+  presentName,
   classifyBureauStatus,
   isLookupFresh,
   lookupCarePartner,
