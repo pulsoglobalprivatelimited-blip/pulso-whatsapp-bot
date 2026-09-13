@@ -50,11 +50,11 @@ services:
       - key: PARTNER_SUPPORT_PHONE
         value: "8714105333"
       - key: PARTNER_HELP_TEMPLATE_NAME
-        value: ""
+        value: "care_partner_help_alert"
       - key: PARTNER_HELP_TEMPLATE_LANGUAGE
         value: "en"
       - key: PARTNER_HELP_TEMPLATE_VARIABLES
-        value: "0"
+        value: "3"
       - key: PROVIDER_SUPPORT_HELP_TEMPLATE_NAME
         value: ""
       - key: PROVIDER_SUPPORT_HELP_TEMPLATE_LANGUAGE
