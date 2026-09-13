@@ -40,7 +40,7 @@ services:
       - key: PROVIDER_SUPPORT_CUSTOMER_CARE_WHATSAPP_URL
         value: "https://wa.me/919446600809"
       - key: PARTNER_HELP_ENABLED
-        value: "false"
+        value: "true"
       - key: PARTNER_CONSOLE_URL
         value: "https://admin.pulso.co.in"
       - key: PARTNER_JOIN_URL
