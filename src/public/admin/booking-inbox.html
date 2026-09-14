@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260510b">
-  <link rel="stylesheet" href="/admin/assets/inbox.css?v=20260913a">
+  <link rel="stylesheet" href="/admin/assets/inbox.css?v=20260914a">
 </head>
 <body>
   <div class="inbox-app" id="inbox-app">
@@ -107,8 +107,27 @@
 
           <div class="booking-facts" id="booking-facts"></div>
 
+          <div class="doc-card hidden" id="doc-card">
+            <span class="doc-thumb" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+            <span class="doc-meta">
+              <strong>Registration document</strong>
+              <span id="doc-sub"></span>
+            </span>
+            <button class="button secondary" id="doc-view" type="button">View</button>
+          </div>
+
           <div class="thread-scroll" id="thread-scroll">
             <div class="history-list" id="thread-history"></div>
+          </div>
+
+          <p class="review-hint hidden" id="review-hint">Approving sends the terms and conditions to this agency. The account is created only after they accept.</p>
+          <div class="review-bar hidden" id="review-bar">
+            <button class="button secondary" id="review-ask" type="button">Ask again</button>
+            <button class="button approve" id="review-approve" type="button">Approve &amp; send terms</button>
+          </div>
+          <div class="review-bar hidden" id="review-done">
+            <span class="chat-status-pill" id="review-done-pill"></span>
+            <span class="review-done-note" id="review-done-note"></span>
           </div>
 
           <div class="thread-footer">
@@ -119,6 +138,18 @@
         </div>
       </section>
     </div>
+    <div class="viewer hidden" id="doc-viewer">
+      <div class="viewer-top">
+        <strong id="viewer-title">Registration document</strong>
+        <button class="viewer-x" id="viewer-close" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div class="viewer-body" id="viewer-body"></div>
+      <div class="viewer-actions hidden" id="viewer-actions">
+        <button class="button secondary" id="viewer-ask" type="button">Ask again</button>
+        <button class="button approve" id="viewer-approve" type="button">Approve &amp; send terms</button>
+      </div>
+    </div>
+
     <div class="sheet-backdrop hidden" id="call-sheet-backdrop">
       <div class="call-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
         <div class="sheet-grab" aria-hidden="true"></div>
@@ -145,7 +176,7 @@
   </div>
 
   <script src="/admin/assets/chat-history.js?v=20260911a"></script>
-  <script src="/admin/assets/booking-inbox.js?v=20260913a"></script>
+  <script src="/admin/assets/booking-inbox.js?v=20260914a"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>
 </html>

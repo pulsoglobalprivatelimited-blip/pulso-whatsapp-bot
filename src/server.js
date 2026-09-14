@@ -22,6 +22,11 @@ const {
   resetProviderSupportSession
 } = require('./services/providerSupportAdminService');
 const {
+  getPartnerDocumentUrl,
+  approvePartnerEnquiry,
+  askPartnerAgain
+} = require('./services/partnerReviewService');
+const {
   getWhatsappBookingChatDetail,
   listWhatsappBookingChats,
   setWhatsappBookingChatCalled,
@@ -988,6 +993,36 @@ app.delete('/admin/booking-chats/:phone/notes/:noteId', async (req, res) => {
     return res.json(result);
   } catch (error) {
     return res.status(400).json({ error: error.message });
+  }
+});
+
+/* Partner review, proxied to pulso-hub. This app's staff sign in with a cookie
+   session rather than Firebase auth, so the hub is reached over the shared
+   secret and does the work with the credentials it already holds. */
+app.get('/admin/booking-chats/:phone/document', async (req, res) => {
+  try {
+    const result = await getPartnerDocumentUrl(req.params.phone);
+    return res.json(result);
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({ error: error.message });
+  }
+});
+
+app.post('/admin/booking-chats/:phone/approve', async (req, res) => {
+  try {
+    const result = await approvePartnerEnquiry(req.params.phone, getAdminActor(req));
+    return res.json(result);
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({ error: error.message });
+  }
+});
+
+app.post('/admin/booking-chats/:phone/ask-again', async (req, res) => {
+  try {
+    const result = await askPartnerAgain(req.params.phone, req.body.reason, getAdminActor(req));
+    return res.json(result);
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({ error: error.message });
   }
 });
 

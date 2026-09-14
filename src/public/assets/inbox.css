@@ -520,6 +520,179 @@
   font-weight: 500;
 }
 
+/* Partner review: the document and the decision, without leaving the thread -- */
+.doc-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 14px 10px;
+  padding: 10px;
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.doc-thumb {
+  position: relative;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 58px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.doc-thumb i {
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(89, 66, 43, 0.22);
+}
+
+.doc-thumb i:nth-child(1) { top: 11px; }
+.doc-thumb i:nth-child(2) { top: 18px; }
+.doc-thumb i:nth-child(3) { top: 25px; right: 18px; }
+.doc-thumb i:nth-child(4) { top: 34px; }
+.doc-thumb i:nth-child(5) { top: 41px; right: 14px; }
+
+.doc-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.doc-meta strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.doc-meta span {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.review-hint {
+  margin: 0;
+  padding: 0 14px 8px;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.review-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+
+.inbox-app .review-bar .button {
+  flex: 1;
+}
+
+/* Approving sends a real message to a real agency, so it is the loud one. */
+.inbox-app .button.approve {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+
+.inbox-app .button.approve:disabled,
+.inbox-app .review-bar .button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.review-bar .chat-status-pill {
+  flex: 0 0 auto;
+}
+
+.review-done-note {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* Document viewer ---------------------------------------------------------- */
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  background: rgba(30, 20, 12, 0.86);
+}
+
+.viewer-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  color: #fff;
+}
+
+.viewer-top strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.92rem;
+}
+
+.viewer-x {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font: inherit;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
+.viewer-body {
+  flex: 1;
+  min-height: 0;
+  margin: 0 14px 14px;
+  border-radius: 12px;
+  background: #fff;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.viewer-body img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.viewer-body iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.viewer-body .viewer-msg {
+  padding: 28px 20px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.viewer-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 14px 16px;
+}
+
+.inbox-app .viewer-actions .button {
+  flex: 1;
+}
+
 /* Failed writes revert the row, so say so rather than failing silently. */
 .inbox-toast {
   position: fixed;

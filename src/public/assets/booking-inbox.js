@@ -22,6 +22,23 @@
     enquiryFilters: document.getElementById('enquiry-filters'),
     callFilters: document.getElementById('call-filters'),
     toast: document.getElementById('inbox-toast'),
+    docCard: document.getElementById('doc-card'),
+    docSub: document.getElementById('doc-sub'),
+    docView: document.getElementById('doc-view'),
+    viewer: document.getElementById('doc-viewer'),
+    viewerTitle: document.getElementById('viewer-title'),
+    viewerBody: document.getElementById('viewer-body'),
+    viewerActions: document.getElementById('viewer-actions'),
+    viewerClose: document.getElementById('viewer-close'),
+    viewerAsk: document.getElementById('viewer-ask'),
+    viewerApprove: document.getElementById('viewer-approve'),
+    reviewHint: document.getElementById('review-hint'),
+    reviewBar: document.getElementById('review-bar'),
+    reviewAsk: document.getElementById('review-ask'),
+    reviewApprove: document.getElementById('review-approve'),
+    reviewDone: document.getElementById('review-done'),
+    reviewDonePill: document.getElementById('review-done-pill'),
+    reviewDoneNote: document.getElementById('review-done-note'),
     sheetBackdrop: document.getElementById('call-sheet-backdrop'),
     sheetTitle: document.getElementById('sheet-title'),
     sheetCalled: document.getElementById('sheet-called'),
@@ -63,6 +80,7 @@
   let sheetPhone = '';
   let sheetLog = null;
   let pendingDeleteId = '';
+  let reviewChat = null;
   let toastTimer = null;
   let renderedMessageCount = -1;
 
@@ -129,9 +147,11 @@
   // Where an agency has got to with the terms matters more than which step the
   // bot is on, so it takes the pill once the terms have been sent.
   const TERMS_LABELS = {
+    document_received: 'To verify',
     terms_sent: 'Terms sent',
     terms_accepted: 'Terms accepted',
-    terms_declined: 'Terms declined'
+    terms_declined: 'Terms declined',
+    invited: 'Invited'
   };
 
   function termsState(chat) {
@@ -146,7 +166,9 @@
 
   function statusPillClass(chat) {
     const terms = termsState(chat);
-    if (terms === 'terms_accepted') return 'done';
+    // "To verify" is the one a reviewer has to act on, so it reads loudest.
+    if (terms === 'document_received') return 'attention';
+    if (terms === 'terms_accepted' || terms === 'invited') return 'done';
     if (terms === 'terms_declined') return 'attention';
     if (terms === 'terms_sent') return 'waiting';
     return isCompleted(chat) ? 'done' : '';
@@ -298,6 +320,97 @@
       showToast(error.message || 'Could not save. Try again.');
     }
     renderList();
+  }
+
+  /* ---- partner review --------------------------------------------------- */
+  const DOC_STATUSES = new Set([
+    'document_received', 'asked_again', 'terms_sent', 'terms_accepted', 'terms_declined', 'invited'
+  ]);
+
+  const REVIEW_DONE = {
+    terms_sent: { pill: 'waiting', label: 'Terms sent', note: 'Waiting for the agency to accept.' },
+    terms_accepted: { pill: 'done', label: 'Terms accepted', note: 'The partner account has been created.' },
+    terms_declined: { pill: 'attention', label: 'Terms declined', note: 'No account was created.' },
+    invited: { pill: 'done', label: 'Invited', note: 'The sign-in link has been sent.' },
+    asked_again: { pill: 'attention', label: 'Asked again', note: 'Waiting for a clearer document.' }
+  };
+
+  function renderReview(chat) {
+    reviewChat = chat || null;
+    const status = String((chat && chat.partnerStatus) || '');
+    const isPartner = resolveEnquiryType(chat || {}) === 'partner';
+    // The document lives on the enquiry, not on this chat doc, so the card is
+    // driven by the status: every one of these means a document arrived.
+    const hasDoc = DOC_STATUSES.has(status);
+    const toVerify = isPartner && status === 'document_received';
+    const done = isPartner ? REVIEW_DONE[status] : null;
+
+    els.docCard.classList.toggle('hidden', !(isPartner && hasDoc));
+    if (isPartner && hasDoc) {
+      els.docSub.textContent = toVerify ? 'Tap View to check it' : 'Already reviewed';
+    }
+
+    els.reviewHint.classList.toggle('hidden', !toVerify);
+    els.reviewBar.classList.toggle('hidden', !toVerify);
+    els.viewerActions.classList.toggle('hidden', !toVerify);
+    els.reviewDone.classList.toggle('hidden', !done);
+    if (done) {
+      els.reviewDonePill.className = `chat-status-pill ${done.pill}`;
+      els.reviewDonePill.textContent = done.label;
+      els.reviewDoneNote.textContent = done.note;
+    }
+  }
+
+  function setReviewBusy(busy, label) {
+    [els.reviewApprove, els.reviewAsk, els.viewerApprove, els.viewerAsk].forEach((b) => { b.disabled = busy; });
+    const text = busy ? label : 'Approve & send terms';
+    els.reviewApprove.textContent = text;
+    els.viewerApprove.textContent = text;
+  }
+
+  async function openDocument() {
+    if (!selectedPhone) return;
+    els.viewer.classList.remove('hidden');
+    els.app.classList.add('sheet-open');
+    els.viewerBody.innerHTML = '<p class="viewer-msg">Opening the document…</p>';
+    try {
+      const data = await fetchJson(`/admin/booking-chats/${encodeURIComponent(selectedPhone)}/document`);
+      const mime = String(data.mime || '');
+      els.viewerBody.innerHTML = mime.includes('image')
+        ? `<img src="${Chat.escapeHtml(data.url)}" alt="Registration document">`
+        : `<iframe src="${Chat.escapeHtml(data.url)}" title="Registration document"></iframe>`;
+    } catch (error) {
+      els.viewerBody.innerHTML = `<p class="viewer-msg">${Chat.escapeHtml(error.message || 'Could not open the document.')}</p>`;
+    }
+  }
+
+  function closeViewer() {
+    els.viewer.classList.add('hidden');
+    if (!isSheetOpen()) els.app.classList.remove('sheet-open');
+    els.viewerBody.innerHTML = '';
+  }
+
+  /* Approving sends a real message to a real agency, so this waits on the
+     round trip rather than guessing, and puts the buttons back on failure. */
+  async function submitReview(action, reason) {
+    const phone = selectedPhone;
+    if (!phone) return;
+    setReviewBusy(true, action === 'approve' ? 'Sending…' : 'Asking…');
+    try {
+      await fetchJson(`/admin/booking-chats/${encodeURIComponent(phone)}/${action === 'approve' ? 'approve' : 'ask-again'}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reason ? { reason } : {})
+      });
+      closeViewer();
+      await loadList();
+      const fresh = chats.find((c) => chatPhone(c) === phone);
+      if (fresh) renderReview(fresh);
+      showToast(action === 'approve' ? 'Terms sent to the agency.' : 'Asked the agency for a clearer document.');
+    } catch (error) {
+      showToast(error.message || 'Could not complete that. Try again.');
+    }
+    setReviewBusy(false);
   }
 
   /* ---- call sheet -------------------------------------------------------- */
@@ -638,6 +751,7 @@
     els.enquiry.className = `enquiry-badge ${enquiry.className}`;
 
     renderFacts(chat);
+    renderReview(chat);
 
     const atBottom = els.scroll.scrollHeight - els.scroll.scrollTop - els.scroll.clientHeight < 80;
     els.history.innerHTML = buildMessagesHtml(messages);
@@ -766,6 +880,26 @@
     revealChip(chip);
     renderList();
   });
+
+  els.docView.addEventListener('click', openDocument);
+  els.viewerClose.addEventListener('click', closeViewer);
+  els.viewer.addEventListener('click', (event) => {
+    if (event.target === els.viewer) closeViewer();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !els.viewer.classList.contains('hidden')) closeViewer();
+  });
+
+  els.reviewApprove.addEventListener('click', () => submitReview('approve'));
+  els.viewerApprove.addEventListener('click', () => submitReview('approve'));
+
+  function askAgain() {
+    const reason = window.prompt('What is wrong with the document? (optional, the agency sees this)');
+    if (reason === null) return;
+    submitReview('askAgain', reason.trim());
+  }
+  els.reviewAsk.addEventListener('click', askAgain);
+  els.viewerAsk.addEventListener('click', askAgain);
 
   els.sheetClose.addEventListener('click', closeSheet);
 
