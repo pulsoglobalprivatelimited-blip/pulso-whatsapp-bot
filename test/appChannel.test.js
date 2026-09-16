@@ -107,3 +107,42 @@ test('the record\'s history becomes the chat, both directions, oldest first', ()
   assert.equal(chat[5].buttons[1].title, 'Continue');
   assert.equal(chat[5].at, '2026-09-16T09:06:01.000Z');
 });
+
+test('only what is said to this person is collected — the reviewer still gets their alert', async () => {
+  // Found on the phone: a caregiver's certificate turn also sends the reviewer
+  // their Approve / Reject alert. Collecting that would hand the caregiver the
+  // reviewer's buttons and leave the reviewer with nothing.
+  const person = '919000000111';
+  const reviewer = '919446600809';
+  const { replies } = await metaClient.runCollected(async () => {
+    await metaClient.sendText(person, 'Please upload your certificate as an image or PDF.');
+    await metaClient.sendButtons(reviewer, 'New certificate uploaded for review.', [
+      { id: 'approve', title: 'Approve' },
+      { id: 'reject', title: 'Reject' },
+      { id: 'request_doc', title: 'Request doc' }
+    ]);
+    await metaClient.sendImageById(reviewer, '123', 'Provider certificate for review');
+    await metaClient.sendText(person, 'Thank you. Your certificate has been sent for verification.');
+  }, { onlyTo: person });
+
+  assert.equal(replies.length, 2, 'only the two messages addressed to the person');
+  assert.deepEqual(
+    replies.map((p) => p.text.body),
+    [
+      'Please upload your certificate as an image or PDF.',
+      'Thank you. Your certificate has been sent for verification.'
+    ]
+  );
+  assert.ok(replies.every((p) => String(p.to).replace(/\D/g, '') === person));
+  // Nothing the reviewer was sent can reach the app.
+  const app = replies.map(appChannel.payloadToAppMessage);
+  assert.ok(!app.some((m) => (m.buttons || []).some((b) => b.title === 'Approve')));
+});
+
+test('+91 and bare digits are the same recipient', async () => {
+  const { replies } = await metaClient.runCollected(async () => {
+    await metaClient.sendText('+91 90000 00111', 'yours');
+    await metaClient.sendText('919446600809', 'not yours');
+  }, { onlyTo: '919000000111' });
+  assert.deepEqual(replies.map((p) => p.text.body), ['yours']);
+});

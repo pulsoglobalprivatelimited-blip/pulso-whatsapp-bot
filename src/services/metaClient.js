@@ -12,10 +12,23 @@ const config = require('../config');
 // is where the app reads them from on its next state check.
 const collector = new AsyncLocalStorage();
 
-async function runCollected(fn) {
+// Only what the bot says TO THIS PERSON is collected. The same call also sends
+// the reviewer their certificate alert and ops their notifications — those must
+// still go to WhatsApp, and must never be handed to the app, which would show a
+// caregiver the Approve / Reject buttons meant for the reviewer.
+async function runCollected(fn, { onlyTo } = {}) {
   const replies = [];
-  const result = await collector.run(replies, () => fn());
+  const store = { replies, onlyTo: String(onlyTo || '').replace(/\D/g, '') };
+  const result = await collector.run(store, () => fn());
   return { result, replies };
+}
+
+function collectorFor(payload) {
+  const store = collector.getStore();
+  if (!store) return null;
+  if (!store.onlyTo) return store;
+  const to = String((payload && payload.to) || '').replace(/\D/g, '');
+  return to && to === store.onlyTo ? store : null;
 }
 
 // Files the app uploads live here for the length of one turn: the flow's media
@@ -60,10 +73,10 @@ function summarizeSend(payload, phoneNumberId, extra = {}) {
 }
 
 async function sendRequest(payload, options = {}) {
-  const collected = collector.getStore();
+  const collected = collectorFor(payload);
   if (collected) {
-    collected.push(payload);
-    return { collected: true, messages: [{ id: `app-${Date.now()}-${collected.length}` }] };
+    collected.replies.push(payload);
+    return { collected: true, messages: [{ id: `app-${Date.now()}-${collected.replies.length}` }] };
   }
 
   const startedAt = Date.now();

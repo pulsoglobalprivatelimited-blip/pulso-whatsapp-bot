@@ -222,7 +222,8 @@ function historyToAppMessages(history) {
  * app's next state read shows them.
  */
 async function runAppTurn({ processIncomingMessage, phone, message }) {
-  const { replies } = await runCollected(() => processIncomingMessage(phoneDigits(phone), message));
+  const to = phoneDigits(phone);
+  const { replies } = await runCollected(() => processIncomingMessage(to, message), { onlyTo: to });
   return replies.map(payloadToAppMessage).filter(Boolean);
 }
 
