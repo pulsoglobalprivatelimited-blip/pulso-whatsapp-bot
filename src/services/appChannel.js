@@ -150,8 +150,15 @@ function inboundToAppMessage(message) {
   const text = str(getMessageText(message), 4000);
   if (!text) return null;
   // The app's opening tap is a plain "Hi" to the bot; the person tapped a
-  // button, so show the button.
-  return { kind: 'text', text: message.channel === 'app' && text === 'Hi' ? 'Caregiver / nurse job' : text, outgoing: true };
+  // button, so show the button. Entries made from the app carry their pipe so
+  // the screen never repeats what it already drew live.
+  const fromApp = message.channel === 'app';
+  return {
+    kind: 'text',
+    text: fromApp && text === 'Hi' ? 'Caregiver / nurse job' : text,
+    outgoing: true,
+    ...(fromApp ? { channel: 'app' } : {}),
+  };
 }
 
 /** The bot's own log for one outbound send → what the app draws. */
