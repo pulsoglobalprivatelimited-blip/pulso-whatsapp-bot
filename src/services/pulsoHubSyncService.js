@@ -21,6 +21,9 @@ function buildProviderSyncPayload(provider) {
     termsAccepted: provider.termsAccepted === true,
     completedAt: provider.completedAt || null,
     verification: provider.verification || {},
+    // Set when the person is onboarding through the Pulso app: the hub pushes
+    // the reviewer's decision to this user, and activates them on Accept.
+    appUid: provider.appUid || '',
   };
 }
 

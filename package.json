@@ -19,6 +19,7 @@
     "terms:reminder:backfill": "node src/scripts/sendLegacyTermsReminderBackfill.js",
     "whatsapp:phone-numbers": "node src/scripts/listWhatsappPhoneNumbers.js",
     "whatsapp:register-phone": "node src/scripts/registerWhatsappPhoneNumber.js",
+    "test": "node --test test/*.test.js",
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "check": "node --check src/server.js"

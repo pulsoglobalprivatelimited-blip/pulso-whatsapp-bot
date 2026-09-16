@@ -46,6 +46,12 @@ const { inferProviderRegion, normalizeRegion } = require('./services/regionServi
 const { initializeStorage, saveWhatsappMessageStatus } = require('./services/storage');
 const { notifyCertificateUploaded } = require('./services/opsNotifications');
 const { getMediaMetadata, downloadMediaFile } = require('./services/metaClient');
+const appChannel = require('./services/appChannel');
+const { isPreOnboardedPhone } = require('./services/preOnboardedService');
+const {
+  getProvider: getProviderRecord,
+  updateProvider: updateProviderRecord
+} = require('./services/providerService');
 const {
   buildWelcomeTwiml,
   buildMenuTwiml,
@@ -797,6 +803,92 @@ app.post('/webhook', async (req, res) => {
       statusBatches
     });
     res.sendStatus(500);
+  }
+});
+
+// ---- The Pulso app as a second pipe into the onboarding bot -----------------
+// pulso_hub/docs/in_app_onboarding_bots_plan.md. Same flow, same record per
+// phone number, same reviewer alert; the bot's replies are collected and
+// returned instead of posted to Meta. The person signs in to the app with the
+// same number they would use on WhatsApp, and that number is the key.
+app.post('/app/onboarding/turn', appChannel.requireAppUser, upload.single('file'), async (req, res) => {
+  const { uid, phone } = req.appUser;
+  try {
+    if (isPreOnboardedPhone(phone)) {
+      return res.json({ ok: true, blocked: true, replies: [], status: '' });
+    }
+    const body = req.body || {};
+    const message = appChannel.buildAppMessage({
+      phone,
+      text: body.text,
+      buttonId: body.buttonId,
+      buttonTitle: body.buttonTitle,
+      listRowId: body.listRowId,
+      listRowTitle: body.listRowTitle,
+      // The app names the mime in its own field; the multipart part's is
+      // octet-stream from the Flutter http package.
+      file: req.file ? { ...req.file, mimetype: String(body.mime || req.file.mimetype || '') } : undefined,
+      start: body.start === true || body.start === 'true'
+    });
+    const before = await getProviderRecord(phone);
+    if (!before || before.appUid !== uid) {
+      await updateProviderRecord(phone, { appUid: uid, appChannelAt: new Date().toISOString() });
+    }
+    const replies = await appChannel.runAppTurn({ processIncomingMessage, phone, message });
+    const after = await getProviderRecord(phone);
+    return res.json({
+      ok: true,
+      replies,
+      status: after ? after.status || '' : '',
+      verification: after && after.verification ? after.verification.status || '' : '',
+      termsAccepted: Boolean(after && after.termsAccepted === true),
+      historyLength: after && Array.isArray(after.history) ? after.history.length : 0
+    });
+  } catch (error) {
+    console.error('[APP_CHANNEL] turn failed', phone, error && error.message ? error.message : error);
+    return res.status(400).json({ ok: false, error: error && error.message ? error.message : 'turn_failed' });
+  }
+});
+
+app.get('/app/onboarding/state', appChannel.requireAppUser, async (req, res) => {
+  const { phone } = req.appUser;
+  try {
+    const provider = await getProviderRecord(phone);
+    if (!provider) {
+      return res.json({ ok: true, exists: false, status: '', messages: [], historyLength: 0, blocked: isPreOnboardedPhone(phone) });
+    }
+    return res.json({
+      ok: true,
+      exists: true,
+      status: provider.status || '',
+      verification: provider.verification ? provider.verification.status || '' : '',
+      termsAccepted: provider.termsAccepted === true,
+      messages: appChannel.historyToAppMessages(provider.history),
+      historyLength: Array.isArray(provider.history) ? provider.history.length : 0,
+      blocked: isPreOnboardedPhone(phone)
+    });
+  } catch (error) {
+    console.error('[APP_CHANNEL] state failed', phone, error && error.message ? error.message : error);
+    return res.status(500).json({ ok: false, error: 'state_failed' });
+  }
+});
+
+// The bot's own media (the sample video, a voice note) for the app, fetched
+// with the bot's token so the app never holds it.
+app.get('/app/media/:id', appChannel.requireAppUser, async (req, res) => {
+  const id = String(req.params.id || '');
+  if (!/^\d{5,40}$/.test(id)) {
+    return res.status(400).json({ ok: false, error: 'bad_media_id' });
+  }
+  try {
+    const meta = await getMediaMetadata(id);
+    const buffer = await downloadMediaFile(meta.url);
+    res.set('Content-Type', meta.mime_type || 'application/octet-stream');
+    res.set('Cache-Control', 'private, max-age=86400');
+    return res.send(buffer);
+  } catch (error) {
+    console.warn('[APP_CHANNEL] media unavailable', id, error && error.message ? error.message : error);
+    return res.status(404).json({ ok: false, error: 'media_unavailable' });
   }
 });
 

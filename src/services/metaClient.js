@@ -1,5 +1,40 @@
 const axios = require('axios');
+const crypto = require('crypto');
+const { AsyncLocalStorage } = require('async_hooks');
 const config = require('../config');
+
+// ---- The app pipe -----------------------------------------------------------
+// When a turn comes from the Pulso app instead of WhatsApp, every send the flow
+// makes is collected here and handed back to the app instead of posted to Meta.
+// A per-call store, never a global switch: the webhook keeps sending while an
+// app turn is being collected next to it. Sends the flow schedules with a timer
+// inherit the same store and are still logged into the record's history, which
+// is where the app reads them from on its next state check.
+const collector = new AsyncLocalStorage();
+
+async function runCollected(fn) {
+  const replies = [];
+  const result = await collector.run(replies, () => fn());
+  return { result, replies };
+}
+
+// Files the app uploads live here for the length of one turn: the flow's media
+// helpers read them by an `app:` id exactly as they read a Meta media id.
+const appMedia = new Map();
+
+function registerAppMedia({ buffer, mime, filename }) {
+  const id = `app:${crypto.randomBytes(8).toString('hex')}`;
+  appMedia.set(id, { buffer, mime: mime || 'application/octet-stream', filename: filename || '', at: Date.now() });
+  // Anything not read within ten minutes is forgotten.
+  for (const [key, value] of appMedia) {
+    if (Date.now() - value.at > 10 * 60 * 1000) appMedia.delete(key);
+  }
+  return id;
+}
+
+function isAppMediaId(value) {
+  return typeof value === 'string' && value.startsWith('app:');
+}
 
 function logDryRun(payload) {
   console.log('[DRY RUN] WhatsApp send', JSON.stringify(payload, null, 2));
@@ -25,6 +60,12 @@ function summarizeSend(payload, phoneNumberId, extra = {}) {
 }
 
 async function sendRequest(payload, options = {}) {
+  const collected = collector.getStore();
+  if (collected) {
+    collected.push(payload);
+    return { collected: true, messages: [{ id: `app-${Date.now()}-${collected.length}` }] };
+  }
+
   const startedAt = Date.now();
   const phoneNumberId = options.phoneNumberId || config.phoneNumberId;
 
@@ -212,6 +253,11 @@ async function sendTermsAndConditions(to, url, options) {
 }
 
 async function getMediaMetadata(mediaId) {
+  if (isAppMediaId(mediaId)) {
+    const entry = appMedia.get(mediaId);
+    if (!entry) throw new Error('app media expired');
+    return { id: mediaId, mime_type: entry.mime, file_size: entry.buffer.length, url: mediaId };
+  }
   if (!config.whatsappToken) {
     throw new Error('WHATSAPP_ACCESS_TOKEN is required to fetch media metadata.');
   }
@@ -227,6 +273,12 @@ async function getMediaMetadata(mediaId) {
 }
 
 async function downloadMediaFile(url) {
+  if (isAppMediaId(url)) {
+    const entry = appMedia.get(url);
+    if (!entry) throw new Error('app media expired');
+    appMedia.delete(url);
+    return entry.buffer;
+  }
   if (!config.whatsappToken) {
     throw new Error('WHATSAPP_ACCESS_TOKEN is required to download media files.');
   }
@@ -252,5 +304,8 @@ module.exports = {
   sendAudio,
   sendTermsAndConditions,
   getMediaMetadata,
-  downloadMediaFile
+  downloadMediaFile,
+  runCollected,
+  registerAppMedia,
+  isAppMediaId
 };
