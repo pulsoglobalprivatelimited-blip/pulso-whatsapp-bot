@@ -155,6 +155,33 @@ async function sendImageById(to, mediaId, caption, options) {
   }, options);
 }
 
+// Media uploaded through the app never gets a Meta media id, so the only way to
+// hand it to WhatsApp is a link Meta can fetch — the signed archive URL.
+async function sendImageByUrl(to, link, caption, options) {
+  return sendRequest({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'image',
+    image: {
+      link,
+      caption
+    }
+  }, options);
+}
+
+async function sendDocumentByUrl(to, link, filename, caption, options) {
+  return sendRequest({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'document',
+    document: {
+      link,
+      filename,
+      caption
+    }
+  }, options);
+}
+
 async function sendDocumentById(to, mediaId, filename, caption, options) {
   return sendRequest({
     messaging_product: 'whatsapp',
@@ -310,6 +337,8 @@ module.exports = {
   sendText,
   sendImageById,
   sendDocumentById,
+  sendImageByUrl,
+  sendDocumentByUrl,
   sendVideoById,
   sendButtons,
   sendList,

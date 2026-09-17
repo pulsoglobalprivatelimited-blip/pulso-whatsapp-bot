@@ -41,16 +41,28 @@ function getMessageText(message) {
   return '';
 }
 
+/** The region only — the language is asked separately, as its own step. */
 function parseRegion(message) {
   const replyId = getInteractiveReplyId(message);
-  if (replyId === BUTTON_IDS.REGION_KERALA) return 'kerala_malayalam';
-  if (replyId === BUTTON_IDS.REGION_KARNATAKA) return 'karnataka_english';
+  if (replyId === BUTTON_IDS.REGION_KERALA) return 'kerala';
+  if (replyId === BUTTON_IDS.REGION_KARNATAKA) return 'karnataka';
 
   const normalized = normalizeText(getMessageText(message));
-  if (['kerala', 'malayalam', 'ml'].includes(normalized)) return 'kerala_malayalam';
+  if (['kerala', 'malayalam', 'ml'].includes(normalized)) return 'kerala';
   if (['karnataka', 'bangalore', 'bengaluru', 'english', 'en'].includes(normalized)) {
-    return 'karnataka_english';
+    return 'karnataka';
   }
+  return null;
+}
+
+function parseLanguage(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.LANGUAGE_MALAYALAM) return 'ml';
+  if (replyId === BUTTON_IDS.LANGUAGE_ENGLISH) return 'en';
+
+  const normalized = normalizeText(getMessageText(message));
+  if (['malayalam', 'ml', 'മലയാളം'].includes(normalized)) return 'ml';
+  if (['english', 'en'].includes(normalized)) return 'en';
   return null;
 }
 
@@ -340,6 +352,7 @@ module.exports = {
   getMessageText,
   getInteractiveReplyId,
   parseRegion,
+  parseLanguage,
   parseQualification,
   isQualificationDeclined,
   isInterested,

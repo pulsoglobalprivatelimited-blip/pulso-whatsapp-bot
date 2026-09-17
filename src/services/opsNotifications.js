@@ -5,7 +5,10 @@ const {
   sendList,
   sendTemplate,
   sendImageById,
-  sendDocumentById
+  sendDocumentById,
+  sendImageByUrl,
+  sendDocumentByUrl,
+  isAppMediaId
 } = require('./metaClient');
 
 const REVIEW_ACTIONS = {
@@ -360,6 +363,48 @@ async function sendReviewMediaTo(to, provider, attachment, index, total) {
     provider && provider.phone ? `Phone: ${provider.phone}` : null
   ]);
 
+  const archivedUrl = attachment.cloudStorageUrl || null;
+
+  const sendByUrl = async (link) =>
+    attachment.type === 'image'
+      ? sendImageByUrl(to, link, caption)
+      : sendDocumentByUrl(to, link, attachment.fileName || undefined, caption);
+
+  // An app upload has no Meta media id — its id only ever existed in this
+  // process's memory — so the archived link is the only way to send it.
+  if (isAppMediaId(attachment.id)) {
+    if (!archivedUrl) {
+      console.error(
+        '[OPS_REVIEW_MEDIA_ERROR]',
+        JSON.stringify(
+          {
+            to,
+            attachmentId: attachment.id,
+            reason: 'app_media_without_archive_url',
+            detail: 'App-uploaded media was never archived to cloud storage, so it cannot be sent to the reviewer.'
+          },
+          null,
+          2
+        )
+      );
+      return null;
+    }
+
+    try {
+      return await sendByUrl(archivedUrl);
+    } catch (error) {
+      console.error(
+        '[OPS_REVIEW_MEDIA_ERROR]',
+        JSON.stringify(
+          { to, attachmentId: attachment.id, via: 'archive_url', message: error.message, response: error.response ? error.response.data : null },
+          null,
+          2
+        )
+      );
+      return null;
+    }
+  }
+
   try {
     if (attachment.type === 'image') {
       return await sendImageById(to, attachment.id, caption);
@@ -367,6 +412,24 @@ async function sendReviewMediaTo(to, provider, attachment, index, total) {
 
     return await sendDocumentById(to, attachment.id, attachment.fileName || undefined, caption);
   } catch (error) {
+    // A Meta media id expires about 30 days after upload, so an older
+    // certificate can only be resent from the archive.
+    if (archivedUrl) {
+      try {
+        return await sendByUrl(archivedUrl);
+      } catch (urlError) {
+        console.error(
+          '[OPS_REVIEW_MEDIA_ERROR]',
+          JSON.stringify(
+            { to, attachmentId: attachment.id, via: 'archive_url_fallback', message: urlError.message, response: urlError.response ? urlError.response.data : null },
+            null,
+            2
+          )
+        );
+        return null;
+      }
+    }
+
     console.error(
       '[OPS_REVIEW_MEDIA_ERROR]',
       JSON.stringify(

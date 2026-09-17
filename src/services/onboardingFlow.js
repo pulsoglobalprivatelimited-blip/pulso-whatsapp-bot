@@ -8,6 +8,11 @@ const {
   QUALIFICATIONS,
   DISTRICTS,
   REGION_OPTIONS,
+  LANGUAGE_OPTIONS,
+  DEFAULT_FLOW_ID_BY_REGION,
+  getFlowIdFor,
+  getWorkingModelFor,
+  getDutyHourPaymentSummaryFor,
   UI_TEXT,
   getFlowConfig,
   runWithProviderFlow
@@ -45,6 +50,7 @@ const { isPreOnboardedPhone } = require('./preOnboardedService');
 const {
   getMessageText,
   parseRegion,
+  parseLanguage,
   parseQualification,
   isQualificationDeclined,
   isInterested,
@@ -256,6 +262,15 @@ async function sendCertificateCollectionButtons(phone, provider) {
   });
 }
 
+async function sendCertificateRetry(phone, provider, options = {}) {
+  if (options.force) {
+    await sendAndLog(phone, 'text', MESSAGES.certificateRetry);
+    return;
+  }
+
+  await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
+}
+
 function clearPendingCertificatePrompt(phone) {
   const timer = pendingCertificatePromptTimers.get(phone);
   if (timer) {
@@ -320,7 +335,7 @@ function scheduleCertificateRetry(phone) {
         return;
       }
 
-      await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
+      await sendCertificateRetry(phone, provider, { force: true });
       });
     } catch (error) {
       console.error('[CERTIFICATE_RETRY_SCHEDULE_ERROR]', error);
@@ -485,7 +500,8 @@ async function sendDutyHourPreferenceButtons(phone) {
       { id: BUTTON_IDS.DUTY_HOUR_BOTH, title: UI_TEXT.dutyBothTitle }
     ]
   });
-  await sendAndLog(phone, 'text', MESSAGES.dutyHourPaymentSummary || '8 hour (8 am to 6 pm) - 900rs per day\n24 hour - 1200 rs per day');
+  const provider = await getProvider(phone);
+  await sendAndLog(phone, 'text', getDutyHourPaymentSummaryFor(provider && provider.qualification));
 }
 
 async function sendSampleDutyOfferPrompt(phone) {
@@ -1403,7 +1419,7 @@ async function sendOptionalAgentHelpButton(phone) {
 
 async function sendRegionSelectionList(phone) {
   await sendAndLog(phone, 'list', {
-    body: 'Welcome to Pulso.\nPlease select your region.\n\nPulso-ലേക്ക് സ്വാഗതം.\nതാങ്കളുടെ region തിരഞ്ഞെടുക്കുക.',
+    body: 'Please select your region.\n\nതാങ്കളുടെ region തിരഞ്ഞെടുക്കുക.',
     buttonText: UI_TEXT.regionButtonText || 'Select',
     sections: [
       {
@@ -1445,22 +1461,51 @@ async function startFlow(phone) {
   await sendQualificationList(phone);
 }
 
+// Asked before the language is known, so it carries both languages.
+async function sendLanguageSelectionList(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: 'Please select your language.\n\nതാങ്കളുടെ ഭാഷ തിരഞ്ഞെടുക്കുക.',
+    buttons: LANGUAGE_OPTIONS
+  });
+}
+
 async function handleRegionSelection(phone, message) {
-  const flowId = parseRegion(message);
-  if (!flowId) {
+  const region = parseRegion(message);
+  if (!region) {
     await sendAndLog(phone, 'text', 'Please select Kerala or Karnataka to continue.');
     await sendRegionSelectionList(phone);
     return;
   }
 
-  await assignProviderFlow(phone, flowId);
+  // The region's own default flow until the language question is answered, so
+  // the record is never left without one.
+  await assignProviderFlow(phone, DEFAULT_FLOW_ID_BY_REGION[region], 'region_selection');
+  await updateStatus(phone, STATUS.AWAITING_LANGUAGE_SELECTION, 1.6);
+  await sendLanguageSelectionList(phone);
+}
+
+async function handleLanguageSelection(phone, message) {
   const provider = await getProvider(phone);
-  if (provider && provider.regionResumeStatus) {
-    await resumeProviderAfterRegionSelection(phone, provider);
+  const region = inferProviderRegion(provider);
+  if (!region) {
+    await requestRegionBeforeContinuing(phone, provider || { status: STATUS.NEW });
     return;
   }
 
-  await runWithProviderFlow(provider, async () => {
+  const language = parseLanguage(message);
+  if (!language) {
+    await sendLanguageSelectionList(phone);
+    return;
+  }
+
+  await assignProviderFlow(phone, getFlowIdFor(region, language), 'language_selection');
+  const updated = await getProvider(phone);
+  if (updated && updated.regionResumeStatus) {
+    await resumeProviderAfterRegionSelection(phone, updated);
+    return;
+  }
+
+  await runWithProviderFlow(updated, async () => {
     await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2);
     await sendQualificationList(phone);
   });
@@ -1603,7 +1648,7 @@ async function handleQualification(phone, message) {
   }
 
   await updateStatus(phone, STATUS.AWAITING_INTEREST, 4, { qualification });
-  await sendAndLog(phone, 'text', MESSAGES.workingModel);
+  await sendAndLog(phone, 'text', getWorkingModelFor(qualification));
   await sendInterestButtons(phone);
 }
 
@@ -1739,6 +1784,21 @@ async function handleExpectedDutiesConfirmation(phone, message) {
 
 async function addCertificate(phone, message) {
   const attachment = await archiveIncomingMedia(phone, message, 'certificate');
+  const archivedSuccessfully =
+    attachment &&
+    attachment.id &&
+    (attachment.archived || attachment.cloudArchived);
+
+  if (!archivedSuccessfully) {
+    await appendHistory(phone, {
+      type: 'system',
+      event: 'certificate_archive_failed',
+      attachment
+    });
+    await sendAndLog(phone, 'text', MESSAGES.certificateUploadFailed);
+    return false;
+  }
+
   const provider = (await getProvider(phone)) || (await getOrCreateProvider(phone));
 
   await updateProvider(phone, {
@@ -1751,6 +1811,8 @@ async function addCertificate(phone, message) {
       ]
     }
   });
+
+  return true;
 }
 
 async function finalizeCertificateCollection(phone) {
@@ -1896,7 +1958,7 @@ async function handleCertificate(phone, message) {
     clearPendingCertificatePrompt(phone);
     clearPendingCertificateRetry(phone);
     if (!attachments.length) {
-      scheduleCertificateRetry(phone);
+      await sendCertificateRetry(phone, provider, { force: true });
       return;
     }
 
@@ -1908,11 +1970,11 @@ async function handleCertificate(phone, message) {
     clearPendingCertificatePrompt(phone);
     clearPendingCertificateRetry(phone);
     if (!attachments.length) {
-      scheduleCertificateRetry(phone);
+      await sendCertificateRetry(phone, provider, { force: true });
       return;
     }
 
-    await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
+    await sendCertificateRetry(phone, provider, { force: true });
     return;
   }
 
@@ -1922,7 +1984,7 @@ async function handleCertificate(phone, message) {
       await finalizeCertificateCollection(phone);
       return;
     }
-    scheduleCertificateRetry(phone);
+    await sendCertificateRetry(phone, provider, { force: true });
     return;
   }
 
@@ -1934,7 +1996,11 @@ async function handleCertificate(phone, message) {
     return;
   }
 
-  await addCertificate(phone, message);
+  const added = await addCertificate(phone, message);
+  if (!added) {
+    return;
+  }
+
   const refreshedProvider = await getProvider(phone);
   const refreshedAttachments = refreshedProvider && refreshedProvider.documents
     ? refreshedProvider.documents.certificateAttachments || []
@@ -2875,6 +2941,11 @@ async function processIncomingMessage(phone, message) {
 
   if (provider.status === STATUS.AWAITING_REGION_SELECTION) {
     await handleRegionSelection(phone, message);
+    return;
+  }
+
+  if (provider.status === STATUS.AWAITING_LANGUAGE_SELECTION) {
+    await handleLanguageSelection(phone, message);
     return;
   }
 

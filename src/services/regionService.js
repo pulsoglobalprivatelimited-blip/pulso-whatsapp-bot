@@ -1,9 +1,10 @@
-const { FLOWS, STATUS } = require('../flow');
+const { FLOWS, STATUS, DEFAULT_FLOW_ID_BY_REGION } = require('../flow');
 
-const FLOW_IDS_BY_REGION = Object.values(FLOWS).reduce((acc, flow) => {
-  acc[flow.region] = flow.id;
-  return acc;
-}, {});
+// Each region now has a flow per language, so the region alone cannot pick one.
+// This is the flow a record gets when its region is known but the language
+// question has not been answered — the pairing every existing record already
+// has, so nothing that predates the language step changes.
+const FLOW_IDS_BY_REGION = DEFAULT_FLOW_ID_BY_REGION;
 
 const DISTRICT_REGIONS = Object.values(FLOWS).reduce((acc, flow) => {
   flow.DISTRICTS.forEach((district) => {
