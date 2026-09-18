@@ -164,7 +164,8 @@ async function listPendingVerificationNotificationProviders() {
       'termsAccepted',
       'completedAt',
       'documents',
-      'verification'
+      'verification',
+      'updatedAt'
     )
     .get();
 

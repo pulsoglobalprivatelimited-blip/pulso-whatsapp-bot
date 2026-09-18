@@ -101,6 +101,21 @@ services:
         value: "certificate_review_alert"
       - key: CERTIFICATE_REVIEW_TEMPLATE_LANGUAGE
         value: "en"
+      # The review alert that carries the certificate and the buttons itself, so
+      # it reaches the reviewer outside WhatsApp's 24-hour window. Turn on once
+      # both templates are approved in WhatsApp Manager.
+      - key: CERTIFICATE_REVIEW_V2_ENABLED
+        value: "false"
+      - key: CERTIFICATE_REVIEW_FILE_TEMPLATE_NAME
+        value: "certificate_review_v2_file"
+      - key: CERTIFICATE_REVIEW_IMAGE_TEMPLATE_NAME
+        value: "certificate_review_v2_image"
+      - key: CERTIFICATE_REVIEW_CATCH_UP_INTERVAL_MINUTES
+        value: "30"
+      - key: CERTIFICATE_REVIEW_CATCH_UP_STALE_MINUTES
+        value: "15"
+      - key: CERTIFICATE_REVIEW_CATCH_UP_MAX_PER_SWEEP
+        value: "3"
       - key: TERMS_REMINDER_DELAY_HOURS
         value: "24"
       - key: TERMS_REMINDER_CHECK_INTERVAL_MINUTES

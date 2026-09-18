@@ -10,6 +10,11 @@ const DEFAULT_IVR_WEBHOOK_ALLOWED_IPS = [
 const DEFAULT_PULSO_DUTY_ACCEPT_VIDEO_MEDIA_ID = '1862764111082996';
 const DEFAULT_PULSO_APP_ACTIVATION_VIDEO_MEDIA_ID = '1661011455048746';
 const DEFAULT_CERTIFICATE_REVIEW_TEMPLATE_NAME = 'certificate_review_alert';
+// The review alert that carries the certificate and the buttons itself, so it
+// reaches the reviewer outside the 24-hour window. A template's header format is
+// fixed when it is created, so a PDF and a photo need one template each.
+const DEFAULT_CERTIFICATE_REVIEW_FILE_TEMPLATE_NAME = 'certificate_review_v2_file';
+const DEFAULT_CERTIFICATE_REVIEW_IMAGE_TEMPLATE_NAME = 'certificate_review_v2_image';
 const STALE_PULSO_VIDEO_MEDIA_IDS = new Set([
   '969942785736280',
   '908615228890468'
@@ -83,6 +88,22 @@ module.exports = {
   certificateReviewTemplateName:
     process.env.CERTIFICATE_REVIEW_TEMPLATE_NAME || DEFAULT_CERTIFICATE_REVIEW_TEMPLATE_NAME,
   certificateReviewTemplateLanguage: process.env.CERTIFICATE_REVIEW_TEMPLATE_LANGUAGE || 'en',
+  certificateReviewFileTemplateName:
+    process.env.CERTIFICATE_REVIEW_FILE_TEMPLATE_NAME || DEFAULT_CERTIFICATE_REVIEW_FILE_TEMPLATE_NAME,
+  certificateReviewImageTemplateName:
+    process.env.CERTIFICATE_REVIEW_IMAGE_TEMPLATE_NAME || DEFAULT_CERTIFICATE_REVIEW_IMAGE_TEMPLATE_NAME,
+  // Off until Meta approves both templates; the old template + buttons + file
+  // path keeps running in the meantime.
+  certificateReviewV2Enabled: process.env.CERTIFICATE_REVIEW_V2_ENABLED === 'true',
+  certificateReviewCatchUpIntervalMinutes: Number(
+    process.env.CERTIFICATE_REVIEW_CATCH_UP_INTERVAL_MINUTES || 30
+  ),
+  certificateReviewCatchUpStaleMinutes: Number(
+    process.env.CERTIFICATE_REVIEW_CATCH_UP_STALE_MINUTES || 15
+  ),
+  certificateReviewCatchUpMaxPerSweep: Number(
+    process.env.CERTIFICATE_REVIEW_CATCH_UP_MAX_PER_SWEEP || 3
+  ),
   termsFirstReminderDelayHours: Number(
     process.env.TERMS_FIRST_REMINDER_DELAY_HOURS || process.env.TERMS_REMINDER_DELAY_HOURS || 1
   ),

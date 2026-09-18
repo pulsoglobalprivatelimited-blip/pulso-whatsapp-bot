@@ -29,6 +29,11 @@ function buildCloudObjectPath(phone, category, fileName) {
   return `providers/${phone}/${category}/${timestamp}-${safeName}`;
 }
 
+// The reviewer's alert carries the certificate as a link to this archive, so an
+// upload that quietly fails costs the caregiver their place in the queue. One
+// retry covers the usual cause, a blip talking to the bucket.
+const CLOUD_UPLOAD_ATTEMPTS = 2;
+
 async function uploadBufferToFirebaseStorage(phone, category, fileName, fileBuffer, mimeType) {
   if (!config.firebaseStorageBucket) {
     return {
@@ -37,6 +42,23 @@ async function uploadBufferToFirebaseStorage(phone, category, fileName, fileBuff
     };
   }
 
+  let lastError = null;
+  for (let attempt = 1; attempt <= CLOUD_UPLOAD_ATTEMPTS; attempt += 1) {
+    const result = await uploadBufferOnce(phone, category, fileName, fileBuffer, mimeType);
+    if (result.uploaded) {
+      return attempt > 1 ? { ...result, cloudUploadAttempts: attempt } : result;
+    }
+    lastError = result;
+    console.error(
+      '[CLOUD_ARCHIVE_ATTEMPT_FAILED]',
+      JSON.stringify({ phone, category, fileName, attempt, error: result.cloudError }, null, 2)
+    );
+  }
+
+  return { ...lastError, cloudUploadAttempts: CLOUD_UPLOAD_ATTEMPTS };
+}
+
+async function uploadBufferOnce(phone, category, fileName, fileBuffer, mimeType) {
   try {
     const bucket = getStorageBucket();
     const objectPath = buildCloudObjectPath(phone, category, fileName);

@@ -887,6 +887,43 @@ function updateDashboardMetrics() {
   completed30dCount.textContent = metricProviders.filter((item) => isCompletedInPastDays(item, 30)).length;
 }
 
+// A reviewer alert WhatsApp refused used to show as nothing at all here: the
+// send succeeded, so the record said sent, and the caregiver waited. The bot now
+// reads the delivery receipts back, and a caregiver whose alert never landed
+// gets a red mark in the list and a line in their details.
+function getReviewAlert(provider) {
+  return provider && provider.verification ? provider.verification.reviewAlert || null : null;
+}
+
+function hasFailedReviewAlert(provider) {
+  const reviewAlert = getReviewAlert(provider);
+  return Boolean(reviewAlert && reviewAlert.failed === true && reviewAlert.delivered !== true);
+}
+
+function renderReviewAlertBadge(provider) {
+  return hasFailedReviewAlert(provider) ? '<span class="alert-badge">Alert failed</span>' : '';
+}
+
+function formatReviewAlert(provider) {
+  const reviewAlert = getReviewAlert(provider);
+  if (!reviewAlert) {
+    return '-';
+  }
+
+  const retries = reviewAlert.retryCount ? ` · ${reviewAlert.retryCount} retry(s)` : '';
+  if (reviewAlert.delivered) {
+    return `Delivered to reviewer${retries}`;
+  }
+
+  if (!reviewAlert.failed) {
+    return `Sent, waiting for delivery${retries}`;
+  }
+
+  const failed = (reviewAlert.messages || []).find((message) => message && message.error);
+  const reason = failed && failed.error ? failed.error.detail || failed.error.title : null;
+  return `Not delivered${retries}${reason ? ` — ${reason}` : ''}`;
+}
+
 function renderList() {
   const filtered = getVisibleProviders();
 
@@ -914,6 +951,7 @@ function renderList() {
           <p class="provider-meta">
             <span>${formatStatus(getDashboardStatus(provider))}</span>
             ${renderRegionBadge(provider)}
+            ${renderReviewAlertBadge(provider)}
           </p>
         </article>
       `).join('')
@@ -1303,6 +1341,11 @@ async function renderDetail(provider) {
   setText('detail-updated', detailProvider.updatedAt ? new Date(detailProvider.updatedAt).toLocaleString() : '-');
   setText('detail-certificate', documents.certificateReceived ? `${certificateAttachments.length} file(s)` : 'Not received');
   setText('detail-verification', verification.status);
+  setText('detail-review-alert', formatReviewAlert(detailProvider));
+  const reviewAlertField = document.getElementById('detail-review-alert');
+  if (reviewAlertField) {
+    reviewAlertField.classList.toggle('alert-failed', hasFailedReviewAlert(detailProvider));
+  }
   renderProviderChatActions(detailProvider);
   renderAttachments('detail-certificate-files', certificateAttachments);
   renderAdditionalDocumentRequest(detailProvider);

@@ -38,13 +38,15 @@ const {
 const {
   listProviders,
   listProviderSummaries,
-  listPendingVerificationNotificationProviders,
-  getProvider,
-  updateProvider
+  getProvider
 } = require('./services/providerService');
 const { inferProviderRegion, normalizeRegion } = require('./services/regionService');
 const { initializeStorage, saveWhatsappMessageStatus } = require('./services/storage');
-const { notifyCertificateUploaded } = require('./services/opsNotifications');
+const { handleReviewAlertStatus } = require('./services/reviewAlertEscalation');
+const {
+  runCertificateReviewCatchUpSweep,
+  startCertificateReviewCatchUpScheduler
+} = require('./services/certificateReviewCatchUp');
 const { getMediaMetadata, downloadMediaFile } = require('./services/metaClient');
 const appChannel = require('./services/appChannel');
 const { isPreOnboardedPhone } = require('./services/preOnboardedService');
@@ -257,17 +259,6 @@ function logStatusBatch(statuses, value) {
   });
 }
 
-function buildVerificationNotificationPatch(notificationResult) {
-  if (!notificationResult || !notificationResult.sent) {
-    return null;
-  }
-
-  return {
-    notificationSentAt: new Date().toISOString(),
-    notificationRecipients: notificationResult.recipients || [],
-    notificationAttempts: notificationResult.attempts || []
-  };
-}
 
 async function persistWhatsappMessageStatus(status, value) {
   const startedAt = Date.now();
@@ -320,6 +311,16 @@ async function processWhatsappStatuses(statuses, value) {
       failed += 1;
     }
     maxSaveDurationMs = Math.max(maxSaveDurationMs, result.durationMs || 0);
+
+    // A reviewer alert that WhatsApp refused says so here and nowhere else.
+    try {
+      await handleReviewAlertStatus(status);
+    } catch (error) {
+      console.error(
+        '[REVIEW_ALERT_STATUS_ERROR]',
+        JSON.stringify({ id: status.id || null, status: status.status || null, message: error.message })
+      );
+    }
   }
 
   logTiming('[WEBHOOK_STATUS_BATCH_TIMING]', startedAt, {
@@ -747,6 +748,8 @@ app.post('/webhook', async (req, res) => {
                     message.interactive.list_reply &&
                     message.interactive.list_reply.title) ||
                   null,
+                templateButtonPayload:
+                  (message.type === 'button' && message.button && message.button.payload) || null,
                 id: message.id || null,
                 flow: useProviderSupportBot ? 'provider_support' : 'onboarding',
                 ...getWebhookMetadata(value)
@@ -1236,42 +1239,15 @@ app.post('/admin/providers/:phone/upload-certificate', upload.array('certificate
   }
 });
 
+// Replaced by the catch-up sweep: the old version only ran at boot, and only
+// looked at providers with no notificationSentAt at all — which today's
+// incident never had, because the send succeeded and the delivery failed.
 async function reconcilePendingVerificationNotifications() {
-  const providers = await listPendingVerificationNotificationProviders();
-  const pendingProviders = providers.filter(
-    (provider) =>
-      provider &&
-      provider.phone &&
-      provider.status === STATUS.VERIFICATION_PENDING &&
-      !provider.termsAccepted &&
-      !provider.completedAt &&
-      provider.verification &&
-      provider.verification.status === 'pending' &&
-      !provider.verification.notificationSentAt
-  );
-
-  if (!pendingProviders.length) {
-    console.log('[STARTUP] No pending verification notifications to resend');
-    return;
+  const result = await runCertificateReviewCatchUpSweep();
+  if (result.retried) {
+    console.log(`[STARTUP] Resent ${result.retried} undelivered reviewer alert(s)`);
   }
-
-  console.log(`[STARTUP] Retrying ${pendingProviders.length} pending verification notification(s)`);
-
-  for (const provider of pendingProviders) {
-    const attachments =
-      provider && provider.documents ? provider.documents.certificateAttachments || [] : [];
-    const notificationResult = await notifyCertificateUploaded(provider, attachments);
-    const notificationPatch = buildVerificationNotificationPatch(notificationResult);
-
-    if (notificationPatch) {
-      await updateProvider(provider.phone, {
-        verification: notificationPatch
-      });
-      console.log(`[STARTUP] Resent verification notification for ${provider.phone}`);
-    } else {
-      console.error(`[STARTUP] Failed to resend verification notification for ${provider.phone}`);
-    }
-  }
+  return result;
 }
 
 initializeStorage()
@@ -1283,6 +1259,7 @@ initializeStorage()
   })
   .then(() => {
     startTermsReminderScheduler();
+    startCertificateReviewCatchUpScheduler();
     app.listen(config.port, () => {
       console.log(`Pulso WhatsApp bot listening on port ${config.port}`);
       console.log(`Webhook verify token: ${config.verifyToken}`);
@@ -1292,6 +1269,10 @@ initializeStorage()
       console.log(`Terms first reminder delay hours: ${config.termsFirstReminderDelayHours}`);
       console.log(`Terms second reminder delay hours: ${config.termsSecondReminderDelayHours}`);
       console.log(`Terms reminder check interval minutes: ${config.termsReminderCheckIntervalMinutes}`);
+      console.log(
+        `Certificate review catch-up: every ${config.certificateReviewCatchUpIntervalMinutes}m, ` +
+          `stale after ${config.certificateReviewCatchUpStaleMinutes}m`
+      );
       console.log(`Terms reminder template configured: ${Boolean(config.termsReminderTemplateName)}`);
       console.log(`Certificate review template configured: ${Boolean(config.certificateReviewTemplateName)}`);
     });

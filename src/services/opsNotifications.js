@@ -353,8 +353,134 @@ async function sendCertificateReviewTemplate(to, provider) {
   }
 }
 
+// ---- The review alert that stands on its own -------------------------------
+// The old alert was three messages: a bare template, then the buttons, then the
+// file. Only the template may cross the 24-hour window, and it carried neither
+// the certificate nor the buttons — so a reviewer who had not written to the bot
+// that day got a notice about a certificate they could not see or act on. These
+// two templates carry the file in the header, the caregiver in the body and the
+// Approve / Reject / Ask again quick replies, so one message does all of it and
+// the window never applies.
+
+function getCertificateReviewV2TemplateName(attachment) {
+  const name =
+    attachment && attachment.type === 'image'
+      ? config.certificateReviewImageTemplateName
+      : config.certificateReviewFileTemplateName;
+  return String(name || '').trim();
+}
+
+function formatReviewTemplateValue(value) {
+  // A template variable may not be empty and may not hold a newline or a run of
+  // spaces, or Meta rejects the send with 132000.
+  const text = String(value === 0 ? '0' : value || '').replace(/\s+/g, ' ').trim();
+  return text || '-';
+}
+
+function buildCertificateReviewV2Components(provider, attachment) {
+  const link = attachment && attachment.cloudStorageUrl ? attachment.cloudStorageUrl : null;
+  if (!link) {
+    return null;
+  }
+
+  const header =
+    attachment.type === 'image'
+      ? { type: 'image', image: { link } }
+      : {
+          type: 'document',
+          document: { link, filename: attachment.fileName || 'certificate.pdf' }
+        };
+
+  const providerPhone = normalizePhone(provider && provider.phone);
+
+  return [
+    { type: 'header', parameters: [header] },
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: formatReviewTemplateValue(provider && provider.fullName) },
+        { type: 'text', text: formatReviewTemplateValue(provider && provider.phone) },
+        {
+          type: 'text',
+          text: formatReviewTemplateValue(
+            provider && provider.qualification ? String(provider.qualification).toUpperCase() : null
+          )
+        },
+        { type: 'text', text: formatReviewTemplateValue(provider && provider.district) }
+      ]
+    },
+    // The payloads are the same ids the interactive buttons use, so a tap on a
+    // template button and a tap on an in-window button reach the same handler.
+    {
+      type: 'button',
+      sub_type: 'quick_reply',
+      index: '0',
+      parameters: [{ type: 'payload', payload: `${REVIEW_ACTIONS.APPROVE}${providerPhone}` }]
+    },
+    {
+      type: 'button',
+      sub_type: 'quick_reply',
+      index: '1',
+      parameters: [{ type: 'payload', payload: `${REVIEW_ACTIONS.REJECT}${providerPhone}` }]
+    },
+    {
+      type: 'button',
+      sub_type: 'quick_reply',
+      index: '2',
+      parameters: [
+        { type: 'payload', payload: `${REVIEW_ACTIONS.REQUEST_ADDITIONAL_DOCUMENT}${providerPhone}` }
+      ]
+    }
+  ];
+}
+
+async function sendCertificateReviewV2Template(to, provider, attachment) {
+  const templateName = getCertificateReviewV2TemplateName(attachment);
+  const components = buildCertificateReviewV2Components(provider, attachment);
+
+  if (!to || !templateName || !components) {
+    return { ok: false, reason: components ? 'template_not_configured' : 'attachment_without_archive_url' };
+  }
+
+  try {
+    const result = await sendTemplate(
+      to,
+      templateName,
+      getCertificateReviewTemplateLanguage(),
+      components
+    );
+    console.log(
+      '[OPS_REVIEW_V2_SENT]',
+      JSON.stringify(
+        { to, providerPhone: provider && provider.phone ? provider.phone : null, templateName },
+        null,
+        2
+      )
+    );
+    return { ok: true, result, templateName };
+  } catch (error) {
+    console.error(
+      '[OPS_REVIEW_V2_ERROR]',
+      JSON.stringify(
+        {
+          to,
+          providerPhone: provider && provider.phone ? provider.phone : null,
+          templateName,
+          message: error.message,
+          response: error.response ? error.response.data : null
+        },
+        null,
+        2
+      )
+    );
+    return { ok: false, reason: 'send_failed', error, templateName };
+  }
+}
+
 async function sendReviewMediaTo(to, provider, attachment, index, total) {
-  if (!to || !attachment || !attachment.id) {
+  // A file ops uploaded from the dashboard has no media id, only an archived
+  // copy; that link is enough to send it.
+  if (!to || !attachment || (!attachment.id && !attachment.cloudStorageUrl)) {
     return null;
   }
 
@@ -372,7 +498,7 @@ async function sendReviewMediaTo(to, provider, attachment, index, total) {
 
   // An app upload has no Meta media id — its id only ever existed in this
   // process's memory — so the archived link is the only way to send it.
-  if (isAppMediaId(attachment.id)) {
+  if (!attachment.id || isAppMediaId(attachment.id)) {
     if (!archivedUrl) {
       console.error(
         '[OPS_REVIEW_MEDIA_ERROR]',
@@ -497,9 +623,42 @@ async function notifyCertificateUploaded(provider, attachments) {
     'Tap below to approve or reject.'
   ]);
 
+  const files = Array.isArray(attachments) ? attachments : attachments ? [attachments] : [];
+
   let notificationSent = false;
   const attempts = [];
+
   for (const to of recipients) {
+    // One self-contained template per certificate. Only if one of them cannot
+    // go — no archived link, template not approved yet, Meta refused it — does
+    // this recipient fall back to the old three messages, which at least reach
+    // them while the reviewer's 24-hour window is open.
+    if (config.certificateReviewV2Enabled && files.length) {
+      let deliveredEverything = true;
+
+      for (const attachment of files) {
+        const outcome = await sendCertificateReviewV2Template(to, provider, attachment);
+        attempts.push(
+          buildNotificationAttempt(to, 'review_template_v2', outcome.ok ? outcome.result : null, outcome.error || null, {
+            templateName: outcome.templateName || null,
+            attachmentId: attachment && attachment.id ? attachment.id : null,
+            attachmentType: attachment && attachment.type ? attachment.type : null,
+            ...(outcome.ok ? {} : { reason: outcome.reason || 'send_failed' })
+          })
+        );
+
+        if (outcome.ok) {
+          notificationSent = true;
+        } else {
+          deliveredEverything = false;
+        }
+      }
+
+      if (deliveredEverything) {
+        continue;
+      }
+    }
+
     try {
       const result = await sendCertificateReviewTemplate(to, provider);
       if (result) {
@@ -538,11 +697,8 @@ async function notifyCertificateUploaded(provider, attachments) {
         )
       );
     }
-  }
 
-  const files = Array.isArray(attachments) ? attachments : attachments ? [attachments] : [];
-  for (let index = 0; index < files.length; index += 1) {
-    for (const to of recipients) {
+    for (let index = 0; index < files.length; index += 1) {
       const result = await sendReviewMediaTo(to, provider, files[index], index + 1, files.length);
       attempts.push(
         buildNotificationAttempt(to, 'review_media', result, null, {
@@ -946,7 +1102,12 @@ function parseReviewerAction(message) {
     message.interactive &&
     message.interactive.list_reply &&
     message.interactive.list_reply.id;
-  const interactiveReplyId = replyId || listReplyId;
+  // A quick reply on a template comes back as its own message type, carrying the
+  // payload the template was sent with rather than an interactive reply id. The
+  // payloads are the same ids, so both taps land on the same branches below.
+  const templateButtonPayload =
+    message && message.type === 'button' && message.button ? message.button.payload : null;
+  const interactiveReplyId = replyId || listReplyId || templateButtonPayload;
 
   if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.APPROVE_QUALIFICATION)) {
     const value = interactiveReplyId.slice(REVIEW_ACTIONS.APPROVE_QUALIFICATION.length);

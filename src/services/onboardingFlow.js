@@ -72,8 +72,12 @@ const {
   parseCertificateCollectionAction,
   classifyDocument
 } = require('./messageParser');
-const { archiveIncomingMedia } = require('./mediaStorage');
+const { archiveIncomingMedia, uploadBufferToFirebaseStorage } = require('./mediaStorage');
 const { syncProviderToPulsoHub } = require('./pulsoHubSyncService');
+const {
+  buildVerificationNotificationPatch,
+  recordReviewAlertSend
+} = require('./reviewAlertEscalation');
 const { inferProviderRegion, statusRequiresRegion } = require('./regionService');
 
 const pendingCertificatePromptTimers = new Map();
@@ -128,17 +132,6 @@ function buildAdditionalDocumentMessage(note) {
   return MESSAGES.additionalDocumentRequest.replace('{{note}}', note);
 }
 
-function buildVerificationNotificationPatch(notificationResult) {
-  if (!notificationResult || !notificationResult.sent) {
-    return null;
-  }
-
-  return {
-    notificationSentAt: new Date().toISOString(),
-    notificationRecipients: notificationResult.recipients || [],
-    notificationAttempts: notificationResult.attempts || []
-  };
-}
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -1782,14 +1775,44 @@ async function handleExpectedDutiesConfirmation(phone, message) {
   await sendAndLog(phone, 'text', MESSAGES.certificateRequest);
 }
 
+// A certificate the reviewer cannot be shown is not a certificate we have.
+// The alert sends the file as a link to the cloud archive — an app upload has no
+// Meta media id at all, and a WhatsApp media id expires in about thirty days —
+// so without that link there is nothing to show, now or later. Saying "sent for
+// verification" on a local-disk copy alone left the caregiver waiting for a
+// review that could never start; better to ask for the file again.
+function isCertificateSendable(attachment) {
+  if (!attachment || !attachment.id) {
+    return false;
+  }
+
+  if (attachment.cloudArchived && attachment.cloudStorageUrl) {
+    return true;
+  }
+
+  // Nothing is uploaded anywhere in a dry run, so the gate would block every
+  // local test.
+  return attachment.cloudArchiveStatus === 'dry_run';
+}
+
 async function addCertificate(phone, message) {
   const attachment = await archiveIncomingMedia(phone, message, 'certificate');
-  const archivedSuccessfully =
-    attachment &&
-    attachment.id &&
-    (attachment.archived || attachment.cloudArchived);
 
-  if (!archivedSuccessfully) {
+  if (!isCertificateSendable(attachment)) {
+    console.error(
+      '[CERTIFICATE_ARCHIVE_FAILED]',
+      JSON.stringify(
+        {
+          phone,
+          attachmentId: attachment ? attachment.id : null,
+          archiveStatus: attachment ? attachment.archiveStatus : null,
+          cloudArchiveStatus: attachment ? attachment.cloudArchiveStatus : null,
+          cloudError: attachment ? attachment.cloudError : null
+        },
+        null,
+        2
+      )
+    );
     await appendHistory(phone, {
       type: 'system',
       event: 'certificate_archive_failed',
@@ -1841,6 +1864,7 @@ async function finalizeCertificateCollection(phone) {
         verification: notificationPatch
       });
     }
+    await recordReviewAlertSend(phone, notificationPatch);
     await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
     await sendAndLog(phone, 'text', MESSAGES.verificationPending);
     return;
@@ -1874,27 +1898,46 @@ async function adminUploadCertificateFiles(phone, files, uploadedBy = 'admin') {
 
   const acceptedFiles = uploads.slice(0, remainingSlots);
   const archivedAt = new Date().toISOString();
-  const attachments = acceptedFiles.map((file, index) => {
+  const attachments = [];
+  for (let index = 0; index < acceptedFiles.length; index += 1) {
+    const file = acceptedFiles[index];
     const baseName = file.originalname || `manual-upload-${Date.now()}-${index}`;
     const safeName = String(baseName).replace(/[^\w.-]+/g, '_');
     const targetPath = path.join(providerDir, safeName);
     fs.writeFileSync(targetPath, file.buffer);
 
-    return {
+    // A file ops uploads here never passes through Meta, so it has no media id.
+    // The cloud archive is the only copy the reviewer's alert can point at.
+    const mimeType = file.mimetype || 'application/octet-stream';
+    const cloudUpload = await uploadBufferToFirebaseStorage(
+      phone,
+      'certificate',
+      safeName,
+      file.buffer,
+      mimeType
+    );
+
+    attachments.push({
       id: null,
-      type: file.mimetype && file.mimetype.startsWith('image/') ? 'image' : 'document',
+      type: mimeType.startsWith('image/') ? 'image' : 'document',
       category: 'certificate',
       fileName: safeName,
-      mimeType: file.mimetype || 'application/octet-stream',
+      mimeType,
       bytes: file.size || file.buffer.length,
       storagePath: targetPath,
       archived: true,
       archiveStatus: 'manual_upload',
+      cloudArchived: cloudUpload.uploaded,
+      cloudArchiveStatus: cloudUpload.cloudArchiveStatus,
+      cloudStorageBucket: cloudUpload.cloudStorageBucket || null,
+      cloudStoragePath: cloudUpload.cloudStoragePath || null,
+      cloudStorageUrl: cloudUpload.cloudStorageUrl || null,
+      cloudError: cloudUpload.cloudError || null,
       uploadedBy,
       archivedAt,
       receivedAt: archivedAt
-    };
-  });
+    });
+  }
 
   await updateProvider(phone, {
     documents: {
@@ -1945,6 +1988,7 @@ async function adminUploadCertificateFiles(phone, files, uploadedBy = 'admin') {
       verification: notificationPatch
     });
   }
+  await recordReviewAlertSend(phone, notificationPatch);
   await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
   return getProvider(phone);
 }
@@ -2231,6 +2275,7 @@ async function handleDistrict(phone, message) {
       verification: notificationPatch
     });
   }
+  await recordReviewAlertSend(phone, notificationPatch);
   await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
   await sendAndLog(phone, 'text', MESSAGES.verificationPending);
 }
@@ -2624,7 +2669,10 @@ async function resendLatestPendingCertificateReview(reviewerPhone) {
       ? pendingProvider.documents.certificateAttachments || []
       : [];
   const notificationResult = await notifyCertificateUploaded(pendingProvider, attachments);
-  const notificationPatch = buildVerificationNotificationPatch(notificationResult);
+  const notificationPatch = buildVerificationNotificationPatch(
+    notificationResult,
+    pendingProvider.verification ? pendingProvider.verification.reviewAlert : null
+  );
   if (!notificationPatch) {
     return false;
   }
@@ -2632,6 +2680,7 @@ async function resendLatestPendingCertificateReview(reviewerPhone) {
   await updateProvider(pendingProvider.phone, {
     verification: notificationPatch
   });
+  await recordReviewAlertSend(pendingProvider.phone, notificationPatch);
   await appendHistory(pendingProvider.phone, {
     type: 'system',
     event: 'verification_notification_resent_after_reviewer_reply',
