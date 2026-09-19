@@ -377,6 +377,16 @@ function formatReviewTemplateValue(value) {
   return text || '-';
 }
 
+// The nine lines the old free-form alert showed, in the same order and from the
+// same helper, so the template and the summary can never drift apart. The
+// template's body is fixed at approval, so this list and the {{1}}..{{9}} in
+// certificate_review_v3_* must stay in step.
+function buildCertificateReviewBodyValues(provider) {
+  return formatProviderSummary(provider).map((line) =>
+    formatReviewTemplateValue(line.slice(line.indexOf(':') + 1))
+  );
+}
+
 function buildCertificateReviewV2Components(provider, attachment) {
   const link = attachment && attachment.cloudStorageUrl ? attachment.cloudStorageUrl : null;
   if (!link) {
@@ -397,17 +407,7 @@ function buildCertificateReviewV2Components(provider, attachment) {
     { type: 'header', parameters: [header] },
     {
       type: 'body',
-      parameters: [
-        { type: 'text', text: formatReviewTemplateValue(provider && provider.fullName) },
-        { type: 'text', text: formatReviewTemplateValue(provider && provider.phone) },
-        {
-          type: 'text',
-          text: formatReviewTemplateValue(
-            provider && provider.qualification ? String(provider.qualification).toUpperCase() : null
-          )
-        },
-        { type: 'text', text: formatReviewTemplateValue(provider && provider.district) }
-      ]
+      parameters: buildCertificateReviewBodyValues(provider).map((text) => ({ type: 'text', text }))
     },
     // The payloads are the same ids the interactive buttons use, so a tap on a
     // template button and a tap on an in-window button reach the same handler.
@@ -1241,6 +1241,7 @@ function parseReviewerAction(message) {
 }
 
 module.exports = {
+  buildCertificateReviewBodyValues,
   getRejectReasonDetails,
   isReviewerPhone,
   notifyAgentHelpRequested,

@@ -13,8 +13,8 @@ const DEFAULT_CERTIFICATE_REVIEW_TEMPLATE_NAME = 'certificate_review_alert';
 // The review alert that carries the certificate and the buttons itself, so it
 // reaches the reviewer outside the 24-hour window. A template's header format is
 // fixed when it is created, so a PDF and a photo need one template each.
-const DEFAULT_CERTIFICATE_REVIEW_FILE_TEMPLATE_NAME = 'certificate_review_v2_file';
-const DEFAULT_CERTIFICATE_REVIEW_IMAGE_TEMPLATE_NAME = 'certificate_review_v2_image';
+const DEFAULT_CERTIFICATE_REVIEW_FILE_TEMPLATE_NAME = 'certificate_review_v3_file';
+const DEFAULT_CERTIFICATE_REVIEW_IMAGE_TEMPLATE_NAME = 'certificate_review_v3_image';
 const STALE_PULSO_VIDEO_MEDIA_IDS = new Set([
   '969942785736280',
   '908615228890468'

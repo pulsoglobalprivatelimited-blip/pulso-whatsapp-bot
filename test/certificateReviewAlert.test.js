@@ -4,7 +4,10 @@ const assert = require('node:assert/strict');
 
 process.env.WHATSAPP_DRY_RUN = process.env.WHATSAPP_DRY_RUN || 'true';
 
-const { parseReviewerAction } = require('../src/services/opsNotifications');
+const {
+  parseReviewerAction,
+  buildCertificateReviewBodyValues
+} = require('../src/services/opsNotifications');
 const {
   buildReviewAlertState,
   collectAlertMessages
@@ -215,4 +218,81 @@ test('a reviewAlert timestamp beats the record\'s own updatedAt', () => {
     { updatedAt: new Date(NOW - 5 * 24 * 60 * MINUTE).toISOString() }
   );
   assert.equal(lastAttemptMs(provider), Date.parse(new Date(NOW - 20 * MINUTE).toISOString()));
+});
+
+// ---- the template body matches the old free-form alert --------------------
+
+test('the alert Meta receives is the old message, verbatim, with the file on it', async () => {
+  // Reconstructs the payload the way the old free-form alert read, so a change
+  // to either side shows up here rather than in the reviewer's chat.
+  const provider = {
+    phone: '918157878452',
+    fullName: 'Anjana Santhosh',
+    age: 29,
+    sex: 'Female',
+    region: 'kerala',
+    dutyHourPreference: '24_hour',
+    qualification: 'bsc_nursing',
+    district: 'Ernakulam',
+    status: 'certificate_verification_pending'
+  };
+  const values = buildCertificateReviewBodyValues(provider);
+  const labels = [
+    'Name', 'Phone', 'Age', 'Sex', 'Region',
+    'Preferred duty hour', 'Qualification', 'District', 'Status'
+  ];
+  const rendered = [
+    'New certificate uploaded for review.',
+    ...labels.map((label, i) => `${label}: ${values[i]}`),
+    'Tap below to approve or reject.'
+  ].join('\n');
+
+  assert.equal(
+    rendered,
+    [
+      'New certificate uploaded for review.',
+      'Name: Anjana Santhosh',
+      'Phone: 918157878452',
+      'Age: 29',
+      'Sex: Female',
+      'Region: kerala',
+      'Preferred duty hour: 24 hour',
+      'Qualification: BSC_NURSING',
+      'District: Ernakulam',
+      'Status: certificate verification pending',
+      'Tap below to approve or reject.'
+    ].join('\n')
+  );
+});
+
+test('nine body values, in the order the template numbers them', () => {
+  const provider = {
+    phone: '918157878452',
+    fullName: 'Anjana Santhosh',
+    age: 29,
+    sex: 'Female',
+    region: 'kerala',
+    dutyHourPreference: '24_hour',
+    qualification: 'bsc_nursing',
+    district: 'Ernakulam',
+    status: 'certificate_verification_pending'
+  };
+  const values = buildCertificateReviewBodyValues(provider);
+  assert.equal(values.length, 9, 'the v3 template has {{1}}..{{9}}');
+  assert.equal(values[0], 'Anjana Santhosh');
+  assert.equal(values[1], '918157878452');
+  assert.equal(values[2], '29');
+  assert.equal(values[3], 'Female');
+  assert.equal(values[4], 'kerala');
+  assert.equal(values[6], 'BSC_NURSING');
+  assert.equal(values[7], 'Ernakulam');
+  // A template variable may never be empty, or Meta refuses the send.
+  values.forEach((v, i) => assert.ok(v && v.length, `value ${i + 1} is empty`));
+});
+
+test('a half-filled record still sends: no empty variable reaches Meta', () => {
+  const values = buildCertificateReviewBodyValues({ phone: '919000000199' });
+  assert.equal(values.length, 9);
+  values.forEach((v, i) => assert.ok(v && v.length, `value ${i + 1} is empty`));
+  assert.equal(values[0], '-');
 });

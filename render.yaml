@@ -107,9 +107,9 @@ services:
       - key: CERTIFICATE_REVIEW_V2_ENABLED
         value: "false"
       - key: CERTIFICATE_REVIEW_FILE_TEMPLATE_NAME
-        value: "certificate_review_v2_file"
+        value: "certificate_review_v3_file"
       - key: CERTIFICATE_REVIEW_IMAGE_TEMPLATE_NAME
-        value: "certificate_review_v2_image"
+        value: "certificate_review_v3_image"
       - key: CERTIFICATE_REVIEW_CATCH_UP_INTERVAL_MINUTES
         value: "30"
       - key: CERTIFICATE_REVIEW_CATCH_UP_STALE_MINUTES
