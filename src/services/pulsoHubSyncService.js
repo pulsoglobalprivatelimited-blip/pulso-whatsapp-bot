@@ -52,12 +52,19 @@ function buildCertificateReviewAlertSummary(provider) {
   const failedMessage = (state.messages || []).find(
     (message) => message && message.status === 'failed' && message.error
   );
+  // With two template versions live, "which one failed" is the first question
+  // anyone asks of a failed alert.
+  const templateName =
+    (failedMessage && failedMessage.templateName) ||
+    (state.messages || []).map((message) => message && message.templateName).find(Boolean) ||
+    null;
 
   return {
     delivered: state.delivered === true,
     failed: state.failed === true,
     retryCount: state.retryCount || 0,
     lastSentAt: state.lastSentAt || null,
+    templateName,
     recipients: Array.from(
       new Set((state.messages || []).map((message) => message && message.to).filter(Boolean))
     ),

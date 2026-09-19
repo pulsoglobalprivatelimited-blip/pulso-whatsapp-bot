@@ -35,6 +35,7 @@ function collectAlertMessages(attempts) {
         id: message.id,
         to: attempt.to || null,
         type: attempt.type,
+        templateName: attempt.templateName || null,
         actionable: ACTIONABLE_ALERT_TYPES.includes(attempt.type),
         status: 'sent',
         error: null,

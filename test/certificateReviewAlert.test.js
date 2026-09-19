@@ -296,3 +296,20 @@ test('a half-filled record still sends: no empty variable reaches Meta', () => {
   values.forEach((v, i) => assert.ok(v && v.length, `value ${i + 1} is empty`));
   assert.equal(values[0], '-');
 });
+
+test('a failed alert reports which template it tried', () => {
+  const state = buildReviewAlertState({
+    sent: true,
+    recipients: ['910000000000'],
+    attempts: [
+      {
+        to: '910000000000',
+        type: 'review_template_v2',
+        ok: true,
+        templateName: 'certificate_review_v3_image',
+        messages: [{ id: 'm1' }]
+      }
+    ]
+  });
+  assert.equal(state.messages[0].templateName, 'certificate_review_v3_image');
+});
