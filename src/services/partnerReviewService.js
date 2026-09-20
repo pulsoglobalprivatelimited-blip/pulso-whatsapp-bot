@@ -7,7 +7,9 @@ const axios = require('axios');
 const config = require('../config');
 
 const SYNC_FUNCTION = 'syncprovideronboardingfrombot';
-const REVIEW_FUNCTION = 'partnerreviewfrombot';
+// The cloudfunctions.net path is case-sensitive, so the replacement has to
+// carry the function's real name; the match below stays case-insensitive.
+const REVIEW_FUNCTION = 'partnerReviewFromBot';
 
 /** Both functions live in one project and share the Cloud Run hash, so the
     review URL follows from the configured sync URL. */
