@@ -56,17 +56,26 @@ const karnatakaDashboardLink = document.getElementById('karnataka-dashboard-link
 const regionFilterRow = document.getElementById('region-filter-row');
 const adminManagementLink = document.getElementById('admin-management-link');
 
+/* The provider desk shares /admin with the agency and customer boards, and all
+   three use the same filter-chip attributes. Every chip lookup here is scoped
+   to this panel so toggling a provider filter can't reach into theirs. */
+const providerRoot = document.getElementById('side-provider') || document;
+
+function providerAll(selector) {
+  return providerRoot.querySelectorAll(selector);
+}
+
 configureDashboardShell();
 loadCurrentAdmin().catch(() => {});
 
 document.getElementById('refresh-button').addEventListener('click', loadProviders);
-document.querySelectorAll('.filter').forEach((button) => {
+providerAll('.filter').forEach((button) => {
   if (!button.dataset.filter) {
     return;
   }
 
   button.addEventListener('click', () => {
-    document.querySelectorAll('[data-filter]').forEach((item) => item.classList.remove('active'));
+    providerAll('[data-filter]').forEach((item) => item.classList.remove('active'));
     button.classList.add('active');
     currentFilter = button.dataset.filter;
     currentCompletedRange = 'all';
@@ -76,18 +85,18 @@ document.querySelectorAll('.filter').forEach((button) => {
     renderList();
   });
 });
-document.querySelectorAll('[data-region-filter]').forEach((button) => {
+providerAll('[data-region-filter]').forEach((button) => {
   button.addEventListener('click', () => {
-    document.querySelectorAll('[data-region-filter]').forEach((item) => item.classList.remove('active'));
+    providerAll('[data-region-filter]').forEach((item) => item.classList.remove('active'));
     button.classList.add('active');
     currentRegionFilter = button.dataset.regionFilter;
     updateDashboardMetrics();
     renderList();
   });
 });
-document.querySelectorAll('[data-app-filter]').forEach((button) => {
+providerAll('[data-app-filter]').forEach((button) => {
   button.addEventListener('click', () => {
-    document.querySelectorAll('[data-app-filter]').forEach((item) => item.classList.remove('active'));
+    providerAll('[data-app-filter]').forEach((item) => item.classList.remove('active'));
     button.classList.add('active');
     currentAppFilter = button.dataset.appFilter;
     renderList();
@@ -126,9 +135,9 @@ completed7dMetric.addEventListener('click', () => {
 completed30dMetric.addEventListener('click', () => {
   applyCompletedMetricFilter('30d');
 });
-document.querySelectorAll('[data-completed-range]').forEach((button) => {
+providerAll('[data-completed-range]').forEach((button) => {
   button.addEventListener('click', () => {
-    document.querySelectorAll('[data-completed-range]').forEach((item) => item.classList.remove('active'));
+    providerAll('[data-completed-range]').forEach((item) => item.classList.remove('active'));
     button.classList.add('active');
     currentCompletedRange = button.dataset.completedRange;
     currentCompletedSex = 'all';
@@ -296,7 +305,7 @@ function configureDashboardShell() {
     regionFilterRow.classList.add('hidden');
   }
 
-  document.querySelectorAll('[data-region-filter]').forEach((button) => {
+  providerAll('[data-region-filter]').forEach((button) => {
     button.classList.toggle('active', button.dataset.regionFilter === dashboardRegion);
   });
 }
@@ -448,13 +457,13 @@ function resetListSelectionForMetric() {
 }
 
 function updateStatusFilterButtons() {
-  document.querySelectorAll('.filter').forEach((item) => {
+  providerAll('.filter').forEach((item) => {
     item.classList.toggle('active', item.dataset.filter === currentFilter);
   });
 }
 
 function scrollBoardIntoView() {
-  document.querySelector('.board')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  providerRoot.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function applyStatusMetricFilter(status) {
@@ -576,7 +585,7 @@ function updateCompletedRangeFilterState() {
   }
 
   completedRangeFilters.classList.toggle('hidden', currentFilter !== 'completed');
-  document.querySelectorAll('[data-completed-range]').forEach((button) => {
+  providerAll('[data-completed-range]').forEach((button) => {
     button.classList.toggle('active', button.dataset.completedRange === currentCompletedRange);
   });
 }

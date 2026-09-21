@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260510b">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260921a">
 </head>
 <body>
   <main class="layout">
@@ -21,7 +21,18 @@
       <p class="eyebrow" id="dashboard-eyebrow">Pulso Operations</p>
       <h1 id="dashboard-title">Care Provider Verification Desk</h1>
       <p class="subtitle" id="dashboard-subtitle">Review Meta ad leads, verify certificates, and unblock onboarding without leaving WhatsApp context.</p>
-      <div class="hero-meta">
+
+      <!-- Which side of the business you are looking at. Swaps the desk in
+           place; admin-sides.js keeps the choice in the URL and in storage. -->
+      <div class="side-switch" id="side-switch" role="tablist" aria-label="Which side of the business">
+        <button class="side-tab" type="button" role="tab" data-side="provider" aria-selected="true" aria-controls="side-provider">Provider</button>
+        <button class="side-tab" type="button" role="tab" data-side="agency" aria-selected="false" aria-controls="side-agency">Partner agency</button>
+        <button class="side-tab" type="button" role="tab" data-side="customer" aria-selected="false" aria-controls="side-customer">Direct customer</button>
+      </div>
+
+      <div class="hero-meta" data-side-metrics="agency" hidden></div>
+      <div class="hero-meta" data-side-metrics="customer" hidden></div>
+      <div class="hero-meta" data-side-metrics="provider">
         <button class="metric metric-button" id="pending-metric" type="button">
           <span id="pending-count">0</span>
           <label>Pending verification</label>
@@ -69,7 +80,7 @@
       </div>
     </section>
 
-    <section class="board">
+    <section class="board side-panel" id="side-provider" role="tabpanel" aria-labelledby="side-switch">
       <div class="board-header">
         <div>
           <p class="eyebrow">Queue</p>
@@ -271,9 +282,78 @@
         </section>
       </div>
     </section>
+
+    <!-- Filled from the template below the first time each side is opened, so
+         plain /admin never fetches booking chats it isn't showing. -->
+    <div class="side-panel" id="side-agency" role="tabpanel" aria-labelledby="side-switch" hidden></div>
+    <div class="side-panel" id="side-customer" role="tabpanel" aria-labelledby="side-switch" hidden></div>
   </main>
 
-  <script src="/admin/assets/dashboard.js?v=20260504a"></script>
+  <!-- One board skeleton, cloned per side. Elements carry data-el rather than
+       ids so two clones can coexist on this page. -->
+  <template id="booking-board-template">
+    <section class="board">
+      <div class="board-header">
+        <div>
+          <p class="eyebrow">Queue</p>
+          <h2 data-el="board-title">Booking conversations</h2>
+        </div>
+        <div class="actions" data-el="board-actions">
+          <button data-el="refresh-button" class="button secondary" type="button">Refresh</button>
+        </div>
+      </div>
+
+      <div data-el="filter-rows"></div>
+
+      <div class="search-row">
+        <label class="search-field">
+          <span data-el="search-label">Search</span>
+          <input data-el="booking-search" type="search" placeholder="Search">
+        </label>
+        <button data-el="clear-search-button" class="button secondary" type="button">Clear</button>
+      </div>
+
+      <div class="content" data-el="booking-content">
+        <aside data-el="list-panel" class="list-panel">
+          <div data-el="booking-list" class="provider-list"></div>
+        </aside>
+
+        <section data-el="detail-panel" class="detail-panel">
+          <div data-el="booking-detail" class="detail hidden">
+            <div class="mobile-detail-bar">
+              <button data-el="back-to-list-button" class="button secondary" type="button">Back to list</button>
+            </div>
+
+            <div class="detail-header">
+              <div>
+                <p data-el="detail-phone" class="detail-phone"></p>
+                <h3 data-el="detail-status"></h3>
+              </div>
+              <div class="detail-pills">
+                <span data-el="detail-enquiry-type" class="pill enquiry-pill hidden"></span>
+                <span data-el="detail-step" class="pill"></span>
+              </div>
+            </div>
+
+            <article class="card history-card">
+              <div class="history-card-head">
+                <h4>WhatsApp chat history</h4>
+                <button data-el="history-bottom-button" class="button secondary" type="button">Jump to bottom</button>
+              </div>
+              <div data-el="history-list" class="history-list"></div>
+            </article>
+
+            <div class="detail-grid" data-el="detail-grid"></div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </template>
+
+  <script src="/admin/assets/dashboard.js?v=20260921a"></script>
+  <script src="/admin/assets/partner-review.js?v=20260921a"></script>
+  <script src="/admin/assets/booking-dashboard.js?v=20260921a"></script>
+  <script src="/admin/assets/admin-sides.js?v=20260921a"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>
 </html>

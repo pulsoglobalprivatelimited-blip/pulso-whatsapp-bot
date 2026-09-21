@@ -7,8 +7,8 @@
   'use strict';
 
   const Chat = window.PulsoChat;
+  const Partner = window.PulsoPartnerReview;
   const REFRESH_MS = 25000;
-  const PRE_CHOICE_STEPS = ['', 'language', 'region', 'intent'];
 
   const els = {
     app: document.getElementById('inbox-app'),
@@ -144,51 +144,13 @@
     return chat.status === 'booking_completed';
   }
 
-  // Where an agency has got to with the terms matters more than which step the
-  // bot is on, so it takes the pill once the terms have been sent.
-  const TERMS_LABELS = {
-    document_received: 'To verify',
-    terms_sent: 'Terms sent',
-    terms_accepted: 'Terms accepted',
-    terms_declined: 'Terms declined',
-    invited: 'Invited'
-  };
-
-  function termsState(chat) {
-    return TERMS_LABELS[String(chat.partnerStatus || '')] ? String(chat.partnerStatus) : '';
-  }
-
-  function statusLabel(chat) {
-    const terms = termsState(chat);
-    if (terms) return TERMS_LABELS[terms];
-    return isCompleted(chat) ? 'Completed' : Chat.formatStatus(chat.currentStep || 'active');
-  }
-
-  function statusPillClass(chat) {
-    const terms = termsState(chat);
-    // "To verify" is the one a reviewer has to act on, so it reads loudest.
-    if (terms === 'document_received') return 'attention';
-    if (terms === 'terms_accepted' || terms === 'invited') return 'done';
-    if (terms === 'terms_declined') return 'attention';
-    if (terms === 'terms_sent') return 'waiting';
-    return isCompleted(chat) ? 'done' : '';
-  }
-
-  function resolveEnquiryType(chat) {
-    const tagged = String(chat.enquiryType || '').toLowerCase();
-    if (tagged === 'care' || tagged === 'job' || tagged === 'partner') return tagged;
-    if (String(chat.currentStep || '').startsWith('partner_')) return 'partner';
-    const step = String(chat.currentStep || '').toLowerCase();
-    if (step && !PRE_CHOICE_STEPS.includes(step)) return 'care';
-    return 'undecided';
-  }
-
-  function enquiryMeta(type) {
-    if (type === 'care') return { label: 'Booking', className: 'care' };
-    if (type === 'job') return { label: 'Job enquiry', className: 'job' };
-    if (type === 'partner') return { label: 'Agency', className: 'partner' };
-    return { label: 'Undecided', className: 'undecided' };
-  }
+  // Agency vocabulary and the review round trip live in PulsoPartnerReview, so
+  // this inbox and the Partner Agency desk agree on what a chat is and on what
+  // approving one does. Only the DOM wiring below is inbox-specific.
+  const statusLabel = Partner.statusLabel;
+  const statusPillClass = Partner.statusPillClass;
+  const resolveEnquiryType = Partner.resolveEnquiryType;
+  const enquiryMeta = Partner.enquiryMeta;
 
   function rowTime(chat) {
     return chat.updatedAt || chat.lastMessageAt || chat.createdAt || null;
@@ -323,30 +285,12 @@
   }
 
   /* ---- partner review --------------------------------------------------- */
-  const DOC_STATUSES = new Set([
-    'document_received', 'asked_again', 'terms_sent', 'terms_accepted', 'terms_declined', 'invited'
-  ]);
-
-  const REVIEW_DONE = {
-    terms_sent: { pill: 'waiting', label: 'Terms sent', note: 'Waiting for the agency to accept.' },
-    terms_accepted: { pill: 'done', label: 'Terms accepted', note: 'The partner account has been created.' },
-    terms_declined: { pill: 'attention', label: 'Terms declined', note: 'No account was created.' },
-    invited: { pill: 'done', label: 'Invited', note: 'The sign-in link has been sent.' },
-    asked_again: { pill: 'attention', label: 'Asked again', note: 'Waiting for a clearer document.' }
-  };
-
   function renderReview(chat) {
     reviewChat = chat || null;
-    const status = String((chat && chat.partnerStatus) || '');
-    const isPartner = resolveEnquiryType(chat || {}) === 'partner';
-    // The document lives on the enquiry, not on this chat doc, so the card is
-    // driven by the status: every one of these means a document arrived.
-    const hasDoc = DOC_STATUSES.has(status);
-    const toVerify = isPartner && status === 'document_received';
-    const done = isPartner ? REVIEW_DONE[status] : null;
+    const { hasDoc, toVerify, done } = Partner.reviewState(chat);
 
-    els.docCard.classList.toggle('hidden', !(isPartner && hasDoc));
-    if (isPartner && hasDoc) {
+    els.docCard.classList.toggle('hidden', !hasDoc);
+    if (hasDoc) {
       els.docSub.textContent = toVerify ? 'Tap View to check it' : 'Already reviewed';
     }
 
@@ -374,7 +318,7 @@
     els.app.classList.add('sheet-open');
     els.viewerBody.innerHTML = '<p class="viewer-msg">Opening the document…</p>';
     try {
-      const data = await fetchJson(`/admin/booking-chats/${encodeURIComponent(selectedPhone)}/document`);
+      const data = await Partner.openDocument(selectedPhone);
       const mime = String(data.mime || '');
       els.viewerBody.innerHTML = mime.includes('image')
         ? `<img src="${Chat.escapeHtml(data.url)}" alt="Registration document">`
@@ -397,11 +341,11 @@
     if (!phone) return;
     setReviewBusy(true, action === 'approve' ? 'Sending…' : 'Asking…');
     try {
-      await fetchJson(`/admin/booking-chats/${encodeURIComponent(phone)}/${action === 'approve' ? 'approve' : 'ask-again'}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(reason ? { reason } : {})
-      });
+      if (action === 'approve') {
+        await Partner.approve(phone);
+      } else {
+        await Partner.askAgain(phone, reason);
+      }
       closeViewer();
       await loadList();
       const fresh = chats.find((c) => chatPhone(c) === phone);
@@ -697,18 +641,7 @@
   }
 
   function partnerFacts(chat) {
-    if (resolveEnquiryType(chat) !== 'partner' && !chat.persona) return [];
-    const entry = chat.partnerEntry === 'ad' ? `Meta ad ${chat.partnerAdId || ''}`.trim() : chat.partnerEntry ? `WhatsApp (${chat.partnerEntry})` : '';
-    return [
-      fact('Agency', chat.partnerAgencyName),
-      fact('Who', chat.persona === 'job' ? 'Job-seeker (from partner ad)' : chat.persona === 'agency' ? 'Home care agency' : ''),
-      fact('Partner status', chat.partnerStatus && Chat.formatStatus(chat.partnerStatus)),
-      fact('Read up to', chat.partnerPitchStep ? `piece ${chat.partnerPitchStep} of 4` : ''),
-      fact('District', chat.partnerDistrict && Chat.formatStatus(chat.partnerDistrict)),
-      fact('Came from', entry),
-      fact('Region', chat.region && Chat.formatStatus(chat.region)),
-      fact('Language', chat.language)
-    ];
+    return Partner.partnerFacts(chat).map((item) => fact(item.label, item.value));
   }
 
   function renderFacts(chat) {

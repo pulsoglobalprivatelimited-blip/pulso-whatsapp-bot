@@ -137,6 +137,68 @@ h1 {
   flex-wrap: wrap;
 }
 
+/* Which side of the business the desk is showing. Sits between the subtitle
+   and the metric tiles, above everything it changes. */
+.side-switch {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 24px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  flex-wrap: wrap;
+}
+
+.side-tab {
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 11px 22px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.side-tab:hover {
+  color: var(--text);
+}
+
+.side-tab[aria-selected="true"] {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* `hidden` alone loses to the display these carry from their own class, so
+   both sides of the switch spell it out. */
+.side-panel[hidden],
+.hero-meta[hidden] {
+  display: none;
+}
+
+.card-note {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+  .side-switch {
+    display: flex;
+    width: 100%;
+  }
+
+  .side-tab {
+    flex: 1;
+    padding: 11px 12px;
+    text-align: center;
+    white-space: normal;
+  }
+}
+
 .search-row {
   display: flex;
   gap: 12px;
@@ -412,6 +474,34 @@ h1 {
 .pill.enquiry-pill.undecided {
   background: rgba(90, 90, 90, 0.1);
   color: #6b6b6b;
+}
+
+.pill.enquiry-pill.partner {
+  background: #e3f1ee;
+  color: #0b5d5a;
+}
+
+/* Where an agency has got to with the terms, on the row badge and the review
+   card. "Attention" is the one a reviewer still has to act on. */
+.enquiry-badge.attention,
+.pill.attention {
+  border-color: rgba(183, 93, 50, 0.4);
+  background: rgba(183, 93, 50, 0.16);
+  color: #9c4a24;
+}
+
+.enquiry-badge.waiting,
+.pill.waiting {
+  border-color: rgba(89, 66, 43, 0.2);
+  background: rgba(89, 66, 43, 0.09);
+  color: var(--muted);
+}
+
+.enquiry-badge.done,
+.pill.done {
+  border-color: rgba(45, 122, 88, 0.26);
+  background: rgba(45, 122, 88, 0.14);
+  color: var(--success);
 }
 
 .phone-link {
@@ -894,6 +984,14 @@ dd {
   .metric {
     min-width: 0;
     width: 100%;
+  }
+
+  /* Flex items refuse to shrink past their text by default, and three labels
+     this long overflow a phone. min-width lets them wrap instead. */
+  .side-tab {
+    min-width: 0;
+    padding: 10px 8px;
+    font-size: 0.85rem;
   }
 
   .content,
