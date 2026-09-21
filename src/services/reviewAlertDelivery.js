@@ -64,6 +64,9 @@ function summarizeReviewAlert(messages, previous = {}) {
     ...previous,
     messages,
     delivered,
+    // When delivery landed, so the state can be read later. `delivered` alone
+    // could not tell a receipt from two minutes ago from one from two days ago.
+    deliveredAt: delivered ? previous.deliveredAt || new Date().toISOString() : previous.deliveredAt || null,
     failed,
     // Nothing to act on at all is a failure of the same kind: the reviewer was
     // never given a way in.
@@ -176,6 +179,7 @@ async function applyReviewAlertStatus(status) {
 }
 
 module.exports = {
+  summarizeReviewAlert,
   ACTIONABLE_ALERT_TYPES,
   applyReviewAlertStatus,
   buildReviewAlertState,

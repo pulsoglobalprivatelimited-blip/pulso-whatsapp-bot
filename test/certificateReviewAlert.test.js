@@ -10,7 +10,8 @@ const {
 } = require('../src/services/opsNotifications');
 const {
   buildReviewAlertState,
-  collectAlertMessages
+  collectAlertMessages,
+  summarizeReviewAlert
 } = require('../src/services/reviewAlertDelivery');
 const {
   needsCatchUp,
@@ -190,6 +191,49 @@ test('it gives up after three tries and leaves the ops alert standing', () => {
     lastSentAt: new Date(NOW - 5 * 60 * MINUTE).toISOString()
   });
   assert.equal(needsCatchUp(provider, NOW), false);
+});
+
+test('an alert that went out but is not yet confirmed is left alone', () => {
+  // The bug this guards: WhatsApp can take longer than the stale window to
+  // confirm delivery. Resending on that silence sent the reviewer a second copy
+  // of a certificate they already had, buttons and all.
+  const provider = pendingProvider({
+    delivered: false,
+    failed: false,
+    undeliverable: false,
+    retryCount: 0,
+    lastSentAt: new Date(NOW - 45 * MINUTE).toISOString()
+  });
+  assert.equal(needsCatchUp(provider, NOW), false);
+});
+
+test('an alert with nothing actionable on it is still swept', () => {
+  // No archived file, template unapproved: the reviewer was never given a way
+  // in, so retrying is the whole point of the sweep.
+  const provider = pendingProvider({
+    delivered: false,
+    failed: false,
+    undeliverable: true,
+    retryCount: 0,
+    lastSentAt: new Date(NOW - 45 * MINUTE).toISOString()
+  });
+  assert.equal(needsCatchUp(provider, NOW), true);
+});
+
+test('delivery records when it landed, and keeps the first time', () => {
+  const first = summarizeReviewAlert([{ id: 'a', actionable: true, status: 'delivered' }], {});
+  assert.equal(first.delivered, true);
+  assert.ok(first.deliveredAt, 'deliveredAt is recorded');
+
+  const later = summarizeReviewAlert(
+    [{ id: 'a', actionable: true, status: 'read' }],
+    { deliveredAt: first.deliveredAt }
+  );
+  assert.equal(later.deliveredAt, first.deliveredAt, 'a later status does not overwrite it');
+
+  const undelivered = summarizeReviewAlert([{ id: 'a', actionable: true, status: 'sent' }], {});
+  assert.equal(undelivered.delivered, false);
+  assert.equal(undelivered.deliveredAt, null);
 });
 
 test('a record from before this tracking existed falls back to when it last moved', () => {

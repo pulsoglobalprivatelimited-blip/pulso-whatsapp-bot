@@ -74,6 +74,15 @@ function needsCatchUp(provider, now = Date.now()) {
     return false;
   }
 
+  // A delivery receipt that has not arrived is not the same as an alert that
+  // never went out. WhatsApp can take longer than the stale window to confirm,
+  // and resending on that silence sent reviewers a second copy of a message
+  // they already had. Only a send that actually failed is worth retrying:
+  // nothing to act on, or every actionable message rejected.
+  if (reviewAlert && !reviewAlert.failed && !reviewAlert.undeliverable) {
+    return false;
+  }
+
   // An alert sent a minute ago may simply not have been delivered yet; only a
   // silence longer than the window counts as stuck. Records from before this
   // tracking existed have no reviewAlert at all, so fall back to the last time
