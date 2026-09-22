@@ -1454,24 +1454,42 @@ dd {
     padding: 6px 0 10px;
   }
 
-  .content.mobile-detail-open .review-actions,
-  .content.mobile-detail-open .detail-actions {
+  /* Approve / Reject live in #review-form's plain .actions div - there is no
+     .review-actions class, which is why the first attempt at this pinned
+     nothing. Only this pair is pinned: the other review cards have their own
+     .actions and would stack on top of each other down here. */
+  .content.mobile-detail-open #review-form .actions {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 41;
     display: flex;
+    flex-direction: row;
+    align-items: center;
     gap: 8px;
+    margin: 0;
     padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
     background: var(--panel-strong);
     border-top: 1px solid var(--line);
   }
 
-  .content.mobile-detail-open .review-actions .button,
-  .content.mobile-detail-open .detail-actions .button {
+  .content.mobile-detail-open #review-form .actions .button {
     flex: 1;
+    width: auto;
     min-height: 46px;
+  }
+}
+
+/* position:fixed resolves against the nearest ancestor carrying a filter,
+   backdrop-filter or transform - not the viewport. .board has
+   backdrop-filter: blur(16px), so every fixed child above was being contained
+   by the board and could never cover the screen. The blur is decoration; on a
+   phone it also costs a repaint on every scroll frame. */
+@media (max-width: 720px) {
+  .board,
+  .hero {
+    backdrop-filter: none;
   }
 }
 

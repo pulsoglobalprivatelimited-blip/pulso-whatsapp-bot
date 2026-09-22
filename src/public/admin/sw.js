@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pulso-admin-v12';
+const CACHE_NAME = 'pulso-admin-v13';
 const STATIC_ASSETS = [
   '/admin/login',
   '/admin/provider-support',
@@ -6,7 +6,7 @@ const STATIC_ASSETS = [
   '/admin/bookings/kerala',
   '/admin/bookings/karnataka',
   '/admin/manifest.webmanifest',
-  '/admin/assets/dashboard.css?v=20260922c',
+  '/admin/assets/dashboard.css?v=20260922d',
   '/admin/assets/admin-pwa.js?v=20260419c',
   '/admin/assets/pwa/icon.svg',
   '/admin/assets/pwa/icon-maskable.svg'
