@@ -13,9 +13,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260922d">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260923a">
 </head>
-<body>
+<!-- `desk-shell` opts this page into the phone chrome: the fixed tab bar, the
+     segment strip and the sheets. The other admin pages share this stylesheet
+     and keep their own layout. -->
+<body class="desk-shell">
   <main class="layout">
     <section class="hero">
       <p class="eyebrow" id="dashboard-eyebrow">Pulso Operations</p>
@@ -30,9 +33,31 @@
         <button class="side-tab" type="button" role="tab" data-side="customer" aria-selected="false" aria-controls="side-customer">Customer</button>
       </div>
 
-      <div class="hero-meta" data-side-metrics="agency" hidden></div>
-      <div class="hero-meta" data-side-metrics="customer" hidden></div>
-      <div class="hero-meta" data-side-metrics="provider">
+      <!-- Phone only: the bar carries search and everything that used to be a
+           row of navigation buttons. -->
+      <div class="desk-bar-actions">
+        <button class="desk-icon-button" type="button" data-desk-search-toggle aria-label="Search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M16.5 16.5 21 21"></path></svg>
+        </button>
+        <button class="desk-icon-button" type="button" data-sheet-open="stats" aria-label="The numbers">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"></path></svg>
+        </button>
+        <button class="desk-icon-button" type="button" data-sheet-open="menu" aria-label="More">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.4"></circle><circle cx="12" cy="12" r="1.4"></circle><circle cx="12" cy="19" r="1.4"></circle></svg>
+        </button>
+      </div>
+
+      <!-- On a desktop this wrapper is `display: contents` and the counters sit
+           in the hero exactly where they always did. On a phone it is a sheet. -->
+      <div class="desk-sheet" data-sheet="stats" aria-hidden="true">
+        <div class="desk-sheet-head">
+          <span class="desk-grab"></span>
+          <h4>The numbers</h4>
+          <p>Tap one to filter the queue by it.</p>
+        </div>
+        <div class="hero-meta" data-side-metrics="agency" hidden></div>
+        <div class="hero-meta" data-side-metrics="customer" hidden></div>
+        <div class="hero-meta" data-side-metrics="provider">
         <button class="metric metric-button" id="pending-metric" type="button">
           <span id="pending-count">0</span>
           <label>Pending verification</label>
@@ -77,6 +102,7 @@
           <span id="completed-30d-count">0</span>
           <label>Completed in 30 days</label>
         </button>
+        </div>
       </div>
     </section>
 
@@ -88,12 +114,12 @@
         </div>
         <div class="actions">
           <a class="button secondary" href="/admin/inbox">Inbox</a>
-          <a id="all-dashboard-link" class="button secondary hidden" href="/admin">All-region dashboard</a>
-          <a id="kerala-dashboard-link" class="button secondary" href="/admin/kerala">Kerala dashboard</a>
-          <a id="karnataka-dashboard-link" class="button secondary" href="/admin/karnataka">Karnataka dashboard</a>
+          <a data-nav="all" class="button secondary hidden" href="/admin">All-region dashboard</a>
+          <a data-nav="kerala" class="button secondary" href="/admin/kerala">Kerala dashboard</a>
+          <a data-nav="karnataka" class="button secondary" href="/admin/karnataka">Karnataka dashboard</a>
           <a class="button secondary" href="/admin/bookings/kerala">Booking dashboard</a>
           <a class="button secondary" href="/admin/provider-support">Provider support dashboard</a>
-          <a id="admin-management-link" class="button secondary hidden" href="/admin/admins">Admin management</a>
+          <a data-nav="admins" class="button secondary hidden" href="/admin/admins">Admin management</a>
           <button id="refresh-button" class="button secondary">Refresh</button>
           <form action="/admin/logout" method="post">
             <button class="button secondary" type="submit">Log out</button>
@@ -101,33 +127,49 @@
         </div>
       </div>
 
-      <div class="filters">
-        <button class="filter active" data-filter="all">All</button>
-        <button class="filter" data-filter="certificate_verification_pending">Pending</button>
-        <button class="filter" data-filter="awaiting_terms_acceptance">Waiting for terms</button>
-        <button class="filter" data-filter="awaiting_certificate">Certificate upload</button>
-        <button class="filter" data-filter="completed">Completed</button>
+      <!-- The one strip that stays on screen. Ordered so the work comes first
+           and named the way an ops person would say it out loud. -->
+      <div class="filters desk-segments">
+        <button class="filter active" data-filter="certificate_verification_pending">Needs you</button>
+        <button class="filter" data-filter="awaiting_certificate">Certificate</button>
+        <button class="filter" data-filter="awaiting_terms_acceptance">Terms</button>
+        <button class="filter" data-filter="completed">Done</button>
+        <button class="filter" data-filter="all">All</button>
+        <button class="desk-filter-button" type="button" data-sheet-open="filters" aria-label="Filter">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4"></path></svg>
+          <span class="desk-filter-count"></span>
+        </button>
       </div>
 
-      <div class="filters" id="region-filter-row">
-        <button class="filter active" data-region-filter="all">All regions</button>
-        <button class="filter" data-region-filter="kerala">Kerala</button>
-        <button class="filter" data-region-filter="karnataka">Karnataka</button>
-      </div>
+      <div class="desk-sheet" data-sheet="filters" aria-hidden="true">
+        <div class="desk-sheet-head">
+          <span class="desk-grab"></span>
+          <h4>Filter</h4>
+          <p>These narrow the queue further. The badge shows how many are on.</p>
+        </div>
 
-      <div class="filters">
-        <button class="filter active" data-app-filter="all">All app statuses</button>
-        <button class="filter" data-app-filter="pending">App pending</button>
-        <button class="filter" data-app-filter="help">App help</button>
-        <button class="filter" data-app-filter="verified">App verified</button>
-      </div>
+        <div class="filters" id="region-filter-row">
+          <button class="filter active" data-region-filter="all">All regions</button>
+          <button class="filter" data-region-filter="kerala">Kerala</button>
+          <button class="filter" data-region-filter="karnataka">Karnataka</button>
+        </div>
 
-      <div id="completed-range-filters" class="filters hidden">
-        <button class="filter active" data-completed-range="all">All completed</button>
-        <button class="filter" data-completed-range="today">Today</button>
-        <button class="filter" data-completed-range="yesterday">Yesterday</button>
-        <button class="filter" data-completed-range="7d">Past 7 days</button>
-        <button class="filter" data-completed-range="30d">Past 30 days</button>
+        <div class="filters">
+          <button class="filter active" data-app-filter="all">All app statuses</button>
+          <button class="filter" data-app-filter="pending">App pending</button>
+          <button class="filter" data-app-filter="help">App help</button>
+          <button class="filter" data-app-filter="verified">App verified</button>
+        </div>
+
+        <div id="completed-range-filters" class="filters hidden">
+          <button class="filter active" data-completed-range="all">All completed</button>
+          <button class="filter" data-completed-range="today">Today</button>
+          <button class="filter" data-completed-range="yesterday">Yesterday</button>
+          <button class="filter" data-completed-range="7d">Past 7 days</button>
+          <button class="filter" data-completed-range="30d">Past 30 days</button>
+        </div>
+
+        <button class="desk-sheet-apply" type="button">Show the queue</button>
       </div>
 
       <div class="search-row">
@@ -189,23 +231,31 @@
 
               <article class="card">
                 <h4>Profile</h4>
+                <!-- The six that bear on a certificate decision. The other nine
+                     are a click away rather than nine rows of scrolling between
+                     the evidence and the buttons. -->
                 <dl>
-                  <div><dt>Full name</dt><dd id="detail-name">-</dd></div>
-                  <div><dt>Region</dt><dd id="detail-region">-</dd></div>
-                  <div><dt>Language</dt><dd id="detail-language">-</dd></div>
                   <div><dt>Qualification</dt><dd id="detail-qualification">-</dd></div>
-                  <div><dt>Interested</dt><dd id="detail-interest">-</dd></div>
+                  <div><dt>Region</dt><dd id="detail-region">-</dd></div>
+                  <div><dt>District</dt><dd id="detail-district">-</dd></div>
                   <div><dt>Duty preference</dt><dd id="detail-duty-hour">-</dd></div>
-                  <div><dt>Expected duties</dt><dd id="detail-expected-duties">-</dd></div>
-                  <div><dt>Agent help</dt><dd id="detail-agent-help">-</dd></div>
-                  <div><dt>App status</dt><dd id="detail-app-status">-</dd></div>
-                  <div><dt>App device</dt><dd id="detail-app-device">-</dd></div>
-                  <div><dt>App help</dt><dd id="detail-app-help">-</dd></div>
                   <div><dt>Age</dt><dd id="detail-age">-</dd></div>
                   <div><dt>Sex</dt><dd id="detail-sex">-</dd></div>
-                  <div><dt>District</dt><dd id="detail-district">-</dd></div>
-                  <div><dt>Updated</dt><dd id="detail-updated">-</dd></div>
                 </dl>
+                <details class="detail-more">
+                  <summary>All details</summary>
+                  <dl>
+                    <div><dt>Full name</dt><dd id="detail-name">-</dd></div>
+                    <div><dt>Language</dt><dd id="detail-language">-</dd></div>
+                    <div><dt>Interested</dt><dd id="detail-interest">-</dd></div>
+                    <div><dt>Expected duties</dt><dd id="detail-expected-duties">-</dd></div>
+                    <div><dt>Agent help</dt><dd id="detail-agent-help">-</dd></div>
+                    <div><dt>App status</dt><dd id="detail-app-status">-</dd></div>
+                    <div><dt>App device</dt><dd id="detail-app-device">-</dd></div>
+                    <div><dt>App help</dt><dd id="detail-app-help">-</dd></div>
+                    <div><dt>Updated</dt><dd id="detail-updated">-</dd></div>
+                  </dl>
+                </details>
                 <div class="attachment-section">
                   <h5>Provider Chat</h5>
                   <div id="detail-provider-chat-actions" class="attachment-list"></div>
@@ -213,7 +263,7 @@
               </article>
             </div>
 
-            <article class="card review-card">
+            <article class="card review-card" id="manual-review-card">
               <div class="review-head">
                 <h4>Manual review</h4>
                 <p>Approve only after checking that the certificate is readable, valid, and matches the provider.</p>
@@ -238,7 +288,12 @@
               </form>
             </article>
 
-            <article class="card review-card">
+            <!-- The rarer three. A reviewer reaches for these a few times a
+                 week; the approve/reject pair is every record. -->
+            <details class="card review-card detail-extra">
+              <summary>More actions</summary>
+
+            <article class="review-inner">
               <div class="review-head">
                 <h4>Additional document request</h4>
                 <p>Ask the provider to upload one more document with a custom note.</p>
@@ -252,7 +307,7 @@
               </form>
             </article>
 
-            <article class="card review-card">
+            <article class="review-inner">
               <div class="review-head">
                 <h4>App activation</h4>
                 <p>Mark this only after confirming that the provider has logged in to the Pulso app with the onboarding phone number.</p>
@@ -265,7 +320,7 @@
               </form>
             </article>
 
-            <article class="card review-card">
+            <article class="review-inner">
               <div class="review-head">
                 <h4>Manual certificate upload</h4>
                 <p>Upload old certificate files from your device and attach them to this provider for review.</p>
@@ -279,6 +334,7 @@
                 </div>
               </form>
             </article>
+            </details>
           </div>
         </section>
       </div>
@@ -304,7 +360,17 @@
         </div>
       </div>
 
-      <div data-el="filter-rows"></div>
+      <div class="filters desk-segments" data-el="segments"></div>
+
+      <div class="desk-sheet" data-sheet="filters" data-el="filter-sheet" aria-hidden="true">
+        <div class="desk-sheet-head">
+          <span class="desk-grab"></span>
+          <h4>Filter</h4>
+          <p>These narrow the queue further. The badge shows how many are on.</p>
+        </div>
+        <div data-el="filter-rows"></div>
+        <button class="desk-sheet-apply" type="button">Show the queue</button>
+      </div>
 
       <div class="search-row">
         <label class="search-field">
@@ -351,10 +417,37 @@
     </section>
   </template>
 
-  <script src="/admin/assets/dashboard.js?v=20260922b"></script>
+  <!-- The overflow menu is global on purpose: the links go everywhere in the
+       admin, and a menu that lived inside the provider panel would disappear
+       the moment you switched to Agency. Phone only — on a desktop these same
+       links sit across the board header where there is room for them. -->
+  <div class="desk-sheet desk-sheet-global" data-sheet="menu" aria-hidden="true">
+    <div class="desk-sheet-head">
+      <span class="desk-grab"></span>
+      <h4>Go to</h4>
+    </div>
+    <div class="actions">
+      <a class="button secondary" href="/admin/inbox">Provider inbox</a>
+      <a data-nav="all" class="button secondary hidden" href="/admin">All regions</a>
+      <a data-nav="kerala" class="button secondary" href="/admin/kerala">Kerala desk</a>
+      <a data-nav="karnataka" class="button secondary" href="/admin/karnataka">Karnataka desk</a>
+      <a class="button secondary" href="/admin/bookings/kerala">Booking dashboard</a>
+      <a class="button secondary" href="/admin/provider-support">Provider support</a>
+      <a data-nav="admins" class="button secondary hidden" href="/admin/admins">Admin management</a>
+      <form action="/admin/logout" method="post">
+        <button class="button secondary" type="submit">Log out</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="desk-scrim" aria-hidden="true"></div>
+
+  <script src="/admin/assets/desk-ui.js?v=20260923a"></script>
+  <script src="/admin/assets/desk-shell.js?v=20260923a"></script>
+  <script src="/admin/assets/dashboard.js?v=20260923a"></script>
   <script src="/admin/assets/partner-review.js?v=20260921a"></script>
-  <script src="/admin/assets/booking-dashboard.js?v=20260922b"></script>
-  <script src="/admin/assets/admin-sides.js?v=20260921a"></script>
+  <script src="/admin/assets/booking-dashboard.js?v=20260923a"></script>
+  <script src="/admin/assets/admin-sides.js?v=20260923a"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>
 </html>

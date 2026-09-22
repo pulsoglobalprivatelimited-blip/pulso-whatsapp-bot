@@ -20,6 +20,7 @@
   'use strict';
 
   const Partner = global.PulsoPartnerReview;
+  const Desk = global.PulsoDesk;
 
   /* ---- formatting ------------------------------------------------------- */
 
@@ -46,10 +47,10 @@
     return value || '-';
   }
 
+  /* Shares the provider desk's dictionary so the same status is named the same
+     thing on whichever desk you meet it. */
   function formatStatus(value) {
-    return String(value || '-')
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (char) => char.toUpperCase());
+    return Desk.label(value, '-') || '-';
   }
 
   function formatBoolean(value) {
@@ -273,6 +274,7 @@
     const metricsRoot = settings.metricsRoot || null;
 
     let chats = [];
+    let loaded = false;
     let selectedPhone = null;
     let selectedChat = null;
     let statusFilter = 'all';
@@ -318,14 +320,32 @@
       return `<div class="filters">${buttons}</div>`;
     }
 
+    /* One strip stays on screen — the status the reviewer works by — and the
+       rest moves into the filter sheet. Three stacked scrolling rows of chips
+       used to sit between the heading and the first agency. */
     function renderFilterRows() {
+      const segments = el('segments');
       const container = el('filter-rows');
-      if (!container) return;
-      container.innerHTML = [
-        chipRow('data-status-filter', config.statusChips, statusFilter),
-        chipRow('data-region-filter', REGION_CHIPS, regionFilter),
-        chipRow('data-enquiry-filter', config.enquiryChips, enquiryFilter)
-      ].join('');
+
+      if (segments) {
+        segments.innerHTML =
+          config.statusChips
+            .map((chip) => {
+              const active = chip.key === statusFilter ? ' active' : '';
+              return `<button class="filter${active}" type="button" data-status-filter="${escapeAttr(chip.key)}">${escapeHtml(chip.label)}</button>`;
+            })
+            .join('') +
+          '<button class="desk-filter-button" type="button" data-sheet-open="filters" aria-label="Filter">' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4"></path></svg>' +
+          '<span class="desk-filter-count"></span></button>';
+      }
+
+      if (container) {
+        container.innerHTML = [
+          chipRow('data-region-filter', REGION_CHIPS, regionFilter),
+          chipRow('data-enquiry-filter', config.enquiryChips, enquiryFilter)
+        ].join('');
+      }
 
       wireChips('data-status-filter', (key) => { statusFilter = key; });
       wireChips('data-region-filter', (key) => { regionFilter = key; });
@@ -453,85 +473,165 @@
 
     /* ---- list ------------------------------------------------------------ */
 
-    function rowTitle(chat) {
-      if (mode === 'agency') {
-        return chat.partnerAgencyName || formatPhone(chat.phone || chat.id);
-      }
-      return formatPhone(chat.phone || chat.id);
+    /* ---- what a row says -------------------------------------------------
+
+       Two lines, the same two lines every desk now uses: who it is, what they
+       last said, when. An agency row used to carry five — the phone number as
+       its title when the agency had no name yet, the same number again as its
+       subtitle, how far through the pitch they had read, a Meta ad id, and a
+       timestamp to the second. Two of the five were the same number and one
+       was a database key. */
+
+    /* The agency's name, or the family's, when we have one. Kept apart from the
+       row heading because the heading falls back to a phone number and a phone
+       number does not have initials. */
+    function rowPerson(chat) {
+      if (mode === 'agency') return chat.partnerAgencyName || '';
+      return chat.careRecipientName || chat.familyName || '';
     }
 
-    /* The agency badge already carries the terms status, so this line says how
-       far through the pitch they got instead of repeating it. */
-    function rowStatus(chat) {
+    function rowName(chat) {
+      const person = rowPerson(chat);
+      if (!person) return formatPhone(chat.phone || chat.id);
+      return mode !== 'agency' && chat.isTestBooking ? `${person} · Test` : person;
+    }
+
+    function rowPreview(chat) {
+      const said = String(chat.lastIncomingText || '').trim();
+      if (said) return said;
+
       if (mode === 'agency') {
+        if (partnerStatusOf(chat)) return Desk.label(partnerStatusOf(chat));
         return chat.partnerPitchStep
-          ? `Read piece ${chat.partnerPitchStep} of 4`
-          : formatStatus(chat.currentStep || 'Agency enquiry');
+          ? `Read ${chat.partnerPitchStep} of 4 intro messages`
+          : 'Agency enquiry';
       }
-      return isCompleted(chat) ? 'Completed' : formatStatus(chat.currentStep || 'Active');
+
+      if (isCompleted(chat)) return 'Booking confirmed';
+      return Desk.label(chat.currentStep, 'No messages yet');
     }
 
-    function rowSubtitle(chat) {
+    /* The same four words as the provider desk, so a colour means one thing
+       across the whole admin. An agency we have asked for a clearer document
+       is waiting on them, not on us — the old badge called that "attention"
+       and coloured it like work. */
+    function chatTone(chat) {
+      const at = chat.updatedAt || chat.lastMessageAt;
+
       if (mode === 'agency') {
-        const phone = formatPhone(chat.phone || chat.id);
-        return chat.partnerDistrict ? `${phone} · ${formatStatus(chat.partnerDistrict)}` : phone;
+        const status = partnerStatusOf(chat);
+        if (status === 'document_received') return Desk.escalate('needs', at);
+        if (status === 'terms_declined') return 'stuck';
+        if (status === 'terms_accepted' || status === 'invited') return 'done';
+        return 'waiting';
       }
-      const name = chat.careRecipientName || chat.familyName || 'Name pending';
-      return chat.isTestBooking ? `${name} · Test` : name;
+
+      return isCompleted(chat) ? 'done' : 'waiting';
     }
 
-    function rowDetail(chat) {
-      if (mode === 'agency') {
-        return chat.partnerAdId ? `Meta ad ${chat.partnerAdId}` : 'WhatsApp enquiry';
-      }
-      return chat.requestId ? `Request: ${chat.requestId}` : 'Booking not completed yet';
+    function chatTime(chat, tone) {
+      const at = chat.updatedAt || chat.lastMessageAt;
+      if (tone === 'needs' || tone === 'stuck') return Desk.waitLabel(at);
+      return Desk.relativeTime(chat.lastMessageAt || at);
     }
 
-    /* The status badge carries the colour that says whether this row needs
-       acting on, so agency rows show that instead of the "Agency" label they
-       would all share. */
-    function rowBadge(chat) {
-      if (mode !== 'agency') {
-        const enquiry = Partner.enquiryMeta(Partner.resolveEnquiryType(chat));
-        return `<span class="enquiry-badge ${enquiry.className}">${escapeHtml(enquiry.label)}</span>`;
-      }
-      const pillClass = Partner.statusPillClass(chat) || 'partner';
-      return `<span class="enquiry-badge ${pillClass}">${escapeHtml(Partner.statusLabel(chat))}</span>`;
+    function groupLabel(chat, tone) {
+      return Desk.groupLabel(tone, chat.updatedAt || chat.lastMessageAt);
+    }
+
+    /* Oldest-waiting first among the rows that need something, newest first
+       among the ones that are finished. */
+    function sortForQueue(list) {
+      const rank = { stuck: 0, needs: 1, waiting: 2, done: 3 };
+      return list.slice().sort((left, right) => {
+        const leftTone = chatTone(left);
+        const rightTone = chatTone(right);
+        if (rank[leftTone] !== rank[rightTone]) return rank[leftTone] - rank[rightTone];
+        const leftAt = Desk.timeValue(left.updatedAt || left.lastMessageAt);
+        const rightAt = Desk.timeValue(right.updatedAt || right.lastMessageAt);
+        return leftTone === 'done' ? rightAt - leftAt : leftAt - rightAt;
+      });
     }
 
     function renderList() {
-      const visible = getVisibleChats();
+      if (!loaded) {
+        bookingList.innerHTML = Desk.skeleton(7);
+        return;
+      }
+
+      const visible = sortForQueue(getVisibleChats());
+      let lastGroup = null;
+
       bookingList.innerHTML =
         visible
           .map((chat) => {
             const phone = chat.phone || chat.id;
-            const regionLabel = chat.region ? formatStatus(chat.region) : 'Location pending';
-            const activeClass = phone === selectedPhone || chat.id === selectedPhone ? ' active' : '';
-            const updated =
-              chat.updatedAt || chat.lastMessageAt ? formatTime(chat.updatedAt || chat.lastMessageAt) : 'No update time';
+            const tone = chatTone(chat);
+            const group = groupLabel(chat, tone);
+            const divider = group === lastGroup ? '' : Desk.divider(group);
+            lastGroup = group;
 
-            return `
-              <article class="provider-item${activeClass}" data-phone="${escapeAttr(phone)}">
-                <div class="provider-meta">
-                  <strong>${escapeHtml(rowTitle(chat))}</strong>
-                  <span class="region-badge ${escapeAttr(chat.region || '')}">${escapeHtml(regionLabel)}</span>
-                  ${rowBadge(chat)}
-                </div>
-                <p>${escapeHtml(rowSubtitle(chat))}</p>
-                <p>${escapeHtml(rowStatus(chat))}</p>
-                <p>${escapeHtml(rowDetail(chat))}</p>
-                <p>${escapeHtml(updated)}</p>
-              </article>
-            `;
+            return divider + Desk.row({
+              name: rowName(chat),
+              person: rowPerson(chat),
+              preview: rowPreview(chat),
+              time: chatTime(chat, tone),
+              tone,
+              active: phone === selectedPhone || chat.id === selectedPhone,
+              data: { phone }
+            });
           })
-          .join('') ||
-        `<div class="provider-item"><strong>${escapeHtml(config.emptyTitle)}</strong><p>Nothing matches the selected filters.</p></div>`;
+          .join('') || emptyHtml();
 
       bookingList.querySelectorAll('[data-phone]').forEach((item) => {
         item.addEventListener('click', () => {
           renderDetail(item.dataset.phone);
         });
       });
+
+      updateDeskCounts();
+    }
+
+    function emptyHtml() {
+      const needsYou = chats.filter((chat) => {
+        const tone = chatTone(chat);
+        return tone === 'needs' || tone === 'stuck';
+      }).length;
+
+      if (statusFilter === 'all' && !search && !needsYou) {
+        return Desk.empty({
+          title: "You're all caught up",
+          body: mode === 'agency'
+            ? 'Every agency document has been reviewed.'
+            : 'Nothing on this desk is waiting on you.'
+        });
+      }
+
+      return Desk.empty({
+        title: config.emptyTitle,
+        body: 'No one matches the filters you have on.'
+      });
+    }
+
+    /* The count on this desk's tab, and the badge saying how many filters are
+       quietly narrowing what the queue shows. */
+    function updateDeskCounts() {
+      if (!global.PulsoDeskShell) return;
+
+      const needsYou = chats.filter((chat) => {
+        const tone = chatTone(chat);
+        return tone === 'needs' || tone === 'stuck';
+      }).length;
+
+      if (mode === 'agency' || mode === 'customer') {
+        global.PulsoDeskShell.setTabCount(mode, needsYou);
+      }
+
+      const refinements = [
+        !region && regionFilter !== 'all',
+        enquiryFilter !== 'all'
+      ].filter(Boolean).length;
+      global.PulsoDeskShell.setFilterCount(root, refinements);
     }
 
     /* ---- detail ---------------------------------------------------------- */
@@ -838,6 +938,7 @@
       const query = region ? `?region=${encodeURIComponent(region)}` : '';
       const data = await fetchJson(`/admin/booking-chats${query}`);
       chats = (data.chats || []).filter((chat) => config.keeps(Partner.resolveEnquiryType(chat)));
+      loaded = true;
       updateMetrics();
       renderList();
 

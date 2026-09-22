@@ -152,6 +152,35 @@
     return DEFAULT_SIDE;
   }
 
+  /* The point of putting counts on the tabs is seeing that another desk needs
+     you while you are standing on this one — which the boards themselves can't
+     tell you, because a board isn't built until its side is opened. One small
+     request at startup buys that, and the board still loads its own fresh copy
+     when someone actually switches. */
+  async function countOtherSides() {
+    if (!global.PulsoDeskShell || !global.PulsoPartnerReview) return;
+
+    try {
+      const query = region ? `?region=${encodeURIComponent(region)}` : '';
+      const response = await fetch(`/admin/booking-chats${query}`);
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const chats = data.chats || [];
+      const agencies = chats.filter((chat) => global.PulsoPartnerReview.isPartner(chat));
+
+      global.PulsoDeskShell.setTabCount(
+        'agency',
+        agencies.filter((chat) => String(chat.partnerStatus || '') === 'document_received').length
+      );
+      // Customer bookings are the family's to finish, not ours, so nothing on
+      // that desk is ever waiting on a reviewer. No badge is the honest answer.
+      global.PulsoDeskShell.setTabCount('customer', 0);
+    } catch (error) {
+      // A count is a convenience; the desk works without it.
+    }
+  }
+
   tabs.forEach((tab) => {
     tab.addEventListener('click', () => showSide(tab.dataset.side));
   });
@@ -160,4 +189,5 @@
   // The chosen side is only in the URL once it differs from the default, so a
   // remembered side still gets written on the first paint.
   rememberSide(startingSide());
+  countOtherSides();
 })(window);

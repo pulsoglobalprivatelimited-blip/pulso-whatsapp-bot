@@ -1531,3 +1531,1046 @@ dd {
     white-space: nowrap;
   }
 }
+
+/* =========================================================================
+   THE DESK SHELL
+   =========================================================================
+
+   Everything below replaces the top of the phone screen. The desk used to
+   spend about 83% of a 1080x2460 phone on chrome — hero, subtitle, side
+   tabs, eleven counter chips, a queue heading, eight navigation links,
+   three rows of filters and a search box — before the first person in the
+   queue appeared. This collapses that to two bands: a tab bar that carries
+   its own counts, and one strip of segments. Everything else still exists,
+   one tap away, in a sheet.
+
+   Nothing here changes the desktop, where two panes and a tall window meant
+   the stacking was never the problem.
+   ========================================================================= */
+
+:root {
+  /* Four tones, and only four, shared by all three desks. Kept apart from
+     --accent on purpose: the terracotta means "Pulso" and "tap this", and a
+     colour cannot mean three things at once. */
+  --tone-needs: #a8700c;
+  --tone-needs-bg: rgba(200, 134, 27, 0.15);
+  --tone-waiting: #4a687a;
+  --tone-waiting-bg: rgba(74, 104, 122, 0.13);
+  --tone-done: #2d7a58;
+  --tone-done-bg: rgba(45, 122, 88, 0.13);
+  --tone-stuck: #a53d2f;
+  --tone-stuck-bg: rgba(165, 61, 47, 0.12);
+}
+
+/* ---- the row, on every desk -------------------------------------------- */
+
+.desk-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  background: transparent;
+  transition: background 120ms ease;
+}
+
+.desk-row:last-child {
+  border-bottom: 0;
+}
+
+.desk-row:hover {
+  background: rgba(183, 93, 50, 0.05);
+}
+
+.desk-row.active {
+  background: rgba(183, 93, 50, 0.1);
+}
+
+/* A row you press should say so before the next screen arrives. */
+.desk-row:active {
+  background: rgba(183, 93, 50, 0.16);
+}
+
+.desk-avatar {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background: rgba(89, 66, 43, 0.09);
+  color: var(--muted);
+}
+
+.desk-avatar svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  opacity: 0.75;
+}
+
+.desk-avatar.needs { background: var(--tone-needs-bg); color: var(--tone-needs); }
+.desk-avatar.stuck { background: var(--tone-stuck-bg); color: var(--tone-stuck); }
+.desk-avatar.waiting { background: var(--tone-waiting-bg); color: var(--tone-waiting); }
+.desk-avatar.done { background: var(--tone-done-bg); color: var(--tone-done); }
+
+.desk-body {
+  flex: 1;
+  min-width: 0;
+  display: block;
+}
+
+.desk-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.desk-line + .desk-line {
+  margin-top: 1px;
+  align-items: center;
+}
+
+.desk-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.desk-time {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.desk-time.is-late {
+  color: var(--tone-stuck);
+  font-weight: 600;
+}
+
+.desk-preview {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.83rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.desk-preview.is-quiet {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.desk-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.desk-dot.needs { background: var(--tone-needs); }
+.desk-dot.stuck { background: var(--tone-stuck); }
+.desk-dot.waiting { background: var(--tone-waiting); }
+.desk-dot.done { background: var(--tone-done); }
+
+.desk-divider {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  margin: 0;
+  padding: 9px 14px 5px;
+  font-size: 0.68rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  background: var(--panel-strong);
+  border-bottom: 1px solid var(--line);
+}
+
+/* ---- empty and loading -------------------------------------------------
+
+   These used to look identical: a blank white panel. One of them means you
+   are finished and the other means the network is still thinking. */
+
+.desk-empty {
+  padding: 46px 28px;
+  text-align: center;
+}
+
+.desk-empty-tick {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: var(--tone-done-bg);
+}
+
+.desk-empty-tick svg {
+  width: 26px;
+  height: 26px;
+  stroke: var(--tone-done);
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.desk-empty strong {
+  display: block;
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.4rem;
+  font-weight: 400;
+  margin-bottom: 5px;
+}
+
+.desk-empty p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.desk-empty-hint {
+  margin-top: 10px !important;
+  color: var(--accent) !important;
+  font-weight: 500;
+}
+
+.desk-row.is-skeleton {
+  cursor: default;
+  pointer-events: none;
+}
+
+.desk-avatar.sk,
+.sk-bar {
+  background: linear-gradient(90deg, rgba(89, 66, 43, 0.07) 25%, rgba(89, 66, 43, 0.13) 50%, rgba(89, 66, 43, 0.07) 75%);
+  background-size: 300% 100%;
+  animation: desk-shimmer 1.4s ease-in-out infinite;
+}
+
+.sk-bar {
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+}
+
+.sk-bar + .sk-bar {
+  margin-top: 8px;
+}
+
+@keyframes desk-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-avatar.sk,
+  .sk-bar {
+    animation: none;
+  }
+}
+
+/* ---- status pills, wherever they appear -------------------------------- */
+
+.tone-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  background: rgba(89, 66, 43, 0.08);
+  color: var(--muted);
+}
+
+.tone-pill::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.tone-pill.needs { background: var(--tone-needs-bg); color: var(--tone-needs); }
+.tone-pill.stuck { background: var(--tone-stuck-bg); color: var(--tone-stuck); }
+.tone-pill.waiting { background: var(--tone-waiting-bg); color: var(--tone-waiting); }
+.tone-pill.done { background: var(--tone-done-bg); color: var(--tone-done); }
+
+/* The agency desk's existing badge vocabulary, given the same four tones so
+   a colour means the same thing whichever desk you are standing on. */
+.enquiry-badge.waiting,
+.pill.waiting,
+.chat-status-pill.waiting {
+  background: var(--tone-waiting-bg);
+  color: var(--tone-waiting);
+}
+
+/* ---- counts ------------------------------------------------------------
+
+   Every figure on the desk is a count that updates on refresh. Proportional
+   digits make them jump sideways each time; tabular ones do not. */
+
+.metric span,
+.desk-tab-count,
+.stat-value,
+.desk-time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- sheets ------------------------------------------------------------
+
+   A sheet is chrome that earns its place only when asked for. On the desktop
+   it is not a sheet at all: `display: contents` drops the wrapper and its
+   children lay out exactly where they always did. */
+
+.desk-sheet {
+  display: contents;
+}
+
+/* A sheet with no desktop home of its own — the overflow menu — has nothing
+   to fall back to, so it simply isn't there until the screen is small. */
+.desk-sheet-global {
+  display: none;
+}
+
+.desk-sheet-head,
+.desk-scrim,
+.desk-bar-actions,
+/* A desktop shows every filter row at once, so there is nothing for the
+   filter button or the sheet's apply button to reveal. */
+.desk-filter-button,
+.desk-sheet-apply {
+  display: none;
+}
+
+/* The tabs carry their counts on a phone, where they replace the counter
+   chips. On a desktop the chips are right there, so the badge is only a
+   quiet marker that another side wants attention. */
+.side-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.desk-tab-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 18px;
+  min-width: 18px;
+  padding: 0 5px;
+  text-align: center;
+  border-radius: 999px;
+  background: var(--tone-needs-bg);
+  color: var(--tone-needs);
+}
+
+.side-tab[aria-selected="true"] .desk-tab-count {
+  background: rgba(255, 255, 255, 0.24);
+  color: #fff;
+}
+
+.desk-tab-count:empty,
+.desk-tab-count[hidden] {
+  display: none;
+}
+
+/* =========================================================================
+   PHONES AND TABLETS
+   Same breakpoint dashboard.js uses for isMobileViewport(), so what the
+   script thinks is a phone and what the stylesheet thinks is a phone can
+   never disagree.
+   ========================================================================= */
+
+@media (max-width: 960px), (hover: none) and (pointer: coarse) {
+
+  /* ---- the app bar ----------------------------------------------------
+
+     The hero becomes the bar. Its serif title, its subtitle and its eyebrow
+     are identity, and identity is worth a third of a phone screen only on
+     the first visit; the tabs underneath say where you are on every visit
+     after that. */
+
+  body.desk-shell .hero {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    margin: 0;
+    padding: 0 8px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    box-shadow: 0 1px 12px rgba(79, 49, 21, 0.06);
+    background: var(--panel-strong);
+    /* A filter makes this the containing block for every fixed element
+       inside it — which would pin the sheets to the 52px bar. */
+    backdrop-filter: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 52px;
+  }
+
+  body.desk-shell .hero .eyebrow,
+  body.desk-shell .hero h1,
+  body.desk-shell .hero .subtitle {
+    display: none;
+  }
+
+  body.desk-shell .layout {
+    padding-top: 60px;
+  }
+
+  /* ---- the tabs, carrying their own counts ---------------------------
+
+     One element doing three jobs: switching desks, replacing the eleven
+     counter chips that used to sit below, and showing that another desk
+     needs you while you are standing on this one. */
+
+  body.desk-shell .side-switch {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  body.desk-shell .side-switch::-webkit-scrollbar {
+    display: none;
+  }
+
+  body.desk-shell .side-tab {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 15px 9px 13px;
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: none;
+  }
+
+  /* The base rule paints the selected tab as a solid terracotta pill and
+     selects on the aria attribute, so matching on `.active` alone loses. */
+  body.desk-shell .side-tab.active,
+  body.desk-shell .side-tab[aria-selected="true"] {
+    background: none;
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+
+  .desk-tab-count {
+    font-size: 0.66rem;
+    font-weight: 700;
+    line-height: 16px;
+    min-width: 16px;
+    padding: 0 5px;
+    text-align: center;
+    border-radius: 999px;
+    background: var(--tone-needs);
+    color: #fff;
+  }
+
+  body.desk-shell .side-tab.active .desk-tab-count {
+    background: var(--accent);
+  }
+
+  .desk-tab-count:empty,
+  .desk-tab-count[hidden] {
+    display: none;
+  }
+
+  /* ---- search and overflow, in the bar ------------------------------- */
+
+  .desk-bar-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 2px;
+  }
+
+  .desk-icon-button {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .desk-icon-button svg {
+    width: 19px;
+    height: 19px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.85;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .desk-icon-button:active {
+    background: rgba(89, 66, 43, 0.1);
+  }
+
+  /* ---- the board loses its card ---------------------------------------
+
+     A rounded floating panel inside a rounded floating panel wastes both
+     margins. On a phone the queue is the page. */
+
+  body.desk-shell .board {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: none;
+    /* A filter on an ancestor makes it the containing block for every
+       fixed child inside it, which is what used to trap the full-screen
+       record and now would trap the sheets too. */
+    backdrop-filter: none;
+    padding: 0;
+  }
+
+  body.desk-shell .layout {
+    padding-left: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+  }
+
+  /* ---- the queue heading and the navigation go away -------------------
+
+     Not `display: none` on the header: the overflow sheet lives inside it,
+     and a hidden ancestor hides a fixed child however fixed it is. The
+     header keeps its box and gives up its size; the heading inside it goes. */
+
+  /* The heading said "Queue / Provider pipeline" above a queue you were
+     already looking at, and the links beside it are in the overflow menu
+     now, so the whole band goes. */
+  body.desk-shell .board-header {
+    display: none;
+  }
+
+  /* ---- pull to refresh ------------------------------------------------- */
+
+  .desk-pull {
+    position: fixed;
+    top: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 29;
+    padding: 6px 15px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 500;
+    box-shadow: 0 6px 18px rgba(79, 49, 21, 0.2);
+  }
+
+  /* ---- one strip of segments ------------------------------------------ */
+
+  .desk-segments {
+    position: sticky;
+    top: 52px;
+    z-index: 20;
+    display: flex;
+    gap: 7px;
+    align-items: center;
+    margin: 0;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .desk-segments::-webkit-scrollbar {
+    display: none;
+  }
+
+  .desk-segments .filter {
+    flex: 0 0 auto;
+    width: auto;
+    padding: 6px 13px;
+    font-size: 0.82rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  /* Pinned to the right edge of the strip rather than sitting after the last
+     chip: the agency desk has six status chips, so a button at the end of the
+     scroll was a filter control you had to scroll to find. */
+  .desk-filter-button {
+    flex: 0 0 auto;
+    position: sticky;
+    right: 0;
+    width: 30px;
+    height: 30px;
+    margin-left: auto;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--panel-strong);
+    color: var(--muted);
+    cursor: pointer;
+    /* The chips pass underneath, so the strip needs an edge of its own. */
+    box-shadow: -8px 0 8px -4px var(--bg), 0 0 0 4px var(--bg);
+  }
+
+  .desk-filter-button svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.85;
+    stroke-linecap: round;
+  }
+
+  /* A hidden filter that is silently on is worse than a filter row. The
+     badge is the promise that nothing is filtering behind your back. */
+  .desk-filter-count {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 16px;
+    line-height: 16px;
+    padding: 0 4px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-align: center;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .desk-filter-count:empty {
+    display: none;
+  }
+
+  /* ---- search collapses into the bar ---------------------------------- */
+
+  body.desk-shell .search-row {
+    display: none;
+  }
+
+  body.desk-shell.desk-search-open .search-row {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 35;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 9px 12px;
+    background: var(--panel-strong);
+    border-bottom: 1px solid var(--line);
+  }
+
+  body.desk-shell.desk-search-open .search-field {
+    flex: 1;
+    min-width: 0;
+  }
+
+  body.desk-shell.desk-search-open .search-field span {
+    display: none;
+  }
+
+  body.desk-shell.desk-search-open .search-row .button {
+    width: auto;
+    flex: 0 0 auto;
+    padding: 11px 15px;
+  }
+
+  /* ---- the list is the page ------------------------------------------- */
+
+  body.desk-shell .content {
+    display: block;
+  }
+
+  /* The queue is the page, so it holds the page's ground all the way down
+     rather than stopping where the rows stop and leaving a seam. */
+  body.desk-shell .list-panel {
+    padding: 0;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    background: var(--panel-strong);
+    min-height: calc(100vh - 96px);
+  }
+
+  body.desk-shell .provider-list {
+    display: block;
+  }
+
+  /* ---- sheets ---------------------------------------------------------- */
+
+  .desk-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(40, 26, 16, 0.38);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease;
+  }
+
+  body.desk-sheet-open .desk-scrim {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .desk-sheet {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    max-height: 78vh;
+    overflow-y: auto;
+    margin: 0;
+    padding: 8px 16px calc(20px + env(safe-area-inset-bottom));
+    background: var(--panel-strong);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -10px 30px rgba(79, 49, 21, 0.18);
+    transform: translateY(101%);
+    transition: transform 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .desk-sheet.is-open {
+    transform: translateY(0);
+  }
+
+  .desk-sheet-head {
+    display: block;
+    position: sticky;
+    top: 0;
+    background: var(--panel-strong);
+    padding-bottom: 10px;
+  }
+
+  .desk-grab {
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: 0 auto 12px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+
+  .desk-sheet-head h4 {
+    font-size: 1rem;
+  }
+
+  .desk-sheet-head p {
+    margin: 3px 0 0;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  /* Inside a sheet there is room, so the chips wrap instead of scrolling
+     and you can see every one of them at once — which is the whole reason
+     they were worth moving here. */
+  .desk-sheet .filters,
+  .desk-sheet .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    overflow: visible;
+    gap: 8px;
+    margin: 0 0 16px;
+    padding: 0;
+  }
+
+  /* The sheet turns these back on, so the two ways the desk hides a row —
+     a class on a filter row, `hidden` on the side that isn't showing — both
+     have to be spelt out again or a sheet shows all three sides at once. */
+  .desk-sheet .filters.hidden,
+  .desk-sheet .hero-meta[hidden] {
+    display: none;
+  }
+
+  .desk-sheet .filter,
+  .desk-sheet .metric {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .desk-sheet .metric {
+    padding: 9px 14px;
+  }
+
+  /* The overflow menu reads as a list, not as a row of buttons that
+     happens to have wrapped. */
+  .desk-sheet .actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    overflow: visible;
+    margin: 0;
+  }
+
+  .desk-sheet .actions .button,
+  .desk-sheet .actions form {
+    width: 100%;
+    flex: 0 0 auto;
+    margin: 0;
+  }
+
+  .desk-sheet .actions .button {
+    justify-content: flex-start;
+    text-align: left;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    padding: 13px 12px;
+    font-size: 0.95rem;
+    box-shadow: none;
+  }
+
+  .desk-sheet .actions .button:active {
+    background: rgba(89, 66, 43, 0.08);
+  }
+
+  .desk-sheet .actions .button.hidden {
+    display: none;
+  }
+
+  .desk-sheet-apply {
+    display: block;
+    position: sticky;
+    bottom: 0;
+    width: 100%;
+    margin-top: 4px;
+    padding: 13px 0;
+    border: 0;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* ---- the record ------------------------------------------------------
+
+     Ordered around the question it exists to answer: who is this, what am I
+     looking at, what do I do. The chat used to come first and the decision
+     last, which is the order of a filing cabinet, not of a review. */
+
+  /* Dropping the two-column grid lets its two cards be ordered against the
+     rest of the record rather than as one block. */
+  body.desk-shell .detail-grid {
+    display: contents;
+  }
+
+  .detail-header { order: 1; }
+  /* Documents — the certificate, the thing actually being judged. */
+  .detail-grid > .card:nth-child(1) { order: 2; }
+  /* The decision itself. */
+  #manual-review-card { order: 3; }
+  /* Profile facts: useful once you have decided what you are looking at. */
+  .detail-grid > .card:nth-child(2) { order: 4; }
+  /* The rarer actions — extra documents, app activation, manual upload. */
+  .review-card { order: 5; }
+  /* The chat, last: you rarely need it to read a certificate. */
+  .card.history-card { order: 6; }
+
+  /* A chat in its own scroller inside a scrolling page means half your
+     swipes move the wrong thing. It gets the page's scroll like everything
+     else, and shows the recent end of the thread, which is the end that
+     matters. */
+  body.desk-shell .history-card .history-list {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+  }
+
+  body.desk-shell .history-card-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--panel-strong);
+    padding: 6px 0;
+  }
+
+  /* ---- the certificate is the screen ---------------------------------- */
+
+  body.desk-shell .attachment-card img {
+    margin-top: 0;
+    margin-bottom: 10px;
+    max-height: 46vh;
+    object-fit: contain;
+    background: #fff;
+    cursor: zoom-in;
+  }
+
+  body.desk-shell .attachment-card a:first-child {
+    font-size: 0.95rem;
+  }
+}
+
+/* ---- full-screen document viewer --------------------------------------
+
+   The certificate is the one thing a reviewer is actually judging, and it
+   was a link that left the desk. Now it opens over it and closes back. */
+
+.doc-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(24, 16, 10, 0.94);
+  padding: 16px;
+}
+
+.doc-viewer.is-open {
+  display: flex;
+}
+
+.doc-viewer img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.doc-viewer-close {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 14px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* ---- disclosures in the record -----------------------------------------
+
+   Fifteen profile rows and four stacked forms all had equal claim on the
+   screen, so the decision a reviewer opened the record to make sat under all
+   of it. These two keep everything and ask for a tap. */
+
+.detail-more,
+.detail-extra {
+  margin-top: 4px;
+}
+
+.detail-more > summary,
+.detail-extra > summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 2px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.detail-more > summary::-webkit-details-marker,
+.detail-extra > summary::-webkit-details-marker {
+  display: none;
+}
+
+.detail-more > summary::after,
+.detail-extra > summary::after {
+  content: '›';
+  font-size: 1.15rem;
+  line-height: 1;
+  transition: transform 0.18s ease;
+}
+
+.detail-more[open] > summary::after,
+.detail-extra[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+.detail-extra > summary {
+  font-size: 0.95rem;
+  padding: 4px 2px;
+}
+
+.review-inner + .review-inner {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detail-more > summary::after,
+  .detail-extra > summary::after {
+    transition: none;
+  }
+}
+
+@media (max-width: 960px), (hover: none) and (pointer: coarse) {
+  /* "Back to list" as a full-width pill cost one caregiver row of screen at
+     the top of every record, to say something a leading chevron says. */
+  body.desk-shell .content.mobile-detail-open .mobile-detail-bar {
+    padding: 0;
+    margin-bottom: 2px;
+  }
+
+  body.desk-shell .content.mobile-detail-open .mobile-detail-bar .button {
+    width: auto;
+    gap: 3px;
+    padding: 9px 14px 9px 6px;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  body.desk-shell .content.mobile-detail-open .mobile-detail-bar .button::before {
+    content: '\2039';
+    font-size: 1.55rem;
+    line-height: 0.8;
+  }
+}

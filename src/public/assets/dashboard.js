@@ -1,6 +1,10 @@
 let providers = [];
 let selectedPhone = null;
-let currentFilter = 'all';
+/* The desk opens on the work. "All" put ten people who need a decision in
+   with four hundred and seventy-seven who don't, newest first, so the first
+   thing a reviewer saw on opening was the least urgent thing on the desk. */
+let currentFilter = 'certificate_verification_pending';
+let hasLoadedOnce = false;
 let currentAppFilter = 'all';
 let currentSearch = '';
 let currentCompletedRange = 'all';
@@ -50,11 +54,18 @@ const manualCertificateUploadStatus = document.getElementById('manual-certificat
 const dashboardEyebrow = document.getElementById('dashboard-eyebrow');
 const dashboardTitle = document.getElementById('dashboard-title');
 const dashboardSubtitle = document.getElementById('dashboard-subtitle');
-const allDashboardLink = document.getElementById('all-dashboard-link');
-const keralaDashboardLink = document.getElementById('kerala-dashboard-link');
-const karnatakaDashboardLink = document.getElementById('karnataka-dashboard-link');
 const regionFilterRow = document.getElementById('region-filter-row');
-const adminManagementLink = document.getElementById('admin-management-link');
+
+/* The same links appear twice — across the board header on a desktop, and in
+   the overflow sheet on a phone — so they are addressed by what they are
+   rather than by an id only one of them could carry. */
+function navLinks(name) {
+  return document.querySelectorAll(`[data-nav="${name}"]`);
+}
+
+function toggleNav(name, hidden) {
+  navLinks(name).forEach((link) => link.classList.toggle('hidden', hidden));
+}
 
 /* The provider desk shares /admin with the agency and customer boards, and all
    three use the same filter-chip attributes. Every chip lookup here is scoped
@@ -174,6 +185,13 @@ document
   .addEventListener('click', submitManualCertificateUpload);
 window.addEventListener('resize', updateMobileDetailState);
 
+/* The Refresh button was a full-width pill sitting where a caregiver could
+   have been. On a phone the gesture every other app already taught them does
+   the same job for nothing. */
+if (window.PulsoDeskShell) {
+  PulsoDeskShell.wirePullToRefresh(() => loadProviders());
+}
+
 function setManualUploadStatus(message, tone) {
   if (!manualCertificateUploadStatus) {
     return;
@@ -208,12 +226,7 @@ async function loadCurrentAdmin() {
   const data = await fetchJson('/admin/session');
   currentAdmin = data.admin || null;
 
-  if (adminManagementLink) {
-    adminManagementLink.classList.toggle(
-      'hidden',
-      !currentAdmin || currentAdmin.role !== 'super_admin'
-    );
-  }
+  toggleNav('admins', !currentAdmin || currentAdmin.role !== 'super_admin');
 
   ['reviewer-input', 'additional-reviewer-input', 'app-activation-reviewer-input', 'manual-uploaded-by-input']
     .forEach((id) => {
@@ -228,6 +241,7 @@ async function loadProviders() {
   const providerUrl = dashboardRegion ? `/admin/providers?region=${encodeURIComponent(dashboardRegion)}` : '/admin/providers';
   const data = await fetchJson(providerUrl);
   providers = data.providers || [];
+  hasLoadedOnce = true;
   updateDashboardMetrics();
   updateCompletedRangeFilterState();
   renderList();
@@ -276,17 +290,9 @@ function getDashboardRegionFromPath() {
 }
 
 function configureDashboardShell() {
-  if (allDashboardLink) {
-    allDashboardLink.classList.toggle('hidden', !dashboardRegion);
-  }
-
-  if (keralaDashboardLink) {
-    keralaDashboardLink.classList.toggle('hidden', dashboardRegion === 'kerala');
-  }
-
-  if (karnatakaDashboardLink) {
-    karnatakaDashboardLink.classList.toggle('hidden', dashboardRegion === 'karnataka');
-  }
+  toggleNav('all', !dashboardRegion);
+  toggleNav('kerala', dashboardRegion === 'kerala');
+  toggleNav('karnataka', dashboardRegion === 'karnataka');
 
   if (!dashboardRegion) {
     return;
@@ -317,8 +323,12 @@ function configureDashboardShell() {
   });
 }
 
+/* The whole humanising layer of this desk used to be one underscore swap, which
+   is how `bsc_nursing` and `awaiting_certificate` reached the screen. The
+   dictionary in desk-ui.js is shared with the agency and customer desks, so a
+   status is named the same wherever it shows up. */
 function formatStatus(status) {
-  return status.replace(/_/g, ' ');
+  return PulsoDesk.label(status);
 }
 
 function isMobileViewport() {
@@ -463,8 +473,11 @@ function resetListSelectionForMetric() {
   updateMobileDetailState();
 }
 
+/* Scoped to the status chips. Matching every `.filter` on the desk meant that
+   picking a status also stripped the active mark off the region and app-status
+   chips, which stayed filtering while looking as though they weren't. */
 function updateStatusFilterButtons() {
-  providerAll('.filter').forEach((item) => {
+  providerAll('[data-filter]').forEach((item) => {
     item.classList.toggle('active', item.dataset.filter === currentFilter);
   });
 }
@@ -706,7 +719,7 @@ function renderPhoneLink(phone, className = '') {
   const chatLink = buildProviderChatLink(normalized);
   const businessChatLink = buildProviderBusinessChatLink(normalized);
   const androidBusinessIntentLink = buildProviderAndroidBusinessIntentLink(normalized, chatLink);
-  return `<a class="${classes}" href="${businessChatLink}" data-chat-fallback-href="${chatLink}" data-chat-android-intent-href="${androidBusinessIntentLink}" rel="noreferrer">${escapeHtml(phone || normalized)}</a>`;
+  return `<a class="${classes}" href="${businessChatLink}" data-chat-fallback-href="${chatLink}" data-chat-android-intent-href="${androidBusinessIntentLink}" rel="noreferrer">${escapeHtml(PulsoDesk.formatPhone(phone || normalized))}</a>`;
 }
 
 function buildProviderPrefilledChatLink(provider) {
@@ -786,9 +799,26 @@ function attachPreferredWhatsAppHandlers(root = document) {
   });
 }
 
+/* Newest-first is right for a log and wrong for a queue: it buries whoever has
+   been waiting longest under whoever arrived last. Work waits oldest-first;
+   finished work still reads newest-first, because that is a record. */
+function sortForQueue(list) {
+  const rank = { stuck: 0, needs: 1, waiting: 2, done: 3 };
+  return list.slice().sort((left, right) => {
+    const leftTone = providerTone(left);
+    const rightTone = providerTone(right);
+    if (rank[leftTone] !== rank[rightTone]) {
+      return rank[leftTone] - rank[rightTone];
+    }
+    const leftAt = PulsoDesk.timeValue(providerSortTime(left));
+    const rightAt = PulsoDesk.timeValue(providerSortTime(right));
+    return leftTone === 'done' ? rightAt - leftAt : leftAt - rightAt;
+  });
+}
+
 function getVisibleProviders() {
   const phoneSearch = normalizePhone(currentSearch);
-  return providers.filter((item) => {
+  return sortForQueue(providers.filter((item) => {
     const matchesFilter = currentFilter === 'all' || getDashboardStatus(item) === currentFilter;
     const region = getProviderRegion(item);
     const matchesRegion = currentRegionFilter === 'all' || region === currentRegionFilter;
@@ -802,7 +832,7 @@ function getVisibleProviders() {
     const matchesRegionSearch = currentSearch ? region.includes(currentSearch) : false;
     const matchesSearch = !currentSearch || matchesPhone || matchesName || matchesRegionSearch;
     return matchesFilter && matchesRegion && matchesApp && matchesCompletedWindow && matchesCompletedSexFilter && matchesStartedWindow && matchesSearch;
-  });
+  }));
 }
 
 function normalizeRegion(value) {
@@ -959,50 +989,141 @@ function renderList() {
     updateMobileDetailState();
   }
 
-  providerList.innerHTML = filtered.length
-    ? filtered.map((provider) => `
-        <article class="provider-item ${provider.phone === selectedPhone ? 'active' : ''}" data-phone="${escapeHtml(provider.phone)}">
-          <span class="chat-avatar" aria-hidden="true">${escapeHtml(providerInitials(provider))}</span>
-          <span class="provider-body">
-            <strong>${renderPhoneLink(provider.phone, 'provider-phone-link')}</strong>
-            <p>${escapeHtml(shouldShowCompletedListSummary() ? formatListSummary(provider) : (provider.fullName || provider.qualification || 'Profile pending'))}</p>
-            <p class="provider-meta">
-              <span>${formatStatus(getDashboardStatus(provider))}</span>
-              ${renderRegionBadge(provider)}
-              ${renderReviewAlertBadge(provider)}
-            </p>
-          </span>
-        </article>
-      `).join('')
-    : '<div class="provider-item"><span class="provider-body"><strong>No providers</strong><p>Nothing matches the selected filter right now.</p></span></div>';
+  if (!hasLoadedOnce) {
+    providerList.innerHTML = PulsoDesk.skeleton(7);
+    return;
+  }
 
-  providerList.querySelectorAll('.provider-item[data-phone]').forEach((item) => {
+  providerList.innerHTML = filtered.length
+    ? renderQueue(filtered)
+    : renderEmptyQueue();
+
+  providerList.querySelectorAll('.desk-row[data-phone]').forEach((item) => {
     item.addEventListener('click', () => {
       const provider = providers.find((entry) => entry.phone === item.dataset.phone);
       if (provider) renderDetail(provider);
     });
   });
 
-  providerList.querySelectorAll('.phone-link').forEach((link) => {
-    link.addEventListener('click', (event) => {
-      event.stopPropagation();
-    });
-  });
   attachPreferredWhatsAppHandlers(providerList);
+  updateDeskCounts();
 }
 
-/* Two letters for the row's circle: the person's name when we know it, the
-   last digits of the number when we don't, so every row still has an anchor
-   the eye can land on. */
-function providerInitials(provider) {
-  const name = String((provider && provider.fullName) || '').trim();
-  if (name) {
-    const parts = name.split(/\s+/).filter(Boolean);
-    const letters = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0].slice(0, 2);
-    return letters.toUpperCase();
+/* The queue, grouped. Sorted by how long something has waited, a run of forty
+   rows reads as one undifferentiated column; the dividers put the days back. */
+function renderQueue(list) {
+  let lastGroup = null;
+  return list.map((provider) => {
+    const tone = providerTone(provider);
+    const group = queueGroupLabel(provider, tone);
+    const divider = group === lastGroup ? '' : PulsoDesk.divider(group);
+    lastGroup = group;
+    return divider + PulsoDesk.row({
+      name: provider.fullName || PulsoDesk.formatPhone(provider.phone),
+      person: provider.fullName,
+      preview: rowPreview(provider),
+      time: rowTime(provider, tone),
+      tone,
+      active: provider.phone === selectedPhone,
+      data: { phone: provider.phone }
+    });
+  }).join('');
+}
+
+/* What this row needs from the desk, in the four words every desk uses:
+   needs / waiting / done, and needs that has waited too long becomes stuck. */
+function providerTone(provider) {
+  const status = getDashboardStatus(provider);
+  if (status === 'completed') {
+    return 'done';
   }
-  const digits = String((provider && provider.phone) || '').replace(/\D/g, '');
-  return digits ? digits.slice(-2) : '—';
+  if (status === 'certificate_verification_pending') {
+    return PulsoDesk.escalate('needs', providerSortTime(provider));
+  }
+  if (hasFailedReviewAlert(provider)) {
+    return 'stuck';
+  }
+  return 'waiting';
+}
+
+function providerSortTime(provider) {
+  if (!provider) return null;
+  return provider.updatedAt || provider.lastMessageAt || provider.createdAt || null;
+}
+
+/* Their own last message, the way WhatsApp shows it — the single thing that
+   makes a list scannable rather than merely readable. Where there isn't one,
+   say what the desk is waiting for instead. */
+function rowPreview(provider) {
+  if (shouldShowCompletedListSummary()) {
+    return formatListSummary(provider);
+  }
+
+  const preview = String((provider && provider.lastMessagePreview) || '').trim();
+  if (preview) {
+    return provider.lastMessageDirection === 'outbound' ? `You: ${preview}` : preview;
+  }
+
+  const status = PulsoDesk.label(getDashboardStatus(provider), 'Profile pending');
+  const qualification = provider.qualification ? formatQualification(provider.qualification) : '';
+  return qualification ? `${qualification} · ${status}` : status;
+}
+
+/* A row that needs a decision says how long it has been waiting; everything
+   else says when it last moved. */
+function rowTime(provider, tone) {
+  if (tone === 'needs' || tone === 'stuck') {
+    return PulsoDesk.waitLabel(providerSortTime(provider));
+  }
+  return PulsoDesk.relativeTime(provider.lastMessageAt || providerSortTime(provider));
+}
+
+function queueGroupLabel(provider, tone) {
+  return PulsoDesk.groupLabel(tone, providerSortTime(provider));
+}
+
+/* An empty queue and a broken one used to look identical. This one also says
+   where the work went, which on a good morning is the only honest answer. */
+function renderEmptyQueue() {
+  const isActionQueue = currentFilter === 'certificate_verification_pending';
+  const waiting = providers.filter((item) => providerTone(item) === 'waiting').length;
+
+  if (isActionQueue && !currentSearch) {
+    return PulsoDesk.empty({
+      title: "You're all caught up",
+      body: 'Every certificate on this desk has been reviewed.',
+      hint: waiting ? `${waiting} more are waiting on the caregiver.` : ''
+    });
+  }
+
+  return PulsoDesk.empty({
+    title: 'Nothing here',
+    body: 'No one matches the filters you have on.'
+  });
+}
+
+/* The counts the shell shows: how many need this desk, and how many filters
+   are quietly narrowing what you can see. */
+function updateDeskCounts() {
+  if (!window.PulsoDeskShell) return;
+
+  const inRegion = providers.filter((item) => (
+    currentRegionFilter === 'all' || getProviderRegion(item) === currentRegionFilter
+  ));
+  const needsYou = inRegion.filter((item) => {
+    const tone = providerTone(item);
+    return tone === 'needs' || tone === 'stuck';
+  }).length;
+  PulsoDeskShell.setTabCount('provider', needsYou);
+
+  const refinements = [
+    !dashboardRegion && currentRegionFilter !== 'all',
+    currentAppFilter !== 'all',
+    currentCompletedRange !== 'all',
+    currentCompletedSex !== 'all',
+    currentStartedRange !== 'all'
+  ].filter(Boolean).length;
+  PulsoDeskShell.setFilterCount(providerRoot, refinements);
 }
 
 function shouldShowCompletedListSummary() {
@@ -1283,10 +1404,29 @@ function scrollHistoryToBottom() {
   });
 }
 
+/* The top of a record answers "who am I looking at", not "what does the
+   database call this row". The heading used to be the raw status — lowercase,
+   underscores and all — over an unformatted twelve-digit number, and the pill
+   beside it said "Kerala | Step undefined" whenever a provider had not reached
+   a named step. */
+function setDetailIdentity(provider) {
+  setText('detail-status', provider.fullName || PulsoDesk.formatPhone(provider.phone));
+
+  const step = document.getElementById('detail-step');
+  if (!step) return;
+
+  const tone = providerTone(provider);
+  const waited = PulsoDesk.waitLabel(providerSortTime(provider));
+  step.className = `pill tone-pill ${tone}`;
+  step.textContent = (tone === 'needs' || tone === 'stuck') && waited
+    ? `${PulsoDesk.toneLabel(tone)} · waiting ${waited}`
+    : `${PulsoDesk.toneLabel(tone)} · ${PulsoDesk.label(getDashboardStatus(provider), 'In progress')}`;
+}
+
 function renderDetailLoading(provider) {
   document.getElementById('detail-phone').innerHTML = renderPhoneLink(provider.phone, 'detail-phone-link');
-  setText('detail-status', formatStatus(getDashboardStatus(provider) || 'loading'));
-  setText('detail-step', `${formatRegionLabel(getProviderRegion(provider))} | Loading`);
+  setText('detail-status', provider.fullName || PulsoDesk.formatPhone(provider.phone));
+  setText('detail-step', 'Loading…');
   [
     'detail-name',
     'detail-region',
@@ -1315,8 +1455,8 @@ function renderDetailLoading(provider) {
 
 function renderDetailError(provider, message) {
   document.getElementById('detail-phone').innerHTML = renderPhoneLink(provider.phone, 'detail-phone-link');
-  setText('detail-status', 'Unable to load');
-  setText('detail-step', `${formatRegionLabel(getProviderRegion(provider))} | Detail unavailable`);
+  setText('detail-status', provider.fullName || PulsoDesk.formatPhone(provider.phone));
+  setText('detail-step', 'Could not load this record');
   document.getElementById('history-list').innerHTML = `<p class="attachment-empty">${escapeHtml(message || 'Could not load provider detail.')}</p>`;
 }
 
@@ -1355,8 +1495,7 @@ async function renderDetail(provider) {
   const additionalDocumentAttachments = documents.additionalDocumentAttachments || [];
 
   document.getElementById('detail-phone').innerHTML = renderPhoneLink(detailProvider.phone, 'detail-phone-link');
-  setText('detail-status', formatStatus(getDashboardStatus(detailProvider)));
-  setText('detail-step', `${formatRegionLabel(getProviderRegion(detailProvider))} | Step ${detailProvider.currentStep}`);
+  setDetailIdentity(detailProvider);
   setText('detail-name', detailProvider.fullName);
   setText('detail-region', formatRegionLabel(getProviderRegion(detailProvider)));
   setText('detail-language', detailProvider.language || (getProviderRegion(detailProvider) === 'karnataka' ? 'en' : 'ml'));
