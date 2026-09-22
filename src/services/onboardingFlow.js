@@ -2869,8 +2869,20 @@ async function handleReviewerMessage(phone, message) {
     }
 
     await clearReviewerWorkflow(providerPhone);
-    await approveCertificate(providerPhone, phone, 'Approved from reviewer WhatsApp', qualification);
-    await sendText(phone, `Approved certificate for ${providerPhone}.`);
+    const approval = await approveCertificate(
+      providerPhone,
+      phone,
+      'Approved from reviewer WhatsApp',
+      qualification
+    );
+    // A second tap says so, the way the reject branch below already does.
+    // Staying silent would leave the reviewer unsure whether either tap landed.
+    await sendText(
+      phone,
+      approval.already
+        ? `Certificate is already approved for ${providerPhone}${approval.reviewedBy ? ` by ${approval.reviewedBy}` : ''}.`
+        : `Approved certificate for ${providerPhone}.`
+    );
     return;
   }
 
@@ -3120,10 +3132,39 @@ async function sendCertificateApprovalFollowup(phone, provider, reviewer) {
   return failures.length === 0;
 }
 
+/* True once an approval has actually gone out for this provider.
+   Both halves matter. `verified` alone is not enough: a provider who was
+   rejected and is being approved again still carries the verification from the
+   first time round, and that approval has to send. `termsSentAt` is stamped by
+   the approval below, so the pair together mean "the terms have already left". */
+function hasAlreadyBeenApproved(provider) {
+  return Boolean(
+    provider &&
+      provider.verification &&
+      provider.verification.status === 'verified' &&
+      provider.termsSentAt
+  );
+}
+
+/* Approving is idempotent. Pressing it twice — a double-click on the desk, a
+   second tap on the reviewer's WhatsApp buttons, or one of each — used to send
+   the provider a second approval, a second copy of the terms and a second pair
+   of Accept / Decline buttons on a record that had already moved past that
+   step. Now the second call reports who approved and when, and sends nothing.
+   Mirrors invitePartnerAfterTermsCore in pulso-hub, which answers the same way. */
 async function approveCertificate(phone, reviewedBy, notes, qualification) {
   const provider = await getProvider(phone);
   if (!provider) {
     throw new Error('Provider not found');
+  }
+
+  if (hasAlreadyBeenApproved(provider)) {
+    return {
+      provider,
+      already: true,
+      reviewedBy: provider.verification.reviewedBy || '',
+      reviewedAt: provider.verification.reviewedAt || provider.termsSentAt || ''
+    };
   }
 
   const approvedQualification = normalizeApprovedQualification(qualification);
@@ -3164,7 +3205,7 @@ async function approveCertificate(phone, reviewedBy, notes, qualification) {
     reviewer,
     notes || ''
   );
-  return updatedProvider;
+  return { provider: updatedProvider, already: false, reviewedBy: reviewer, reviewedAt };
   });
 }
 
@@ -3218,6 +3259,8 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
 module.exports = {
   processIncomingMessage,
   approveCertificate,
+  // Exported so the idempotency rule can be tested without a Firestore.
+  hasAlreadyBeenApproved,
   rejectCertificate,
   requestAdditionalDocument,
   markPulsoAppActivationVerified,

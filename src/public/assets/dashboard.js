@@ -955,16 +955,19 @@ function renderList() {
   providerList.innerHTML = filtered.length
     ? filtered.map((provider) => `
         <article class="provider-item ${provider.phone === selectedPhone ? 'active' : ''}" data-phone="${escapeHtml(provider.phone)}">
-          <strong>${renderPhoneLink(provider.phone, 'provider-phone-link')}</strong>
-          <p>${escapeHtml(shouldShowCompletedListSummary() ? formatListSummary(provider) : (provider.fullName || provider.qualification || 'Profile pending'))}</p>
-          <p class="provider-meta">
-            <span>${formatStatus(getDashboardStatus(provider))}</span>
-            ${renderRegionBadge(provider)}
-            ${renderReviewAlertBadge(provider)}
-          </p>
+          <span class="chat-avatar" aria-hidden="true">${escapeHtml(providerInitials(provider))}</span>
+          <span class="provider-body">
+            <strong>${renderPhoneLink(provider.phone, 'provider-phone-link')}</strong>
+            <p>${escapeHtml(shouldShowCompletedListSummary() ? formatListSummary(provider) : (provider.fullName || provider.qualification || 'Profile pending'))}</p>
+            <p class="provider-meta">
+              <span>${formatStatus(getDashboardStatus(provider))}</span>
+              ${renderRegionBadge(provider)}
+              ${renderReviewAlertBadge(provider)}
+            </p>
+          </span>
         </article>
       `).join('')
-    : '<div class="provider-item"><strong>No providers</strong><p>Nothing matches the selected filter right now.</p></div>';
+    : '<div class="provider-item"><span class="provider-body"><strong>No providers</strong><p>Nothing matches the selected filter right now.</p></span></div>';
 
   providerList.querySelectorAll('.provider-item[data-phone]').forEach((item) => {
     item.addEventListener('click', () => {
@@ -979,6 +982,20 @@ function renderList() {
     });
   });
   attachPreferredWhatsAppHandlers(providerList);
+}
+
+/* Two letters for the row's circle: the person's name when we know it, the
+   last digits of the number when we don't, so every row still has an anchor
+   the eye can land on. */
+function providerInitials(provider) {
+  const name = String((provider && provider.fullName) || '').trim();
+  if (name) {
+    const parts = name.split(/\s+/).filter(Boolean);
+    const letters = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0].slice(0, 2);
+    return letters.toUpperCase();
+  }
+  const digits = String((provider && provider.phone) || '').replace(/\D/g, '');
+  return digits ? digits.slice(-2) : '—';
 }
 
 function shouldShowCompletedListSummary() {
@@ -1377,8 +1394,53 @@ async function renderDetail(provider) {
   }
 }
 
+/* One decision per tap. The approve path sends the provider a message and
+   appends history, so a second tap while the first is still in flight used to
+   approve twice — two "you're approved" messages to the same person. */
+let reviewInFlight = false;
+
+/* Listed by id rather than by a container class: the buttons sit in plain
+   `.actions` divs shared with the board header and the region links, so a
+   class selector either misses them or disables half the page. */
+const REVIEW_ACTION_BUTTON_IDS = [
+  'approve-button',
+  'reject-button',
+  'request-additional-document-button',
+  'verify-app-activation-button',
+  'manual-certificate-upload-button'
+];
+
+function setReviewBusy(busy, activeButtonId) {
+  reviewInFlight = busy;
+  REVIEW_ACTION_BUTTON_IDS.forEach((id) => {
+    const button = document.getElementById(id);
+    if (button) button.disabled = busy;
+  });
+
+  // Say it is working, otherwise a slow approve looks like nothing happened —
+  // which is what got it pressed twice in the first place.
+  const active = activeButtonId && document.getElementById(activeButtonId);
+  if (active) {
+    if (busy) {
+      active.dataset.idleLabel = active.textContent;
+      active.textContent = 'Working…';
+    } else if (active.dataset.idleLabel) {
+      active.textContent = active.dataset.idleLabel;
+      delete active.dataset.idleLabel;
+    }
+  }
+}
+
+function setReviewStatus(message, kind) {
+  const target = document.getElementById('review-status');
+  if (!target) return;
+  target.textContent = message || '';
+  target.classList.remove('success', 'error');
+  if (kind) target.classList.add(kind);
+}
+
 async function submitReview(action) {
-  if (!selectedPhone) return;
+  if (!selectedPhone || reviewInFlight) return;
 
   const notes = document.getElementById('notes-input').value || '';
   const qualification = document.getElementById('review-qualification-input').value || '';
@@ -1387,6 +1449,8 @@ async function submitReview(action) {
     return;
   }
 
+  setReviewStatus('');
+  setReviewBusy(true, action === 'approve-certificate' ? 'approve-button' : 'reject-button');
   try {
     const provider = await fetchJson(`/admin/providers/${selectedPhone}/${action}`, {
       method: 'POST',
@@ -1398,8 +1462,17 @@ async function submitReview(action) {
     if (index >= 0) providers[index] = provider;
     renderDetail(provider);
     updateDashboardMetrics();
+
+    // Information, not a failure: the server refused to send a second copy.
+    if (provider.alreadyApproved) {
+      const by = provider.approvedBy ? ` by ${provider.approvedBy}` : '';
+      const at = provider.approvedAt ? ` on ${formatHistoryTime(provider.approvedAt)}` : '';
+      setReviewStatus(`Already approved${by}${at}. Nothing was sent again.`);
+    }
   } catch (error) {
-    alert(error.message);
+    setReviewStatus(error.message, 'error');
+  } finally {
+    setReviewBusy(false, action === 'approve-certificate' ? 'approve-button' : 'reject-button');
   }
 }
 

@@ -1197,13 +1197,21 @@ app.get('/admin/providers/:phone', async (req, res) => {
 app.post('/admin/providers/:phone/approve-certificate', async (req, res) => {
   try {
     const actor = getAdminActor(req);
-    const provider = await approveCertificate(
+    const result = await approveCertificate(
       req.params.phone,
       actor,
       req.body.notes,
       req.body.qualification
     );
-    res.json(provider);
+    // Still answers with the provider, so the desk's existing rendering is
+    // unchanged; the flags ride alongside so it can say "already approved"
+    // instead of implying a second approval just went out.
+    res.json({
+      ...result.provider,
+      alreadyApproved: result.already,
+      approvedBy: result.reviewedBy,
+      approvedAt: result.reviewedAt
+    });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
