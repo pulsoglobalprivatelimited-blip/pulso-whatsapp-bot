@@ -954,9 +954,9 @@ function renderList() {
 
   providerList.innerHTML = filtered.length
     ? filtered.map((provider) => `
-        <article class="provider-item ${provider.phone === selectedPhone ? 'active' : ''}" data-phone="${provider.phone}">
+        <article class="provider-item ${provider.phone === selectedPhone ? 'active' : ''}" data-phone="${escapeHtml(provider.phone)}">
           <strong>${renderPhoneLink(provider.phone, 'provider-phone-link')}</strong>
-          <p>${shouldShowCompletedListSummary() ? formatListSummary(provider) : (provider.fullName || provider.qualification || 'Profile pending')}</p>
+          <p>${escapeHtml(shouldShowCompletedListSummary() ? formatListSummary(provider) : (provider.fullName || provider.qualification || 'Profile pending'))}</p>
           <p class="provider-meta">
             <span>${formatStatus(getDashboardStatus(provider))}</span>
             ${renderRegionBadge(provider)}
@@ -1482,10 +1482,12 @@ async function submitManualCertificateUpload() {
 }
 
 function escapeHtml(value) {
-  return value
+  return String(value == null ? '' : value)
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 loadProviders().catch((error) => {

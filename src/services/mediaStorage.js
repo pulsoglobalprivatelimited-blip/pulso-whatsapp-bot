@@ -130,10 +130,15 @@ async function archiveIncomingMedia(phone, message, category) {
   try {
     const metadata = await getMediaMetadata(mediaId);
     const extension = path.extname(originalFileName || '') || extensionFromMime(metadata.mime_type);
-    const finalFileName = originalFileName || `${mediaId}${extension}`;
+    // The document filename comes straight from WhatsApp (attacker-controllable),
+    // so never let it reach a filesystem path unsanitised — a name like
+    // "../../server.js" would otherwise escape the provider's media folder.
+    const finalFileName = sanitizeFileName(originalFileName) || `${mediaId}${extension}`;
+    const safePhone = sanitizeFileName(phone) || 'unknown';
+    const safeCategory = sanitizeFileName(category) || 'misc';
     const fileBuffer = await downloadMediaFile(metadata.url);
     const cloudUpload = await uploadBufferToFirebaseStorage(phone, category, finalFileName, fileBuffer, metadata.mime_type);
-    const providerDir = path.join(config.mediaStorageDir, phone, category);
+    const providerDir = path.join(config.mediaStorageDir, safePhone, safeCategory);
     const targetPath = path.join(providerDir, finalFileName);
     let localArchive = {
       archived: false,

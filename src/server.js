@@ -1160,28 +1160,38 @@ app.get('/admin/whatsapp-media/:mediaId', async (req, res) => {
 });
 
 app.get('/admin/providers', async (req, res) => {
-  const requestedRegion = normalizeRegion(req.query.region);
-  const providers = (await listProviderSummaries()).map((provider) => ({
-    ...provider,
-    dashboardSummary: true,
-    region: inferProviderRegion(provider) || provider.region || null
-  }));
+  try {
+    const requestedRegion = normalizeRegion(req.query.region);
+    const providers = (await listProviderSummaries()).map((provider) => ({
+      ...provider,
+      dashboardSummary: true,
+      region: inferProviderRegion(provider) || provider.region || null
+    }));
 
-  if (!requestedRegion) {
-    return res.json({ providers });
+    if (!requestedRegion) {
+      return res.json({ providers });
+    }
+
+    return res.json({
+      providers: providers.filter((provider) => inferProviderRegion(provider) === requestedRegion)
+    });
+  } catch (error) {
+    console.error('[ADMIN_PROVIDERS_ERROR]', JSON.stringify({ message: error.message }));
+    return res.status(500).json({ error: 'Could not load providers' });
   }
-
-  return res.json({
-    providers: providers.filter((provider) => inferProviderRegion(provider) === requestedRegion)
-  });
 });
 
 app.get('/admin/providers/:phone', async (req, res) => {
-  const provider = await getProvider(req.params.phone);
-  if (!provider) {
-    return res.status(404).json({ error: 'Provider not found' });
+  try {
+    const provider = await getProvider(req.params.phone);
+    if (!provider) {
+      return res.status(404).json({ error: 'Provider not found' });
+    }
+    return res.json(provider);
+  } catch (error) {
+    console.error('[ADMIN_PROVIDER_ERROR]', JSON.stringify({ phone: req.params.phone, message: error.message }));
+    return res.status(500).json({ error: 'Could not load provider' });
   }
-  return res.json(provider);
 });
 
 app.post('/admin/providers/:phone/approve-certificate', async (req, res) => {
