@@ -1,15 +1,39 @@
+/* WhatsApp's own palette. The team lives in WhatsApp all day, so the desk
+   borrows its colours, its type and its shapes rather than asking anyone to
+   learn a second visual language. Values are WhatsApp Web's light theme. */
 :root {
-  --bg: #f5efe5;
-  --panel: rgba(255, 255, 255, 0.72);
-  --panel-strong: #fffdf8;
-  --line: rgba(89, 66, 43, 0.12);
-  --text: #2d2016;
-  --muted: #6f5b4c;
-  --accent: #b75d32;
-  --accent-soft: #f0c49c;
-  --success: #2d7a58;
+  --bg: #f0f2f5;
+  --panel: #ffffff;
+  --panel-strong: #ffffff;
+  --line: rgba(var(--ink-rgb), 0.14);
+  --text: #111b21;
+  --muted: #667781;
+  --accent: rgb(var(--accent-rgb));
+  --accent-soft: rgb(var(--accent-soft-rgb));
+  --success: #008069;
   --danger: #a53d2f;
-  --shadow: 0 18px 60px rgba(79, 49, 21, 0.12);
+  --shadow: 0 1px 3px rgba(var(--shadow-rgb), 0.12);
+
+  /* The chat itself: WhatsApp's warm paper, its green outgoing bubble and its
+     white incoming one. */
+  --chat-bg: #efeae2;
+  --bubble-out: #d9fdd3;
+  --bubble-in: #ffffff;
+  --badge: #25d366;
+
+  /* WhatsApp is squared-off next to what was here before: 8px panels, and
+     bubbles at the 7.5px it actually uses. */
+  --radius-card: 8px;
+  --radius-bubble: 7.5px;
+
+  /* Translucent brand colours are written as rgba(var(--x-rgb), alpha) rather
+     than as literals, because a literal cannot follow the palette: 43 of them
+     were scattered through this file, so changing --accent recoloured the
+     buttons and left terracotta borders and shadows behind everywhere else. */
+  --accent-rgb: 0, 128, 105;       /* #008069 WhatsApp teal green */
+  --accent-soft-rgb: 217, 253, 211; /* #d9fdd3 outgoing bubble green */
+  --ink-rgb: 17, 27, 33;           /* #111b21 WhatsApp ink */
+  --shadow-rgb: 11, 20, 26;        /* WhatsApp's near-black shadow */
 }
 
 * {
@@ -18,7 +42,7 @@
 
 body {
   margin: 0;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   color: var(--text);
   width: 100%;
   max-width: 100vw;
@@ -30,11 +54,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
-  background:
-    radial-gradient(circle at top left, rgba(252, 214, 173, 0.7), transparent 30%),
-    radial-gradient(circle at bottom right, rgba(183, 93, 50, 0.18), transparent 28%),
-    linear-gradient(135deg, #f6efe5 0%, #efe3d3 100%);
-  background-attachment: fixed;
+  background: var(--bg);
 }
 
 .layout {
@@ -46,9 +66,8 @@ body {
 .hero,
 .board {
   background: var(--panel);
-  backdrop-filter: blur(16px);
   border: 1px solid var(--line);
-  border-radius: 28px;
+  border-radius: var(--radius-card);
   box-shadow: var(--shadow);
 }
 
@@ -70,10 +89,12 @@ h1, h2, h3, h4 {
 }
 
 h1 {
-  font-family: 'Instrument Serif', serif;
-  font-size: clamp(2.8rem, 5vw, 4.8rem);
-  line-height: 0.95;
-  max-width: 10ch;
+  font-family: inherit;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  max-width: 24ch;
 }
 
 .subtitle {
@@ -126,8 +147,8 @@ h1 {
 .metric-button:hover,
 .metric-button:focus-visible {
   transform: translateY(-1px);
-  border-color: rgba(183, 93, 50, 0.4);
-  box-shadow: inset 0 0 0 1px rgba(183, 93, 50, 0.14);
+  border-color: rgba(var(--accent-rgb), 0.4);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.14);
 }
 
 .metric span {
@@ -145,8 +166,8 @@ h1 {
 
 /* The one a human has to act on reads louder than the rest. */
 .metric.attention {
-  border-color: rgba(183, 93, 50, 0.55);
-  background: rgba(183, 93, 50, 0.08);
+  border-color: rgba(var(--accent-rgb), 0.55);
+  background: rgba(var(--accent-rgb), 0.08);
 }
 
 .metric.attention span,
@@ -267,7 +288,7 @@ h1 {
 .search-field select {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   padding: 14px 16px;
   font: inherit;
   background: #fff;
@@ -296,7 +317,7 @@ h1 {
 .admin-detail-card {
   background: var(--panel-strong);
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: var(--radius-card);
   padding: 16px;
 }
 
@@ -326,7 +347,7 @@ h1 {
 }
 
 .admin-table tr.selected {
-  background: rgba(240, 196, 156, 0.24);
+  background: rgba(var(--accent-soft-rgb), 0.24);
 }
 
 .role-pill,
@@ -408,7 +429,7 @@ h1 {
 .provider-item {
   background: var(--panel-strong);
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: var(--radius-card);
 }
 
 .list-panel {
@@ -429,8 +450,8 @@ h1 {
 }
 
 .provider-item.active {
-  border-color: rgba(183, 93, 50, 0.48);
-  box-shadow: inset 0 0 0 1px rgba(183, 93, 50, 0.18);
+  border-color: rgba(var(--accent-rgb), 0.48);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.18);
 }
 
 .provider-item p {
@@ -483,9 +504,9 @@ h1 {
 
 /* Recruitment / job enquiry */
 .enquiry-badge.job {
-  border-color: rgba(183, 93, 50, 0.28);
-  background: rgba(183, 93, 50, 0.14);
-  color: #b75d32;
+  border-color: rgba(var(--accent-rgb), 0.28);
+  background: rgba(var(--accent-rgb), 0.14);
+  color: var(--accent);
 }
 
 /* Hasn't chosen booking vs job yet */
@@ -514,8 +535,8 @@ h1 {
 }
 
 .pill.enquiry-pill.job {
-  background: rgba(183, 93, 50, 0.16);
-  color: #b75d32;
+  background: rgba(var(--accent-rgb), 0.16);
+  color: var(--accent);
 }
 
 .pill.enquiry-pill.undecided {
@@ -532,15 +553,15 @@ h1 {
    card. "Attention" is the one a reviewer still has to act on. */
 .enquiry-badge.attention,
 .pill.attention {
-  border-color: rgba(183, 93, 50, 0.4);
-  background: rgba(183, 93, 50, 0.16);
+  border-color: rgba(var(--accent-rgb), 0.4);
+  background: rgba(var(--accent-rgb), 0.16);
   color: #9c4a24;
 }
 
 .enquiry-badge.waiting,
 .pill.waiting {
-  border-color: rgba(89, 66, 43, 0.2);
-  background: rgba(89, 66, 43, 0.09);
+  border-color: rgba(var(--ink-rgb), 0.2);
+  background: rgba(var(--ink-rgb), 0.09);
   color: var(--muted);
 }
 
@@ -595,7 +616,7 @@ h1 {
   place-items: center;
   text-align: center;
   border: 1px dashed var(--line);
-  border-radius: 22px;
+  border-radius: var(--radius-card);
   padding: 42px 20px;
   color: var(--muted);
 }
@@ -620,14 +641,17 @@ h1 {
 }
 
 .history-card .history-list {
+  background: var(--chat-bg);
+  border-radius: var(--radius-card);
+  padding: 10px;
   max-height: 420px;
   overflow-y: auto;
   padding-right: 6px;
 }
 
 .review-card {
-  border-color: rgba(183, 93, 50, 0.2);
-  box-shadow: 0 12px 28px rgba(79, 49, 21, 0.08);
+  border-color: rgba(var(--accent-rgb), 0.2);
+  box-shadow: 0 12px 28px rgba(var(--shadow-rgb), 0.08);
 }
 
 .attachment-section {
@@ -646,7 +670,7 @@ h1 {
 
 .attachment-card {
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   padding: 12px;
   background: rgba(255, 255, 255, 0.7);
 }
@@ -738,7 +762,7 @@ dd {
 
 .pill {
   padding: 10px 14px;
-  background: rgba(183, 93, 50, 0.12);
+  background: rgba(var(--accent-rgb), 0.12);
   color: var(--accent);
   border-radius: 999px;
   font-size: 0.9rem;
@@ -749,7 +773,7 @@ dd {
 .review-form textarea {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   padding: 14px 16px;
   font: inherit;
   margin-top: 14px;
@@ -820,25 +844,27 @@ dd {
   font-weight: 600;
 }
 
+/* WhatsApp's bubble: no border, a hairline shadow, and one squared corner on
+   the side the tail would be. The tail itself is left off — at this size it
+   reads as noise, and the squared corner already says which way the message
+   went. */
 .history-bubble {
   max-width: min(78%, 680px);
-  padding: 14px 16px;
-  border-radius: 18px;
-  border: 1px solid var(--line);
-  box-shadow: 0 8px 18px rgba(79, 49, 21, 0.05);
+  padding: 6px 9px 8px;
+  border-radius: var(--radius-bubble);
+  box-shadow: 0 1px 0.5px rgba(var(--shadow-rgb), 0.13);
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .history-item-inbound .history-bubble {
-  background: #fff;
-  border-bottom-left-radius: 8px;
+  background: var(--bubble-in);
+  border-top-left-radius: 0;
 }
 
 .history-item-outbound .history-bubble {
-  background: rgba(240, 196, 156, 0.34);
-  border-color: rgba(183, 93, 50, 0.18);
-  border-bottom-right-radius: 8px;
+  background: var(--bubble-out);
+  border-top-right-radius: 0;
 }
 
 .history-label {
@@ -990,7 +1016,7 @@ dd {
 
   .hero,
   .board {
-    border-radius: 20px;
+    border-radius: var(--radius-card);
     width: 100%;
     max-width: 100%;
   }
@@ -1180,11 +1206,11 @@ dd {
 
 .chat-row:hover,
 .chat-row:focus-visible {
-  background: rgba(240, 196, 156, 0.18);
+  background: rgba(var(--accent-soft-rgb), 0.18);
 }
 
 .chat-row.active {
-  background: rgba(240, 196, 156, 0.34);
+  background: rgba(var(--accent-soft-rgb), 0.34);
 }
 
 .chat-avatar {
@@ -1249,7 +1275,7 @@ dd {
   border-radius: 999px;
   font-size: 0.66rem;
   font-weight: 600;
-  background: rgba(89, 66, 43, 0.08);
+  background: rgba(var(--ink-rgb), 0.08);
   color: var(--muted);
 }
 
@@ -1580,16 +1606,16 @@ dd {
 }
 
 .desk-row:hover {
-  background: rgba(183, 93, 50, 0.05);
+  background: rgba(var(--accent-rgb), 0.05);
 }
 
 .desk-row.active {
-  background: rgba(183, 93, 50, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 
 /* A row you press should say so before the next screen arrives. */
 .desk-row:active {
-  background: rgba(183, 93, 50, 0.16);
+  background: rgba(var(--accent-rgb), 0.16);
 }
 
 .desk-avatar {
@@ -1602,7 +1628,7 @@ dd {
   font-size: 0.86rem;
   font-weight: 600;
   letter-spacing: 0.01em;
-  background: rgba(89, 66, 43, 0.09);
+  background: rgba(var(--ink-rgb), 0.09);
   color: var(--muted);
 }
 
@@ -1731,7 +1757,7 @@ dd {
 
 .desk-empty strong {
   display: block;
-  font-family: 'Instrument Serif', serif;
+  font-family: inherit;
   font-size: 1.4rem;
   font-weight: 400;
   margin-bottom: 5px;
@@ -1756,7 +1782,7 @@ dd {
 
 .desk-avatar.sk,
 .sk-bar {
-  background: linear-gradient(90deg, rgba(89, 66, 43, 0.07) 25%, rgba(89, 66, 43, 0.13) 50%, rgba(89, 66, 43, 0.07) 75%);
+  background: linear-gradient(90deg, rgba(var(--ink-rgb), 0.07) 25%, rgba(var(--ink-rgb), 0.13) 50%, rgba(var(--ink-rgb), 0.07) 75%);
   background-size: 300% 100%;
   animation: desk-shimmer 1.4s ease-in-out infinite;
 }
@@ -1793,7 +1819,7 @@ dd {
   border-radius: 999px;
   font-size: 0.74rem;
   font-weight: 600;
-  background: rgba(89, 66, 43, 0.08);
+  background: rgba(var(--ink-rgb), 0.08);
   color: var(--muted);
 }
 
@@ -1923,7 +1949,7 @@ dd {
     border: 0;
     border-bottom: 1px solid var(--line);
     border-radius: 0;
-    box-shadow: 0 1px 12px rgba(79, 49, 21, 0.06);
+    box-shadow: 0 1px 12px rgba(var(--shadow-rgb), 0.06);
     background: var(--panel-strong);
     /* A filter makes this the containing block for every fixed element
        inside it — which would pin the sheets to the 52px bar. */
@@ -2052,7 +2078,7 @@ dd {
   }
 
   .desk-icon-button:active {
-    background: rgba(89, 66, 43, 0.1);
+    background: rgba(var(--ink-rgb), 0.1);
   }
 
   /* ---- the board loses its card ---------------------------------------
@@ -2105,7 +2131,7 @@ dd {
     color: #fff;
     font-size: 0.78rem;
     font-weight: 500;
-    box-shadow: 0 6px 18px rgba(79, 49, 21, 0.2);
+    box-shadow: 0 6px 18px rgba(var(--shadow-rgb), 0.2);
   }
 
   /* ---- one strip of segments ------------------------------------------ */
@@ -2286,7 +2312,7 @@ dd {
     padding: 8px 16px calc(20px + env(safe-area-inset-bottom));
     background: var(--panel-strong);
     border-radius: 20px 20px 0 0;
-    box-shadow: 0 -10px 30px rgba(79, 49, 21, 0.18);
+    box-shadow: 0 -10px 30px rgba(var(--shadow-rgb), 0.18);
     transform: translateY(101%);
     transition: transform 200ms cubic-bezier(0.32, 0.72, 0, 1);
   }
@@ -2383,7 +2409,7 @@ dd {
   }
 
   .desk-sheet .actions .button:active {
-    background: rgba(89, 66, 43, 0.08);
+    background: rgba(var(--ink-rgb), 0.08);
   }
 
   .desk-sheet .actions .button.hidden {

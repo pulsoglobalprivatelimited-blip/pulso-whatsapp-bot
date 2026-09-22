@@ -51,7 +51,7 @@
 
 .inbox-brand h1 {
   margin: 0;
-  font-family: 'Instrument Serif', serif;
+  font-family: inherit;
   font-size: 1.5rem;
   line-height: 1.1;
 }
@@ -549,7 +549,7 @@
   right: 7px;
   height: 2px;
   border-radius: 2px;
-  background: rgba(89, 66, 43, 0.22);
+  background: rgba(var(--ink-rgb), 0.22);
 }
 
 .doc-thumb i:nth-child(1) { top: 11px; }
@@ -726,11 +726,11 @@
 }
 
 .chat-row:hover {
-  background: rgba(240, 196, 156, 0.18);
+  background: rgba(var(--accent-soft-rgb), 0.18);
 }
 
 .chat-row.active {
-  background: rgba(240, 196, 156, 0.34);
+  background: rgba(var(--accent-soft-rgb), 0.34);
 }
 
 .chat-avatar {
@@ -795,7 +795,7 @@
   font-size: 0.68rem;
   font-weight: 600;
   text-transform: capitalize;
-  background: rgba(89, 66, 43, 0.08);
+  background: rgba(var(--ink-rgb), 0.08);
   color: var(--muted);
 }
 
@@ -811,7 +811,7 @@
 
 /* An agency sitting on unanswered terms is worth spotting at a glance. */
 .chat-status-pill.waiting {
-  background: rgba(183, 93, 50, 0.14);
+  background: rgba(var(--accent-rgb), 0.14);
   color: var(--accent);
 }
 
@@ -887,7 +887,7 @@
   flex: 0 0 auto;
   padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(240, 196, 156, 0.4);
+  background: rgba(var(--accent-soft-rgb), 0.4);
   color: var(--accent);
   font-size: 0.78rem;
   font-weight: 600;
