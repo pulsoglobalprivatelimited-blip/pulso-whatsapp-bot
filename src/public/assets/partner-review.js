@@ -28,6 +28,11 @@
     terms_accepted: 'Terms accepted',
     terms_declined: 'Terms declined',
     invited: 'Invited',
+    /* Written by the hub the moment the agency claims its invite — which only
+       happens by signing in to the app. "Invited" used to stand in for this and
+       was wrong for two of the first six: they had an account and never opened
+       it, and the desk called them Joined. */
+    signed_in: 'Signed in',
     rejected_document: 'Rejected'
   };
 
@@ -36,14 +41,23 @@
      document arrived at some point. */
   const DOC_STATUSES = new Set([
     'document_received', 'asked_again', 'terms_sent', 'terms_accepted', 'terms_declined', 'invited',
-    'rejected_document'
+    'signed_in', 'rejected_document'
   ]);
 
   const REVIEW_DONE = {
     terms_sent: { pill: 'waiting', label: 'Terms sent', note: 'Waiting for the agency to accept.' },
     terms_accepted: { pill: 'done', label: 'Terms accepted', note: 'The partner account has been created.' },
     terms_declined: { pill: 'attention', label: 'Terms declined', note: 'No account was created.' },
-    invited: { pill: 'done', label: 'Invited', note: 'The sign-in link has been sent.' },
+    invited: {
+      pill: 'waiting',
+      label: 'Invited',
+      note: 'The app install walk has been sent. They have not signed in yet.'
+    },
+    signed_in: {
+      pill: 'done',
+      label: 'Signed in',
+      note: 'The agency installed the app and signed in. They can add clients now.'
+    },
     asked_again: { pill: 'attention', label: 'Asked again', note: 'Waiting for a clearer document.' },
     rejected_document: {
       pill: 'attention',
@@ -105,7 +119,10 @@
     const terms = termsState(chat);
     // "To verify" is the one a reviewer has to act on, so it reads loudest.
     if (terms === 'document_received') return 'attention';
-    if (terms === 'terms_accepted' || terms === 'invited') return 'done';
+    if (terms === 'signed_in') return 'done';
+    // An invited agency has an account and has not opened it. That is not done,
+    // and calling it done is how two of them went unnoticed for weeks.
+    if (terms === 'terms_accepted' || terms === 'invited') return 'waiting';
     if (terms === 'terms_declined' || terms === 'rejected_document') return 'attention';
     if (terms === 'terms_sent') return 'waiting';
     return isCompleted(chat) ? 'done' : '';
@@ -126,6 +143,28 @@
     };
   }
 
+  /* How far an agency got with the app, in the words the caregiver desk uses.
+     Everything past "Terms accepted" used to read as Invited and stop there;
+     these say whether they chose a phone, got a link, claimed to have installed
+     it, asked for help, or are actually in. */
+  const APP_STATUS_LABELS = {
+    required: 'Install asked',
+    link_sent_android: 'Android link sent',
+    link_sent_iphone: 'iPhone link sent',
+    install_claimed: 'Says installed — sign-in not seen',
+    later: 'Chose to install later',
+    help_install: 'Needs help installing',
+    help_login: 'Needs help with login / OTP',
+    help_no_phone: 'No smartphone',
+    signed_in: 'Signed in'
+  };
+
+  function appStatusLabel(chat) {
+    const key = String((chat && chat.appStatus) || '').trim();
+    if (!key) return '';
+    return APP_STATUS_LABELS[key] || formatStatus(key);
+  }
+
   /* Label/value pairs rather than markup, so each surface renders them in its
      own idiom. Blank values are dropped by the caller. */
   function partnerFacts(chat) {
@@ -143,6 +182,7 @@
       { label: 'Who', value: who },
       { label: 'Partner status', value: source.partnerStatus && formatStatus(source.partnerStatus) },
       { label: 'Read up to', value: source.partnerPitchStep ? `piece ${source.partnerPitchStep} of 4` : '' },
+      { label: 'App', value: appStatusLabel(source) },
       { label: 'District', value: source.partnerDistrict && formatStatus(source.partnerDistrict) },
       { label: 'Came from', value: entry },
       { label: 'Region', value: source.region && formatStatus(source.region) },
@@ -188,6 +228,7 @@
     termsState,
     statusLabel,
     statusPillClass,
+    appStatusLabel,
     reviewState,
     partnerFacts,
     /** Returns { url, mime } for the agency's registration document. */

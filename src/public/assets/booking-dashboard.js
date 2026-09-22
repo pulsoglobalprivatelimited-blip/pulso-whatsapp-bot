@@ -124,7 +124,10 @@
     { key: 'document_received', label: 'To verify', statuses: ['document_received'] },
     { key: 'asked_again', label: 'Asked again', statuses: ['asked_again'] },
     { key: 'terms_sent', label: 'Terms sent', statuses: ['terms_sent'] },
-    { key: 'joined', label: 'Joined', statuses: ['terms_accepted', 'invited'] },
+    /* "Joined" used to cover both, which made a sent link look like a working
+       partner. Two of the first six sat in it having never opened the app. */
+    { key: 'invited', label: 'Invited', statuses: ['terms_accepted', 'invited'] },
+    { key: 'signed_in', label: 'Signed in', statuses: ['signed_in'] },
     { key: 'terms_declined', label: 'Declined', statuses: ['terms_declined'] },
     { key: 'rejected_document', label: 'Rejected', statuses: ['rejected_document'] }
   ];
@@ -150,9 +153,15 @@
     { label: 'Total agencies', count: (chats) => chats.length, status: 'all' },
     { label: 'Terms sent', count: (chats) => countPartnerStatus(chats, ['terms_sent']), status: 'terms_sent' },
     {
-      label: 'Joined',
+      label: 'Invited, not in yet',
+      attention: true,
       count: (chats) => countPartnerStatus(chats, ['terms_accepted', 'invited']),
-      status: 'joined'
+      status: 'invited'
+    },
+    {
+      label: 'Signed in',
+      count: (chats) => countPartnerStatus(chats, ['signed_in']),
+      status: 'signed_in'
     },
     { label: 'Asked again', count: (chats) => countPartnerStatus(chats, ['asked_again']), status: 'asked_again' }
   ];
@@ -526,8 +535,15 @@
       if (mode === 'agency') {
         const status = partnerStatusOf(chat);
         if (status === 'document_received') return Desk.escalate('needs', at);
-        if (status === 'terms_declined') return 'stuck';
-        if (status === 'terms_accepted' || status === 'invited') return 'done';
+        if (status === 'terms_declined' || status === 'rejected_document') return 'stuck';
+        if (status === 'signed_in') return 'done';
+        /* An agency with an account it has never opened is not finished. It is
+           not waiting on us either, so it stays amber rather than red — until
+           two days pass, at which point somebody should ring them. */
+        if (status === 'terms_accepted' || status === 'invited') {
+          const hours = Desk.hoursSince(at);
+          return hours !== null && hours >= 48 ? 'stuck' : 'waiting';
+        }
         return 'waiting';
       }
 
