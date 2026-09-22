@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260921a">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260922a">
 </head>
 <body>
   <main class="layout">
@@ -26,8 +26,8 @@
            place; admin-sides.js keeps the choice in the URL and in storage. -->
       <div class="side-switch" id="side-switch" role="tablist" aria-label="Which side of the business">
         <button class="side-tab" type="button" role="tab" data-side="provider" aria-selected="true" aria-controls="side-provider">Provider</button>
-        <button class="side-tab" type="button" role="tab" data-side="agency" aria-selected="false" aria-controls="side-agency">Partner agency</button>
-        <button class="side-tab" type="button" role="tab" data-side="customer" aria-selected="false" aria-controls="side-customer">Direct customer</button>
+        <button class="side-tab" type="button" role="tab" data-side="agency" aria-selected="false" aria-controls="side-agency">Agency</button>
+        <button class="side-tab" type="button" role="tab" data-side="customer" aria-selected="false" aria-controls="side-customer">Customer</button>
       </div>
 
       <div class="hero-meta" data-side-metrics="agency" hidden></div>
@@ -234,6 +234,7 @@
                   <button type="button" id="approve-button" class="button approve">Approve certificate</button>
                   <button type="button" id="reject-button" class="button reject">Reject certificate</button>
                 </div>
+                <p id="review-status" class="form-status" aria-live="polite"></p>
               </form>
             </article>
 
@@ -350,9 +351,9 @@
     </section>
   </template>
 
-  <script src="/admin/assets/dashboard.js?v=20260921a"></script>
+  <script src="/admin/assets/dashboard.js?v=20260922a"></script>
   <script src="/admin/assets/partner-review.js?v=20260921a"></script>
-  <script src="/admin/assets/booking-dashboard.js?v=20260921a"></script>
+  <script src="/admin/assets/booking-dashboard.js?v=20260922a"></script>
   <script src="/admin/assets/admin-sides.js?v=20260921a"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>

@@ -356,6 +356,10 @@
 
       metricsRoot.querySelectorAll('[data-metric]').forEach((button) => {
         button.addEventListener('click', () => {
+          // A chip is a filter now, so it has to look switched on once tapped.
+          metricsRoot.querySelectorAll('[data-metric]').forEach((other) => {
+            other.classList.toggle('is-active', other === button);
+          });
           applyMetricFilters(config.metrics[Number(button.dataset.metric)].status);
         });
       });
