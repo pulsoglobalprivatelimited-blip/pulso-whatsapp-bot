@@ -1841,6 +1841,14 @@ dd {
   display: contents;
 }
 
+/* Same idea for the segment strip's scroll track: on a desktop the wrapper
+   drops out and the chips sit in the filter row exactly as before. Declared
+   here rather than after the phone rules, because `display: contents` later
+   in the file would beat the `display: flex` the phone layout needs. */
+.desk-segments-scroll {
+  display: contents;
+}
+
 /* A sheet with no desktop home of its own — the overflow menu — has nothing
    to fall back to, so it simply isn't there until the screen is small. */
 .desk-sheet-global {
@@ -2610,10 +2618,4 @@ dd {
     font-size: 0.94rem;
     white-space: nowrap;
   }
-}
-
-/* On a desktop the chips need no track of their own: dropping the wrapper
-   leaves them as direct children of the filter row, exactly as before. */
-.desk-segments-scroll {
-  display: contents;
 }
