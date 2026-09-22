@@ -246,6 +246,13 @@ async function loadProviders() {
     }
   }
 
+  // Desktop pre-selects so the detail pane isn't sitting empty beside the list.
+  // A phone has no second pane: opening the first record on load drops the
+  // reviewer inside someone's file and hides the queue they came to work.
+  if (isMobileViewport()) {
+    return;
+  }
+
   const visibleProviders = getVisibleProviders();
   const exactPhoneSearch = normalizePhone(currentSearch);
   const exactMatch = currentSearch

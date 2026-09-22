@@ -1474,3 +1474,30 @@ dd {
     min-height: 46px;
   }
 }
+
+/* Found on the phone: the board header's links (Inbox, two region dashboards,
+   booking, support, admin, Refresh, Log out) inherit the full-width button
+   rule and stack into roughly a thousand pixels of navigation — the same wall
+   the metric cards used to make, one element lower. One scrolling row instead. */
+@media (max-width: 720px) {
+  .board-header .actions {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .board-header .actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .board-header .actions .button {
+    width: auto;
+    flex: 0 0 auto;
+    padding: 9px 15px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+}

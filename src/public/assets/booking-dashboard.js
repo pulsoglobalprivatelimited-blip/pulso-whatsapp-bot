@@ -849,7 +849,9 @@
         }
       }
 
-      const first = getVisibleChats()[0];
+      // Same reason as the provider desk: on a phone the queue is the screen,
+      // so nothing is opened until someone taps a row.
+      const first = isMobileViewport() ? null : getVisibleChats()[0];
       if (first) {
         await renderDetail(first.phone || first.id);
       } else {
