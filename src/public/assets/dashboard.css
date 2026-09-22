@@ -2579,3 +2579,28 @@ dd {
     line-height: 0.8;
   }
 }
+
+@media (max-width: 960px), (hover: none) and (pointer: coarse) {
+  /* The certificate is what the reviewer came for, so it comes before the
+     links that open it somewhere else. */
+  body.desk-shell .attachment-card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  body.desk-shell .attachment-card img {
+    order: -1;
+  }
+
+  body.desk-shell .attachment-card .attachment-actions {
+    order: 1;
+  }
+
+  /* "Approve certificate" wrapped onto two lines inside its own pinned
+     button, which made the pair uneven and the bar taller than it needs. */
+  body.desk-shell .content.mobile-detail-open #review-form .actions .button {
+    padding: 12px 10px;
+    font-size: 0.94rem;
+    white-space: nowrap;
+  }
+}

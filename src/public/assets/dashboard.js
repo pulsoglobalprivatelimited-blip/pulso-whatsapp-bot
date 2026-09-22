@@ -1279,8 +1279,11 @@ function renderProviderChatActions(provider) {
   attachPreferredWhatsAppHandlers(target);
 }
 
+/* "02/05/2026, 19:41:59" on an attachment told a reviewer the second a photo
+   arrived, which nobody has ever needed. */
 function formatHistoryTime(value) {
-  return new Date(value).toLocaleString();
+  const relative = PulsoDesk.relativeTime(value);
+  return relative || new Date(value).toLocaleString();
 }
 
 function getInboundMessageContent(payload) {
@@ -1518,7 +1521,7 @@ async function renderDetail(provider) {
   setText('detail-district', detailProvider.district);
   setText('detail-updated', detailProvider.updatedAt ? new Date(detailProvider.updatedAt).toLocaleString() : '-');
   setText('detail-certificate', documents.certificateReceived ? `${certificateAttachments.length} file(s)` : 'Not received');
-  setText('detail-verification', verification.status);
+  setText('detail-verification', formatStatus(verification.status));
   setText('detail-review-alert', formatReviewAlert(detailProvider));
   const reviewAlertField = document.getElementById('detail-review-alert');
   if (reviewAlertField) {
