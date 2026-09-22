@@ -24,7 +24,8 @@ const {
 const {
   getPartnerDocumentUrl,
   approvePartnerEnquiry,
-  askPartnerAgain
+  askPartnerAgain,
+  rejectPartnerEnquiry
 } = require('./services/partnerReviewService');
 const {
   getWhatsappBookingChatDetail,
@@ -1164,6 +1165,15 @@ app.get('/admin/booking-chats/:phone/document', async (req, res) => {
 app.post('/admin/booking-chats/:phone/approve', async (req, res) => {
   try {
     const result = await approvePartnerEnquiry(req.params.phone, getAdminActor(req));
+    return res.json(result);
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({ error: error.message });
+  }
+});
+
+app.post('/admin/booking-chats/:phone/reject', async (req, res) => {
+  try {
+    const result = await rejectPartnerEnquiry(req.params.phone, req.body.reason, getAdminActor(req));
     return res.json(result);
   } catch (error) {
     return res.status(error.statusCode || 400).json({ error: error.message });

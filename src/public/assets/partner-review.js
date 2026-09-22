@@ -27,14 +27,16 @@
     terms_sent: 'Terms sent',
     terms_accepted: 'Terms accepted',
     terms_declined: 'Terms declined',
-    invited: 'Invited'
+    invited: 'Invited',
+    rejected_document: 'Rejected'
   };
 
   /* The document lives on the enquiry in pulso-hub, not on this chat doc, so
      the review card is driven by the status: every one of these means a
      document arrived at some point. */
   const DOC_STATUSES = new Set([
-    'document_received', 'asked_again', 'terms_sent', 'terms_accepted', 'terms_declined', 'invited'
+    'document_received', 'asked_again', 'terms_sent', 'terms_accepted', 'terms_declined', 'invited',
+    'rejected_document'
   ]);
 
   const REVIEW_DONE = {
@@ -42,7 +44,12 @@
     terms_accepted: { pill: 'done', label: 'Terms accepted', note: 'The partner account has been created.' },
     terms_declined: { pill: 'attention', label: 'Terms declined', note: 'No account was created.' },
     invited: { pill: 'done', label: 'Invited', note: 'The sign-in link has been sent.' },
-    asked_again: { pill: 'attention', label: 'Asked again', note: 'Waiting for a clearer document.' }
+    asked_again: { pill: 'attention', label: 'Asked again', note: 'Waiting for a clearer document.' },
+    rejected_document: {
+      pill: 'attention',
+      label: 'Rejected',
+      note: 'The document could not be verified, so the enquiry was closed.'
+    }
   };
 
   function formatStatus(value) {
@@ -99,7 +106,7 @@
     // "To verify" is the one a reviewer has to act on, so it reads loudest.
     if (terms === 'document_received') return 'attention';
     if (terms === 'terms_accepted' || terms === 'invited') return 'done';
-    if (terms === 'terms_declined') return 'attention';
+    if (terms === 'terms_declined' || terms === 'rejected_document') return 'attention';
     if (terms === 'terms_sent') return 'waiting';
     return isCompleted(chat) ? 'done' : '';
   }
@@ -188,6 +195,8 @@
     /** Sends the terms message and creates the partner account in pulso-hub. */
     approve: (phone) => postJson(chatUrl(phone, 'approve')),
     /** Asks the agency for a clearer document, quoting `reason`. */
-    askAgain: (phone, reason) => postJson(chatUrl(phone, 'ask-again'), { reason })
+    askAgain: (phone, reason) => postJson(chatUrl(phone, 'ask-again'), { reason }),
+    /** Closes the enquiry when the document cannot be verified at all. */
+    reject: (phone, reason) => postJson(chatUrl(phone, 'reject'), { reason })
   };
 })(window);

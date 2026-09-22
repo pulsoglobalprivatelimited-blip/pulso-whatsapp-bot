@@ -31,10 +31,12 @@
     viewerActions: document.getElementById('viewer-actions'),
     viewerClose: document.getElementById('viewer-close'),
     viewerAsk: document.getElementById('viewer-ask'),
+    viewerReject: document.getElementById('viewer-reject'),
     viewerApprove: document.getElementById('viewer-approve'),
     reviewHint: document.getElementById('review-hint'),
     reviewBar: document.getElementById('review-bar'),
     reviewAsk: document.getElementById('review-ask'),
+    reviewReject: document.getElementById('review-reject'),
     reviewApprove: document.getElementById('review-approve'),
     reviewDone: document.getElementById('review-done'),
     reviewDonePill: document.getElementById('review-done-pill'),
@@ -306,7 +308,8 @@
   }
 
   function setReviewBusy(busy, label) {
-    [els.reviewApprove, els.reviewAsk, els.viewerApprove, els.viewerAsk].forEach((b) => { b.disabled = busy; });
+    [els.reviewApprove, els.reviewAsk, els.reviewReject, els.viewerApprove, els.viewerAsk, els.viewerReject]
+      .forEach((b) => { if (b) b.disabled = busy; });
     const text = busy ? label : 'Approve & send terms';
     els.reviewApprove.textContent = text;
     els.viewerApprove.textContent = text;
@@ -339,10 +342,12 @@
   async function submitReview(action, reason) {
     const phone = selectedPhone;
     if (!phone) return;
-    setReviewBusy(true, action === 'approve' ? 'Sending…' : 'Asking…');
+    setReviewBusy(true, action === 'approve' ? 'Sending…' : action === 'reject' ? 'Closing…' : 'Asking…');
     try {
       if (action === 'approve') {
         await Partner.approve(phone);
+      } else if (action === 'reject') {
+        await Partner.reject(phone, reason);
       } else {
         await Partner.askAgain(phone, reason);
       }
@@ -350,7 +355,13 @@
       await loadList();
       const fresh = chats.find((c) => chatPhone(c) === phone);
       if (fresh) renderReview(fresh);
-      showToast(action === 'approve' ? 'Terms sent to the agency.' : 'Asked the agency for a clearer document.');
+      showToast(
+        action === 'approve'
+          ? 'Terms sent to the agency.'
+          : action === 'reject'
+            ? 'Enquiry closed. The agency was told the document could not be verified.'
+            : 'Asked the agency for a clearer document.'
+      );
     } catch (error) {
       showToast(error.message || 'Could not complete that. Try again.');
     }
@@ -833,6 +844,17 @@
   }
   els.reviewAsk.addEventListener('click', askAgain);
   els.viewerAsk.addEventListener('click', askAgain);
+
+  /* Closing an enquiry cannot be undone from here, so it asks twice: once for
+     the reason the agency is told, once to be sure. */
+  function reject() {
+    const reason = window.prompt('Why can this document not be verified? (the agency sees this)');
+    if (reason === null) return;
+    if (!window.confirm('Close this agency enquiry? They will be told it could not be verified.')) return;
+    submitReview('reject', reason.trim());
+  }
+  if (els.reviewReject) els.reviewReject.addEventListener('click', reject);
+  if (els.viewerReject) els.viewerReject.addEventListener('click', reject);
 
   els.sheetClose.addEventListener('click', closeSheet);
 

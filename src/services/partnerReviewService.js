@@ -51,4 +51,7 @@ module.exports = {
   getPartnerDocumentUrl: (phone) => callPartnerReview('document', { phone }),
   approvePartnerEnquiry: (phone, actorLabel) => callPartnerReview('approve', { phone, actorLabel }),
   askPartnerAgain: (phone, reason, actorLabel) => callPartnerReview('askAgain', { phone, reason, actorLabel }),
+  /* Closes an enquiry whose document cannot be verified. Unlike askAgain, which
+     leaves the agency in the queue waiting to resend, this one ends it. */
+  rejectPartnerEnquiry: (phone, reason, actorLabel) => callPartnerReview('reject', { phone, reason, actorLabel }),
 };

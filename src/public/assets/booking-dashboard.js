@@ -125,7 +125,8 @@
     { key: 'asked_again', label: 'Asked again', statuses: ['asked_again'] },
     { key: 'terms_sent', label: 'Terms sent', statuses: ['terms_sent'] },
     { key: 'joined', label: 'Joined', statuses: ['terms_accepted', 'invited'] },
-    { key: 'terms_declined', label: 'Declined', statuses: ['terms_declined'] }
+    { key: 'terms_declined', label: 'Declined', statuses: ['terms_declined'] },
+    { key: 'rejected_document', label: 'Rejected', statuses: ['rejected_document'] }
   ];
 
   const CUSTOMER_METRICS = [
@@ -675,9 +676,10 @@
           <div class="attachment-actions">
             ${viewButton}
             <button class="button approve" type="button" data-review="approve">Approve &amp; send terms</button>
-            <button class="button reject" type="button" data-review="ask">Ask again</button>
+            <button class="button secondary" type="button" data-review="ask">Ask again</button>
+            <button class="button reject" type="button" data-review="reject">Reject</button>
           </div>
-          <p class="card-note">Approving sends the terms message to the agency and creates the partner account in Pulso Hub.</p>
+          <p class="card-note">Approving sends the terms and creates the partner account in Pulso Hub. Ask again keeps the agency in the queue; Reject closes the enquiry.</p>
           <p class="form-status" data-el="review-status" aria-live="polite"></p>
         `;
       }
@@ -780,14 +782,26 @@
         reason = global.prompt('What should the agency send instead?', 'The document was not readable.');
         if (reason === null) return;
       }
+      if (action === 'reject') {
+        // Ending an enquiry is not undoable from the desk, so it asks twice:
+        // once for the reason the agency will be told, once to be sure.
+        reason = global.prompt('Why can this document not be verified? The agency is told this.', '');
+        if (reason === null) return;
+        if (!global.confirm('Close this agency enquiry? They will be told it could not be verified.')) return;
+      }
 
       const buttons = Array.from(detailGrid.querySelectorAll('[data-review]'));
       buttons.forEach((button) => { button.disabled = true; });
-      setStatusText('review-status', action === 'approve' ? 'Sending terms…' : 'Asking again…');
+      setStatusText(
+        'review-status',
+        action === 'approve' ? 'Sending terms…' : action === 'reject' ? 'Closing the enquiry…' : 'Asking again…'
+      );
 
       try {
         if (action === 'approve') {
           await Partner.approve(phone);
+        } else if (action === 'reject') {
+          await Partner.reject(phone, reason);
         } else {
           await Partner.askAgain(phone, reason);
         }
