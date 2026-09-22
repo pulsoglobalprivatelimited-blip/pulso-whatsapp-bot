@@ -1052,16 +1052,22 @@ function providerSortTime(provider) {
 }
 
 /* Their own last message, the way WhatsApp shows it — the single thing that
-   makes a list scannable rather than merely readable. Where there isn't one,
-   say what the desk is waiting for instead. */
+   makes a list scannable rather than merely readable.
+
+   Only when they said it, though. The bot answers every certificate with the
+   same sentence, so showing the last message whatever its direction gave six
+   rows in a row reading "Bot: നന്ദി. താങ്കളുടെ certificate verification-…" and
+   no way to tell them apart. Where the last word was ours, the useful thing is
+   what we are about to look at. */
 function rowPreview(provider) {
   if (shouldShowCompletedListSummary()) {
     return formatListSummary(provider);
   }
 
+  const theirs = provider && provider.lastMessageDirection === 'in';
   const preview = String((provider && provider.lastMessagePreview) || '').trim();
-  if (preview) {
-    return provider.lastMessageDirection === 'outbound' ? `You: ${preview}` : preview;
+  if (theirs && preview) {
+    return preview;
   }
 
   const status = PulsoDesk.label(getDashboardStatus(provider), 'Profile pending');

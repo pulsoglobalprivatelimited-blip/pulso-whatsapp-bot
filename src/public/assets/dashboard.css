@@ -1922,8 +1922,9 @@ dd {
     backdrop-filter: none;
     display: flex;
     align-items: center;
+    flex-wrap: nowrap;
     gap: 4px;
-    min-height: 52px;
+    height: 52px;
   }
 
   body.desk-shell .hero .eyebrow,
@@ -1946,6 +1947,10 @@ dd {
     flex: 1;
     min-width: 0;
     display: flex;
+    /* The base rule wraps, which on a narrow phone dropped "Customer" onto a
+       second line and pushed the segment strip under the bar. Three tabs
+       scroll sideways instead. */
+    flex-wrap: nowrap;
     gap: 0;
     margin: 0;
     padding: 0;
