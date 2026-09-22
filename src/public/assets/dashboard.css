@@ -22,12 +22,19 @@ body {
   color: var(--text);
   width: 100%;
   max-width: 100vw;
+  /* The gradient is painted on the body, so on a page shorter than the screen
+     it used to stop where the content stopped and leave a bare strip below —
+     visible on the phone as a seam under the sign-in card. Filling the viewport
+     and pinning the gradient keeps one continuous ground on every page, however
+     short or long. */
+  min-height: 100vh;
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
   background:
     radial-gradient(circle at top left, rgba(252, 214, 173, 0.7), transparent 30%),
     radial-gradient(circle at bottom right, rgba(183, 93, 50, 0.18), transparent 28%),
     linear-gradient(135deg, #f6efe5 0%, #efe3d3 100%);
+  background-attachment: fixed;
 }
 
 .layout {
@@ -962,9 +969,15 @@ dd {
     order: 3;
   }
 
+  /* Letting the thread run the full height of the page suits a short chat, but
+     an agency's history carries the whole terms and conditions — one bubble of
+     about 2,200 characters. Uncapped, that buries the agency details and the
+     Approve / Ask again buttons under a screen and a half of scrolling. Keeping
+     the thread in its own scroller holds the decision within reach, which is
+     what the "Jump to bottom" button beside it was always for. */
   .history-card .history-list {
-    max-height: none;
-    overflow: visible;
+    max-height: 55vh;
+    overflow-y: auto;
     padding-right: 0;
   }
 }
