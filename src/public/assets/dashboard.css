@@ -2107,18 +2107,30 @@ dd {
     top: 52px;
     z-index: 20;
     display: flex;
-    gap: 7px;
+    gap: 8px;
     align-items: center;
     margin: 0;
     padding: 8px 12px;
     background: var(--bg);
     border-bottom: 1px solid var(--line);
+    overflow: visible;
+  }
+
+  /* The chips scroll in here; the filter button sits outside and keeps its
+     place. With one scroller for both, the last chip parked underneath the
+     button and could not be tapped. */
+  .desk-segments-scroll {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    gap: 7px;
+    align-items: center;
     overflow-x: auto;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
   }
 
-  .desk-segments::-webkit-scrollbar {
+  .desk-segments-scroll::-webkit-scrollbar {
     display: none;
   }
 
@@ -2131,16 +2143,13 @@ dd {
     white-space: nowrap;
   }
 
-  /* Pinned to the right edge of the strip rather than sitting after the last
-     chip: the agency desk has six status chips, so a button at the end of the
-     scroll was a filter control you had to scroll to find. */
+  /* Outside the scrolling track, so it is always reachable and never lands on
+     top of the chip it happens to stop beside. */
   .desk-filter-button {
     flex: 0 0 auto;
-    position: sticky;
-    right: 0;
+    position: static;
     width: 30px;
     height: 30px;
-    margin-left: auto;
     display: grid;
     place-items: center;
     padding: 0;
@@ -2149,8 +2158,6 @@ dd {
     background: var(--panel-strong);
     color: var(--muted);
     cursor: pointer;
-    /* The chips pass underneath, so the strip needs an edge of its own. */
-    box-shadow: -8px 0 8px -4px var(--bg), 0 0 0 4px var(--bg);
   }
 
   .desk-filter-button svg {
@@ -2603,4 +2610,10 @@ dd {
     font-size: 0.94rem;
     white-space: nowrap;
   }
+}
+
+/* On a desktop the chips need no track of their own: dropping the wrapper
+   leaves them as direct children of the filter row, exactly as before. */
+.desk-segments-scroll {
+  display: contents;
 }

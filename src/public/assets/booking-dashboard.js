@@ -328,13 +328,17 @@
       const container = el('filter-rows');
 
       if (segments) {
+        // The chips scroll inside their own track so the filter button beside
+        // them keeps its place instead of sitting on top of the last chip.
         segments.innerHTML =
+          '<div class="desk-segments-scroll">' +
           config.statusChips
             .map((chip) => {
               const active = chip.key === statusFilter ? ' active' : '';
               return `<button class="filter${active}" type="button" data-status-filter="${escapeAttr(chip.key)}">${escapeHtml(chip.label)}</button>`;
             })
             .join('') +
+          '</div>' +
           '<button class="desk-filter-button" type="button" data-sheet-open="filters" aria-label="Filter">' +
           '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4"></path></svg>' +
           '<span class="desk-filter-count"></span></button>';

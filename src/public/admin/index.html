@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260923c">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260923d">
 </head>
 <!-- `desk-shell` opts this page into the phone chrome: the fixed tab bar, the
      segment strip and the sheets. The other admin pages share this stylesheet
@@ -130,11 +130,15 @@
       <!-- The one strip that stays on screen. Ordered so the work comes first
            and named the way an ops person would say it out loud. -->
       <div class="filters desk-segments">
-        <button class="filter active" data-filter="certificate_verification_pending">Needs you</button>
-        <button class="filter" data-filter="awaiting_certificate">Certificate</button>
-        <button class="filter" data-filter="awaiting_terms_acceptance">Terms</button>
-        <button class="filter" data-filter="completed">Done</button>
-        <button class="filter" data-filter="all">All</button>
+        <!-- The chips scroll; the filter button does not. It used to be the last
+             thing in the scroller, which put it on top of the chip beside it. -->
+        <div class="desk-segments-scroll">
+          <button class="filter active" data-filter="certificate_verification_pending">Needs you</button>
+          <button class="filter" data-filter="awaiting_certificate">Certificate</button>
+          <button class="filter" data-filter="awaiting_terms_acceptance">Terms</button>
+          <button class="filter" data-filter="completed">Done</button>
+          <button class="filter" data-filter="all">All</button>
+        </div>
         <button class="desk-filter-button" type="button" data-sheet-open="filters" aria-label="Filter">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4"></path></svg>
           <span class="desk-filter-count"></span>
@@ -446,7 +450,7 @@
   <script src="/admin/assets/desk-shell.js?v=20260923a"></script>
   <script src="/admin/assets/dashboard.js?v=20260923c"></script>
   <script src="/admin/assets/partner-review.js?v=20260921a"></script>
-  <script src="/admin/assets/booking-dashboard.js?v=20260923c"></script>
+  <script src="/admin/assets/booking-dashboard.js?v=20260923d"></script>
   <script src="/admin/assets/admin-sides.js?v=20260923a"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>
