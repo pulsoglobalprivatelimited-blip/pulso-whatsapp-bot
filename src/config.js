@@ -117,6 +117,19 @@ module.exports = {
   // Same project and the same Cloud Run hash, so this is derived from the sync
   // URL rather than needing its own setting. Override only if that changes.
   pulsoHubPartnerReviewUrl: process.env.PULSO_HUB_PARTNER_REVIEW_URL || '',
+  /* Meta signs every webhook POST with an HMAC of the raw body keyed on the
+     app secret. Without this set, anyone who knows the callback URL — and it
+     is a conventional path on a public host — can post a message that looks
+     like it came from WhatsApp, impersonate any number, and make the business
+     number send a real reply to whoever they name.
+
+     Two settings rather than one on purpose. The secret turns the check on;
+     `metaWebhookEnforce` decides whether a bad signature is rejected or only
+     logged. A wrong secret rejecting everything would take the bot off the
+     air, so it goes out in log-only first and is enforced once real traffic
+     has been seen to pass. */
+  metaAppSecret: process.env.META_APP_SECRET || '',
+  metaWebhookEnforce: String(process.env.META_WEBHOOK_ENFORCE || '').toLowerCase() === 'true',
   ivrStaffPhone: process.env.IVR_STAFF_PHONE || process.env.OWNER_NOTIFICATION_PHONE || '918714105666',
   ivrRecruitmentWhatsappNumber: process.env.IVR_RECRUITMENT_WHATSAPP_NUMBER || '919633108778',
   ivrWebhookSecret: process.env.IVR_WEBHOOK_SECRET || '',

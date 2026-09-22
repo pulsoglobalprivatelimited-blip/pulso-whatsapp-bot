@@ -49,6 +49,7 @@ const {
 } = require('./services/certificateReviewCatchUp');
 const { getMediaMetadata, downloadMediaFile } = require('./services/metaClient');
 const appChannel = require('./services/appChannel');
+const { decideWebhook } = require('./services/webhookSignature');
 const { isPreOnboardedPhone } = require('./services/preOnboardedService');
 const {
   getProvider: getProviderRecord,
@@ -82,7 +83,19 @@ const {
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
-app.use(express.json());
+/* Meta's signature is an HMAC of the exact bytes it sent. Parsing JSON and
+   serialising it again produces different bytes — different key order, no
+   whitespace — which would never match, so the raw buffer is kept here as it
+   goes past. Only the webhook reads it. */
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      if (buf && buf.length) {
+        req.rawBody = buf;
+      }
+    }
+  })
+);
 app.use(express.urlencoded({ extended: false }));
 app.use('/admin/assets', express.static(path.join(config.publicDir, 'assets')));
 
@@ -680,7 +693,52 @@ app.get('/webhook', (req, res) => {
   return res.sendStatus(403);
 });
 
+/* Proves the delivery came from Meta before any of it is believed. Logs on
+   every outcome that isn't a clean pass, because the log is how we find out
+   whether the configured secret is the right one before switching the check
+   from watching to enforcing. */
+function verifyWebhookSignature(req, res) {
+  const decision = decideWebhook(req.rawBody, req.get('x-hub-signature-256'), {
+    secret: config.metaAppSecret,
+    enforce: config.metaWebhookEnforce
+  });
+
+  if (decision.action === 'allow' && decision.ok) {
+    return true;
+  }
+
+  if (decision.action === 'reject') {
+    console.warn(
+      '[WEBHOOK_SIGNATURE_REJECTED]',
+      JSON.stringify({ reason: decision.reason, clientIp: getRequestClientIp(req) }, null, 2)
+    );
+    // A bare 403: naming the reason would tell an unauthenticated caller which
+    // part of their forgery to fix.
+    res.sendStatus(403);
+    return false;
+  }
+
+  console.warn(
+    '[WEBHOOK_SIGNATURE]',
+    JSON.stringify(
+      {
+        outcome: decision.action,
+        reason: decision.reason,
+        enforcing: config.metaWebhookEnforce,
+        clientIp: getRequestClientIp(req)
+      },
+      null,
+      2
+    )
+  );
+  return true;
+}
+
 app.post('/webhook', async (req, res) => {
+  if (!verifyWebhookSignature(req, res)) {
+    return;
+  }
+
   const webhookStartedAt = Date.now();
   let processedMessages = 0;
   let processedStatuses = 0;
