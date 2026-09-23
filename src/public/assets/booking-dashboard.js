@@ -144,6 +144,13 @@
 
   /* An agency chip stands for one or more `partnerStatus` values, so a tile and
      the chip it selects always count the same rows. */
+  const CALL_CHIPS = [
+    { key: 'all', label: 'Any call state' },
+    { key: 'not_called', label: 'Not called' },
+    { key: 'called', label: 'Called' },
+    { key: 'shortlisted', label: 'Shortlisted' }
+  ];
+
   const AGENCY_STATUS_CHIPS = [
     { key: 'all', label: 'All agencies' },
     { key: 'document_received', label: 'To verify', statuses: ['document_received'] },
@@ -238,6 +245,10 @@
   const AGENCY_CARDS = [
     { title: 'Agency', kind: 'partner-facts' },
     { title: 'Document review', kind: 'review' },
+    /* Working this queue is phone work, and the call had nowhere to go: the
+       next reviewer opened the same row and started again. Sitting only in
+       AGENCY_CARDS is what keeps it off the customer tab — no mode check. */
+    { title: 'Call', kind: 'call' },
     { title: 'Actions', kind: 'actions', copy: 'phone' }
   ];
 
@@ -316,6 +327,9 @@
     let regionFilter = region || 'all';
     let enquiryFilter = 'all';
     let sortMode = readStoredSort();
+    /* A separate variable on purpose: an agency can be both "To verify" and
+       "Shortlisted", and one chip set cannot say both. */
+    let callFilter = 'all';
     let search = '';
     let mobileDetailOpen = false;
     let detailToken = 0;
@@ -385,6 +399,7 @@
           '<p class="desk-sheet-label">Order</p>',
           chipRow('data-sort', SORT_CHIPS, sortMode),
           '<p class="desk-sheet-label">Narrow</p>',
+          mode === 'agency' ? chipRow('data-call-filter', CALL_CHIPS, callFilter) : '',
           chipRow('data-region-filter', REGION_CHIPS, regionFilter),
           chipRow('data-enquiry-filter', config.enquiryChips, enquiryFilter)
         ].join('');
@@ -395,6 +410,7 @@
         sortMode = key === 'latest' ? 'latest' : 'queue';
         rememberSort(sortMode);
       });
+      wireChips('data-call-filter', (key) => { callFilter = key; });
       wireChips('data-region-filter', (key) => { regionFilter = key; });
       wireChips('data-enquiry-filter', (key) => { enquiryFilter = key; });
     }
@@ -446,11 +462,13 @@
       statusFilter = nextStatus || 'all';
       regionFilter = region || 'all';
       enquiryFilter = 'all';
+      callFilter = 'all';
       search = '';
       if (searchInput) searchInput.value = '';
       syncChip('data-status-filter', statusFilter);
       syncChip('data-region-filter', regionFilter);
       syncChip('data-enquiry-filter', 'all');
+      syncChip('data-call-filter', 'all');
       renderList();
     }
 
@@ -475,6 +493,15 @@
       return chat.status === statusFilter;
     }
 
+    function callMatches(chat) {
+      if (callFilter === 'all') return true;
+      const status = callStatusOf(chat);
+      if (callFilter === 'called') return status.called === true;
+      if (callFilter === 'not_called') return status.called !== true;
+      if (callFilter === 'shortlisted') return status.shortlisted === true;
+      return true;
+    }
+
     function regionMatches(chat) {
       if (regionFilter === 'all') return true;
       if (regionFilter === 'other') return !['kerala', 'karnataka'].includes(chat.region);
@@ -485,7 +512,8 @@
       return chats.filter((chat) => {
         const enquiryMatch =
           enquiryFilter === 'all' || Partner.resolveEnquiryType(chat) === enquiryFilter;
-        return statusMatches(chat) && regionMatches(chat) && enquiryMatch && matchesSearch(chat, search);
+        const callMatch = callMatches(chat);
+        return statusMatches(chat) && regionMatches(chat) && enquiryMatch && callMatch && matchesSearch(chat, search);
       });
     }
 
@@ -538,12 +566,27 @@
     }
 
     function rowName(chat) {
-      const person = rowPerson(chat);
-      if (!person) return formatPhone(chat.phone || chat.id);
-      return mode !== 'agency' && chat.isTestBooking ? `${person} · Test` : person;
+      const person = rowPerson(chat) || formatPhone(chat.phone || chat.id);
+      /* Desk.row has no slot for a badge and is shared with the provider desk,
+         so the two things worth knowing at a glance ride in the text it
+         already has: the star here, and the call on the preview line. */
+      const star = mode === 'agency' && callStatusOf(chat).shortlisted === true ? '★ ' : '';
+      if (!rowPerson(chat)) return `${star}${person}`;
+      return mode !== 'agency' && chat.isTestBooking ? `${person} · Test` : `${star}${person}`;
     }
 
     function rowPreview(chat) {
+      /* Once somebody has rung, that outranks what the agency last said and
+         what the ad was: the next reviewer needs to know it has been handled. */
+      if (mode === 'agency') {
+        const status = callStatusOf(chat);
+        if (status.called === true) {
+          const notes = Number(status.noteCount || (status.notes || []).length) || 0;
+          const who = status.calledBy ? `called by ${status.calledBy}` : 'called';
+          return notes ? `${who} · ${notes} note${notes > 1 ? 's' : ''}` : who;
+        }
+      }
+
       const said = String(chat.lastIncomingText || '').trim();
       if (said) return said;
 
@@ -738,6 +781,53 @@
       `;
     }
 
+    /* The same store the Booking Inbox writes to, so a call logged on either
+       surface shows on the other. Every chat already arrives carrying
+       callStatus; this desk simply never looked at it. */
+    function callStatusOf(chat) {
+      return (chat && chat.callStatus) || {};
+    }
+
+    function noteHtml(note, index) {
+      const when = note.createdAt ? formatTime(note.createdAt) : '';
+      const who = [note.createdBy, when].filter(Boolean).join(' · ');
+      return `
+        <div class="call-note">
+          <span class="call-note-text">${escapeHtml(note.text || '')}</span>
+          ${who ? `<span class="call-note-meta">${escapeHtml(who)}</span>` : ''}
+          <button class="call-note-delete" type="button" data-note-delete="${escapeAttr(note.id || String(index))}" aria-label="Delete note">&times;</button>
+        </div>
+      `;
+    }
+
+    function callHtml(chat) {
+      const status = callStatusOf(chat);
+      const notes = Array.isArray(status.notes) ? status.notes : [];
+      const calledWhen = [status.calledBy, status.calledAt && formatTime(status.calledAt)]
+        .filter(Boolean)
+        .join(' · ');
+
+      return `
+        <div class="attachment-actions">
+          <button class="call-toggle" type="button" data-call-toggle="called" aria-pressed="${status.called === true}">
+            ${status.called === true ? '&#10003; Called' : 'Mark called'}
+          </button>
+          <button class="call-toggle star" type="button" data-call-toggle="shortlist" aria-pressed="${status.shortlisted === true}">
+            &#9733; ${status.shortlisted === true ? 'Shortlisted' : 'Shortlist'}
+          </button>
+        </div>
+        ${calledWhen ? `<p class="card-note">Called by ${escapeHtml(calledWhen)}</p>` : ''}
+        <div class="call-notes">
+          ${notes.length ? notes.map(noteHtml).join('') : '<p class="attachment-empty">No notes yet.</p>'}
+        </div>
+        <textarea class="call-note-box" data-el="note-text" maxlength="1000" placeholder="Add a note about this call…"></textarea>
+        <div class="attachment-actions">
+          <button class="button approve" type="button" data-call-toggle="note">Save note</button>
+        </div>
+        <p class="form-status" data-el="call-status" aria-live="polite"></p>
+      `;
+    }
+
     function actionsHtml(chat, card) {
       const link = buildWhatsAppLink(chat.phone || chat.id);
       const copyLabel = card.copy === 'phone' ? 'Copy phone' : 'Copy request ID';
@@ -754,6 +844,7 @@
     function cardBodyHtml(card, chat) {
       if (card.kind === 'partner-facts') return partnerFactsHtml(chat);
       if (card.kind === 'review') return reviewHtml(chat);
+      if (card.kind === 'call') return callHtml(chat);
       if (card.kind === 'actions') return actionsHtml(chat, card);
       return `<dl>${rowsHtml(card.rows, chat)}</dl>`;
     }
@@ -762,7 +853,9 @@
       if (!detailGrid) return;
       detailGrid.innerHTML = config.cards
         .map((card) => {
-          const extraClass = card.kind === 'review' && Partner.reviewState(chat).toVerify ? ' review-card' : '';
+          const extraClass = card.kind === 'call'
+            ? ' call-card'
+            : card.kind === 'review' && Partner.reviewState(chat).toVerify ? ' review-card' : '';
           return `<article class="card${extraClass}"><h4>${escapeHtml(card.title)}</h4>${cardBodyHtml(card, chat)}</article>`;
         })
         .join('');
@@ -782,6 +875,113 @@
 
       detailGrid.querySelectorAll('[data-review]').forEach((button) => {
         button.addEventListener('click', () => handleReview(button.dataset.review, phone));
+      });
+
+      detailGrid.querySelectorAll('[data-call-toggle]').forEach((button) => {
+        button.addEventListener('click', () => handleCall(button.dataset.callToggle, chat));
+      });
+
+      detailGrid.querySelectorAll('[data-note-delete]').forEach((button) => {
+        button.addEventListener('click', () => deleteNote(button.dataset.noteDelete, chat));
+      });
+    }
+
+    /* Optimistic, the way the Booking Inbox does it: the queue is worked
+       through fast and must not wait on a round trip. The old value is kept so
+       a failed write can be put back — without that the desk would show a call
+       that never saved, which is worse than showing none. */
+    /* The detail pane holds its own copy of the chat, fetched by phone, while
+       the list holds the one that came from the collection. They are different
+       objects, so a write has to land on both or the row keeps the old state
+       until the next refresh. */
+    function syncRow(chat, status) {
+      const id = chat.phone || chat.id;
+      const row = chats.find((item) => (item.phone || item.id) === id);
+      if (row) row.callStatus = status;
+    }
+
+    async function withOptimisticCall(chat, nextStatus, request) {
+      const previous = chat.callStatus;
+      chat.callStatus = nextStatus;
+      syncRow(chat, nextStatus);
+      renderCards(chat);
+      renderList();
+
+      try {
+        const result = await request();
+        chat.callStatus = (result && result.callStatus) || chat.callStatus;
+      } catch (error) {
+        chat.callStatus = previous;
+        syncRow(chat, previous);
+        renderCards(chat);
+        renderList();
+        setStatusText('call-status', error.message || 'Could not save. Try again.', 'error');
+        return;
+      }
+      syncRow(chat, chat.callStatus);
+      renderCards(chat);
+      renderList();
+    }
+
+    async function handleCall(action, chat) {
+      const phone = chat.phone || chat.id;
+      const status = callStatusOf(chat);
+
+      if (action === 'note') {
+        const box = detailGrid.querySelector('[data-el="note-text"]');
+        const text = box ? box.value.trim() : '';
+        if (!text) {
+          setStatusText('call-status', 'Write the note first.');
+          return;
+        }
+        // Writing a note about a call means the call happened.
+        const notes = (Array.isArray(status.notes) ? status.notes : []).concat([
+          { id: `pending-${Date.now()}`, text, createdAt: new Date().toISOString(), createdBy: 'you' }
+        ]);
+        await withOptimisticCall(
+          chat,
+          { ...status, called: true, notes, noteCount: notes.length },
+          () => postCall(phone, 'notes', { text })
+        );
+        return;
+      }
+
+      if (action === 'called') {
+        const called = status.called !== true;
+        await withOptimisticCall(
+          chat,
+          { ...status, called, calledBy: called ? 'you' : '', calledAt: called ? new Date().toISOString() : null },
+          () => postCall(phone, 'called', { called })
+        );
+        return;
+      }
+
+      if (action === 'shortlist') {
+        const shortlisted = status.shortlisted !== true;
+        await withOptimisticCall(
+          chat,
+          { ...status, shortlisted, shortlistedBy: shortlisted ? 'you' : '' },
+          () => postCall(phone, 'shortlist', { shortlisted })
+        );
+      }
+    }
+
+    async function deleteNote(noteId, chat) {
+      const phone = chat.phone || chat.id;
+      const status = callStatusOf(chat);
+      const notes = (Array.isArray(status.notes) ? status.notes : []).filter((n, i) => String(n.id || i) !== String(noteId));
+      await withOptimisticCall(
+        chat,
+        { ...status, notes, noteCount: notes.length },
+        () => fetchJson(`/admin/booking-chats/${encodeURIComponent(phone)}/notes/${encodeURIComponent(noteId)}`, { method: 'DELETE' })
+      );
+    }
+
+    function postCall(phone, suffix, body) {
+      return fetchJson(`/admin/booking-chats/${encodeURIComponent(phone)}/${suffix}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body)
       });
     }
 

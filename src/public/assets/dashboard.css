@@ -262,6 +262,98 @@ h1 {
   margin-top: 4px;
 }
 
+/* ---- the call card on the agency desk ---- */
+
+/* Two toggles, a list of notes and a textarea do not fit a half-width column:
+   the Shortlist pill was clipping and the note box was a slot. */
+.card.call-card {
+  grid-column: 1 / -1;
+}
+
+.call-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  /* The detail grid is two narrow columns, and "Mark called" was breaking
+     across two lines inside the pill. */
+  white-space: nowrap;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 9px 15px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.call-toggle[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* The star keeps its own colour when on, so "called" and "shortlisted" never
+   read as the same state at a glance. */
+.call-toggle.star[aria-pressed="true"] {
+  background: #c08a2e;
+  border-color: #c08a2e;
+}
+
+.call-notes {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.call-note {
+  position: relative;
+  background: var(--chat-bg);
+  border-radius: var(--radius-card);
+  padding: 9px 30px 9px 11px;
+  font-size: 0.88rem;
+}
+
+.call-note-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.call-note-delete {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 2px 5px;
+  cursor: pointer;
+}
+
+.call-note-delete:hover,
+.call-note-delete:focus-visible {
+  color: var(--danger);
+}
+
+.call-note-box {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--panel-strong);
+  resize: vertical;
+  min-height: 62px;
+}
+
 .card-note {
   margin: 12px 0 0;
   font-size: 0.85rem;
