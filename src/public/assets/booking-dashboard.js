@@ -103,6 +103,31 @@
 
   /* ---- mode definitions -------------------------------------------------- */
 
+  const SORT_CHIPS = [
+    { key: 'queue', label: 'Oldest waiting' },
+    { key: 'latest', label: 'Latest first' }
+  ];
+
+  /* The same key the provider desk uses: one preference about how a person
+     reads a list, not one per desk. */
+  const SORT_STORAGE_KEY = 'pulso-desk-sort';
+
+  function readStoredSort() {
+    try {
+      return global.localStorage.getItem(SORT_STORAGE_KEY) === 'latest' ? 'latest' : 'queue';
+    } catch (error) {
+      return 'queue';
+    }
+  }
+
+  function rememberSort(mode) {
+    try {
+      global.localStorage.setItem(SORT_STORAGE_KEY, mode);
+    } catch (error) {
+      // Private browsing, or storage blocked. It still holds for this visit.
+    }
+  }
+
   const REGION_CHIPS = [
     { key: 'all', label: 'All locations' },
     { key: 'kerala', label: 'Kerala' },
@@ -290,6 +315,7 @@
     let statusFilter = 'all';
     let regionFilter = region || 'all';
     let enquiryFilter = 'all';
+    let sortMode = readStoredSort();
     let search = '';
     let mobileDetailOpen = false;
     let detailToken = 0;
@@ -356,12 +382,19 @@
 
       if (container) {
         container.innerHTML = [
+          '<p class="desk-sheet-label">Order</p>',
+          chipRow('data-sort', SORT_CHIPS, sortMode),
+          '<p class="desk-sheet-label">Narrow</p>',
           chipRow('data-region-filter', REGION_CHIPS, regionFilter),
           chipRow('data-enquiry-filter', config.enquiryChips, enquiryFilter)
         ].join('');
       }
 
       wireChips('data-status-filter', (key) => { statusFilter = key; });
+      wireChips('data-sort', (key) => {
+        sortMode = key === 'latest' ? 'latest' : 'queue';
+        rememberSort(sortMode);
+      });
       wireChips('data-region-filter', (key) => { regionFilter = key; });
       wireChips('data-enquiry-filter', (key) => { enquiryFilter = key; });
     }
@@ -557,20 +590,16 @@
     }
 
     function groupLabel(chat, tone) {
-      return Desk.groupLabel(tone, chat.updatedAt || chat.lastMessageAt);
+      return Desk.groupFor(sortMode, tone, chat.updatedAt || chat.lastMessageAt);
     }
 
     /* Oldest-waiting first among the rows that need something, newest first
        among the ones that are finished. */
     function sortForQueue(list) {
-      const rank = { stuck: 0, needs: 1, waiting: 2, done: 3 };
-      return list.slice().sort((left, right) => {
-        const leftTone = chatTone(left);
-        const rightTone = chatTone(right);
-        if (rank[leftTone] !== rank[rightTone]) return rank[leftTone] - rank[rightTone];
-        const leftAt = Desk.timeValue(left.updatedAt || left.lastMessageAt);
-        const rightAt = Desk.timeValue(right.updatedAt || right.lastMessageAt);
-        return leftTone === 'done' ? rightAt - leftAt : leftAt - rightAt;
+      return Desk.sortRows(list, {
+        mode: sortMode,
+        toneOf: chatTone,
+        timeOf: (chat) => chat.updatedAt || chat.lastMessageAt
       });
     }
 

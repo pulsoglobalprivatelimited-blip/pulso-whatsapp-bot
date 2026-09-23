@@ -6,6 +6,10 @@ let selectedPhone = null;
 let currentFilter = 'certificate_verification_pending';
 let hasLoadedOnce = false;
 let currentAppFilter = 'all';
+/* Shared with the agency and customer boards: it is a preference about how a
+   person reads a list, not about one desk. */
+const SORT_STORAGE_KEY = 'pulso-desk-sort';
+let currentSort = readStoredSort();
 let currentSearch = '';
 let currentCompletedRange = 'all';
 let currentCompletedSex = 'all';
@@ -72,6 +76,22 @@ function toggleNav(name, hidden) {
    to this panel so toggling a provider filter can't reach into theirs. */
 const providerRoot = document.getElementById('side-provider') || document;
 
+function readStoredSort() {
+  try {
+    return window.localStorage.getItem(SORT_STORAGE_KEY) === 'latest' ? 'latest' : 'queue';
+  } catch (error) {
+    return 'queue';
+  }
+}
+
+function rememberSort(mode) {
+  try {
+    window.localStorage.setItem(SORT_STORAGE_KEY, mode);
+  } catch (error) {
+    // Private browsing, or storage blocked. The choice still holds for this visit.
+  }
+}
+
 function providerAll(selector) {
   return providerRoot.querySelectorAll(selector);
 }
@@ -102,6 +122,15 @@ providerAll('[data-region-filter]').forEach((button) => {
     button.classList.add('active');
     currentRegionFilter = button.dataset.regionFilter;
     updateDashboardMetrics();
+    renderList();
+  });
+});
+providerAll('[data-sort]').forEach((button) => {
+  button.addEventListener('click', () => {
+    providerAll('[data-sort]').forEach((item) => item.classList.remove('active'));
+    button.classList.add('active');
+    currentSort = button.dataset.sort === 'latest' ? 'latest' : 'queue';
+    rememberSort(currentSort);
     renderList();
   });
 });
@@ -803,16 +832,10 @@ function attachPreferredWhatsAppHandlers(root = document) {
    been waiting longest under whoever arrived last. Work waits oldest-first;
    finished work still reads newest-first, because that is a record. */
 function sortForQueue(list) {
-  const rank = { stuck: 0, needs: 1, waiting: 2, done: 3 };
-  return list.slice().sort((left, right) => {
-    const leftTone = providerTone(left);
-    const rightTone = providerTone(right);
-    if (rank[leftTone] !== rank[rightTone]) {
-      return rank[leftTone] - rank[rightTone];
-    }
-    const leftAt = PulsoDesk.timeValue(providerSortTime(left));
-    const rightAt = PulsoDesk.timeValue(providerSortTime(right));
-    return leftTone === 'done' ? rightAt - leftAt : leftAt - rightAt;
+  return PulsoDesk.sortRows(list, {
+    mode: currentSort,
+    toneOf: providerTone,
+    timeOf: providerSortTime
   });
 }
 
@@ -1085,7 +1108,7 @@ function rowTime(provider, tone) {
 }
 
 function queueGroupLabel(provider, tone) {
-  return PulsoDesk.groupLabel(tone, providerSortTime(provider));
+  return PulsoDesk.groupFor(currentSort, tone, providerSortTime(provider));
 }
 
 /* An empty queue and a broken one used to look identical. This one also says

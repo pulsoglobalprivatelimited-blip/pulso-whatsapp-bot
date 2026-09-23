@@ -246,6 +246,22 @@ h1 {
   display: none;
 }
 
+/* Names a group inside the filter sheet. The sheet holds two kinds of control
+   now — one that reorders and several that narrow — and without labels they
+   read as one long undifferentiated row of chips. */
+.desk-sheet-label {
+  margin: 18px 0 -8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.desk-sheet-label:first-of-type {
+  margin-top: 4px;
+}
+
 .card-note {
   margin: 12px 0 0;
   font-size: 0.85rem;

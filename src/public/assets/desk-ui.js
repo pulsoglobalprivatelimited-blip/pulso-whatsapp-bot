@@ -205,6 +205,54 @@
     return Number.isNaN(ms) ? 0 : ms;
   }
 
+  /* ---- order ------------------------------------------------------------- */
+
+  /* Two ways to read the same list, and the desks need both.
+
+     "queue" is the working order: whatever needs a decision first, and within
+     that the person who has waited longest. Finished rows still read newest
+     first, because they are a record rather than work.
+
+     "latest" is the log: pure time order, urgency ignored. It answers the other
+     question a reviewer asks several times a day — what just came in — which
+     the queue order makes genuinely hard, since a new arrival lands at the
+     bottom of its group under everything older.
+
+     The rank lived twice, once per desk, with the same map and different
+     accessors. It lives here now, and the desks pass `toneOf` and `timeOf`. */
+  const QUEUE_RANK = { stuck: 0, needs: 1, waiting: 2, done: 3 };
+
+  function sortRows(list, options) {
+    const config = options || {};
+    const toneOf = config.toneOf || (() => 'waiting');
+    const timeOf = config.timeOf || (() => null);
+    const rows = Array.isArray(list) ? list.slice() : [];
+
+    if (config.mode === 'latest') {
+      return rows.sort((left, right) => timeValue(timeOf(right)) - timeValue(timeOf(left)));
+    }
+
+    return rows.sort((left, right) => {
+      const leftTone = toneOf(left);
+      const rightTone = toneOf(right);
+      if (QUEUE_RANK[leftTone] !== QUEUE_RANK[rightTone]) {
+        return QUEUE_RANK[leftTone] - QUEUE_RANK[rightTone];
+      }
+      const leftAt = timeValue(timeOf(left));
+      const rightAt = timeValue(timeOf(right));
+      return leftTone === 'done' ? rightAt - leftAt : leftAt - rightAt;
+    });
+  }
+
+  /* The heading has to follow the order. In time order the tones interleave, so
+     tone headings would flip back and forth down the list — "Waiting longest"
+     above "Done" above "Waiting today". Latest-first groups by date instead,
+     which is the branch groupLabel already has and never reaches for a row that
+     is stuck, needs a decision, or is done. */
+  function groupFor(mode, tone, value) {
+    return groupLabel(mode === 'latest' ? 'waiting' : tone, value);
+  }
+
   /* ---- identity ---------------------------------------------------------- */
 
   function normalizePhone(value) {
@@ -355,6 +403,8 @@
     relativeTime,
     waitLabel,
     timeValue,
+    sortRows,
+    groupFor,
     normalizePhone,
     formatPhone,
     initials,

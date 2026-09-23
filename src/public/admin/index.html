@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-title" content="Pulso Admin">
   <link rel="manifest" href="/admin/manifest.webmanifest">
   <link rel="icon" href="/admin/assets/pwa/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260923w">
+  <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260923x">
 </head>
 <!-- `desk-shell` opts this page into the phone chrome: the fixed tab bar, the
      segment strip and the sheets. The other admin pages share this stylesheet
@@ -149,6 +149,15 @@
           <p>These narrow the queue further. The badge shows how many are on.</p>
         </div>
 
+        <!-- Order is not a filter: it narrows nothing, so it sits above the
+             ones that do and stays out of the badge count. -->
+        <p class="desk-sheet-label">Order</p>
+        <div class="filters">
+          <button class="filter active" data-sort="queue">Oldest waiting</button>
+          <button class="filter" data-sort="latest">Latest first</button>
+        </div>
+
+        <p class="desk-sheet-label">Narrow</p>
         <div class="filters" id="region-filter-row">
           <button class="filter active" data-region-filter="all">All regions</button>
           <button class="filter" data-region-filter="kerala">Kerala</button>
@@ -443,11 +452,11 @@
 
   <div class="desk-scrim" aria-hidden="true"></div>
 
-  <script src="/admin/assets/desk-ui.js?v=20260923b"></script>
+  <script src="/admin/assets/desk-ui.js?v=20260923x"></script>
   <script src="/admin/assets/desk-shell.js?v=20260923a"></script>
-  <script src="/admin/assets/dashboard.js?v=20260923c"></script>
+  <script src="/admin/assets/dashboard.js?v=20260923x"></script>
   <script src="/admin/assets/partner-review.js?v=20260923g"></script>
-  <script src="/admin/assets/booking-dashboard.js?v=20260923g"></script>
+  <script src="/admin/assets/booking-dashboard.js?v=20260923x"></script>
   <script src="/admin/assets/admin-sides.js?v=20260923a"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>
