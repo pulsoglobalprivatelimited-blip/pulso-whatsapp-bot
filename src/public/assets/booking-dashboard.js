@@ -809,10 +809,10 @@
 
       return `
         <div class="attachment-actions">
-          <button class="call-toggle" type="button" data-call-toggle="called" aria-pressed="${status.called === true}">
+          <button class="agency-call-toggle" type="button" data-call-toggle="called" aria-pressed="${status.called === true}">
             ${status.called === true ? '&#10003; Called' : 'Mark called'}
           </button>
-          <button class="call-toggle star" type="button" data-call-toggle="shortlist" aria-pressed="${status.shortlisted === true}">
+          <button class="agency-call-toggle star" type="button" data-call-toggle="shortlist" aria-pressed="${status.shortlisted === true}">
             &#9733; ${status.shortlisted === true ? 'Shortlisted' : 'Shortlist'}
           </button>
         </div>

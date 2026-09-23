@@ -262,7 +262,12 @@ h1 {
   margin-top: 4px;
 }
 
-/* ---- the call card on the agency desk ---- */
+/* ---- the call card on the agency desk ----
+
+   Named agency-call-toggle, not call-toggle: the Booking Inbox already owns
+   that class and restyles it on phones into a 58px borderless column built
+   around .mark and .label children these buttons do not have. Sharing the name
+   collapsed the two pills into overlapping text. */
 
 /* Two toggles, a list of notes and a textarea do not fit a half-width column:
    the Shortlist pill was clipping and the note box was a slot. */
@@ -270,7 +275,7 @@ h1 {
   grid-column: 1 / -1;
 }
 
-.call-toggle {
+.agency-call-toggle {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -287,7 +292,7 @@ h1 {
   cursor: pointer;
 }
 
-.call-toggle[aria-pressed="true"] {
+.agency-call-toggle[aria-pressed="true"] {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
@@ -295,7 +300,7 @@ h1 {
 
 /* The star keeps its own colour when on, so "called" and "shortlisted" never
    read as the same state at a glance. */
-.call-toggle.star[aria-pressed="true"] {
+.agency-call-toggle.star[aria-pressed="true"] {
   background: #c08a2e;
   border-color: #c08a2e;
 }
