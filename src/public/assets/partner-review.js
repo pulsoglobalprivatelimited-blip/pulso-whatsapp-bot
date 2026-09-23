@@ -27,6 +27,7 @@
     terms_sent: 'Terms sent',
     terms_accepted: 'Terms accepted',
     terms_declined: 'Terms declined',
+    document_requested: 'Document asked for',
     invited: 'Invited',
     /* Written by the hub the moment the agency claims its invite — which only
        happens by signing in to the app. "Invited" used to stand in for this and
@@ -40,8 +41,8 @@
      the review card is driven by the status: every one of these means a
      document arrived at some point. */
   const DOC_STATUSES = new Set([
-    'document_received', 'asked_again', 'terms_sent', 'terms_accepted', 'terms_declined', 'invited',
-    'signed_in', 'rejected_document'
+    'document_received', 'asked_again', 'document_requested', 'terms_sent', 'terms_accepted',
+    'terms_declined', 'invited', 'signed_in', 'rejected_document'
   ]);
 
   const REVIEW_DONE = {
@@ -59,6 +60,11 @@
       note: 'The agency installed the app and signed in. They can add clients now.'
     },
     asked_again: { pill: 'attention', label: 'Asked again', note: 'Waiting for a clearer document.' },
+    document_requested: {
+      pill: 'waiting',
+      label: 'Document asked for',
+      note: 'One more document has been asked for. Waiting for the agency to send it.'
+    },
     rejected_document: {
       pill: 'attention',
       label: 'Rejected',
@@ -124,6 +130,8 @@
     // and calling it done is how two of them went unnoticed for weeks.
     if (terms === 'terms_accepted' || terms === 'invited') return 'waiting';
     if (terms === 'terms_declined' || terms === 'rejected_document') return 'attention';
+    // Waiting on them, not on us — it leaves the review queue without closing.
+    if (terms === 'document_requested') return 'waiting';
     if (terms === 'terms_sent') return 'waiting';
     return isCompleted(chat) ? 'done' : '';
   }
@@ -244,6 +252,8 @@
     approve: (phone) => postJson(chatUrl(phone, 'approve')),
     /** Asks the agency for a clearer document, quoting `reason`. */
     askAgain: (phone, reason) => postJson(chatUrl(phone, 'ask-again'), { reason }),
+    /** Asks for one more document, in the reviewer's own words. */
+    requestDocument: (phone, note) => postJson(chatUrl(phone, 'request-document'), { note }),
     /** Closes the enquiry when the document cannot be verified at all. */
     reject: (phone, reason) => postJson(chatUrl(phone, 'reject'), { reason })
   };

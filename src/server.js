@@ -25,6 +25,7 @@ const {
   getPartnerDocumentUrl,
   approvePartnerEnquiry,
   askPartnerAgain,
+  requestPartnerDocument,
   rejectPartnerEnquiry
 } = require('./services/partnerReviewService');
 const {
@@ -1183,6 +1184,18 @@ app.post('/admin/booking-chats/:phone/reject', async (req, res) => {
 app.post('/admin/booking-chats/:phone/ask-again', async (req, res) => {
   try {
     const result = await askPartnerAgain(req.params.phone, req.body.reason, getAdminActor(req));
+    return res.json(result);
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({ error: error.message });
+  }
+});
+
+/* Ask for one more document rather than a replacement. Agencies that are real
+   but unregistered cannot answer "send a registration certificate"; they can
+   answer "send your GST, or a Panchayat licence, or a bank passbook". */
+app.post('/admin/booking-chats/:phone/request-document', async (req, res) => {
+  try {
+    const result = await requestPartnerDocument(req.params.phone, req.body.note, getAdminActor(req));
     return res.json(result);
   } catch (error) {
     return res.status(error.statusCode || 400).json({ error: error.message });

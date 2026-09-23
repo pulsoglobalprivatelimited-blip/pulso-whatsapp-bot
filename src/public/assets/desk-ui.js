@@ -55,6 +55,7 @@
     /* agency partner status */
     document_received: 'Document to review',
     asked_again: 'Asked for a clearer one',
+    document_requested: 'Document asked for',
     terms_sent: 'Terms sent',
     terms_accepted: 'Terms accepted',
     terms_declined: 'Terms declined',

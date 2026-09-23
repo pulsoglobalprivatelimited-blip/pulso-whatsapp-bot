@@ -154,7 +154,7 @@
   const AGENCY_STATUS_CHIPS = [
     { key: 'all', label: 'All agencies' },
     { key: 'document_received', label: 'To verify', statuses: ['document_received'] },
-    { key: 'asked_again', label: 'Asked again', statuses: ['asked_again'] },
+    { key: 'asked_again', label: 'Asked again', statuses: ['asked_again', 'document_requested'] },
     { key: 'terms_sent', label: 'Terms sent', statuses: ['terms_sent'] },
     /* "Joined" used to cover both, which made a sent link look like a working
        partner. Two of the first six sat in it having never opened the app. */
@@ -613,6 +613,8 @@
         if (status === 'document_received') return Desk.escalate('needs', at);
         if (status === 'terms_declined' || status === 'rejected_document') return 'stuck';
         if (status === 'signed_in') return 'done';
+        // We asked for a document; the ball is with them.
+        if (status === 'document_requested') return 'waiting';
         /* An agency with an account it has never opened is not finished. It is
            not waiting on us either, so it stays amber rather than red — until
            two days pass, at which point somebody should ring them. */
@@ -765,9 +767,10 @@
             ${viewButton}
             <button class="button approve" type="button" data-review="approve">Approve &amp; send terms</button>
             <button class="button secondary" type="button" data-review="ask">Ask again</button>
+            <button class="button secondary" type="button" data-review="request">Ask for another document</button>
             <button class="button reject" type="button" data-review="reject">Reject</button>
           </div>
-          <p class="card-note">Approving sends the terms and creates the partner account in Pulso Hub. Ask again keeps the agency in the queue; Reject closes the enquiry.</p>
+          <p class="card-note">Approving sends the terms and creates the partner account in Pulso Hub. Ask again says the document was not usable; Ask for another keeps it and requests one more — for an agency that is real but not registered. Reject closes the enquiry.</p>
           <p class="form-status" data-el="review-status" aria-live="polite"></p>
         `;
       }
@@ -1027,6 +1030,17 @@
         reason = global.prompt('What should the agency send instead?', 'The document was not readable.');
         if (reason === null) return;
       }
+      /* Ask again replaces what they sent; this adds to it. An agency whose own
+         name comes through as "Not registered" cannot answer the first and can
+         answer the second, which is why the reviewer writes the document. */
+      if (action === 'request') {
+        reason = global.prompt(
+          'Which document should the agency send? They are told this, in their language.',
+          'Your GST certificate, a Panchayat / Municipality licence, or a bank passbook in the agency name.',
+        );
+        if (reason === null) return;
+        if (!String(reason).trim()) return;
+      }
       if (action === 'reject') {
         // Ending an enquiry is not undoable from the desk, so it asks twice:
         // once for the reason the agency will be told, once to be sure.
@@ -1039,7 +1053,13 @@
       buttons.forEach((button) => { button.disabled = true; });
       setStatusText(
         'review-status',
-        action === 'approve' ? 'Sending terms…' : action === 'reject' ? 'Closing the enquiry…' : 'Asking again…'
+        action === 'approve'
+          ? 'Sending terms…'
+          : action === 'reject'
+            ? 'Closing the enquiry…'
+            : action === 'request'
+              ? 'Asking for the document…'
+              : 'Asking again…'
       );
 
       try {
@@ -1047,6 +1067,8 @@
           await Partner.approve(phone);
         } else if (action === 'reject') {
           await Partner.reject(phone, reason);
+        } else if (action === 'request') {
+          await Partner.requestDocument(phone, reason);
         } else {
           await Partner.askAgain(phone, reason);
         }
