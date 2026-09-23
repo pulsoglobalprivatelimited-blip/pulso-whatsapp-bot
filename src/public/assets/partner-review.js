@@ -184,6 +184,10 @@
       { label: 'Read up to', value: source.partnerPitchStep ? `piece ${source.partnerPitchStep} of 4` : '' },
       { label: 'App', value: appStatusLabel(source) },
       { label: 'District', value: source.partnerDistrict && formatStatus(source.partnerDistrict) },
+      /* The reviewer is about to judge a document. If the agency told us it has
+         no registration, it was asked for a visiting card or a sign board, and
+         that is what will be attached — not a certificate. */
+      { label: 'Registered', value: source.partnerNoRegistration === true ? 'No — told us at signup' : '' },
       { label: 'Came from', value: entry },
       { label: 'Region', value: source.region && formatStatus(source.region) },
       { label: 'Language', value: source.language }
@@ -225,6 +229,9 @@
     resolveEnquiryType,
     enquiryMeta,
     isPartner,
+    /** True when the agency said it has no registration, so a card or a sign
+        board is the right thing to have received. */
+    hasNoRegistration: (chat) => Boolean(chat && chat.partnerNoRegistration === true),
     termsState,
     statusLabel,
     statusPillClass,
