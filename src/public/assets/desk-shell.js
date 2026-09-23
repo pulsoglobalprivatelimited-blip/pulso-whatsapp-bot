@@ -180,10 +180,31 @@
     indicator.hidden = true;
     body.append(indicator);
 
+    /* Which element the finger is actually scrolling.
+
+       The page is not always the scroller. On a phone the open detail is
+       `position: fixed; inset: 0; overflow-y: auto`, and the thread inside it
+       scrolls on its own too. While either is scrolling, the document behind
+       stays at scrollTop 0 for ever — so testing the document said "they are at
+       the top of the page" on every single touch, and any 60px drag refreshed
+       the desk. Reading a long certificate did it over and over. */
+    function scrollerFor(node) {
+      let el = node instanceof Element ? node : null;
+      while (el && el !== body) {
+        const style = global.getComputedStyle(el);
+        const scrolls = /(auto|scroll|overlay)/.test(style.overflowY);
+        if (scrolls && el.scrollHeight > el.clientHeight + 1) return el;
+        el = el.parentElement;
+      }
+      return doc.scrollingElement || doc.documentElement;
+    }
+
     doc.addEventListener('touchstart', (event) => {
       if (!isPhone() || body.classList.contains('desk-sheet-open')) return;
-      const scroller = doc.scrollingElement || doc.documentElement;
-      if (scroller.scrollTop > 2) return;
+      // An open detail is a screen of its own. Pulling down in it means
+      // scrolling the certificate, never refreshing the queue behind it.
+      if (doc.querySelector('.content.mobile-detail-open')) return;
+      if (scrollerFor(event.target).scrollTop > 2) return;
       startY = event.touches[0].clientY;
       pulling = false;
     }, { passive: true });
