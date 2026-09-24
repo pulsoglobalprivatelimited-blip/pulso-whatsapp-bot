@@ -82,6 +82,7 @@
   let sheetPhone = '';
   let sheetLog = null;
   let pendingDeleteId = '';
+  let pendingCallPhone = '';
   let reviewChat = null;
   let toastTimer = null;
   let renderedMessageCount = -1;
@@ -211,9 +212,15 @@
   const CALL_ICON_PHONE =
     '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>';
-  const CALL_ICON_CHECK =
-    '<svg viewBox="0 0 24 24" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">' +
-    '<path d="M20 6 9 17l-5-5"/></svg>';
+
+  /* tel: wants digits and an optional leading +. Row phones arrive as +91…,
+     91… or bare 10-digit, so normalise rather than trusting the stored shape. */
+  function telHref(phone) {
+    const digits = String(phone || '').replace(/\D/g, '');
+    if (!digits) return 'tel:';
+    if (digits.length === 10) return `tel:+91${digits}`;
+    return `tel:+${digits}`;
+  }
 
   function callStatusOf(chat) {
     return chat && chat.callStatus ? chat.callStatus : { called: false, calledBy: '', calledAt: null };
@@ -495,12 +502,12 @@
             </span>
           </span>
         </button>
-        <button class="call-toggle${called ? ' on' : ''}" type="button"
-                data-call-phone="${Chat.escapeHtml(phone)}" aria-pressed="${called}"
-                title="${called ? 'Open call notes' : 'Mark as called'}">
-          <span class="mark">${called ? CALL_ICON_CHECK : CALL_ICON_PHONE}</span>
-          <span class="label">Called</span>
-        </button>
+        <a class="call-dial" href="${Chat.escapeHtml(telHref(phone))}"
+           data-call-phone="${Chat.escapeHtml(phone)}"
+           title="Call ${Chat.escapeHtml(formatPhone(phone))}">
+          <span class="mark">${CALL_ICON_PHONE}</span>
+          <span class="label">Call</span>
+        </a>
       </div>
     `;
   }
@@ -757,17 +764,19 @@
 
   /* ---- events ----------------------------------------------------------- */
   els.list.addEventListener('click', (event) => {
-    // The toggle is a sibling of .chat-row, not a child, so a tap on it must
-    // not fall through to opening the thread.
-    const toggle = event.target.closest('.call-toggle');
-    if (toggle && toggle.dataset.callPhone) {
+    // The dial link is a sibling of .chat-row, not a child, so a tap on it must
+    // not fall through to opening the thread. The browser still follows the
+    // href, which is what hands the number to the dialler.
+    const dial = event.target.closest('.call-dial');
+    if (dial && dial.dataset.callPhone) {
       event.stopPropagation();
-      const phone = toggle.dataset.callPhone;
+      const phone = dial.dataset.callPhone;
       const chat = chats.find((item) => chatPhone(item) === phone);
-      // First tap marks the call; once marked, the toggle opens the sheet so
-      // un-marking is a deliberate choice inside it rather than a stray tap.
-      if (chat && isCalled(chat)) openSheet(phone);
-      else toggleCalled(phone);
+      // Dialling is the act of calling, so it marks them. The sheet then opens
+      // when they come back, to record what was said - and to undo this if the
+      // tap was a mistake or nobody answered.
+      pendingCallPhone = phone;
+      if (chat && !isCalled(chat)) toggleCalled(phone);
       return;
     }
     const row = event.target.closest('.chat-row');
@@ -947,11 +956,27 @@
     }
   });
 
+  /* Back from the dialler. The tel: link leaves the page rather than unloading
+     it on Android, and iOS may restore it from cache, so both routes lead
+     here. The sheet opens on whoever was just dialled. */
+  async function resumeAfterCall() {
+    const phone = pendingCallPhone;
+    if (!phone) return;
+    pendingCallPhone = '';
+    await loadList();
+    if (!isSheetOpen()) openSheet(phone);
+  }
+
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       loadList();
       refreshOpenThread();
+      resumeAfterCall();
     }
+  });
+
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) resumeAfterCall();
   });
 
   window.setInterval(() => {
