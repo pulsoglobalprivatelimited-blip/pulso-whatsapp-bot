@@ -77,6 +77,18 @@
     return formatStatus(event || 'system update');
   }
 
+  /* Which door a message came through. Entries from before this was recorded
+     carry nothing, and an unbadged entry reads as WhatsApp, which it was. */
+  const CHANNEL_ICONS = {
+    app: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18.5h2"/></svg>'
+  };
+
+  function channelBadge(entry) {
+    const channel = String((entry && entry.channel) || '');
+    if (channel !== 'app') return '';
+    return `<span class="chan-badge app">${CHANNEL_ICONS.app}App</span>`;
+  }
+
   function renderHistoryBubble(entry) {
     if (!entry) return '';
 
@@ -89,7 +101,7 @@
       return `
         <article class="history-item history-item-inbound">
           <div class="history-meta">
-            <span class="history-sender">Provider</span>
+            <span class="history-sender">Provider</span>${channelBadge(entry)}
             <time>${formatHistoryTime(entry.at)}</time>
           </div>
           <div class="history-bubble">
@@ -108,7 +120,7 @@
       return `
         <article class="history-item history-item-outbound">
           <div class="history-meta">
-            <span class="history-sender">${escapeHtml(entry.sender || 'Bot')}</span>
+            <span class="history-sender">${escapeHtml(entry.sender || 'Bot')}</span>${channelBadge(entry)}
             <time>${formatHistoryTime(entry.at)}</time>
           </div>
           <div class="history-bubble">
@@ -194,6 +206,7 @@
     getOutboundMessageContent,
     describeSystemEvent,
     renderHistoryBubble,
+    channelBadge,
     buildHistoryHtml,
     previewFromEntry
   };

@@ -9,6 +9,7 @@ const {
 } = require('./storage');
 const { STATUS } = require('../flow');
 const { applyRegionDefaults, inferProviderRegion, statusRequiresRegion } = require('./regionService');
+const { currentChannel } = require('./metaClient');
 
 function now() {
   return new Date().toISOString();
@@ -148,7 +149,14 @@ function summarizeHistoryEntry(entry) {
 async function appendHistory(phone, event) {
   const provider = await getOrCreateProvider(phone);
   const at = now();
-  provider.history.push({ at, ...event });
+  // Stamped from the turn in progress, so every entry says which door the
+  // person came through. WhatsApp turns set nothing and stay unstamped.
+  const channel = currentChannel();
+  provider.history.push({ at, ...event, ...(channel ? { channel } : {}) });
+  // Also on the record, so the list can badge and filter without reading every
+  // entry. It is the last door used, not the first: someone who starts in the
+  // app and continues on WhatsApp should read as WhatsApp now.
+  provider.lastChannel = channel || 'whatsapp';
   const summary = summarizeHistoryEntry(event);
   provider.lastMessageAt = at;
   provider.lastMessageDirection = summary.direction;

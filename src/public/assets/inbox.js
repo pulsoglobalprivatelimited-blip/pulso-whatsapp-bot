@@ -11,6 +11,7 @@
     app: document.getElementById('inbox-app'),
     list: document.getElementById('inbox-list'),
     count: document.getElementById('inbox-count'),
+    channelFilters: document.getElementById('channel-filters'),
     search: document.getElementById('inbox-search'),
     clear: document.getElementById('inbox-clear'),
     refresh: document.getElementById('inbox-refresh'),
@@ -30,6 +31,7 @@
   let providers = [];
   let selectedPhone = null;
   let searchTerm = '';
+  let channelFilter = 'all';
   let renderedHistoryCount = -1;
 
   /* ---- data ------------------------------------------------------------- */
@@ -117,11 +119,19 @@
   }
 
   /* ---- chat list -------------------------------------------------------- */
+  /* Records from before the channel was recorded have no lastChannel. They came
+     through WhatsApp, because the app did not exist yet, so they count as it. */
+  function providerChannel(provider) {
+    return String((provider && provider.lastChannel) || 'whatsapp');
+  }
+
   function getVisibleProviders() {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return providers;
     const digits = term.replace(/\D/g, '');
     return providers.filter((provider) => {
+      const channelMatch = channelFilter === 'all' || providerChannel(provider) === channelFilter;
+      if (!channelMatch) return false;
+      if (!term) return true;
       const name = (provider.fullName || '').toLowerCase();
       const phone = String(provider.phone || '');
       return name.includes(term) || (digits && phone.includes(digits));
@@ -146,6 +156,7 @@
           <span class="chat-sub">
             <span class="chat-preview">${Chat.escapeHtml(rowPreview(provider))}</span>
             <span class="chat-status-pill ${pillClass}">${Chat.escapeHtml(Chat.formatStatus(status) || 'lead')}</span>
+            ${providerChannel(provider) === 'app' ? Chat.channelBadge({ channel: 'app' }) : ''}
             <span class="chat-dot${attention ? '' : ' hidden'}"></span>
           </span>
         </span>
@@ -155,9 +166,13 @@
 
   function renderList() {
     const visible = getVisibleProviders();
-    els.count.textContent = searchTerm
+    const appCount = providers.filter((p) => providerChannel(p) === 'app').length;
+    const base = searchTerm || channelFilter !== 'all'
       ? `${visible.length} of ${providers.length} conversations`
       : `${providers.length} conversations`;
+    els.count.textContent = appCount
+      ? `${base} · ${appCount} app · ${providers.length - appCount} WhatsApp`
+      : base;
 
     if (!visible.length) {
       els.list.innerHTML = '<p class="is-loading">No conversations match your search.</p>';
@@ -331,6 +346,14 @@
   els.list.addEventListener('click', (event) => {
     const row = event.target.closest('.chat-row');
     if (row && row.dataset.phone) selectChat(row.dataset.phone);
+  });
+
+  els.channelFilters.addEventListener('click', (event) => {
+    const chip = event.target.closest('[data-channel]');
+    if (!chip) return;
+    channelFilter = chip.dataset.channel;
+    els.channelFilters.querySelectorAll('.inbox-chip').forEach((c) => c.classList.toggle('active', c === chip));
+    renderList();
   });
 
   els.search.addEventListener('input', () => {

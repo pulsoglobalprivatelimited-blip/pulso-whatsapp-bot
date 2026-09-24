@@ -1238,3 +1238,37 @@
     flex-basis: 100%;
   }
 }
+
+/* Which door a person came through. Only the app is badged: an unbadged row is
+   WhatsApp, which is also true of every record from before this was recorded. */
+.chan-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px 2px 6px;
+  border-radius: 999px;
+  font-size: 0.63rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.chan-badge svg {
+  display: block;
+  width: 10px;
+  height: 10px;
+}
+
+.chan-badge.app {
+  background: rgba(94, 74, 120, 0.14);
+  color: #5e4a78;
+}
+
+.chan-badge.app svg rect,
+.chan-badge.app svg path {
+  stroke: #5e4a78;
+}
+
+.history-meta .chan-badge {
+  margin-left: 6px;
+}

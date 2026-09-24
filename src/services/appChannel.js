@@ -223,7 +223,10 @@ function historyToAppMessages(history) {
  */
 async function runAppTurn({ processIncomingMessage, phone, message }) {
   const to = phoneDigits(phone);
-  const { replies } = await runCollected(() => processIncomingMessage(to, message), { onlyTo: to });
+  const { replies } = await runCollected(() => processIncomingMessage(to, message), {
+    onlyTo: to,
+    channel: 'app'
+  });
   return replies.map(payloadToAppMessage).filter(Boolean);
 }
 

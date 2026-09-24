@@ -16,11 +16,23 @@ const collector = new AsyncLocalStorage();
 // the reviewer their certificate alert and ops their notifications — those must
 // still go to WhatsApp, and must never be handed to the app, which would show a
 // caregiver the Approve / Reject buttons meant for the reviewer.
-async function runCollected(fn, { onlyTo } = {}) {
+async function runCollected(fn, { onlyTo, channel } = {}) {
   const replies = [];
-  const store = { replies, onlyTo: String(onlyTo || '').replace(/\D/g, '') };
+  const store = {
+    replies,
+    onlyTo: String(onlyTo || '').replace(/\D/g, ''),
+    // Which door this turn came through. Set once here rather than threaded
+    // through every appendHistory call, so a WhatsApp turn can never pick it up.
+    channel: channel || ''
+  };
   const result = await collector.run(store, () => fn());
   return { result, replies };
+}
+
+/** The channel of the turn in progress, or '' for WhatsApp. */
+function currentChannel() {
+  const store = collector.getStore();
+  return (store && store.channel) || '';
 }
 
 function collectorFor(payload) {
@@ -348,6 +360,7 @@ module.exports = {
   getMediaMetadata,
   downloadMediaFile,
   runCollected,
+  currentChannel,
   registerAppMedia,
   isAppMediaId
 };

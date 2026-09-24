@@ -110,6 +110,7 @@ async function listProviderSummaries() {
       'lastMessageAt',
       'lastMessageDirection',
       'lastMessagePreview',
+      'lastChannel',
       'verification',
       'pulsoAppActivationStatus',
       'pulsoAppDevice',

@@ -11,7 +11,7 @@
   <link rel="manifest" href="/admin/manifest.webmanifest">
   <link rel="icon" href="/admin/assets/pwa/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260923r">
-  <link rel="stylesheet" href="/admin/assets/inbox.css?v=20260924b">
+  <link rel="stylesheet" href="/admin/assets/inbox.css?v=20260924c">
 </head>
 <body>
   <div class="inbox-app" id="inbox-app">
@@ -42,6 +42,13 @@
           <div class="inbox-search-row">
             <input id="inbox-search" type="search" placeholder="Search by name or phone" autocomplete="off">
             <button id="inbox-clear" class="button secondary" type="button">Clear</button>
+          </div>
+          <div class="inbox-filter-strip" id="channel-filters">
+            <span class="inbox-filter-group">
+              <button class="inbox-chip active" data-channel="all" type="button">All</button>
+              <button class="inbox-chip" data-channel="app" type="button">App</button>
+              <button class="inbox-chip" data-channel="whatsapp" type="button">WhatsApp</button>
+            </span>
           </div>
         </div>
         <p class="inbox-count" id="inbox-count">Loading conversations…</p>
@@ -80,8 +87,8 @@
     </div>
   </div>
 
-  <script src="/admin/assets/chat-history.js?v=20260911a"></script>
-  <script src="/admin/assets/inbox.js?v=20260622a"></script>
+  <script src="/admin/assets/chat-history.js?v=20260924c"></script>
+  <script src="/admin/assets/inbox.js?v=20260924c"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>
 </html>
