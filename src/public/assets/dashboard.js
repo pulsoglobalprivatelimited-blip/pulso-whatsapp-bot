@@ -16,6 +16,37 @@ let currentCompletedSex = 'all';
 let currentStartedRange = 'all';
 let mobileDetailOpen = false;
 let suppressAutoSelectOnce = false;
+/* A reviewer's half-finished work: a qualification they have changed, or a note
+   they are still typing. Refresh redraws the whole detail pane, which used to
+   put these back to what the server last said — silently, so the next Approve
+   sent the old qualification. Tied to a phone number, because carrying a note
+   across to the next caregiver would be worse than losing it. */
+const unsavedEdits = { phone: null, fields: new Set() };
+
+function markEdited(field) {
+  if (!selectedPhone) return;
+  if (unsavedEdits.phone !== selectedPhone) {
+    unsavedEdits.phone = selectedPhone;
+    unsavedEdits.fields.clear();
+  }
+  unsavedEdits.fields.add(field);
+}
+
+function hasUnsavedEdit(phone, field) {
+  return unsavedEdits.phone === phone && unsavedEdits.fields.has(field);
+}
+
+function clearUnsavedEdits() {
+  unsavedEdits.phone = null;
+  unsavedEdits.fields.clear();
+}
+
+/* Only writes the field when the reviewer has not touched it. */
+function setReviewField(id, value, phone, field) {
+  const element = document.getElementById(id);
+  if (!element || hasUnsavedEdit(phone, field)) return;
+  element.value = value;
+}
 let detailRequestToken = 0;
 let currentAdmin = null;
 
@@ -100,6 +131,16 @@ configureDashboardShell();
 loadCurrentAdmin().catch(() => {});
 
 document.getElementById('refresh-button').addEventListener('click', loadProviders);
+
+/* The three fields holding work that is not saved anywhere yet. */
+[
+  ['review-qualification-input', 'qualification', 'change'],
+  ['notes-input', 'notes', 'input'],
+  ['additional-note-input', 'additionalNote', 'input']
+].forEach(([id, field, event]) => {
+  const element = document.getElementById(id);
+  if (element) element.addEventListener(event, () => markEdited(field));
+});
 providerAll('.filter').forEach((button) => {
   if (!button.dataset.filter) {
     return;
@@ -1555,16 +1596,30 @@ async function renderDetail(provider) {
   renderAdditionalDocumentRequest(detailProvider);
   renderAttachments('detail-additional-document-files', additionalDocumentAttachments);
 
+  const detailPhone = detailProvider.phone;
+  // A different caregiver is a clean slate: unsaved work belongs to the record
+  // it was typed against and must not follow the reviewer to the next one.
+  if (unsavedEdits.phone && unsavedEdits.phone !== detailPhone) {
+    clearUnsavedEdits();
+  }
+
   document.getElementById('reviewer-input').value = getCurrentAdminName();
-  document.getElementById('review-qualification-input').value = normalizeQualification(
-    (verification && verification.qualificationApproved) || detailProvider.qualification
-  );
-  document.getElementById('notes-input').value = verification.notes || '';
   document.getElementById('additional-reviewer-input').value = getCurrentAdminName();
-  document.getElementById('additional-note-input').value =
+  setReviewField(
+    'review-qualification-input',
+    normalizeQualification((verification && verification.qualificationApproved) || detailProvider.qualification),
+    detailPhone,
+    'qualification'
+  );
+  setReviewField('notes-input', verification.notes || '', detailPhone, 'notes');
+  setReviewField(
+    'additional-note-input',
     documents && documents.additionalDocumentRequest && documents.additionalDocumentRequest.status === 'pending'
       ? documents.additionalDocumentRequest.note || ''
-      : '';
+      : '',
+    detailPhone,
+    'additionalNote'
+  );
   renderHistory(detailProvider.history);
   setTimeout(scrollHistoryToBottom, 0);
   if (isMobileViewport()) {
@@ -1636,6 +1691,9 @@ async function submitReview(action) {
       body: JSON.stringify({ notes, qualification })
     });
 
+    // Saved: what is on screen now came back from the server, so it is no
+    // longer unsaved work to protect.
+    clearUnsavedEdits();
     const index = providers.findIndex((item) => item.phone === provider.phone);
     if (index >= 0) providers[index] = provider;
     renderDetail(provider);
@@ -1666,6 +1724,7 @@ async function submitAdditionalDocumentRequest() {
       body: JSON.stringify({ note })
     });
 
+    clearUnsavedEdits();
     const index = providers.findIndex((item) => item.phone === provider.phone);
     if (index >= 0) providers[index] = provider;
     renderDetail(provider);
