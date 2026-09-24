@@ -281,6 +281,11 @@ const MESSAGES = {
     'താങ്കളുടെ certificate verify ചെയ്തിരിക്കുന്നു.\nതാങ്കൾ Pulso-യിൽ ജോയിൻ ചെയ്യാൻ eligible ആണ്.',
   certificateRejected:
     'ക്ഷമിക്കണം, താങ്കൾ അയച്ച certificate verify ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി വ്യക്തമായ certificate വീണ്ടും upload ചെയ്യുക.',
+  /* Sent when a reviewer takes an approval back. The person already has
+     "your certificate is verified" and the terms buttons in their chat;
+     saying nothing leaves them holding buttons that no longer do anything. */
+  approvalUndone:
+    'ക്ഷമിക്കണം, താങ്കളുടെ certificate ഞങ്ങൾ ഒന്നുകൂടി പരിശോധിക്കുകയാണ്. പരിശോധന കഴിഞ്ഞ് ഞങ്ങൾ ഇവിടെ അറിയിക്കാം. ഇപ്പോൾ ഒന്നും ചെയ്യേണ്ടതില്ല.',
   certificateReuploadRequested:
     'താങ്കൾ അയച്ച certificate വ്യക്തമായി വായിക്കാൻ കഴിഞ്ഞില്ല. ദയവായി കൂടുതൽ clarity ഉള്ള certificate photo അല്ലെങ്കിൽ PDF വീണ്ടും upload ചെയ്യുക.',
   certificateCvUploaded:
@@ -472,6 +477,8 @@ const KARNATAKA_MESSAGES = {
     'Your certificate has been verified.\nYou are eligible to join Pulso.',
   certificateRejected:
     'Sorry, we could not verify your certificate. Please upload a clear certificate again.',
+  approvalUndone:
+    'Sorry, we are checking your certificate once more. We will let you know here when it is done. Nothing is needed from you right now.',
   certificateReuploadRequested:
     'We could not read your certificate clearly. Please upload a clearer certificate photo or PDF.',
   certificateCvUploaded:

@@ -293,6 +293,10 @@
                 <div class="actions">
                   <button type="button" id="approve-button" class="button approve">Approve certificate</button>
                   <button type="button" id="reject-button" class="button reject">Reject certificate</button>
+                  <!-- Only shown on a record that is actually approved, so the
+                       usual review screen is not cluttered by an action that
+                       would have nothing to undo. -->
+                  <button type="button" id="undo-approval-button" class="button secondary hidden">Undo approval</button>
                 </div>
                 <p id="review-status" class="form-status" aria-live="polite"></p>
               </form>
@@ -454,7 +458,7 @@
 
   <script src="/admin/assets/desk-ui.js?v=20260924a"></script>
   <script src="/admin/assets/desk-shell.js?v=20260923p"></script>
-  <script src="/admin/assets/dashboard.js?v=20260924a"></script>
+  <script src="/admin/assets/dashboard.js?v=20260924b"></script>
   <script src="/admin/assets/partner-review.js?v=20260924a"></script>
   <script src="/admin/assets/booking-dashboard.js?v=20260924a"></script>
   <script src="/admin/assets/admin-sides.js?v=20260923a"></script>

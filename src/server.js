@@ -8,6 +8,7 @@ const { STATUS } = require('./flow');
 const {
   processIncomingMessage,
   approveCertificate,
+  undoApproval,
   rejectCertificate,
   requestAdditionalDocument,
   markPulsoAppActivationVerified,
@@ -1295,6 +1296,18 @@ app.post('/admin/providers/:phone/approve-certificate', async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+/* Takes an approval back. Separate from reject on purpose: reject is a verdict
+   on the certificate and tells the provider to send another, while this says
+   the review is happening again. */
+app.post('/admin/providers/:phone/undo-approval', async (req, res) => {
+  try {
+    const provider = await undoApproval(req.params.phone, getAdminActor(req), req.body.reason);
+    res.json(provider);
+  } catch (error) {
+    res.status(error.statusCode || 400).json({ error: error.message });
   }
 });
 

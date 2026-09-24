@@ -243,6 +243,7 @@ historyBottomButton.addEventListener('click', () => {
 });
 
 document.getElementById('approve-button').addEventListener('click', () => submitReview('approve-certificate'));
+document.getElementById('undo-approval-button').addEventListener('click', submitUndoApproval);
 document.getElementById('reject-button').addEventListener('click', () => submitReview('reject-certificate'));
 document
   .getElementById('request-additional-document-button')
@@ -1611,6 +1612,16 @@ async function renderDetail(provider) {
     detailPhone,
     'qualification'
   );
+  const undoButton = document.getElementById('undo-approval-button');
+  if (undoButton) {
+    // Approved, but not yet past the point of no return.
+    const canUndo =
+      verification.status === 'verified' &&
+      detailProvider.termsAccepted !== true &&
+      detailProvider.status !== 'completed';
+    undoButton.classList.toggle('hidden', !canUndo);
+  }
+
   setReviewField('notes-input', verification.notes || '', detailPhone, 'notes');
   setReviewField(
     'additional-note-input',
@@ -1640,7 +1651,8 @@ const REVIEW_ACTION_BUTTON_IDS = [
   'reject-button',
   'request-additional-document-button',
   'verify-app-activation-button',
-  'manual-certificate-upload-button'
+  'manual-certificate-upload-button',
+  'undo-approval-button'
 ];
 
 function setReviewBusy(busy, activeButtonId) {
@@ -1709,6 +1721,37 @@ async function submitReview(action) {
     setReviewStatus(error.message, 'error');
   } finally {
     setReviewBusy(false, action === 'approve-certificate' ? 'approve-button' : 'reject-button');
+  }
+}
+
+/* Taking an approval back is not undoable in turn, and the provider is told,
+   so it asks for a reason and then asks again. */
+async function submitUndoApproval() {
+  if (!selectedPhone || reviewInFlight) return;
+
+  const reason = prompt('Why is this approval being undone? The reviewers see this.');
+  if (reason === null) return;
+  if (!confirm('Put this provider back in the review queue? They will be told their certificate is being checked again.')) return;
+
+  setReviewStatus('');
+  setReviewBusy(true, 'undo-approval-button');
+  try {
+    const provider = await fetchJson(`/admin/providers/${selectedPhone}/undo-approval`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: reason.trim() })
+    });
+    clearUnsavedEdits();
+    const index = providers.findIndex((item) => item.phone === provider.phone);
+    if (index >= 0) providers[index] = provider;
+    renderDetail(provider);
+    renderList();
+    updateDashboardMetrics();
+    setReviewStatus('Approval undone. They are back in the review queue.');
+  } catch (error) {
+    setReviewStatus(error.message, 'error');
+  } finally {
+    setReviewBusy(false, 'undo-approval-button');
   }
 }
 

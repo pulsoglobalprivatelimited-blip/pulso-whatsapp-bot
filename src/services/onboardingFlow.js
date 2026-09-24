@@ -3209,6 +3209,91 @@ async function approveCertificate(phone, reviewedBy, notes, qualification) {
   });
 }
 
+/* Why an undo is refused, or '' when it can go ahead.
+
+   The two "too late" cases are the point of this function. Once someone has
+   accepted the terms they have a partner account and an app login in
+   pulso-hub; rolling the record back here would leave those orphaned, with
+   this desk saying "waiting for review" about a person who is already working.
+   That is worse than the wrong approval it is trying to fix. */
+function blockUndoReason(provider) {
+  if (!provider) return 'Provider not found';
+  const verification = provider.verification || {};
+  if (verification.status !== 'verified') {
+    return 'This certificate is not approved, so there is nothing to undo';
+  }
+  if (provider.termsAccepted === true) {
+    return 'They have already accepted the terms — undo is not possible from here';
+  }
+  if (provider.status === STATUS.COMPLETED) {
+    return 'They have already completed onboarding — undo is not possible from here';
+  }
+  return '';
+}
+
+/* Put an approved provider back in the review queue.
+
+   The inverse of approveCertificate, and deliberately not a quiet one: it
+   records who undid it and why, tells the reviewers, and tells the provider.
+   They already hold "your certificate is verified" and a live pair of terms
+   buttons — the record changing underneath them is not something they can see. */
+async function undoApproval(phone, reviewedBy, reason) {
+  const provider = await getProvider(phone);
+  const blocked = blockUndoReason(provider);
+  if (blocked) {
+    const error = new Error(blocked);
+    error.statusCode = provider ? 409 : 404;
+    throw error;
+  }
+
+  return runWithProviderFlow(provider, async () => {
+    const undoneAt = new Date().toISOString();
+    const reviewer = reviewedBy || config.adminDefaultReviewer;
+    const note = String(reason || '').trim();
+
+    await updateProvider(phone, {
+      status: STATUS.VERIFICATION_PENDING,
+      currentStep: 13,
+      // The terms were never accepted, so every trace of having sent them goes.
+      termsSentAt: null,
+      termsReminderSentAt: null,
+      termsReminderCount: 0,
+      termsReminderKind: null,
+      termsReminderReplyReceivedAt: null,
+      termsDeclinedAt: null,
+      verification: {
+        status: 'pending',
+        notes: note,
+        undoneAt,
+        undoneBy: reviewer,
+        undoneReason: note
+      }
+    });
+    await appendHistory(phone, {
+      type: 'system',
+      event: 'certificate_approval_undone',
+      undoneBy: reviewer,
+      reason: note,
+      undoneAt
+    });
+
+    // Best effort: the record is already correct, and a message that fails to
+    // send must not roll that back or the queue starts lying again.
+    try {
+      await sendAndLog(phone, 'text', MESSAGES.approvalUndone, reviewer);
+    } catch (error) {
+      console.error(
+        '[UNDO_APPROVAL_NOTICE_ERROR]',
+        JSON.stringify({ phone, message: error.message })
+      );
+    }
+
+    const updatedProvider = await getProvider(phone);
+    await notifyCertificateReviewed(updatedProvider, 'approval undone', reviewer, note);
+    return updatedProvider;
+  });
+}
+
 async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
   const provider = await getProvider(phone);
   if (!provider) {
@@ -3259,6 +3344,8 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
 module.exports = {
   processIncomingMessage,
   approveCertificate,
+  undoApproval,
+  blockUndoReason,
   // Exported so the idempotency rule can be tested without a Firestore.
   hasAlreadyBeenApproved,
   rejectCertificate,
