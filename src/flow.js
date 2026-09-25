@@ -280,13 +280,13 @@ const MESSAGES = {
   certificateApproved:
     'താങ്കളുടെ certificate verify ചെയ്തിരിക്കുന്നു.\nതാങ്കൾ Pulso-യിൽ ജോയിൻ ചെയ്യാൻ eligible ആണ്.',
   certificateApprovedBasic:
-    // Founder-approved English, 26 Sep 2026. No Malayalam was supplied, so the
-    // Malayalam flow reads this English line rather than an invented translation.
-    'Your document has been reviewed. You are approved to join Pulso as a Basic Caregiver.',
+    // Founder's Malayalam, verbatim, 26 Sep 2026.
+    'നിങ്ങളുടെ രേഖകൾ പരിശോധിച്ചു. Pulso-യിൽ Basic Caregiver ആയി ചേരുന്നതിനുള്ള അംഗീകാരം നിങ്ങൾക്ക് ലഭിച്ചിരിക്കുന്നു.',
   termsRateBasic:
-    // Founder-approved English, 26 Sep 2026; no Malayalam supplied. {{payout8h}} /
-    // {{payout24h}} are filled from app_config/provider_tiers at send time.
-    'As a Basic Caregiver, you have no formal caregiving or nursing qualification/certificate and were selected based on practical caregiving experience. Your duty payment will be ₹{{payout8h}} per day for 8-hour duty and ₹{{payout24h}} per day for 24-hour duty.',
+    // Founder's Malayalam, verbatim, 26 Sep 2026 — except the two figures, which
+    // he wrote as ₹600 / ₹750 and are carried as {{payout8h}} / {{payout24h}} so a
+    // repricing in app_config/provider_tiers reaches this line without a deploy.
+    'നിങ്ങൾക്ക് Nursing/Caregiving സർട്ടിഫിക്കറ്റ് ഇല്ലാത്തതിനാൽ, നിങ്ങളെ Basic Caregiver ആയാണ് തിരഞ്ഞെടുത്തിരിക്കുന്നത്. നിങ്ങളുടെ caregiving പരിചയത്തിന്റെ അടിസ്ഥാനത്തിലാണ് ഈ തിരഞ്ഞെടുപ്പ്.\n\nഡ്യൂട്ടി വേതനം:\n8 മണിക്കൂർ – ദിവസം ₹{{payout8h}}\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
   certificateRejected:
     'ക്ഷമിക്കണം, താങ്കൾ അയച്ച certificate verify ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി വ്യക്തമായ certificate വീണ്ടും upload ചെയ്യുക.',
   /* Sent when a reviewer takes an approval back. The person already has
