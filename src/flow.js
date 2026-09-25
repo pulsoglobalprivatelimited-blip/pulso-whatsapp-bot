@@ -280,10 +280,12 @@ const MESSAGES = {
   certificateApproved:
     'താങ്കളുടെ certificate verify ചെയ്തിരിക്കുന്നു.\nതാങ്കൾ Pulso-യിൽ ജോയിൻ ചെയ്യാൻ eligible ആണ്.',
   certificateApprovedBasic:
-    // TODO founder Malayalam — English draft shown until his words arrive.
+    // Founder-approved English, 26 Sep 2026. No Malayalam was supplied, so the
+    // Malayalam flow reads this English line rather than an invented translation.
     'Your document has been reviewed. You are approved to join Pulso as a Basic Caregiver.',
   termsRateBasic:
-    // TODO founder Malayalam. {{payout8h}} / {{payout24h}} are filled from app_config/provider_tiers at send time.
+    // Founder-approved English, 26 Sep 2026; no Malayalam supplied. {{payout8h}} /
+    // {{payout24h}} are filled from app_config/provider_tiers at send time.
     'As a Basic Caregiver, you have no formal caregiving or nursing qualification/certificate and were selected based on practical caregiving experience. Your duty payment will be ₹{{payout8h}} per day for 8-hour duty and ₹{{payout24h}} per day for 24-hour duty.',
   certificateRejected:
     'ക്ഷമിക്കണം, താങ്കൾ അയച്ച certificate verify ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി വ്യക്തമായ certificate വീണ്ടും upload ചെയ്യുക.',
@@ -482,10 +484,10 @@ const KARNATAKA_MESSAGES = {
   certificateApproved:
     'Your certificate has been verified.\nYou are eligible to join Pulso.',
   certificateApprovedBasic:
-    // DRAFT — founder wording pending.
+    // Founder-approved, 26 Sep 2026.
     'Your document has been reviewed. You are approved to join Pulso as a Basic Caregiver.',
   termsRateBasic:
-    // DRAFT — founder wording pending. Figures come from app_config/provider_tiers at send time.
+    // Founder-approved, 26 Sep 2026. Figures come from app_config/provider_tiers at send time.
     'As a Basic Caregiver, you have no formal caregiving or nursing qualification/certificate and were selected based on practical caregiving experience. Your duty payment will be ₹{{payout8h}} per day for 8-hour duty and ₹{{payout24h}} per day for 24-hour duty.',
   certificateRejected:
     'Sorry, we could not verify your certificate. Please upload a clear certificate again.',
