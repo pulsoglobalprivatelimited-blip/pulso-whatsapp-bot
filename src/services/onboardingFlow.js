@@ -1,4 +1,5 @@
 const config = require('../config');
+const { getProviderTiers } = require('./providerTiersConfig');
 const fs = require('fs');
 const path = require('path');
 const {
@@ -13,6 +14,8 @@ const {
   getFlowIdFor,
   getWorkingModelFor,
   getDutyHourPaymentSummaryFor,
+  getCertificateApprovedFor,
+  getTermsRateFor,
   UI_TEXT,
   getFlowConfig,
   runWithProviderFlow
@@ -231,7 +234,7 @@ function getStepForStatus(status) {
 
 function normalizeApprovedQualification(value) {
   const normalized = String(value || '').trim().toLowerCase();
-  const validQualifications = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving'];
+  const validQualifications = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving', 'basic_caregiver'];
   return validQualifications.includes(normalized) ? normalized : null;
 }
 
@@ -3092,10 +3095,24 @@ async function processIncomingMessage(phone, message) {
 }
 
 async function sendCertificateApprovalFollowup(phone, provider, reviewer) {
+  // `provider` is re-read after approveCertificate wrote the reviewer's choice,
+  // so this is the APPROVED qualification, not what the candidate claimed.
+  const approvedQualification = provider && provider.qualification;
   const steps = [
     {
       name: 'certificate_approved_message',
-      send: () => sendAndLog(phone, 'text', MESSAGES.certificateApproved, reviewer)
+      send: () => sendAndLog(phone, 'text', getCertificateApprovedFor(approvedQualification), reviewer)
+    },
+    // A Basic caregiver reads their actual pay, and why, before the terms —
+    // every other qualification gets nothing extra here.
+    {
+      name: 'terms_rate_message',
+      send: async () => {
+        const line = getTermsRateFor(approvedQualification, await getProviderTiers());
+        if (!line) return false;
+        await sendAndLog(phone, 'text', line, reviewer);
+        return true;
+      }
     },
     {
       name: 'terms_intro_message',

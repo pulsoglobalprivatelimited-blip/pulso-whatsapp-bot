@@ -279,6 +279,12 @@ const MESSAGES = {
     'നന്ദി. ആവശ്യപ്പെട്ട additional document ലഭിച്ചു. വീണ്ടും review-നായി അയച്ചിരിക്കുന്നു.',
   certificateApproved:
     'താങ്കളുടെ certificate verify ചെയ്തിരിക്കുന്നു.\nതാങ്കൾ Pulso-യിൽ ജോയിൻ ചെയ്യാൻ eligible ആണ്.',
+  certificateApprovedBasic:
+    // TODO founder Malayalam — English draft shown until his words arrive.
+    'Your document has been reviewed. You are approved to join Pulso as a Basic Caregiver.',
+  termsRateBasic:
+    // TODO founder Malayalam. {{payout8h}} / {{payout24h}} are filled from app_config/provider_tiers at send time.
+    'As a Basic Caregiver, you have no formal caregiving or nursing qualification/certificate and were selected based on practical caregiving experience. Your duty payment will be ₹{{payout8h}} per day for 8-hour duty and ₹{{payout24h}} per day for 24-hour duty.',
   certificateRejected:
     'ക്ഷമിക്കണം, താങ്കൾ അയച്ച certificate verify ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി വ്യക്തമായ certificate വീണ്ടും upload ചെയ്യുക.',
   /* Sent when a reviewer takes an approval back. The person already has
@@ -475,6 +481,12 @@ const KARNATAKA_MESSAGES = {
     'Thank you. The additional document has been received and sent for review again.',
   certificateApproved:
     'Your certificate has been verified.\nYou are eligible to join Pulso.',
+  certificateApprovedBasic:
+    // DRAFT — founder wording pending.
+    'Your document has been reviewed. You are approved to join Pulso as a Basic Caregiver.',
+  termsRateBasic:
+    // DRAFT — founder wording pending. Figures come from app_config/provider_tiers at send time.
+    'As a Basic Caregiver, you have no formal caregiving or nursing qualification/certificate and were selected based on practical caregiving experience. Your duty payment will be ₹{{payout8h}} per day for 8-hour duty and ₹{{payout24h}} per day for 24-hour duty.',
   certificateRejected:
     'Sorry, we could not verify your certificate. Please upload a clear certificate again.',
   approvalUndone:
@@ -784,6 +796,37 @@ function getWorkingModelFor(qualification) {
   );
 }
 
+/**
+ * The approval message for what the reviewer approved. A Basic caregiver's
+ * document was NOT a certificate, so "your certificate has been verified"
+ * would be untrue; they get their own line instead.
+ */
+function getCertificateApprovedFor(qualification) {
+  const messages = getActiveFlow().MESSAGES;
+  if (String(qualification || '').toLowerCase() === 'basic_caregiver' && messages.certificateApprovedBasic) {
+    return messages.certificateApprovedBasic;
+  }
+  return messages.certificateApproved;
+}
+
+/**
+ * The rate line a Basic caregiver reads before accepting the terms, with the
+ * figures filled from the tier matrix — or null for every other qualification,
+ * whose terms are unchanged. Sent so the person accepts knowing the number.
+ */
+function getTermsRateFor(qualification, tiers) {
+  if (String(qualification || '').toLowerCase() !== 'basic_caregiver') return null;
+  const template = getActiveFlow().MESSAGES.termsRateBasic;
+  if (!template) return null;
+  const basic = (tiers && tiers.basic) || {};
+  if (!basic.payout8h || !basic.payout24h) {
+    throw new Error('Basic caregiver rate is not configured; refusing to send a blank rate');
+  }
+  return String(template)
+    .split('{{payout8h}}').join(String(basic.payout8h))
+    .split('{{payout24h}}').join(String(basic.payout24h));
+}
+
 function getDutyHourPaymentSummaryFor(qualification) {
   const messages = getActiveFlow().MESSAGES;
   if (isNurseQualification(qualification) && messages.dutyHourPaymentSummaryNurse) {
@@ -860,6 +903,8 @@ module.exports = {
   getFlowIdFor,
   isNurseQualification,
   getWorkingModelFor,
+  getCertificateApprovedFor,
+  getTermsRateFor,
   getDutyHourPaymentSummaryFor,
   getFlowConfig,
   getProviderFlowId,

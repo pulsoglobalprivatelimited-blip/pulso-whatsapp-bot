@@ -32,7 +32,9 @@ const REVIEW_ACTIONS = {
   CANCEL: 'review_cancel_'
 };
 
-const APPROVABLE_QUALIFICATIONS = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving'];
+// basic_caregiver: no formal certificate, taken on for practical experience.
+// Chosen by the reviewer looking at the upload, never offered to the candidate.
+const APPROVABLE_QUALIFICATIONS = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving', 'basic_caregiver'];
 
 function normalizePhone(value) {
   return String(value || '').replace(/\D/g, '');
@@ -171,6 +173,7 @@ function formatQualification(value) {
   if (value === 'hca') return 'HCA';
   if (value === 'bsc_nursing') return 'BSc Nursing';
   if (value === 'other_caregiving') return 'Other caregiving';
+  if (value === 'basic_caregiver') return 'Basic caregiver';
   return value ? formatStatus(value) : '-';
 }
 
