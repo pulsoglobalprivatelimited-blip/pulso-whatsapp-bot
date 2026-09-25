@@ -8,7 +8,12 @@
 ## Environment variables
 - `PUBLIC_BASE_URL=https://whatsapp.pulso.co.in`
 - `FIREBASE_PROJECT_ID=pulso-whatsapp-onboarding`
-- `FIREBASE_STORAGE_BUCKET=pulso-whatsapp-onboarding.appspot.com`
+- `FIREBASE_STORAGE_BUCKET=pulso-hub.firebasestorage.app`
+  - Not `pulso-whatsapp-onboarding.appspot.com`, which this file used to say and
+    which does not exist. Everything uploaded while it was set that way failed to
+    archive with "The specified bucket does not exist", and once the Meta media
+    id expired about thirty days later those certificates could no longer be
+    sent to a reviewer at all.
 - `GOOGLE_APPLICATION_CREDENTIALS=/etc/secrets/pulso-whatsapp-onboarding-service-account.json`
 - `WHATSAPP_VERIFY_TOKEN=pulso-whatsapp-webhook-2026`
 - `WHATSAPP_ACCESS_TOKEN=<your current Meta token>`

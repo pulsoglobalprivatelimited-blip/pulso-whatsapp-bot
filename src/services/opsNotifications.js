@@ -1,4 +1,7 @@
+const fs = require('fs');
+const path = require('path');
 const config = require('../config');
+const { uploadLocalFileToFirebaseStorage } = require('./mediaStorage');
 const {
   sendText,
   sendButtons,
@@ -477,6 +480,41 @@ async function sendCertificateReviewV2Template(to, provider, attachment) {
   }
 }
 
+/* The file is still on the server's disk even when both ways of sending it
+   have gone: the Meta id expires after about thirty days, and the cloud copy
+   was never made for anything uploaded while FIREBASE_STORAGE_BUCKET pointed at
+   a bucket that did not exist (April-May 2026). Those certificates were
+   unsendable for good, which is how a reviewer came to get an alert with no
+   certificate attached to it.
+
+   The bucket works now, so the file is archived on the spot and the fresh URL
+   used. It repairs the record as a side effect, so the next alert for the same
+   provider costs nothing. Returns null if the file is not on this disk either,
+   which is the genuine dead end. */
+async function archiveFromLocalDisk(provider, attachment) {
+  const localPath = attachment && attachment.storagePath;
+  if (!localPath || !fs.existsSync(localPath)) {
+    return null;
+  }
+
+  try {
+    const uploaded = await uploadLocalFileToFirebaseStorage(
+      (provider && provider.phone) || 'unknown',
+      attachment.category || 'certificate',
+      attachment.fileName || path.basename(localPath),
+      localPath,
+      attachment.mimeType || undefined
+    );
+    return (uploaded && (uploaded.cloudStorageUrl || uploaded.url)) || null;
+  } catch (error) {
+    console.error(
+      '[OPS_REVIEW_MEDIA_RESCUE_ERROR]',
+      JSON.stringify({ attachmentId: attachment.id, localPath, message: error.message })
+    );
+    return null;
+  }
+}
+
 async function sendReviewMediaTo(to, provider, attachment, index, total) {
   // A file ops uploaded from the dashboard has no media id, only an archived
   // copy; that link is enough to send it.
@@ -499,6 +537,20 @@ async function sendReviewMediaTo(to, provider, attachment, index, total) {
   // An app upload has no Meta media id — its id only ever existed in this
   // process's memory — so the archived link is the only way to send it.
   if (!attachment.id || isAppMediaId(attachment.id)) {
+    if (!archivedUrl) {
+      const rescued = await archiveFromLocalDisk(provider, attachment);
+      if (rescued) {
+        try {
+          return await sendByUrl(rescued);
+        } catch (rescueError) {
+          console.error(
+            '[OPS_REVIEW_MEDIA_ERROR]',
+            JSON.stringify({ to, attachmentId: attachment.id, via: 'local_disk_rescue_app', message: rescueError.message })
+          );
+          return null;
+        }
+      }
+    }
     if (!archivedUrl) {
       console.error(
         '[OPS_REVIEW_MEDIA_ERROR]',
@@ -548,6 +600,25 @@ async function sendReviewMediaTo(to, provider, attachment, index, total) {
           '[OPS_REVIEW_MEDIA_ERROR]',
           JSON.stringify(
             { to, attachmentId: attachment.id, via: 'archive_url_fallback', message: urlError.message, response: urlError.response ? urlError.response.data : null },
+            null,
+            2
+          )
+        );
+        return null;
+      }
+    }
+
+    // Last resort, and the one that saves the older certificates: the file is
+    // on disk, so archive it now and send that.
+    const rescuedUrl = await archiveFromLocalDisk(provider, attachment);
+    if (rescuedUrl) {
+      try {
+        return await sendByUrl(rescuedUrl);
+      } catch (rescueError) {
+        console.error(
+          '[OPS_REVIEW_MEDIA_ERROR]',
+          JSON.stringify(
+            { to, attachmentId: attachment.id, via: 'local_disk_rescue', message: rescueError.message },
             null,
             2
           )
