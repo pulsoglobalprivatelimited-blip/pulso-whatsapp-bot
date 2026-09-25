@@ -251,11 +251,16 @@
     return when ? `${who} \u00b7 ${when}` : who;
   }
 
+  /* The sheet used to open in exactly one place: on returning from the dialler.
+     That made it a good way to write a note and no way at all to read one back
+     — the row said "1 note" and the only route to it was ringing the person
+     again. This line is now the way in. */
   function calledMetaHtml(chat) {
     const star = isShortlisted(chat) ? '<span class="star" aria-hidden="true">&#9733;</span> ' : '';
     const [who, notes] = Chat.escapeHtml(calledSummary(chat)).split('__NOTES__');
     const notesHtml = notes ? ` <span class="notes-count">\u00b7 ${notes}</span>` : '';
-    return `<span class="called-meta">${star}&#10003; ${who}${notesHtml}</span>`;
+    const label = notes ? `Open call notes for ${Chat.escapeHtml(chatPhone(chat))}` : `Open call log for ${Chat.escapeHtml(chatPhone(chat))}`;
+    return `<button type="button" class="called-meta" data-open-notes="${Chat.escapeHtml(chatPhone(chat))}" aria-label="${label}">${star}&#10003; ${who}${notesHtml}</button>`;
   }
 
   function showToast(message) {
@@ -777,6 +782,14 @@
       // tap was a mistake or nobody answered.
       pendingCallPhone = phone;
       if (chat && !isCalled(chat)) toggleCalled(phone);
+      return;
+    }
+    // Sits inside .chat-row, so it has to be caught before the row handler
+    // below sends the tap off to the thread.
+    const notes = event.target.closest('[data-open-notes]');
+    if (notes && notes.dataset.openNotes) {
+      event.stopPropagation();
+      openSheet(notes.dataset.openNotes);
       return;
     }
     const row = event.target.closest('.chat-row');
