@@ -30,6 +30,12 @@
       subtitle: 'Review agency registration documents, send terms, and track partner onboarding.',
       board: 'agency'
     },
+    supply: {
+      eyebrow: 'Pulso Supply',
+      title: 'Agency Supply Enquiries',
+      subtitle: 'Agencies that asked us for caregivers or nurses. Everything here is what they typed on WhatsApp.',
+      board: 'supply'
+    },
     customer: {
       eyebrow: 'Pulso Customer Booking',
       title: 'Senior Care Booking Chats',
@@ -75,6 +81,7 @@
     const label = region.charAt(0).toUpperCase() + region.slice(1);
     if (side === 'provider') return `${label} provider verification desk`;
     if (side === 'agency') return `${label} partner agency desk`;
+    if (side === 'supply') return `${label} supply enquiry desk`;
     return `${label} senior care booking chats`;
   }
 
@@ -172,6 +179,15 @@
       global.PulsoDeskShell.setTabCount(
         'agency',
         agencies.filter((chat) => String(chat.partnerStatus || '') === 'document_received').length
+      );
+      /* An agency that answered every question and has not been rung yet. The
+         alert to the founder is switched off, so this badge is the only thing
+         that says someone is waiting. */
+      global.PulsoDeskShell.setTabCount(
+        'supply',
+        chats.filter((chat) => String(chat.enquiryType || '') === 'supply'
+          && String(chat.supplyStatus || '') === 'notified'
+          && !chat.supplyHandledAt).length
       );
       // Customer bookings are the family's to finish, not ours, so nothing on
       // that desk is ever waiting on a reviewer. No badge is the honest answer.

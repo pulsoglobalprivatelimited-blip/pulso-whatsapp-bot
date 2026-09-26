@@ -160,6 +160,36 @@ async function setWhatsappBookingChatCalled(phone, options = {}) {
   return { id: chat.id, phone: chat.phone || chat.id, callStatus };
 }
 
+/**
+ * Mark a supply enquiry as dealt with, or put it back in the queue.
+ *
+ * The agency board clears a row when the document moves on. A supply row has no
+ * such event — the enquiry reaches "notified" and stays there — so without this
+ * the "Waiting for us" count only ever climbs and stops meaning anything.
+ *
+ * Written onto the chat rather than supplyEnquiries because this is desk state,
+ * not something the bot said, and the desk already reads the chat.
+ */
+async function setWhatsappBookingChatSupplyHandled(phone, options = {}) {
+  const chat = await getWhatsappBookingChat(phone);
+  if (!chat) {
+    return null;
+  }
+
+  const handled = options.handled !== false;
+  await collection().doc(chat.id).set(
+    handled
+      ? {
+          supplyHandledAt: new Date().toISOString(),
+          supplyHandledBy: String(options.actor || '').slice(0, 120)
+        }
+      : { supplyHandledAt: '', supplyHandledBy: '' },
+    { merge: true }
+  );
+
+  return { id: chat.id, phone: chat.phone || chat.id, supplyHandled: handled };
+}
+
 async function resolveChatId(phone) {
   const chat = await getWhatsappBookingChat(phone);
   return chat ? { id: chat.id, phone: chat.phone || chat.id } : null;
@@ -200,6 +230,7 @@ module.exports = {
   getWhatsappBookingChatDetail,
   listWhatsappBookingChats,
   setWhatsappBookingChatCalled,
+  setWhatsappBookingChatSupplyHandled,
   getWhatsappBookingChatCallLog,
   setWhatsappBookingChatShortlisted,
   addWhatsappBookingChatNote,

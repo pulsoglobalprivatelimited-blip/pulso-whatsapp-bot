@@ -242,6 +242,54 @@
     { title: 'Actions', kind: 'actions', copy: 'request' }
   ];
 
+  /* The supply bot's own status, kept apart from partnerStatus on purpose: a
+     phone can have been through both bots, and one already has — its record
+     carries partnerAgencyName "Maxpro" from weeks ago beside a supply answer of
+     "Hoppe68". Reading the partner keys here would name the wrong agency. */
+  function supplyStatusOf(chat) {
+    return String((chat && chat.supplyStatus) || '');
+  }
+
+  function countSupplyStatus(chats, statuses) {
+    return chats.filter((chat) => statuses.includes(supplyStatusOf(chat))).length;
+  }
+
+  const SUPPLY_STATUS_CHIPS = [
+    { key: 'all', label: 'All enquiries' },
+    { key: 'notified', label: 'Finished', statuses: ['notified'] },
+    { key: 'not_now', label: 'Not now', statuses: ['not_now'] },
+    { key: 'asked_need', label: 'Stopped at category', statuses: ['asked_need'] },
+    { key: 'asked_district', label: 'Stopped at district', statuses: ['asked_district'] },
+    { key: 'asked_agency', label: 'Stopped at name', statuses: ['asked_agency'] },
+    { key: 'job_redirected', label: 'Sent to jobs', statuses: ['job_redirected'] }
+  ];
+
+  const SUPPLY_METRICS = [
+    {
+      /* The one that needs a person: they answered everything and are waiting.
+         With the alert switched off this desk is the only place they appear. */
+      label: 'Waiting for us',
+      attention: true,
+      count: (chats) => chats.filter(
+        (chat) => supplyStatusOf(chat) === 'notified' && !chat.supplyHandledAt
+      ).length,
+      status: 'notified'
+    },
+    { label: 'All enquiries', count: (chats) => chats.length, status: 'all' },
+    { label: 'Not now', count: (chats) => countSupplyStatus(chats, ['not_now']), status: 'not_now' },
+    {
+      label: 'Gave up partway',
+      count: (chats) => countSupplyStatus(chats, ['asked_agency', 'asked_district', 'asked_need']),
+      status: 'asked_need'
+    }
+  ];
+
+  const SUPPLY_CARDS = [
+    { title: 'Agency', kind: 'supply-facts' },
+    { title: 'Call', kind: 'call' },
+    { title: 'Actions', kind: 'actions', copy: 'phone' }
+  ];
+
   const AGENCY_CARDS = [
     { title: 'Agency', kind: 'partner-facts' },
     { title: 'Document review', kind: 'review' },
@@ -254,7 +302,10 @@
 
   const MODES = {
     customer: {
-      keeps: (type) => type !== 'partner',
+      /* Supply has to come out too. Before the Supply side existed these chats
+         had nowhere else to go and quietly sat on the customer board, which is
+         how an agency asking for staff came to be listed as a family booking. */
+      keeps: (type) => type !== 'partner' && type !== 'supply',
       metrics: CUSTOMER_METRICS,
       statusChips: CUSTOMER_STATUS_CHIPS,
       enquiryChips: [
@@ -280,6 +331,17 @@
       searchPlaceholder: 'Search partner agencies',
       emptyTitle: 'No agency enquiries'
     },
+    supply: {
+      keeps: (type) => type === 'supply',
+      metrics: SUPPLY_METRICS,
+      statusChips: SUPPLY_STATUS_CHIPS,
+      enquiryChips: [],
+      cards: SUPPLY_CARDS,
+      boardTitle: 'Supply enquiries',
+      searchLabel: 'Agency, phone, or district search',
+      searchPlaceholder: 'Search supply enquiries',
+      emptyTitle: 'No supply enquiries'
+    },
     all: {
       keeps: () => true,
       metrics: CUSTOMER_METRICS,
@@ -289,6 +351,7 @@
         { key: 'care', label: 'Bookings' },
         { key: 'job', label: 'Job enquiries' },
         { key: 'partner', label: 'Agencies' },
+        { key: 'supply', label: 'Supply' },
         { key: 'undecided', label: 'Undecided' }
       ],
       cards: BOOKING_CARDS,
@@ -562,6 +625,7 @@
        number does not have initials. */
     function rowPerson(chat) {
       if (mode === 'agency') return chat.partnerAgencyName || '';
+      if (mode === 'supply') return chat.supplyAgencyName || '';
       return chat.careRecipientName || chat.familyName || '';
     }
 
@@ -751,6 +815,38 @@
         .join('')}</dl>`;
     }
 
+    /* What the agency actually told the supply bot. Everything here is what
+       they typed or tapped; nothing is inferred, and nothing comes from the
+       partner keys on the same record. */
+    function supplyFactsHtml(chat) {
+      const TIERS = { basic: 'Basic', gda: 'GDA and above', nurse: 'Nurse' };
+      const STATUS = {
+        asked_language: 'Stopped at the language question',
+        asked_who: 'Stopped at job-or-agency',
+        asked_agency: 'Stopped at the agency name',
+        asked_district: 'Stopped at the district',
+        asked_need: 'Stopped at the category',
+        notified: 'Finished — waiting for us',
+        not_now: 'Not now — given the helpline',
+        job_redirected: 'Job seeker — sent to recruitment'
+      };
+      const district = String(chat.supplyDistrict || '');
+      const facts = [
+        { label: 'Agency', value: chat.supplyAgencyName || '' },
+        { label: 'District', value: district ? district.charAt(0).toUpperCase() + district.slice(1) : '' },
+        { label: 'Needs', value: TIERS[String(chat.supplyTier || '')] || '' },
+        { label: 'Where they got to', value: STATUS[supplyStatusOf(chat)] || supplyStatusOf(chat) },
+        { label: 'Language', value: chat.language === 'ml' ? 'Malayalam' : chat.language === 'en' ? 'English' : '' },
+        { label: 'From ad', value: chat.supplyAdId || '' }
+      ].filter((item) => item.value);
+      if (!facts.length) {
+        return '<p class="attachment-empty">Supply enquiry — nothing answered yet.</p>';
+      }
+      return `<dl>${facts
+        .map((item) => `<div><dt>${escapeHtml(item.label)}</dt><dd>${escapeHtml(String(item.value))}</dd></div>`)
+        .join('')}</dl>`;
+    }
+
     function reviewHtml(chat) {
       const state = Partner.reviewState(chat);
       if (!state.isPartner) {
@@ -846,6 +942,7 @@
 
     function cardBodyHtml(card, chat) {
       if (card.kind === 'partner-facts') return partnerFactsHtml(chat);
+      if (card.kind === 'supply-facts') return supplyFactsHtml(chat);
       if (card.kind === 'review') return reviewHtml(chat);
       if (card.kind === 'call') return callHtml(chat);
       if (card.kind === 'actions') return actionsHtml(chat, card);
@@ -1144,7 +1241,9 @@
 
     function renderHistoryBubble(message) {
       const directionClass = message.direction === 'outbound' ? 'history-item-outbound' : 'history-item-inbound';
-      const sender = message.direction === 'outbound' ? 'Booking bot' : mode === 'agency' ? 'Agency' : 'Customer';
+      const sender = message.direction === 'outbound'
+        ? (mode === 'supply' ? 'Supply bot' : 'Booking bot')
+        : mode === 'agency' || mode === 'supply' ? 'Agency' : 'Customer';
       const content = getMessageContent(message);
       const label = message.direction === 'outbound' && message.kind && message.kind !== 'text' ? message.kind : '';
 

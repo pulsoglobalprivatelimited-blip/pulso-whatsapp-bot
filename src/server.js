@@ -33,6 +33,7 @@ const {
   getWhatsappBookingChatDetail,
   listWhatsappBookingChats,
   setWhatsappBookingChatCalled,
+  setWhatsappBookingChatSupplyHandled,
   getWhatsappBookingChatCallLog,
   setWhatsappBookingChatShortlisted,
   addWhatsappBookingChatNote,
@@ -1093,6 +1094,21 @@ app.post('/admin/booking-chats/:phone/called', async (req, res) => {
   try {
     const result = await setWhatsappBookingChatCalled(req.params.phone, {
       called: req.body.called !== false,
+      actor: getAdminActor(req)
+    });
+    if (!result) {
+      return res.status(404).json({ error: 'Booking chat not found' });
+    }
+    return res.json(result);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+app.post('/admin/booking-chats/:phone/supply-handled', async (req, res) => {
+  try {
+    const result = await setWhatsappBookingChatSupplyHandled(req.params.phone, {
+      handled: req.body.handled !== false,
       actor: getAdminActor(req)
     });
     if (!result) {

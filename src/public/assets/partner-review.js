@@ -97,9 +97,16 @@
   function resolveEnquiryType(chat) {
     const source = chat || {};
     const tagged = String(source.enquiryType || '').toLowerCase();
-    if (tagged === 'care' || tagged === 'job' || tagged === 'partner') return tagged;
+    if (tagged === 'care' || tagged === 'job' || tagged === 'partner' || tagged === 'supply') {
+      return tagged;
+    }
     const step = String(source.currentStep || '').toLowerCase();
     if (step.startsWith('partner_')) return 'partner';
+    /* Without this a supply chat falls through to the line below and is called
+       a booking, because supply_done is a step like any other. It then shows on
+       the customer board as a family who asked for care, which is the opposite
+       of what happened. */
+    if (step.startsWith('supply_')) return 'supply';
     if (step && !PRE_CHOICE_STEPS.includes(step)) return 'care';
     return 'undecided';
   }
@@ -108,11 +115,20 @@
     if (type === 'care') return { label: 'Booking', className: 'care' };
     if (type === 'job') return { label: 'Job enquiry', className: 'job' };
     if (type === 'partner') return { label: 'Agency', className: 'partner' };
+    if (type === 'supply') return { label: 'Supply', className: 'partner' };
     return { label: 'Undecided', className: 'undecided' };
   }
 
   function isPartner(chat) {
     return resolveEnquiryType(chat) === 'partner';
+  }
+
+  /* The supply bot's chats. Separate from isPartner even though both are
+     agencies: one is signing up to the partner programme, the other is asking
+     us to send someone this week, and they are different queues with different
+     work. */
+  function isSupply(chat) {
+    return resolveEnquiryType(chat) === 'supply';
   }
 
   function statusLabel(chat) {
@@ -237,6 +253,7 @@
     resolveEnquiryType,
     enquiryMeta,
     isPartner,
+    isSupply,
     /** True when the agency said it has no registration, so a card or a sign
         board is the right thing to have received. */
     hasNoRegistration: (chat) => Boolean(chat && chat.partnerNoRegistration === true),
