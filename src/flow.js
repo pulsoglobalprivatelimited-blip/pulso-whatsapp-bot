@@ -283,10 +283,14 @@ const MESSAGES = {
     // Founder's Malayalam, verbatim, 26 Sep 2026.
     'നിങ്ങളുടെ രേഖകൾ പരിശോധിച്ചു. Pulso-യിൽ Basic Caregiver ആയി ചേരുന്നതിനുള്ള അംഗീകാരം നിങ്ങൾക്ക് ലഭിച്ചിരിക്കുന്നു.',
   termsRateBasic:
-    // Founder's Malayalam, verbatim, 26 Sep 2026 — except the two figures, which
+    // Founder's Malayalam, verbatim, 26 Sep 2026. He cut "on the basis of your
+    // caregiving experience" the same day: she is about to accept terms, and the
+    // sentence that matters there is the pay, not the reasoning. The rate lines
+    // already read "ദിവസം ₹600" — per day — so the "/day" he added to the English
+    // is already present here. Except the two figures, which
     // he wrote as ₹600 / ₹750 and are carried as {{payout8h}} / {{payout24h}} so a
     // repricing in app_config/provider_tiers reaches this line without a deploy.
-    'നിങ്ങൾക്ക് Nursing/Caregiving സർട്ടിഫിക്കറ്റ് ഇല്ലാത്തതിനാൽ, നിങ്ങളെ Basic Caregiver ആയാണ് തിരഞ്ഞെടുത്തിരിക്കുന്നത്. നിങ്ങളുടെ caregiving പരിചയത്തിന്റെ അടിസ്ഥാനത്തിലാണ് ഈ തിരഞ്ഞെടുപ്പ്.\n\nഡ്യൂട്ടി വേതനം:\n8 മണിക്കൂർ – ദിവസം ₹{{payout8h}}\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
+    'നിങ്ങൾക്ക് Nursing/Caregiving സർട്ടിഫിക്കറ്റ് ഇല്ലാത്തതിനാൽ, നിങ്ങളെ Basic Caregiver ആയാണ് തിരഞ്ഞെടുത്തിരിക്കുന്നത്.\n\nഡ്യൂട്ടി വേതനം:\n8 മണിക്കൂർ – ദിവസം ₹{{payout8h}}\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
   certificateRejected:
     'ക്ഷമിക്കണം, താങ്കൾ അയച്ച certificate verify ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി വ്യക്തമായ certificate വീണ്ടും upload ചെയ്യുക.',
   /* Sent when a reviewer takes an approval back. The person already has
@@ -487,8 +491,8 @@ const KARNATAKA_MESSAGES = {
     // Founder-approved, 26 Sep 2026.
     'Your document has been reviewed. You are approved to join Pulso as a Basic Caregiver.',
   termsRateBasic:
-    // Founder-approved, 26 Sep 2026. Figures come from app_config/provider_tiers at send time.
-    'As a Basic Caregiver, you have no formal caregiving or nursing qualification/certificate and were selected based on practical caregiving experience. Your duty payment will be ₹{{payout8h}} per day for 8-hour duty and ₹{{payout24h}} per day for 24-hour duty.',
+    // Founder's wording, 26 Sep 2026. Figures from app_config/provider_tiers at send time.
+    'Because you have no Nursing/Caregiving certificate, you have been selected as a Basic Caregiver.\n\nDuty pay: 8 hours ₹{{payout8h}}/day, 24 hours ₹{{payout24h}}/day.',
   certificateRejected:
     'Sorry, we could not verify your certificate. Please upload a clear certificate again.',
   approvalUndone:
