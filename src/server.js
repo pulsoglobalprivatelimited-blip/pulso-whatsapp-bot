@@ -44,6 +44,11 @@ const {
   getProvider
 } = require('./services/providerService');
 const { inferProviderRegion, normalizeRegion } = require('./services/regionService');
+const {
+  buildProviderVCard,
+  buildProviderVCardFile,
+  vcardFilename
+} = require('./services/vcardService');
 const { initializeStorage, saveWhatsappMessageStatus } = require('./services/storage');
 const { handleReviewAlertStatus } = require('./services/reviewAlertEscalation');
 const {
@@ -1260,6 +1265,77 @@ app.get('/admin/providers', async (req, res) => {
   } catch (error) {
     console.error('[ADMIN_PROVIDERS_ERROR]', JSON.stringify({ message: error.message }));
     return res.status(500).json({ error: 'Could not load providers' });
+  }
+});
+
+function isCompletedProvider(provider) {
+  return Boolean(
+    provider && provider.phone && provider.status === 'completed' && provider.termsAccepted === true
+  );
+}
+
+// Content-Disposition is latin-1 only, so a Malayalam name has to travel in the
+// RFC 5987 filename* parameter. The plain filename stays as the ASCII fallback
+// for anything that does not read filename*.
+function contactDisposition(filename) {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '').replace(/"/g, '') || 'pulso-contact.vcf';
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+}
+
+// Declared before /admin/providers/:phone on purpose: Express matches routes in
+// order, and ":phone" would otherwise swallow "contacts.vcf" and 404 the file.
+app.get('/admin/providers/contacts.vcf', async (req, res) => {
+  try {
+    const requestedRegion = normalizeRegion(req.query.region);
+    const since = String(req.query.since || '').trim();
+    const sinceTime = since ? Date.parse(since) : NaN;
+
+    let providers = (await listProviderSummaries()).filter(isCompletedProvider);
+
+    if (requestedRegion) {
+      providers = providers.filter((p) => inferProviderRegion(p) === requestedRegion);
+    }
+
+    // "Everyone finished since I last did this." A provider with no completedAt
+    // is kept rather than dropped - better a duplicate the phone book merges
+    // than a caregiver who never reaches it.
+    if (!Number.isNaN(sinceTime)) {
+      providers = providers.filter((p) => {
+        if (!p.completedAt) return true;
+        const at = Date.parse(p.completedAt);
+        return Number.isNaN(at) ? true : at >= sinceTime;
+      });
+    }
+
+    providers.sort((a, b) => String(a.fullName || '').localeCompare(String(b.fullName || '')));
+
+    const body = buildProviderVCardFile(providers);
+    const name = `pulso-contacts-${new Date().toISOString().slice(0, 10)}.vcf`;
+    res.setHeader('content-type', 'text/vcard; charset=utf-8');
+    res.setHeader('content-disposition', contactDisposition(name));
+    res.setHeader('x-pulso-contact-count', String(providers.length));
+    return res.send(body);
+  } catch (error) {
+    console.error('[ADMIN_CONTACTS_VCF_ERROR]', JSON.stringify({ message: error.message }));
+    return res.status(500).json({ error: 'Could not build contacts file' });
+  }
+});
+
+app.get('/admin/providers/:phone/contact.vcf', async (req, res) => {
+  try {
+    const provider = await getProvider(req.params.phone);
+    if (!provider) {
+      return res.status(404).json({ error: 'Provider not found' });
+    }
+    res.setHeader('content-type', 'text/vcard; charset=utf-8');
+    res.setHeader('content-disposition', contactDisposition(vcardFilename(provider)));
+    return res.send(buildProviderVCard(provider));
+  } catch (error) {
+    console.error(
+      '[ADMIN_CONTACT_VCF_ERROR]',
+      JSON.stringify({ phone: req.params.phone, message: error.message })
+    );
+    return res.status(500).json({ error: 'Could not build contact file' });
   }
 });
 

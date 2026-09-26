@@ -76,6 +76,12 @@ module.exports = {
   firebasePrivateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
   firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET || '',
   googleApplicationCredentials: process.env.GOOGLE_APPLICATION_CREDENTIALS || '',
+  // Google Contacts for the ops phone book. The target mailbox is a consumer
+  // Gmail, so there is no service account that can act for it - only a refresh
+  // token that account consented to once. Keep all three in the environment.
+  googleContactsClientId: process.env.GOOGLE_CONTACTS_CLIENT_ID || '',
+  googleContactsClientSecret: process.env.GOOGLE_CONTACTS_CLIENT_SECRET || '',
+  googleContactsRefreshToken: process.env.GOOGLE_CONTACTS_REFRESH_TOKEN || '',
   adminDefaultReviewer: process.env.ADMIN_DEFAULT_REVIEWER || 'ops-team',
   adminUsersJson: process.env.ADMIN_USERS_JSON || '',
   adminUsername: process.env.ADMIN_USERNAME || 'admin',

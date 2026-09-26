@@ -21,6 +21,12 @@ services:
         sync: false
       - key: GOOGLE_APPLICATION_CREDENTIALS
         sync: false
+      - key: GOOGLE_CONTACTS_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CONTACTS_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CONTACTS_REFRESH_TOKEN
+        sync: false
       - key: WHATSAPP_VERIFY_TOKEN
         sync: false
       - key: WHATSAPP_ACCESS_TOKEN

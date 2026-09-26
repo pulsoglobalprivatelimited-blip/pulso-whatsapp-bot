@@ -77,6 +77,7 @@ const {
 } = require('./messageParser');
 const { archiveIncomingMedia, uploadBufferToFirebaseStorage } = require('./mediaStorage');
 const { syncProviderToPulsoHub } = require('./pulsoHubSyncService');
+const { saveProviderContact } = require('./googleContactsService');
 const {
   buildVerificationNotificationPatch,
   recordReviewAlertSend
@@ -1044,6 +1045,51 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
       type: 'system',
       event: 'pulso_hub_sync_failed',
       details: { message: error.message || 'sync_failed' },
+    });
+  }
+
+  // Put the caregiver in the ops phone book. Kept apart from the hub sync above
+  // so neither failure takes the other down, and wrapped because a contact that
+  // did not save is a nuisance for ops - never a reason to fail an onboarding
+  // the caregiver has already completed.
+  try {
+    const contactProvider = await getProvider(phone);
+    const contactResult = await saveProviderContact(contactProvider);
+    await updateProvider(phone, {
+      contactSync: {
+        status: contactResult.ok ? 'saved' : contactResult.skipped ? 'skipped' : 'failed',
+        skipped: contactResult.skipped === true,
+        reason: contactResult.reason || '',
+        savedAt: new Date().toISOString(),
+        // The handle Google gave this contact. Its presence is what stops a
+        // second copy being created on any later retry or backfill run.
+        resourceName: contactResult.resourceName || '',
+        name: contactResult.name || '',
+      },
+    });
+    await appendHistory(phone, {
+      type: 'system',
+      event: contactResult.ok ? 'google_contact_saved' : 'google_contact_skipped',
+      details: {
+        reason: contactResult.reason || '',
+        name: contactResult.name || '',
+      },
+    });
+  } catch (error) {
+    console.error('[GOOGLE_CONTACT_SYNC_ERROR]', phone, error.message);
+    await updateProvider(phone, {
+      contactSync: {
+        status: 'failed',
+        skipped: false,
+        reason: error.message || 'contact_save_failed',
+        savedAt: new Date().toISOString(),
+        resourceName: '',
+      },
+    });
+    await appendHistory(phone, {
+      type: 'system',
+      event: 'google_contact_failed',
+      details: { message: error.message || 'contact_save_failed' },
     });
   }
 

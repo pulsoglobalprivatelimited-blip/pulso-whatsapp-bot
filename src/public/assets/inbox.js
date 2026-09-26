@@ -25,7 +25,8 @@
     scroll: document.getElementById('thread-scroll'),
     history: document.getElementById('thread-history'),
     openChat: document.getElementById('thread-open-chat'),
-    openIntro: document.getElementById('thread-open-intro')
+    openIntro: document.getElementById('thread-open-intro'),
+    saveContact: document.getElementById('thread-save-contact')
   };
 
   let providers = [];
@@ -202,7 +203,29 @@
     return `intent://send?${params.toString()}#Intent;scheme=whatsapp;package=com.whatsapp.w4b;S.browser_fallback_url=${encodeURIComponent(fallback)};end`;
   }
 
+  // Only a finished caregiver belongs in the phone book: saving someone
+  // mid-onboarding would put a half-filled card in there, with the duty prefix
+  // - the whole point of the name - still unknown.
+  function isCompletedProvider(provider) {
+    return Boolean(provider && provider.status === 'completed' && provider.termsAccepted === true);
+  }
+
+  function wireSaveContact(provider) {
+    if (!els.saveContact) return;
+    const phone = normalizePhone(provider && provider.phone);
+    if (!phone || !isCompletedProvider(provider)) {
+      els.saveContact.classList.add('hidden');
+      els.saveContact.removeAttribute('href');
+      return;
+    }
+    els.saveContact.classList.remove('hidden');
+    // Content-Disposition on the response names the file; the browser hands the
+    // .vcf to the contacts app from there.
+    els.saveContact.setAttribute('href', `/admin/providers/${encodeURIComponent(phone)}/contact.vcf`);
+  }
+
   function wireHandoff(provider) {
+    wireSaveContact(provider);
     const phone = normalizePhone(provider && provider.phone);
     if (!phone) {
       els.openChat.removeAttribute('href');

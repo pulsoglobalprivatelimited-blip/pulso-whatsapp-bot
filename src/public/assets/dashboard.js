@@ -1846,3 +1846,68 @@ function escapeHtml(value) {
 loadProviders().catch((error) => {
   providerList.innerHTML = `<div class="provider-item"><strong>Dashboard unavailable</strong><p>${error.message}</p></div>`;
 });
+
+/* ---- contacts export --------------------------------------------------- */
+// The .vcf a phone imports. "New" means everyone who finished since the last
+// time this browser saved a file - kept in localStorage rather than a database
+// field, because it is a per-person convenience, not shared state.
+const CONTACTS_LAST_SAVED_KEY = 'pulso.contacts.lastSaved';
+
+function readContactsLastSaved() {
+  // Private windows and blocked site data make this throw rather than return
+  // empty, and a dashboard that will not load is worse than one that offers the
+  // whole list.
+  try {
+    return window.localStorage.getItem(CONTACTS_LAST_SAVED_KEY) || '';
+  } catch (error) {
+    return '';
+  }
+}
+
+function writeContactsLastSaved(value) {
+  try {
+    window.localStorage.setItem(CONTACTS_LAST_SAVED_KEY, value);
+  } catch (error) {
+    /* nothing to do - the link still works, it just will not narrow next time */
+  }
+}
+
+function contactsUrl(since) {
+  const params = new URLSearchParams();
+  if (dashboardRegion) params.set('region', dashboardRegion);
+  if (since) params.set('since', since);
+  const query = params.toString();
+  return `/admin/providers/contacts.vcf${query ? `?${query}` : ''}`;
+}
+
+function setupContactsExport() {
+  const newLink = document.getElementById('contacts-save-new');
+  const allLink = document.getElementById('contacts-save-all');
+  const hint = document.getElementById('contacts-save-hint');
+  if (!newLink || !allLink) return;
+
+  const lastSaved = readContactsLastSaved();
+  newLink.setAttribute('href', contactsUrl(lastSaved));
+  allLink.setAttribute('href', contactsUrl(''));
+
+  if (hint) {
+    hint.textContent = lastSaved
+      ? `New = finished since ${new Date(lastSaved).toLocaleDateString()}`
+      : 'No save yet — "new" will give you everyone this first time.';
+  }
+
+  // Stamp the time only on the narrowed link. Stamping on "all" too would mean
+  // a one-off full export silently narrowed every later one.
+  newLink.addEventListener('click', () => {
+    const now = new Date().toISOString();
+    writeContactsLastSaved(now);
+    // Re-point for a second click in the same session, so the same file is not
+    // handed over twice.
+    window.setTimeout(() => {
+      newLink.setAttribute('href', contactsUrl(now));
+      if (hint) hint.textContent = `New = finished since ${new Date(now).toLocaleDateString()}`;
+    }, 1000);
+  });
+}
+
+setupContactsExport();
