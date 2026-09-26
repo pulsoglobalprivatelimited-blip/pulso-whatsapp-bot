@@ -113,6 +113,16 @@ function buildProviderVCard(provider) {
   return lines.join(CRLF) + CRLF;
 }
 
+// A provider who never gave a name sorts to the end, not the top. An empty
+// string sorts first by default, which opened the bulk file with cards that were
+// nothing but a phone number - the least useful entries leading the rest.
+function compareProvidersByName(a, b) {
+  const aName = String((a && a.fullName) || '').trim();
+  const bName = String((b && b.fullName) || '').trim();
+  if (Boolean(aName) !== Boolean(bName)) return aName ? -1 : 1;
+  return aName.localeCompare(bName);
+}
+
 // A .vcf may hold any number of cards back to back, so the whole backlog imports
 // in one tap rather than 483.
 function buildProviderVCardFile(providers) {
@@ -132,6 +142,7 @@ function vcardFilename(provider) {
 
 module.exports = {
   buildProviderVCard,
+  compareProvidersByName,
   buildProviderVCardFile,
   vcardFilename,
   dialablePhone,

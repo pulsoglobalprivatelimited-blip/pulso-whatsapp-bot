@@ -120,6 +120,20 @@ function buildProviderChatLink(phone) {
   return normalizedPhone ? `https://wa.me/${normalizedPhone}` : null;
 }
 
+// The admin web serves a .vcf for a finished provider. Putting the link in the
+// completion alert makes saving the contact one tap from the message, instead
+// of something the reviewer has to remember to go and do later.
+//
+// It only opens straight to the file while the reviewer's phone still has an
+// admin session; expired, it lands on the login page first. That is a login,
+// not a failure, so the link is worth sending either way.
+function buildProviderContactLink(phone) {
+  const normalizedPhone = normalizePhone(phone);
+  const base = String(config.baseUrl || '').trim().replace(/\/+$/, '');
+  if (!normalizedPhone || !base) return null;
+  return `${base}/admin/providers/${normalizedPhone}/contact.vcf`;
+}
+
 function buildProviderIntroMessage(provider, senderName = 'Ashmila') {
   const name = provider && provider.fullName ? provider.fullName : null;
   return [
@@ -846,9 +860,13 @@ async function notifyAdditionalDocumentUploaded(provider, attachment, request) {
 }
 
 async function notifyOnboardingCompleted(provider) {
+  const contactLink = buildProviderContactLink(provider && provider.phone);
   const body = joinLines([
     'Pulso alert: onboarding completed',
-    ...formatProviderSummary(provider)
+    ...formatProviderSummary(provider),
+    // Dropped rather than sent empty when there is no base URL configured, so a
+    // misconfigured environment never puts a dead link in front of the reviewer.
+    ...(contactLink ? [`Save contact: ${contactLink}`] : [])
   ]);
 
   const recipients = [
@@ -1315,6 +1333,7 @@ function parseReviewerAction(message) {
 }
 
 module.exports = {
+  buildProviderContactLink,
   buildCertificateReviewBodyValues,
   getRejectReasonDetails,
   isReviewerPhone,

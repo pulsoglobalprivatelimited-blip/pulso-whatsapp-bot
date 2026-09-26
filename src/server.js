@@ -47,7 +47,8 @@ const { inferProviderRegion, normalizeRegion } = require('./services/regionServi
 const {
   buildProviderVCard,
   buildProviderVCardFile,
-  vcardFilename
+  vcardFilename,
+  compareProvidersByName
 } = require('./services/vcardService');
 const { initializeStorage, saveWhatsappMessageStatus } = require('./services/storage');
 const { handleReviewAlertStatus } = require('./services/reviewAlertEscalation');
@@ -1307,7 +1308,7 @@ app.get('/admin/providers/contacts.vcf', async (req, res) => {
       });
     }
 
-    providers.sort((a, b) => String(a.fullName || '').localeCompare(String(b.fullName || '')));
+    providers.sort(compareProvidersByName);
 
     const body = buildProviderVCardFile(providers);
     const name = `pulso-contacts-${new Date().toISOString().slice(0, 10)}.vcf`;
