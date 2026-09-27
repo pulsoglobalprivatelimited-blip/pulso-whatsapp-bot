@@ -392,8 +392,51 @@
     `).join('');
   }
 
+  /* ---- which review actions a record should offer ------------------------
+
+     The provider desk pins Approve / Reject / Undo to the bottom of the phone,
+     and used to pin all three whatever state the record was in. So an already
+     approved caregiver still showed "Approve certificate", which does nothing
+     - the server refuses a second approval - but looks exactly like the button
+     that did something a moment ago.
+
+     Reject stays available on an approved record on purpose: it is the only
+     way back once terms have been accepted and Undo is gone, and a reviewer
+     who spots a forged certificate afterwards needs it. Only the button with
+     nothing left to do is taken away.
+
+     Pure, and here rather than in dashboard.js, so the rule can be tested
+     without a browser. */
+
+  function reviewStage(provider) {
+    const record = provider || {};
+    const verification = record.verification || {};
+    const status = String(verification.status || '');
+
+    if (status === 'verified') {
+      return {
+        stage: 'verified',
+        approve: false,
+        reject: true,
+        /* Undo tells the caregiver their approval was taken back, so it stops
+           being offered the moment they have acted on it. */
+        undo: record.termsAccepted !== true && record.status !== 'completed'
+      };
+    }
+
+    /* A rejected certificate sends them back to send another, and approving
+       that one is the normal happy path - both stay. */
+    return {
+      stage: status === 'rejected' ? 'rejected' : 'pending',
+      approve: true,
+      reject: true,
+      undo: false
+    };
+  }
+
   global.PulsoDesk = {
     escapeHtml,
+    reviewStage,
     LABELS,
     label,
     TONE_LABELS,

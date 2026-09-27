@@ -2758,3 +2758,67 @@ dd {
     white-space: nowrap;
   }
 }
+
+/* ---- the toast ----------------------------------------------------------
+
+   Said out loud, where the thumb already is. The review form's own status
+   line sits inside the card; the buttons that write to it are pinned to the
+   bottom of the phone, so on the screen where it matters that line is off
+   frame and under the bar. This is the same message, delivered where the eye
+   is looking.
+
+   z-index sits above the pinned action bar (41) and below the document
+   viewer (90) - a certificate open full screen should not be written over. */
+
+.desk-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 60;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.95);
+  color: #fff;
+  font-size: 0.94rem;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(var(--shadow-rgb), 0.28);
+
+  /* Out of the way until asked for. visibility, not display, so the fade has
+     something to animate; pointer-events so it can never eat a tap meant for
+     the button underneath it. */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, 8px);
+  transition: opacity 180ms ease, transform 180ms ease, visibility 180ms;
+}
+
+.desk-toast.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+.desk-toast.is-error {
+  background: var(--danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-toast {
+    transition: none;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (max-width: 960px), (hover: none) and (pointer: coarse) {
+  /* Clear of the pinned Approve / Reject bar - roughly a 46px button inside
+     10px of padding. Lifted on every phone rather than only when the bar is
+     there: nothing on the desk toasts from the list, and a message floating a
+     little high is not a bug, while one hidden behind the bar is. */
+  .desk-toast {
+    bottom: calc(80px + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 28px);
+  }
+}

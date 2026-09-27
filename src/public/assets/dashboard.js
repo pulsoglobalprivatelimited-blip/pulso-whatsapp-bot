@@ -1643,15 +1643,19 @@ async function renderDetail(provider) {
     detailPhone,
     'qualification'
   );
-  const undoButton = document.getElementById('undo-approval-button');
-  if (undoButton) {
-    // Approved, but not yet past the point of no return.
-    const canUndo =
-      verification.status === 'verified' &&
-      detailProvider.termsAccepted !== true &&
-      detailProvider.status !== 'completed';
-    undoButton.classList.toggle('hidden', !canUndo);
-  }
+  /* Which of the three pinned buttons this record should offer. The rule lives
+     in desk-ui.js so it can be tested without a browser; this only applies it.
+     All three share one .actions div - the one pinned to the bottom of the
+     phone - so hiding a button takes it out of the bar and the rest widen. */
+  const stage = PulsoDesk.reviewStage(detailProvider);
+  [
+    ['approve-button', stage.approve],
+    ['reject-button', stage.reject],
+    ['undo-approval-button', stage.undo]
+  ].forEach(([id, visible]) => {
+    const button = document.getElementById(id);
+    if (button) button.classList.toggle('hidden', !visible);
+  });
 
   setReviewField('notes-input', verification.notes || '', detailPhone, 'notes');
   setReviewField(
@@ -1707,6 +1711,18 @@ function setReviewBusy(busy, activeButtonId) {
   }
 }
 
+/* #review-status lives inside the review card. On a phone the buttons that
+   write to it are pinned to the bottom of the screen and the card is scrolled
+   away above them, so every word it has ever said has been said off frame.
+   Keep writing it - it is right on a desktop, and it is what a screen reader
+   on the form reaches - but say it out loud as well. */
+function sayReviewResult(message, kind) {
+  setReviewStatus(message, kind);
+  if (window.PulsoDeskShell && window.PulsoDeskShell.toast) {
+    window.PulsoDeskShell.toast(message, kind);
+  }
+}
+
 function setReviewStatus(message, kind) {
   const target = document.getElementById('review-status');
   if (!target) return;
@@ -1720,15 +1736,27 @@ async function submitReview(action) {
 
   const notes = document.getElementById('notes-input').value || '';
   const qualification = document.getElementById('review-qualification-input').value || '';
-  if (action === 'approve-certificate' && !qualification) {
-    alert('Select the qualification shown on the certificate before approving.');
+  const approving = action === 'approve-certificate';
+  const record = providers.find((item) => item.phone === selectedPhone);
+  const who = (record && record.fullName) || PulsoDesk.formatPhone(selectedPhone);
+
+  if (approving && !qualification) {
+    sayReviewResult('Select the qualification shown on the certificate before approving.', 'error');
+    return;
+  }
+
+  /* Approving sends this person a WhatsApp message and the terms, and there is
+     no unsending it. Undo exists, but it is a second message telling them the
+     first one is withdrawn - not the same as never having sent it. One tap is
+     too little between a mis-tap and that. */
+  if (approving && !confirm(`Approve ${who} and send the terms on WhatsApp now?`)) {
     return;
   }
 
   setReviewStatus('');
-  setReviewBusy(true, action === 'approve-certificate' ? 'approve-button' : 'reject-button');
+  setReviewBusy(true, approving ? 'approve-button' : 'reject-button');
   try {
-    const provider = await fetchJson(`/admin/providers/${selectedPhone}/${action}`, {
+    const reviewed = await fetchJson(`/admin/providers/${selectedPhone}/${action}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ notes, qualification })
@@ -1737,21 +1765,30 @@ async function submitReview(action) {
     // Saved: what is on screen now came back from the server, so it is no
     // longer unsaved work to protect.
     clearUnsavedEdits();
-    const index = providers.findIndex((item) => item.phone === provider.phone);
-    if (index >= 0) providers[index] = provider;
-    renderDetail(provider);
+    const index = providers.findIndex((item) => item.phone === reviewed.phone);
+    if (index >= 0) providers[index] = reviewed;
+    renderDetail(reviewed);
     updateDashboardMetrics();
 
     // Information, not a failure: the server refused to send a second copy.
-    if (provider.alreadyApproved) {
-      const by = provider.approvedBy ? ` by ${provider.approvedBy}` : '';
-      const at = provider.approvedAt ? ` on ${formatHistoryTime(provider.approvedAt)}` : '';
-      setReviewStatus(`Already approved${by}${at}. Nothing was sent again.`);
+    if (reviewed.alreadyApproved) {
+      const by = reviewed.approvedBy ? ` by ${reviewed.approvedBy}` : '';
+      const at = reviewed.approvedAt ? ` on ${formatHistoryTime(reviewed.approvedAt)}` : '';
+      sayReviewResult(`Already approved${by}${at}. Nothing was sent again.`);
+    } else {
+      /* Name what went out, not just that something did: the whole reason this
+         exists is that a reviewer could not tell a sent message from a no-op. */
+      sayReviewResult(
+        approving
+          ? `Approved. Terms sent to ${who} on WhatsApp.`
+          : `Certificate rejected. ${who} has been asked to send another.`,
+        'success'
+      );
     }
   } catch (error) {
-    setReviewStatus(error.message, 'error');
+    sayReviewResult(error.message || 'That did not go through. Try again.', 'error');
   } finally {
-    setReviewBusy(false, action === 'approve-certificate' ? 'approve-button' : 'reject-button');
+    setReviewBusy(false, approving ? 'approve-button' : 'reject-button');
   }
 }
 

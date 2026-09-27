@@ -278,6 +278,56 @@
     });
   }
 
+  /* ---- saying that something happened ------------------------------------- */
+
+  /* Every desk had the same hole: the action bar is pinned to the bottom of the
+     phone and the form's own status line is not - it stays up in the card, off
+     screen, under the bar. So approving a certificate wrote its one line of
+     feedback somewhere nobody was looking, and the only thing the reviewer saw
+     was the button going back to how it started. That is how a WhatsApp message
+     gets sent twice.
+
+     A toast instead, because it appears where the eye already is. One node for
+     the whole desk, made on first use like the document viewer.
+
+     `kind` is 'error' for something that failed and empty otherwise; it only
+     changes the colour and how long it stays. */
+
+  let toastNode = null;
+  let toastTimer = null;
+
+  function ensureToast() {
+    if (toastNode) return toastNode;
+    toastNode = doc.createElement('div');
+    toastNode.className = 'desk-toast';
+    /* polite, not assertive: a confirmation should wait its turn behind
+       whatever the screen reader is already saying. */
+    toastNode.setAttribute('role', 'status');
+    toastNode.setAttribute('aria-live', 'polite');
+    body.append(toastNode);
+    return toastNode;
+  }
+
+  function toast(message, kind) {
+    const text = String(message || '').trim();
+    if (!text) return;
+
+    const node = ensureToast();
+    node.textContent = text;
+    node.classList.toggle('is-error', kind === 'error');
+
+    /* Restart the animation when a second toast lands while the first is still
+       up - without this the class is already on the node and nothing moves. */
+    node.classList.remove('is-open');
+    void node.offsetWidth;
+    node.classList.add('is-open');
+
+    global.clearTimeout(toastTimer);
+    /* An error is the one worth time to read. A confirmation has done its job
+       the moment it is seen. */
+    toastTimer = global.setTimeout(() => node.classList.remove('is-open'), kind === 'error' ? 6000 : 3600);
+  }
+
   /* ---- go ----------------------------------------------------------------- */
 
   function start() {
@@ -299,6 +349,7 @@
     setTabCount,
     setFilterCount,
     wirePullToRefresh,
-    openDocument
+    openDocument,
+    toast
   };
 })(window);
