@@ -74,8 +74,7 @@ function parseQualification(message) {
   if (replyId === BUTTON_IDS.QUALIFICATION_HCA) return 'hca';
   if (replyId === BUTTON_IDS.QUALIFICATION_BSC_NURSING) return 'bsc_nursing';
   if (replyId === BUTTON_IDS.QUALIFICATION_OTHER_CAREGIVING) return 'other_caregiving';
-  if (replyId === BUTTON_IDS.QUALIFICATION_NONE_OF_THESE) return 'none_of_these';
-  if (replyId === BUTTON_IDS.QUALIFICATION_GO_BACK) return 'go_back';
+  if (replyId === BUTTON_IDS.QUALIFICATION_NO_CERTIFICATE) return 'no_certificate';
 
   const normalized = normalizeText(getMessageText(message));
   if (normalized.includes('gda')) return 'gda';
@@ -90,7 +89,18 @@ function parseQualification(message) {
   ) {
     return 'other_caregiving';
   }
-  if (['ivayonnumalla', 'ഇവയൊന്നുമല്ല', 'none', 'none of these'].includes(normalized)) return 'none_of_these';
+  // The row's own words in both scripts, plus the old "None of these" words so
+  // someone who types what the list used to say still lands on the same row.
+  if (
+    normalized.includes('no certificate') ||
+    normalized.includes('no cert') ||
+    normalized.includes('certificate illa') ||
+    normalized.includes('സർട്ടിഫിക്കറ്റ് ഇല്ല') ||
+    normalized.includes('certificate ഇല്ല') ||
+    ['ivayonnumalla', 'ഇവയൊന്നുമല്ല', 'none of these'].includes(normalized)
+  ) {
+    return 'no_certificate';
+  }
   return null;
 }
 

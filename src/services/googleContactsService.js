@@ -41,6 +41,7 @@ const QUALIFICATION_LABEL = {
   bsc_nursing: 'BSc Nursing',
   other_caregiving: 'Other caregiving',
   basic_caregiver: 'Basic caregiver',
+  no_certificate: 'No certificate',
 };
 
 const REGION_LABEL = {
@@ -59,6 +60,7 @@ const QUALIFICATION_SHORT = {
   bsc_nursing: 'Nurse',
   other_caregiving: 'Caregiver',
   basic_caregiver: 'Caregiver',
+  no_certificate: 'Caregiver',
 };
 
 function qualificationShort(qualification) {

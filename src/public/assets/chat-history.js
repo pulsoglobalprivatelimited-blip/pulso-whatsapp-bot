@@ -37,6 +37,8 @@
     if (value === 'hca') return 'HCA';
     if (value === 'bsc_nursing') return 'BSc Nursing';
     if (value === 'other_caregiving') return 'Other caregiving';
+    if (value === 'basic_caregiver') return 'Basic caregiver';
+    if (value === 'no_certificate') return 'No certificate';
     return value ? formatStatus(value) : '-';
   }
 

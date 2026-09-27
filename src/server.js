@@ -597,6 +597,9 @@ function verifyIvrSecret(req, res) {
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
+    // Render sets this on every deploy. Without it there was no way to tell,
+    // from outside, whether a push had actually reached the running service.
+    commit: (process.env.RENDER_GIT_COMMIT || '').slice(0, 12) || null,
     dryRun: config.dryRun,
     webhookUrl: `${config.baseUrl}/webhook`,
     ivrUrl: `${config.baseUrl}/ivr/welcome`,

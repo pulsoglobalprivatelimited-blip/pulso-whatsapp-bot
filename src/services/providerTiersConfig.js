@@ -12,7 +12,7 @@ const { getHubFirestore } = require('./hubStorage');
 
 const DEFAULTS = {
   basic: { payout24h: 750, payout8h: 600 },
-  gda: { payout24h: 1200, payout8h: 900 },
+  gda: { payout24h: 1000, payout8h: 900 },   // live since 26 Sep 2026; was 1200
   nurse: { payout24h: 1800, payout8h: 1500 }
 };
 const TTL_MS = 60 * 1000;
@@ -56,7 +56,10 @@ async function getProviderTiers() {
 function tierForQualification(qualification) {
   const q = String(qualification || '').trim().toLowerCase();
   if (['gnm', 'bsc_nursing', 'post_basic_bsc_nursing', 'msc_nursing'].includes(q)) return 'nurse';
-  if (q === 'basic_caregiver') return 'basic';
+  // `no_certificate` is what she picked; `basic_caregiver` is what the reviewer
+  // approved. Both are the Basic tier — nothing else is, so `other_caregiving`
+  // stays GDA on purpose.
+  if (q === 'basic_caregiver' || q === 'no_certificate') return 'basic';
   return 'gda';
 }
 

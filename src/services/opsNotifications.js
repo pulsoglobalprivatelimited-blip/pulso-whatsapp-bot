@@ -188,6 +188,7 @@ function formatQualification(value) {
   if (value === 'bsc_nursing') return 'BSc Nursing';
   if (value === 'other_caregiving') return 'Other caregiving';
   if (value === 'basic_caregiver') return 'Basic caregiver';
+  if (value === 'no_certificate') return 'No certificate';
   return value ? formatStatus(value) : '-';
 }
 
@@ -705,8 +706,14 @@ async function notifyCertificateUploaded(provider, attachments) {
     return { sent: false, recipients: [], attempts: [] };
   }
 
+  // Someone who picked "No certificate" sent nothing to look at: the reviewer
+  // has to ring her, then approve (as Basic) or reject. Say so up front, or the
+  // alert opens with "certificate uploaded" over an empty card.
+  const noCertificate = String(provider && provider.qualification || '').toLowerCase() === 'no_certificate';
   const body = joinLines([
-    'New certificate uploaded for review.',
+    noCertificate
+      ? 'No certificate — she asks to join as a Basic caregiver. Please call and interview her, then approve or reject.'
+      : 'New certificate uploaded for review.',
     ...formatProviderSummary(provider),
     'Tap below to approve or reject.'
   ]);

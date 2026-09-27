@@ -461,13 +461,6 @@ async function sendDistrictList(phone) {
   });
 }
 
-async function sendQualificationHelpButtons(phone) {
-  await sendAndLog(phone, 'buttons', {
-    body: MESSAGES.qualificationGoBack,
-    buttons: [{ id: BUTTON_IDS.QUALIFICATION_GO_BACK, title: UI_TEXT.qualificationGoBackTitle }]
-  });
-}
-
 async function sendInterestButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.interestQuestion,
@@ -498,7 +491,7 @@ async function sendDutyHourPreferenceButtons(phone) {
     ]
   });
   const provider = await getProvider(phone);
-  await sendAndLog(phone, 'text', getDutyHourPaymentSummaryFor(provider && provider.qualification));
+  await sendAndLog(phone, 'text', getDutyHourPaymentSummaryFor(provider && provider.qualification, await getProviderTiers()));
 }
 
 async function sendSampleDutyOfferPrompt(phone) {
@@ -1634,7 +1627,7 @@ async function sendPromptForCurrentStatus(phone, provider) {
       await sendDistrictList(phone);
       return;
     case STATUS.VERIFICATION_PENDING:
-      await sendAndLog(phone, 'text', MESSAGES.verificationPending);
+      await sendAndLog(phone, 'text', verificationPendingMessageFor(provider));
       return;
     case STATUS.ADDITIONAL_DOCUMENT_REQUESTED: {
       const request = provider && provider.documents ? provider.documents.additionalDocumentRequest : null;
@@ -1670,19 +1663,10 @@ async function handleQualification(phone, message) {
     return;
   }
 
-  if (qualification === 'go_back') {
-    await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2, { qualification: null });
-    await sendQualificationList(phone);
-    return;
-  }
-
-  if (qualification === 'none_of_these') {
-    await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2, { qualification: null });
-    await sendAndLog(phone, 'text', MESSAGES.qualificationCertificateRequired);
-    await sendQualificationHelpButtons(phone);
-    return;
-  }
-
+  // Until 27 Sep 2026 "None of these" lived here and was the only branch in
+  // the flow that refused anyone. It is gone; "no_certificate" is a
+  // qualification like the rest and walks the same path, reading the Basic
+  // rate band, and is never asked for a document (see handleExpectedDuties).
   if (!qualification) {
     await sendAndLog(phone, 'text', MESSAGES.qualificationRetry);
     await sendQualificationList(phone);
@@ -1690,7 +1674,7 @@ async function handleQualification(phone, message) {
   }
 
   await updateStatus(phone, STATUS.AWAITING_INTEREST, 4, { qualification });
-  await sendAndLog(phone, 'text', getWorkingModelFor(qualification));
+  await sendAndLog(phone, 'text', getWorkingModelFor(qualification, await getProviderTiers()));
   await sendInterestButtons(phone);
 }
 
@@ -1817,6 +1801,16 @@ async function handleExpectedDutiesConfirmation(phone, message) {
   if (action !== 'accept') {
     await sendAndLog(phone, 'text', MESSAGES.expectedDutiesRetry);
     await sendExpectedDutiesFlow(phone);
+    return;
+  }
+
+  // No certificate: there is nothing to upload, so she goes straight to her
+  // name. The reviewer sees her in the same queue with no attachment and rings
+  // her (opsNotifications says so in the alert).
+  const applicant = await getProvider(phone);
+  if (applicant && String(applicant.qualification || '').toLowerCase() === 'no_certificate') {
+    await updateStatus(phone, STATUS.AWAITING_NAME, 9, { expectedDutiesAccepted: true });
+    await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
     return;
   }
 
@@ -2326,7 +2320,16 @@ async function handleDistrict(phone, message) {
   }
   await recordReviewAlertSend(phone, notificationPatch);
   await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
-  await sendAndLog(phone, 'text', MESSAGES.verificationPending);
+  await sendAndLog(phone, 'text', verificationPendingMessageFor(updatedProvider));
+}
+
+/** "Your certificate has been sent for verification" is untrue for someone who
+ *  has none; she is told a call is coming instead. */
+function verificationPendingMessageFor(provider) {
+  const noCertificate = String(provider && provider.qualification || '').toLowerCase() === 'no_certificate';
+  return noCertificate && MESSAGES.verificationPendingNoCertificate
+    ? MESSAGES.verificationPendingNoCertificate
+    : MESSAGES.verificationPending;
 }
 
 async function handleTerms(phone, message) {

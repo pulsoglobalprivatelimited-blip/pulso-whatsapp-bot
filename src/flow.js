@@ -56,8 +56,7 @@ const BUTTON_IDS = {
   QUALIFICATION_HCA: 'qualification_hca',
   QUALIFICATION_BSC_NURSING: 'qualification_bsc_nursing',
   QUALIFICATION_OTHER_CAREGIVING: 'qualification_other_caregiving',
-  QUALIFICATION_NONE_OF_THESE: 'qualification_none_of_these',
-  QUALIFICATION_GO_BACK: 'qualification_go_back',
+  QUALIFICATION_NO_CERTIFICATE: 'qualification_no_certificate',
   INTEREST_YES: 'interest_yes',
   INTEREST_NO: 'interest_no',
   DUTY_HOUR_8: 'duty_hour_8',
@@ -104,8 +103,12 @@ const QUALIFICATIONS = [
     description: 'Experience in caregiving'
   },
   {
-    id: BUTTON_IDS.QUALIFICATION_NONE_OF_THESE,
-    title: 'ഇവയൊന്നുമല്ല'
+    // Replaces "None of these" (27 Sep 2026), the one row that refused the
+    // person it was shown to. Founder's wording. She is reviewed by phone,
+    // not by document, and approved as Basic if the reviewer says so.
+    id: BUTTON_IDS.QUALIFICATION_NO_CERTIFICATE,
+    title: 'സർട്ടിഫിക്കറ്റ് ഇല്ല',
+    description: 'caregiver ജോലി ചെയ്യാൻ താൽപര്യമുണ്ട്'
   }
 ];
 
@@ -121,8 +124,9 @@ const ENGLISH_QUALIFICATIONS = [
     description: 'Experience in caregiving'
   },
   {
-    id: BUTTON_IDS.QUALIFICATION_NONE_OF_THESE,
-    title: 'None of these'
+    id: BUTTON_IDS.QUALIFICATION_NO_CERTIFICATE,
+    title: 'No certificate',
+    description: 'Interested in caregiving work'
   }
 ];
 
@@ -179,16 +183,14 @@ const KARNATAKA_DISTRICTS = [
 const MESSAGES = {
   welcomeQualification:
     'താങ്കളുടെ qualification തിരഞ്ഞെടുക്കുക.',
+  // Nobody is refused at this question any more, so this is an instruction,
+  // not a rejection. It fires for a typed answer the list reader cannot place.
   notEligible:
-    'ക്ഷമിക്കണം, നിലവിൽ GDA / GNM / ANM / HCA / BSc Nursing qualification ഉള്ള providers-നെ മാത്രമാണ് onboarding ചെയ്യുന്നത്.',
+    'ദയവായി താഴെയുള്ള list-ിൽ നിന്ന് ഒരു option തിരഞ്ഞെടുക്കുക. സർട്ടിഫിക്കറ്റ് ഇല്ലെങ്കിൽ "സർട്ടിഫിക്കറ്റ് ഇല്ല" എന്ന option തിരഞ്ഞെടുക്കുക.',
   qualificationRetry:
-    'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും qualification തിരഞ്ഞെടുക്കുക: GDA / GNM / ANM / HCA / BSc Nursing / Other with experience in caregiving.',
-  qualificationCertificateRequired:
-    `Pulso-യിൽ Caregiver / Nursing Staff ആയി onboarding ചെയ്യുന്നതിനായി Certificate നിർബന്ധമാണ്.\nതാഴെ പറയുന്ന ഏതെങ്കിലും ഒരു യോഗ്യത നിർബന്ധമായും വേണം:\n✅ GDA (General Duty Assistant)\n✅ GNM (General Nursing & Midwifery)\n✅ ANM (Auxiliary Nurse Midwife)\n✅ HCA (Health Care Assistant)\n✅ BSc Nursing\n✅ Experience Certificate (caregiving fieldൽ ഉണ്ടായത്)\n💡 പ്രധാനമായി ശ്രദ്ധിക്കുക:\nഞങ്ങളുടെ daily payment automatic system പ്രവർത്തിക്കാൻ certificate upload ചെയ്യുന്നത് നിർബന്ധമാണ്.\nCertificate ഇല്ലാത്തവർക്ക് onboarding പൂർത്തിയാക്കാൻ സാധിക്കില്ല.`,
-  qualificationGoBack:
-    'മുകളിലെ യോഗ്യതകളിൽ ഏതെങ്കിലും ഉണ്ടെങ്കിൽ തിരികെ പോയി തിരഞ്ഞെടുക്കുക.',
+    'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും qualification തിരഞ്ഞെടുക്കുക: GDA / GNM / ANM / HCA / BSc Nursing / Other with experience in caregiving / സർട്ടിഫിക്കറ്റ് ഇല്ല.',
   workingModel:
-    `**Pulso Global Private Limited** ഒരു homecare കമ്പനിയാണ്. പ്രായമായർക്കും കിടപ്പ് രോഗികൾക്കും അവരുടെ വീടുകളിൽ പരിചരണം നൽകുന്നതാണ് ഞങ്ങളുടെ സർവീസ്.\n\nGDA (General Duty Assistant) staff-നും nurse-നും ഞങ്ങളോടൊപ്പം join ചെയ്യാൻ കഴിയും. നിങ്ങൾ interested ആണെങ്കിൽ ഞങ്ങൾ നിങ്ങൾക്ക് Pulso App വഴി duty offers അയച്ചു തരും.\n\n**Duty details:**\n\n1. Duty area കേരളത്തിൽ എവിടെയും ആയിരിക്കാം\n2. Duty timing 8 hours, 24 hours എന്നീ രീതികളിലായിരിക്കും\n3. 8 hours duty സമയം രാവിലെ 8 മണി മുതൽ വൈകുന്നേരം 4 മണിവരെ ആയിരിക്കും\n4. Duty duration 1 week, 2 week, 1 month എന്നിങ്ങനെ വ്യത്യാസപ്പെടാം\n5. 24 hours duty-ക്ക് patient-ന്റെ വീട്ടിൽ stay-യും food-ും ലഭിക്കും\n6. 8 hour duty-ക്ക് stay ഉണ്ടായിരിക്കില്ല\n7. 8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹900 വരെ ലഭിക്കും\n8. 24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹1200 വരെ ലഭിക്കും\n9. Payment daily നിങ്ങളുടെ account-ിൽ credit ആവുന്നതാണ്\n10. നിങ്ങൾ work ചെയ്യുന്ന ദിവസങ്ങളിൽ മാത്രമായിരിക്കും payment ലഭിക്കുക\n11. House maid ജോലി ഉണ്ടായിരിക്കില്ല. Patient care duties മാത്രം ആയിരിക്കും\n\n**Working model:**\n\n1. Pulso App വഴി duty offers ലഭിക്കും\n2. നിങ്ങൾക്ക് താല്പര്യമുള്ള duty-കൾ മാത്രം accept ചെയ്യാം\n3. താല്പര്യമില്ലെങ്കിൽ reject ചെയ്യാം അല്ലെങ്കിൽ ignore ചെയ്യാം\n4. Duty accept ചെയ്തതിന് ശേഷം office verification call ഉണ്ടാകും\n5. എല്ലാ instructions-ും duty details-ും office staff clear ആയി അറിയിക്കും\n6. പിന്നീട് നിങ്ങൾ നേരിട്ട് duty location-ലേക്ക് പോകണം\n7. സമയത്തിന് duty ആരംഭിച്ച് ഉത്തരവാദിത്വത്തോടെ care നൽകണം\n\n**Emergency leave:**\n\nEmergency leave ആവശ്യമായി വന്നാൽ വേറെ staff-നെ ഞങ്ങൾ arrange ചെയ്ത് തരുന്നതായിരിക്കും.\n\n**ശ്രദ്ധിക്കുക:**\n\n- Duty offer accept ചെയ്യണോ വേണ്ടയോ എന്നത് മുഴുവൻ നിങ്ങളുടെ ഇഷ്ടമാണ്\n- ഇഷ്ടമുള്ള duty-കൾ മാത്രം സ്വീകരിച്ചാൽ മതി\n- ഇതിനായി പ്രത്യേക registration fee ഒന്നും നൽകേണ്ടതില്ല\n\n**Office Address:**\nPulso Elderlycare, Kalamassery, Kochi - 682021`,
+    `**Pulso Global Private Limited** ഒരു homecare കമ്പനിയാണ്. പ്രായമായർക്കും കിടപ്പ് രോഗികൾക്കും അവരുടെ വീടുകളിൽ പരിചരണം നൽകുന്നതാണ് ഞങ്ങളുടെ സർവീസ്.\n\nGDA (General Duty Assistant) staff-നും nurse-നും ഞങ്ങളോടൊപ്പം join ചെയ്യാൻ കഴിയും. നിങ്ങൾ interested ആണെങ്കിൽ ഞങ്ങൾ നിങ്ങൾക്ക് Pulso App വഴി duty offers അയച്ചു തരും.\n\n**Duty details:**\n\n1. Duty area കേരളത്തിൽ എവിടെയും ആയിരിക്കാം\n2. Duty timing 8 hours, 24 hours എന്നീ രീതികളിലായിരിക്കും\n3. 8 hours duty സമയം രാവിലെ 8 മണി മുതൽ വൈകുന്നേരം 4 മണിവരെ ആയിരിക്കും\n4. Duty duration 1 week, 2 week, 1 month എന്നിങ്ങനെ വ്യത്യാസപ്പെടാം\n5. 24 hours duty-ക്ക് patient-ന്റെ വീട്ടിൽ stay-യും food-ും ലഭിക്കും\n6. 8 hour duty-ക്ക് stay ഉണ്ടായിരിക്കില്ല\n7. 8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹600 മുതൽ ₹900 വരെ ലഭിക്കും\n8. 24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 മുതൽ ₹1000 വരെ ലഭിക്കും\n9. Payment daily നിങ്ങളുടെ account-ിൽ credit ആവുന്നതാണ്\n10. നിങ്ങൾ work ചെയ്യുന്ന ദിവസങ്ങളിൽ മാത്രമായിരിക്കും payment ലഭിക്കുക\n11. House maid ജോലി ഉണ്ടായിരിക്കില്ല. Patient care duties മാത്രം ആയിരിക്കും\n\n**Working model:**\n\n1. Pulso App വഴി duty offers ലഭിക്കും\n2. നിങ്ങൾക്ക് താല്പര്യമുള്ള duty-കൾ മാത്രം accept ചെയ്യാം\n3. താല്പര്യമില്ലെങ്കിൽ reject ചെയ്യാം അല്ലെങ്കിൽ ignore ചെയ്യാം\n4. Duty accept ചെയ്തതിന് ശേഷം office verification call ഉണ്ടാകും\n5. എല്ലാ instructions-ും duty details-ും office staff clear ആയി അറിയിക്കും\n6. പിന്നീട് നിങ്ങൾ നേരിട്ട് duty location-ലേക്ക് പോകണം\n7. സമയത്തിന് duty ആരംഭിച്ച് ഉത്തരവാദിത്വത്തോടെ care നൽകണം\n\n**Emergency leave:**\n\nEmergency leave ആവശ്യമായി വന്നാൽ വേറെ staff-നെ ഞങ്ങൾ arrange ചെയ്ത് തരുന്നതായിരിക്കും.\n\n**ശ്രദ്ധിക്കുക:**\n\n- Duty offer accept ചെയ്യണോ വേണ്ടയോ എന്നത് മുഴുവൻ നിങ്ങളുടെ ഇഷ്ടമാണ്\n- ഇഷ്ടമുള്ള duty-കൾ മാത്രം സ്വീകരിച്ചാൽ മതി\n- ഇതിനായി പ്രത്യേക registration fee ഒന്നും നൽകേണ്ടതില്ല\n\n**Office Address:**\nPulso Elderlycare, Kalamassery, Kochi - 682021`,
   interestQuestion:
     'മുകളിലെ working model മനസ്സിലായോ? തുടരാൻ താൽപര്യമുണ്ടോ?',
   interestRetry:
@@ -196,7 +198,9 @@ const MESSAGES = {
   dutyHourPreferenceQuestion:
     'താങ്കൾക്ക് ഏത് duty hour ആണ് preference?',
   dutyHourPaymentSummary:
-    '8 hour - ദിവസത്തിൽ ₹900\n24 hour - ദിവസത്തിൽ ₹1200',
+    '8 hour - ദിവസത്തിൽ ₹600 മുതൽ ₹900 വരെ\n24 hour - ദിവസത്തിൽ ₹750 മുതൽ ₹1000 വരെ',
+  dutyHourPaymentSummaryBasic:
+    '8 hour - ദിവസത്തിൽ ₹600\n24 hour - ദിവസത്തിൽ ₹750',
   dutyHourPaymentSummaryNurse:
     '8 hour - ദിവസത്തിൽ ₹900 മുതൽ ₹1200 വരെ\n24 hour - ദിവസത്തിൽ ₹1200 മുതൽ ₹2200 വരെ',
   dutyHourPreferenceRetry:
@@ -271,6 +275,9 @@ const MESSAGES = {
     'താഴെയുള്ള list-ിൽ നിന്ന് താങ്കളുടെ ജില്ല തിരഞ്ഞെടുക്കുക.',
   verificationPending:
     'നന്ദി. താങ്കളുടെ certificate verification-നായി അയച്ചിരിക്കുന്നു. പരിശോധിച്ച ശേഷം ഉടൻ അറിയിക്കും.',
+  // For the person with no certificate: nothing was "sent for verification".
+  verificationPendingNoCertificate:
+    'നന്ദി. നിങ്ങളുടെ വിവരങ്ങൾ ലഭിച്ചു. ഒരു പരിചരണ സർട്ടിഫിക്കറ്റ് ഇല്ലാത്തതിനാൽ, ഒരു ചെറിയ ഫോൺ സംഭാഷണത്തിനു ശേഷം തീരുമാനം അറിയിക്കും.',
   additionalDocumentRequest:
     'Onboarding തുടരാൻ ഒരു additional document കൂടി ആവശ്യമാണ്.\n\nNote: {{note}}\n\nദയവായി image അല്ലെങ്കിൽ PDF ആയി ഇപ്പോൾ upload ചെയ്യുക.',
   additionalDocumentRetry:
@@ -411,22 +418,19 @@ const KARNATAKA_MESSAGES = {
   regionRetry: 'Please select Kerala or Karnataka to continue.',
   welcomeQualification: 'Please select your qualification.',
   notEligible:
-    'Sorry, currently we are onboarding only providers with GDA / GNM / ANM / HCA / BSc Nursing qualification or caregiving experience.',
+    'Please select one option from the list below. If you do not have a certificate, select "No certificate".',
   qualificationRetry:
-    'Please select one option: GDA / GNM / ANM / HCA / BSc Nursing / Other caregiving experience.',
-  qualificationCertificateRequired:
-    `To join Pulso as a Caregiver / Nursing Staff, a certificate is required.\n\nYou should have at least one of the following:\n- GDA (General Duty Assistant)\n- GNM (General Nursing & Midwifery)\n- ANM (Auxiliary Nurse Midwife)\n- HCA (Health Care Assistant)\n- BSc Nursing\n- Experience Certificate in caregiving\n\nCertificate upload is required to complete onboarding. Providers without a valid certificate cannot complete onboarding.`,
-  qualificationGoBack:
-    'If you have any of the above qualifications, please go back and select the correct option.',
+    'Please select one option: GDA / GNM / ANM / HCA / BSc Nursing / Other caregiving experience / No certificate.',
   workingModel:
-    `Pulso Global Private Limited is a home care company. We provide care services for elderly people and bedridden patients at their homes.\n\nGDA staff, caregivers, and nurses can join Pulso. If you are interested, we will send duty offers to you through Pulso mobile app\n\nDuty details:\n\n1. Duty location can be anywhere in Karnataka\n2. Duty timing may be 8 hours or 24 hours\n3. 8-hour duty timing will usually be from morning 8 am to evening 4pm\n4. Duty duration may be 1 week, 2 weeks, 1 month, or more depending on the case\n5. For 24-hour duty, stay and food will be provided at the patient's home\n6. For 8-hour duty, stay will not be provided\n7. For 8-hour duty, you will receive Rs 900 per day\n8. For 24-hour duty, you will receive Rs 1200 per day\n9. Payment will be credited daily to your account\n10. You will receive payment only for the days you work\n11. There will be no housemaid work. Only patient care duties\n\nWorking model:\n\n1. Duty offers will be sent through Pulso App\n2. You can accept only the duties you are interested in\n3. If you are not interested in a duty, you can reject or ignore it\n4. After you accept a duty, the office team will call you for verification and confirmation\n5. The office team will clearly explain all duty details and instructions\n6. After confirmation, you should go directly to the duty location\n7. You should start duty on time and provide care responsibly\n\nEmergency leave:\n\nIf you need emergency leave, Pulso will try to arrange another staff member.\n\nImportant:\n\n- Accepting or rejecting a duty offer is completely your choice\n- You only need to accept duties you are interested in\n- There is no registration fee to join Pulso\n\nHead Office Address:\nPulso Elderlycare, cochin, kerala - 682036`,
+    `Pulso Global Private Limited is a home care company. We provide care services for elderly people and bedridden patients at their homes.\n\nGDA staff, caregivers, and nurses can join Pulso. If you are interested, we will send duty offers to you through Pulso mobile app\n\nDuty details:\n\n1. Duty location can be anywhere in Karnataka\n2. Duty timing may be 8 hours or 24 hours\n3. 8-hour duty timing will usually be from morning 8 am to evening 4pm\n4. Duty duration may be 1 week, 2 weeks, 1 month, or more depending on the case\n5. For 24-hour duty, stay and food will be provided at the patient's home\n6. For 8-hour duty, stay will not be provided\n7. For 8-hour duty, you will receive Rs 600 to Rs 900 per day\n8. For 24-hour duty, you will receive Rs 750 to Rs 1000 per day\n9. Payment will be credited daily to your account\n10. You will receive payment only for the days you work\n11. There will be no housemaid work. Only patient care duties\n\nWorking model:\n\n1. Duty offers will be sent through Pulso App\n2. You can accept only the duties you are interested in\n3. If you are not interested in a duty, you can reject or ignore it\n4. After you accept a duty, the office team will call you for verification and confirmation\n5. The office team will clearly explain all duty details and instructions\n6. After confirmation, you should go directly to the duty location\n7. You should start duty on time and provide care responsibly\n\nEmergency leave:\n\nIf you need emergency leave, Pulso will try to arrange another staff member.\n\nImportant:\n\n- Accepting or rejecting a duty offer is completely your choice\n- You only need to accept duties you are interested in\n- There is no registration fee to join Pulso\n\nHead Office Address:\nPulso Elderlycare, cochin, kerala - 682036`,
   interestQuestion: 'Did you understand the working model? Are you interested to continue?',
   interestRetry: 'If you are interested to continue, please select the button below.',
   dutyHourPreferenceQuestion: 'Which duty hour do you prefer?',
   dutyHourPreferenceRetry: 'Please select one duty hour preference: 8 hour / 24 hour / Both.',
   dutyHourPreference8HourNotice:
     'Please note: stay and food are not provided for 8-hour duty. Stay and food are available only for 24-hour duty.',
-  dutyHourPaymentSummary: '8 hour - Rs 900 per day\n24 hour - Rs 1200 per day',
+  dutyHourPaymentSummary: '8 hour - Rs 600 to Rs 900 per day\n24 hour - Rs 750 to Rs 1000 per day',
+  dutyHourPaymentSummaryBasic: '8 hour - Rs 600 per day\n24 hour - Rs 750 per day',
   dutyHourPaymentSummaryNurse:
     '8 hour - Rs 900 to Rs 1200 per day\n24 hour - Rs 1200 to Rs 2200 per day',
   sampleDutyOfferQuestion: 'Would you like to see how a sample duty offer looks?',
@@ -480,6 +484,8 @@ const KARNATAKA_MESSAGES = {
   districtListQuestion: 'Please select your district from the list below.',
   verificationPending:
     'Thank you. Your certificate has been sent for verification. We will inform you once it is reviewed.',
+  verificationPendingNoCertificate:
+    'Thank you. We have received your details. Since you do not have a caregiving certificate, our team will call you for a short talk and inform you after that.',
   additionalDocumentRequest:
     'An additional document is required to continue onboarding.\n\nNote: {{note}}\n\nPlease upload it now as an image or PDF.',
   additionalDocumentRetry: 'Please upload the requested additional document as an image or PDF.',
@@ -581,7 +587,6 @@ const UI_TEXT = {
   nextListDescription: 'ജില്ല ഇവിടെ ഇല്ലെങ്കിൽ തുറക്കുക',
   previousListTitle: 'ആദ്യ list',
   previousListDescription: 'മുൻപത്തെ ജില്ലകൾ കാണുക',
-  qualificationGoBackTitle: 'തിരികെ പോകുക',
   interestYesTitle: 'താൽപര്യമുണ്ട്',
   interestNoTitle: 'താൽപര്യമില്ല',
   dutyBothTitle: 'രണ്ടും',
@@ -616,7 +621,6 @@ const KARNATAKA_UI_TEXT = {
   nextListDescription: 'Open if your district is not here',
   previousListTitle: 'Previous list',
   previousListDescription: 'See previous districts',
-  qualificationGoBackTitle: 'Go back',
   interestYesTitle: 'Yes, interested',
   interestNoTitle: 'Not interested',
   dutyBothTitle: 'Both',
@@ -754,52 +758,107 @@ function getProviderFlowId(provider) {
   return provider && provider.flowId ? provider.flowId : DEFAULT_FLOW_ID;
 }
 
-// GNM and BSc Nursing are offered a higher band than the caregiver grades. The
-// qualification is answered before the working model is sent, so the rate the
-// person reads is already the one that applies to them.
+// GNM and BSc Nursing are offered a higher band than the caregiver grades.
+// The qualification is answered before the working model is sent, so the rate
+// the person reads is already the one that applies to them.
 const NURSE_QUALIFICATIONS = ['gnm', 'bsc_nursing'];
 
 function isNurseQualification(qualification) {
   return NURSE_QUALIFICATIONS.includes(String(qualification || '').toLowerCase());
 }
 
-// The working model quotes the rate inside one long block, so the nurse band is
-// swapped in line by line. Each marker carries its duty hours, so the rewritten
-// 8-hour line can never be matched a second time by the 24-hour swap.
-const NURSE_WORKING_MODEL_SWAPS = {
+// The Basic band: no certificate, taken on for practical experience. Both the
+// claimed value (`no_certificate`, what she picked) and the approved one
+// (`basic_caregiver`, what the reviewer chose) read the Basic figures, so she
+// never sees a rate she will not be paid — the GDA text was what she got until
+// 27 Sep 2026, ₹900/₹1200 against a real ₹600/₹750.
+const BASIC_QUALIFICATIONS = ['basic_caregiver', 'no_certificate'];
+
+function isBasicQualification(qualification) {
+  return BASIC_QUALIFICATIONS.includes(String(qualification || '').toLowerCase());
+}
+
+function rateBandFor(qualification) {
+  if (isNurseQualification(qualification)) return 'nurse';
+  if (isBasicQualification(qualification)) return 'basic';
+  return 'gda';
+}
+
+// Three bands, figures from app_config/provider_tiers (defaults when the doc is
+// unreadable, so a message never quotes ₹0). GDA and above is a range — Basic
+// pay to GDA pay — because a GDA is reachable by Basic-tier offers as well as
+// her own (founder's decision, 26 Sep 2026). Basic is flat: she is never offered
+// more. The nurse band is the founder's older wording, left as it was.
+const TIER_FALLBACK = { basic: { payout24h: 750, payout8h: 600 }, gda: { payout24h: 1000, payout8h: 900 } };
+
+function tierFigures(tiers) {
+  const t = tiers && typeof tiers === 'object' ? tiers : {};
+  const pick = (name, key) => {
+    const n = Math.round(Number((t[name] || {})[key]));
+    return Number.isFinite(n) && n > 0 ? n : TIER_FALLBACK[name][key];
+  };
+  return {
+    b8: pick('basic', 'payout8h'), b24: pick('basic', 'payout24h'),
+    g8: pick('gda', 'payout8h'), g24: pick('gda', 'payout24h')
+  };
+}
+
+// The working model quotes the rate inside one long block, so the band's two
+// lines are swapped in by exact match. The markers are the GDA-range lines as
+// written in MESSAGES.workingModel; swapExact throws if either is reworded
+// without this table, rather than silently sending the wrong band.
+const WORKING_MODEL_MARKERS = {
   ml: [
-    [
-      '8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹900 വരെ ലഭിക്കും',
-      '8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹900 മുതൽ ₹1200 വരെ ലഭിക്കും'
-    ],
-    [
-      '24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹1200 വരെ ലഭിക്കും',
-      '24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹1200 മുതൽ ₹2200 വരെ ലഭിക്കും'
-    ]
+    '8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹600 മുതൽ ₹900 വരെ ലഭിക്കും',
+    '24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 മുതൽ ₹1000 വരെ ലഭിക്കും'
   ],
   en: [
-    [
-      'For 8-hour duty, you will receive Rs 900 per day',
-      'For 8-hour duty, you will receive Rs 900 to Rs 1200 per day'
-    ],
-    [
-      'For 24-hour duty, you will receive Rs 1200 per day',
-      'For 24-hour duty, you will receive Rs 1200 to Rs 2200 per day'
-    ]
+    'For 8-hour duty, you will receive Rs 600 to Rs 900 per day',
+    'For 24-hour duty, you will receive Rs 750 to Rs 1000 per day'
   ]
 };
 
-/** The working model for the flow in play, at the rate this qualification earns. */
-function getWorkingModelFor(qualification) {
-  const flow = getActiveFlow();
-  const base = flow.MESSAGES.workingModel;
-  if (!isNurseQualification(qualification)) {
-    return base;
+function workingModelRateLines(band, language, f) {
+  if (language === 'ml') {
+    if (band === 'nurse') {
+      return [
+        '8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹900 മുതൽ ₹1200 വരെ ലഭിക്കും',
+        '24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹1200 മുതൽ ₹2200 വരെ ലഭിക്കും'
+      ];
+    }
+    if (band === 'basic') {
+      return [
+        `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b8} ലഭിക്കും`,
+        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b24} ലഭിക്കും`
+      ];
+    }
+    return [
+      `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b8} മുതൽ ₹${f.g8} വരെ ലഭിക്കും`,
+      `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b24} മുതൽ ₹${f.g24} വരെ ലഭിക്കും`
+    ];
   }
-  return (NURSE_WORKING_MODEL_SWAPS[flow.language] || []).reduce(
-    (text, [from, to]) => swapExact(text, from, to),
-    String(base)
-  );
+  if (band === 'nurse') {
+    return [
+      'For 8-hour duty, you will receive Rs 900 to Rs 1200 per day',
+      'For 24-hour duty, you will receive Rs 1200 to Rs 2200 per day'
+    ];
+  }
+  if (band === 'basic') {
+    return [`For 8-hour duty, you will receive Rs ${f.b8} per day`, `For 24-hour duty, you will receive Rs ${f.b24} per day`];
+  }
+  return [
+    `For 8-hour duty, you will receive Rs ${f.b8} to Rs ${f.g8} per day`,
+    `For 24-hour duty, you will receive Rs ${f.b24} to Rs ${f.g24} per day`
+  ];
+}
+
+/** The working model for the flow in play, at the rate this qualification earns. */
+function getWorkingModelFor(qualification, tiers) {
+  const flow = getActiveFlow();
+  const band = rateBandFor(qualification);
+  const markers = WORKING_MODEL_MARKERS[flow.language] || WORKING_MODEL_MARKERS.en;
+  const lines = workingModelRateLines(band, flow.language, tierFigures(tiers));
+  return markers.reduce((text, marker, i) => swapExact(text, marker, lines[i]), String(flow.MESSAGES.workingModel));
 }
 
 /**
@@ -833,12 +892,21 @@ function getTermsRateFor(qualification, tiers) {
     .split('{{payout24h}}').join(String(basic.payout24h));
 }
 
-function getDutyHourPaymentSummaryFor(qualification) {
-  const messages = getActiveFlow().MESSAGES;
-  if (isNurseQualification(qualification) && messages.dutyHourPaymentSummaryNurse) {
-    return messages.dutyHourPaymentSummaryNurse;
+/** The two-line pay summary shown with the duty-hours question, per band. */
+function getDutyHourPaymentSummaryFor(qualification, tiers) {
+  const flow = getActiveFlow();
+  const messages = flow.MESSAGES;
+  const band = rateBandFor(qualification);
+  if (band === 'nurse' && messages.dutyHourPaymentSummaryNurse) return messages.dutyHourPaymentSummaryNurse;
+  const f = tierFigures(tiers);
+  if (flow.language === 'ml') {
+    return band === 'basic'
+      ? `8 hour - ദിവസത്തിൽ ₹${f.b8}\n24 hour - ദിവസത്തിൽ ₹${f.b24}`
+      : `8 hour - ദിവസത്തിൽ ₹${f.b8} മുതൽ ₹${f.g8} വരെ\n24 hour - ദിവസത്തിൽ ₹${f.b24} മുതൽ ₹${f.g24} വരെ`;
   }
-  return messages.dutyHourPaymentSummary;
+  return band === 'basic'
+    ? `8 hour - Rs ${f.b8} per day\n24 hour - Rs ${f.b24} per day`
+    : `8 hour - Rs ${f.b8} to Rs ${f.g8} per day\n24 hour - Rs ${f.b24} to Rs ${f.g24} per day`;
 }
 
 function getActiveFlow() {
@@ -909,6 +977,8 @@ module.exports = {
   getFlowIdFor,
   isNurseQualification,
   getWorkingModelFor,
+  isBasicQualification,
+  rateBandFor,
   getCertificateApprovedFor,
   getTermsRateFor,
   getDutyHourPaymentSummaryFor,

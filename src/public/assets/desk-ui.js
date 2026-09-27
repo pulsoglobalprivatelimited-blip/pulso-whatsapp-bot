@@ -44,6 +44,8 @@
     hca: 'HCA',
     bsc_nursing: 'BSc Nursing',
     other_caregiving: 'Other caregiving',
+    basic_caregiver: 'Basic caregiver',
+    no_certificate: 'No certificate',
 
     /* provider onboarding status */
     certificate_verification_pending: 'Certificate to review',
