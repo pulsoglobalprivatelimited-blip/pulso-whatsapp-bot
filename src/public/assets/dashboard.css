@@ -2775,6 +2775,12 @@ dd {
   left: 50%;
   bottom: calc(24px + env(safe-area-inset-bottom));
   z-index: 60;
+
+  /* left:50% with no width leaves the containing block running from the middle
+     of the screen to the right edge, so the pill gets half the width it should
+     and a one-line message wraps onto three. max-content sizes it to the text
+     first; max-width then brings it back in on a narrow phone. */
+  width: max-content;
   max-width: min(520px, calc(100vw - 32px));
   padding: 12px 18px;
   border-radius: 999px;
