@@ -172,6 +172,14 @@
           <button class="filter" data-app-filter="verified">App verified</button>
         </div>
 
+        <!-- Qualification, not status: these narrow *across* the chips above,
+             so "Needs you" + "No certificate" asks the question worth asking —
+             who told us they have no paper and is still waiting on us. -->
+        <div class="filters">
+          <button class="filter active" data-qualification-filter="all">All qualifications</button>
+          <button class="filter" data-qualification-filter="no_certificate">No certificate</button>
+        </div>
+
         <div id="completed-range-filters" class="filters hidden">
           <button class="filter active" data-completed-range="all">All completed</button>
           <button class="filter" data-completed-range="today">Today</button>
@@ -468,7 +476,7 @@
 
   <script src="/admin/assets/desk-ui.js?v=20260924a"></script>
   <script src="/admin/assets/desk-shell.js?v=20260923p"></script>
-  <script src="/admin/assets/dashboard.js?v=20260926a"></script>
+  <script src="/admin/assets/dashboard.js?v=20260927a"></script>
   <script src="/admin/assets/partner-review.js?v=20260924a"></script>
   <script src="/admin/assets/booking-dashboard.js?v=20260924a"></script>
   <script src="/admin/assets/admin-sides.js?v=20260923a"></script>

@@ -6,6 +6,7 @@ let selectedPhone = null;
 let currentFilter = 'certificate_verification_pending';
 let hasLoadedOnce = false;
 let currentAppFilter = 'all';
+let currentQualificationFilter = 'all';
 /* Shared with the agency and customer boards: it is a preference about how a
    person reads a list, not about one desk. */
 const SORT_STORAGE_KEY = 'pulso-desk-sort';
@@ -180,6 +181,15 @@ providerAll('[data-app-filter]').forEach((button) => {
     providerAll('[data-app-filter]').forEach((item) => item.classList.remove('active'));
     button.classList.add('active');
     currentAppFilter = button.dataset.appFilter;
+    renderList();
+  });
+});
+
+providerAll('[data-qualification-filter]').forEach((button) => {
+  button.addEventListener('click', () => {
+    providerAll('[data-qualification-filter]').forEach((item) => item.classList.remove('active'));
+    button.classList.add('active');
+    currentQualificationFilter = button.dataset.qualificationFilter;
     renderList();
   });
 });
@@ -890,6 +900,7 @@ function getVisibleProviders() {
     const region = getProviderRegion(item);
     const matchesRegion = currentRegionFilter === 'all' || region === currentRegionFilter;
     const matchesApp = matchesAppFilter(item);
+    const matchesQualification = matchesQualificationFilter(item);
     const matchesCompletedWindow = currentFilter !== 'completed' || matchesCompletedRange(item);
     const matchesCompletedSexFilter = currentFilter !== 'completed' || matchesCompletedSex(item);
     const matchesStartedWindow = matchesStartedRange(item);
@@ -898,7 +909,8 @@ function getVisibleProviders() {
     const matchesName = currentSearch ? fullName.includes(currentSearch) : false;
     const matchesRegionSearch = currentSearch ? region.includes(currentSearch) : false;
     const matchesSearch = !currentSearch || matchesPhone || matchesName || matchesRegionSearch;
-    return matchesFilter && matchesRegion && matchesApp && matchesCompletedWindow && matchesCompletedSexFilter && matchesStartedWindow && matchesSearch;
+    return matchesFilter && matchesRegion && matchesApp && matchesQualification
+      && matchesCompletedWindow && matchesCompletedSexFilter && matchesStartedWindow && matchesSearch;
   }));
 }
 
@@ -980,6 +992,22 @@ function matchesAppFilter(provider) {
     return Boolean(provider && provider.termsAccepted) && status !== 'verified';
   }
   return true;
+}
+
+/* "No certificate" is what she told the onboarding bot, not a resting state:
+   the reviewer cannot approve it, they approve her as basic_caregiver, and she
+   leaves this list. So this is a work queue that empties as it is worked.
+
+   Matched exactly, never as `!qualification`. Someone who has not reached the
+   qualification question yet has no value at all, and a falsy test would file
+   every half-finished chat under "told us they have no certificate" — a
+   different group, and the wrong one to start ringing. */
+function matchesQualificationFilter(provider) {
+  if (currentQualificationFilter === 'all') {
+    return true;
+  }
+  const qualification = String((provider && provider.qualification) || '').toLowerCase();
+  return qualification === currentQualificationFilter;
 }
 
 function updateDashboardMetrics() {
@@ -1192,6 +1220,7 @@ function updateDeskCounts() {
   const refinements = [
     !dashboardRegion && currentRegionFilter !== 'all',
     currentAppFilter !== 'all',
+    currentQualificationFilter !== 'all',
     currentCompletedRange !== 'all',
     currentCompletedSex !== 'all',
     currentStartedRange !== 'all'
