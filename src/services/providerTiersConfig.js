@@ -10,10 +10,12 @@
  */
 const { getHubFirestore } = require('./hubStorage');
 
+// Repriced by the founder on 28 Sep 2026: every band moved, and the margin
+// between a caregiver's pay and the family floor went from ₹300 to ₹100.
 const DEFAULTS = {
-  basic: { payout24h: 750, payout8h: 600 },
-  gda: { payout24h: 1000, payout8h: 900 },   // live since 26 Sep 2026; was 1200
-  nurse: { payout24h: 1800, payout8h: 1500 }
+  basic: { payout24h: 700, payout8h: 600 },
+  gda: { payout24h: 900, payout8h: 700 },
+  nurse: { payout24h: 1600, payout8h: 1400 }
 };
 const TTL_MS = 60 * 1000;
 let cached = null;

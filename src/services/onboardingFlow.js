@@ -14,6 +14,7 @@ const {
   getFlowIdFor,
   getWorkingModelFor,
   getDutyHourPaymentSummaryFor,
+  getSampleDutyOfferFor,
   getCertificateApprovedFor,
   getTermsRateFor,
   UI_TEXT,
@@ -509,9 +510,11 @@ function getOtherDutyPreference(value) {
   return value === '24_hour' ? '8_hour' : '24_hour';
 }
 
-function getSampleDutyMessage(value) {
+/* The sample is priced for the person reading it. `provider` is already loaded
+   by every caller, and getProviderTiers is cached for a minute. */
+function getSampleDutyMessage(value, qualification, tiers) {
   if (value === 'both') return null;
-  return value === '24_hour' ? MESSAGES.sampleDutyOffer24Hour : MESSAGES.sampleDutyOffer8Hour;
+  return getSampleDutyOfferFor(qualification, tiers, value);
 }
 
 function getOtherSampleQuestion(value) {
@@ -1754,14 +1757,16 @@ async function handleSampleDutyOfferPreference(phone, message) {
 
   if (action === 'show') {
     if (sampleDutyState.initialChoice === 'both') {
-      await sendAndLog(phone, 'text', MESSAGES.sampleDutyOffer8Hour);
-      await sendAndLog(phone, 'text', MESSAGES.sampleDutyOffer24Hour);
+      const bothTiers = await getProviderTiers();
+      const bothQualification = provider && provider.qualification;
+      await sendAndLog(phone, 'text', getSampleDutyOfferFor(bothQualification, bothTiers, '8_hour'));
+      await sendAndLog(phone, 'text', getSampleDutyOfferFor(bothQualification, bothTiers, '24_hour'));
       await moveToExpectedDuties(phone, 'both');
       return;
     }
 
     if (sampleDutyState.stage === 'other_prompt') {
-      await sendAndLog(phone, 'text', getSampleDutyMessage(sampleDutyState.alternateChoice));
+      await sendAndLog(phone, 'text', getSampleDutyMessage(sampleDutyState.alternateChoice, provider && provider.qualification, await getProviderTiers()));
       await updateProvider(phone, {
         sampleDutyState: {
           ...sampleDutyState,
@@ -1772,7 +1777,7 @@ async function handleSampleDutyOfferPreference(phone, message) {
       return;
     }
 
-    await sendAndLog(phone, 'text', getSampleDutyMessage(sampleDutyState.initialChoice));
+    await sendAndLog(phone, 'text', getSampleDutyMessage(sampleDutyState.initialChoice, provider && provider.qualification, await getProviderTiers()));
     await updateProvider(phone, {
       sampleDutyState: {
         ...sampleDutyState,

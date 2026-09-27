@@ -197,12 +197,6 @@ const MESSAGES = {
     'തുടരാൻ താൽപര്യമുണ്ടെങ്കിൽ താഴെയുള്ള button തിരഞ്ഞെടുക്കുക.',
   dutyHourPreferenceQuestion:
     'താങ്കൾക്ക് ഏത് duty hour ആണ് preference?',
-  dutyHourPaymentSummary:
-    '8 hour - ദിവസത്തിൽ ₹600 മുതൽ ₹900 വരെ\n24 hour - ദിവസത്തിൽ ₹750 മുതൽ ₹1000 വരെ',
-  dutyHourPaymentSummaryBasic:
-    '8 hour - ദിവസത്തിൽ ₹600\n24 hour - ദിവസത്തിൽ ₹750',
-  dutyHourPaymentSummaryNurse:
-    '8 hour - ദിവസത്തിൽ ₹900 മുതൽ ₹1200 വരെ\n24 hour - ദിവസത്തിൽ ₹1200 മുതൽ ₹2200 വരെ',
   dutyHourPreferenceRetry:
     'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും ഒരു duty hour preference തിരഞ്ഞെടുക്കുക: 8 hour / 24 hour / രണ്ടും.',
   dutyHourPreference8HourNotice:
@@ -220,9 +214,9 @@ const MESSAGES = {
   sampleDutyFinalChoiceRetry:
     'ദയവായി 8 hour / 24 hour / രണ്ടും എന്നിവയിൽ ഒന്നിനെ തിരഞ്ഞെടുക്കുക.',
   sampleDutyOffer24Hour:
-    `Elderly female Patient (71 yrs)\nCondition: Supportive care\n\n🟡 Care Level: Assisted care (with walker support)\n\n🕘 Duty: 24-hour care\n\n📅 Duration: 1 month (continuous) – from 21 Jan\n\n📍 Location: Vennala (nearby)\n\n🩺 Care Needed (Supportive &\n Assisted):\n\n•⁠  ⁠Washroom support\n•⁠  ⁠Bed making\n•⁠  ⁠Assistance while feeding\n•⁠  ⁠Helping with medicines\n•⁠  ⁠Assistance in lifting & walking using walker\n•⁠  ⁠Assistance during physiotherapy exercises\n(Supportive home care – not hospital duty)\n💰 Earnings:\n\n₹ 1200 per day × 30 days\n👉 ₹ 36000 total\n\n🛡 Safety & Support\n✔ Family verified\n✔ Payment guaranteed\n✔ Support available during duty`,
+    `Elderly female Patient (71 yrs)\nCondition: Supportive care\n\n🟡 Care Level: Assisted care (with walker support)\n\n🕘 Duty: 24-hour care\n\n📅 Duration: 1 month (continuous) – from 21 Jan\n\n📍 Location: Vennala (nearby)\n\n🩺 Care Needed (Supportive &\n Assisted):\n\n•⁠  ⁠Washroom support\n•⁠  ⁠Bed making\n•⁠  ⁠Assistance while feeding\n•⁠  ⁠Helping with medicines\n•⁠  ⁠Assistance in lifting & walking using walker\n•⁠  ⁠Assistance during physiotherapy exercises\n(Supportive home care – not hospital duty)\n💰 Earnings:\n\n₹ {{payout24h}} per day × 30 days\n👉 ₹ {{total24h}} total\n\n🛡 Safety & Support\n✔ Family verified\n✔ Payment guaranteed\n✔ Support available during duty`,
   sampleDutyOffer8Hour:
-    `👤 Patient:\nfemale – 65 yrs\n\n🩺 Condition:\nPost-surgery recovery (Hip surgery)\n\n👨‍⚕ Care Type:\nHome supportive care (not complex)\n\n🕘 Duty:\n8 hours (8:00 AM – 4:00 PM)\n\n⏳ Duration:\nFrom 14 Feb – continuous\n\n📍 Location:\nThevakkal, Ernakulam\n\n🩺 Care Needed:\n•⁠  ⁠Walking / mobility support\n•⁠  ⁠Assistance with daily activities\n•⁠  ⁠Washroom support (if needed)\n•⁠  ⁠Helping with medicines\n•⁠  ⁠General supervision & comfort care\n\n💰 Earnings:\n₹900 per day\n👉 Stable regular day-duty\n\n🛡 Pulso Support:\n✔ Family verified\n✔ Payment guaranteed\n✔ Full support during duty`,
+    `👤 Patient:\nfemale – 65 yrs\n\n🩺 Condition:\nPost-surgery recovery (Hip surgery)\n\n👨‍⚕ Care Type:\nHome supportive care (not complex)\n\n🕘 Duty:\n8 hours (8:00 AM – 4:00 PM)\n\n⏳ Duration:\nFrom 14 Feb – continuous\n\n📍 Location:\nThevakkal, Ernakulam\n\n🩺 Care Needed:\n•⁠  ⁠Walking / mobility support\n•⁠  ⁠Assistance with daily activities\n•⁠  ⁠Washroom support (if needed)\n•⁠  ⁠Helping with medicines\n•⁠  ⁠General supervision & comfort care\n\n💰 Earnings:\n₹{{payout8h}} per day\n👉 Stable regular day-duty\n\n🛡 Pulso Support:\n✔ Family verified\n✔ Payment guaranteed\n✔ Full support during duty`,
   expectedDutiesIntroOne:
     `Caregiver duty-യിൽ സാധാരണയായി വരാവുന്ന ചില ജോലികൾ താഴെ കൊടുക്കുന്നു.\nPatient-ന്റെ condition അനുസരിച്ച് duty responsibilities മാറാം.\n\n*Personal care*\n- Bathing / sponge bath (non-clinical)\n- Dressing\n- Oral care, grooming, hair combing\n\n*Toileting & continence support*\n- Diaper change\n- Bedpan / urinal support\n- Cleaning and maintaining hygiene`,
   expectedDutiesIntroTwo:
@@ -429,10 +423,6 @@ const KARNATAKA_MESSAGES = {
   dutyHourPreferenceRetry: 'Please select one duty hour preference: 8 hour / 24 hour / Both.',
   dutyHourPreference8HourNotice:
     'Please note: stay and food are not provided for 8-hour duty. Stay and food are available only for 24-hour duty.',
-  dutyHourPaymentSummary: '8 hour - Rs 600 to Rs 900 per day\n24 hour - Rs 750 to Rs 1000 per day',
-  dutyHourPaymentSummaryBasic: '8 hour - Rs 600 per day\n24 hour - Rs 750 per day',
-  dutyHourPaymentSummaryNurse:
-    '8 hour - Rs 900 to Rs 1200 per day\n24 hour - Rs 1200 to Rs 2200 per day',
   sampleDutyOfferQuestion: 'Would you like to see how a sample duty offer looks?',
   sampleDutyOfferRetry: 'Please select one option from below.',
   sampleDutyOtherOffer8HourQuestion: 'Do you want to see an 8-hour duty sample?',
@@ -440,9 +430,9 @@ const KARNATAKA_MESSAGES = {
   sampleDutyFinalChoiceQuestion: 'What is your final duty hour preference?',
   sampleDutyFinalChoiceRetry: 'Please select 8 hour / 24 hour / Both.',
   sampleDutyOffer24Hour:
-    `Patient: Elderly female, 71 years\nCondition: Supportive care\n\nCare Level: Assisted care with walker support\n\nDuty: 24-hour care\n\nDuration: 1 month\n\nLocation: Bengaluru\n\nCare Needed:\n- Washroom support\n- Bed making\n- Assistance while feeding\n- Helping with medicines\n- Assistance in lifting and walking using walker\n- Assistance during physiotherapy exercises\n\nEarnings:\nRs 1200 per day x 30 days\nRs 36000 total\n\nSafety and Support:\n- Family verified\n- Payment guaranteed\n- Pulso support available during duty`,
+    `Patient: Elderly female, 71 years\nCondition: Supportive care\n\nCare Level: Assisted care with walker support\n\nDuty: 24-hour care\n\nDuration: 1 month\n\nLocation: Bengaluru\n\nCare Needed:\n- Washroom support\n- Bed making\n- Assistance while feeding\n- Helping with medicines\n- Assistance in lifting and walking using walker\n- Assistance during physiotherapy exercises\n\nEarnings:\nRs {{payout24h}} per day x 30 days\nRs {{total24h}} total\n\nSafety and Support:\n- Family verified\n- Payment guaranteed\n- Pulso support available during duty`,
   sampleDutyOffer8Hour:
-    `Patient: Female, 65 years\n\nCondition: Post-surgery recovery\n\nCare Type: Home supportive care\n\nDuty: 8 hours\n\nDuration: Continuous\n\nLocation: Bengaluru\n\nCare Needed:\n- Walking / mobility support\n- Assistance with daily activities\n- Washroom support if needed\n- Helping with medicines\n- General supervision and comfort care\n\nEarnings:\nRs 900 per day\n\nSupport:\n- Family verified\n- Payment guaranteed\n- Pulso support available during duty`,
+    `Patient: Female, 65 years\n\nCondition: Post-surgery recovery\n\nCare Type: Home supportive care\n\nDuty: 8 hours\n\nDuration: Continuous\n\nLocation: Bengaluru\n\nCare Needed:\n- Walking / mobility support\n- Assistance with daily activities\n- Washroom support if needed\n- Helping with medicines\n- General supervision and comfort care\n\nEarnings:\nRs {{payout8h}} per day\n\nSupport:\n- Family verified\n- Payment guaranteed\n- Pulso support available during duty`,
   expectedDutiesIntroOne:
     `Caregiver duties may include the following. Duties may change depending on the patient's condition.\n\n*Personal care*\n- Bathing or sponge bath support\n- Dressing\n- Oral care\n- Grooming\n- Hair combing\n\n*Toileting and hygiene support*\n- Diaper change\n- Bedpan or urinal support\n- Cleaning and maintaining hygiene`,
   expectedDutiesIntroTwo:
@@ -788,8 +778,14 @@ function rateBandFor(qualification) {
 // unreadable, so a message never quotes ₹0). GDA and above is a range — Basic
 // pay to GDA pay — because a GDA is reachable by Basic-tier offers as well as
 // her own (founder's decision, 26 Sep 2026). Basic is flat: she is never offered
-// more. The nurse band is the founder's older wording, left as it was.
-const TIER_FALLBACK = { basic: { payout24h: 750, payout8h: 600 }, gda: { payout24h: 1000, payout8h: 900 } };
+// more. Nurse is flat too, and is no longer the older hand-written range — the
+// founder repriced all three bands on 28 Sep 2026 and a hardcoded nurse line
+// would have been the one figure left quoting the old money.
+const TIER_FALLBACK = {
+  basic: { payout24h: 700, payout8h: 600 },
+  gda: { payout24h: 900, payout8h: 700 },
+  nurse: { payout24h: 1600, payout8h: 1400 }
+};
 
 function tierFigures(tiers) {
   const t = tiers && typeof tiers === 'object' ? tiers : {};
@@ -799,7 +795,8 @@ function tierFigures(tiers) {
   };
   return {
     b8: pick('basic', 'payout8h'), b24: pick('basic', 'payout24h'),
-    g8: pick('gda', 'payout8h'), g24: pick('gda', 'payout24h')
+    g8: pick('gda', 'payout8h'), g24: pick('gda', 'payout24h'),
+    n8: pick('nurse', 'payout8h'), n24: pick('nurse', 'payout24h')
   };
 }
 
@@ -822,8 +819,8 @@ function workingModelRateLines(band, language, f) {
   if (language === 'ml') {
     if (band === 'nurse') {
       return [
-        '8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹900 മുതൽ ₹1200 വരെ ലഭിക്കും',
-        '24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹1200 മുതൽ ₹2200 വരെ ലഭിക്കും'
+        `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.n8} ലഭിക്കും`,
+        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.n24} ലഭിക്കും`
       ];
     }
     if (band === 'basic') {
@@ -838,10 +835,7 @@ function workingModelRateLines(band, language, f) {
     ];
   }
   if (band === 'nurse') {
-    return [
-      'For 8-hour duty, you will receive Rs 900 to Rs 1200 per day',
-      'For 24-hour duty, you will receive Rs 1200 to Rs 2200 per day'
-    ];
+    return [`For 8-hour duty, you will receive Rs ${f.n8} per day`, `For 24-hour duty, you will receive Rs ${f.n24} per day`];
   }
   if (band === 'basic') {
     return [`For 8-hour duty, you will receive Rs ${f.b8} per day`, `For 24-hour duty, you will receive Rs ${f.b24} per day`];
@@ -850,6 +844,43 @@ function workingModelRateLines(band, language, f) {
     `For 8-hour duty, you will receive Rs ${f.b8} to Rs ${f.g8} per day`,
     `For 24-hour duty, you will receive Rs ${f.b24} to Rs ${f.g24} per day`
   ];
+}
+
+/**
+ * A sample duty offer at the rate this band is actually paid.
+ *
+ * The samples used to quote ₹1200 a day to everybody — the GDA rate, retired
+ * on 26 Sep 2026 — while the pay summary sent moments earlier told a Basic
+ * caregiver ₹750. Two numbers in one conversation, and the sample's is the one
+ * with a patient and a date attached, so it is the one she remembers.
+ *
+ * The month is computed, never written. `₹36000` was typed once and outlived
+ * two repricings; a total that derives from the rate cannot do that again.
+ */
+const SAMPLE_MONTH_DAYS = 30;
+
+function sampleDutyRates(band, f) {
+  if (band === 'nurse') return { day8: f.n8, day24: f.n24 };
+  if (band === 'basic') return { day8: f.b8, day24: f.b24 };
+  return { day8: f.g8, day24: f.g24 };
+}
+
+function getSampleDutyOfferFor(qualification, tiers, choice) {
+  if (choice !== '24_hour' && choice !== '8_hour') return null;
+  const flow = getActiveFlow();
+  const template = choice === '24_hour'
+    ? flow.MESSAGES.sampleDutyOffer24Hour
+    : flow.MESSAGES.sampleDutyOffer8Hour;
+  if (!template) return null;
+
+  /* No blank-rate guard here, unlike getTermsRateFor: tierFigures substitutes
+     TIER_FALLBACK for anything zero or unreadable, so these are always real
+     figures. A throw would look like protection while never firing. */
+  const { day8, day24 } = sampleDutyRates(rateBandFor(qualification), tierFigures(tiers));
+  return String(template)
+    .split('{{payout8h}}').join(String(day8))
+    .split('{{payout24h}}').join(String(day24))
+    .split('{{total24h}}').join(String(day24 * SAMPLE_MONTH_DAYS));
 }
 
 /** The working model for the flow in play, at the rate this qualification earns. */
@@ -897,13 +928,14 @@ function getDutyHourPaymentSummaryFor(qualification, tiers) {
   const flow = getActiveFlow();
   const messages = flow.MESSAGES;
   const band = rateBandFor(qualification);
-  if (band === 'nurse' && messages.dutyHourPaymentSummaryNurse) return messages.dutyHourPaymentSummaryNurse;
   const f = tierFigures(tiers);
   if (flow.language === 'ml') {
+    if (band === 'nurse') return `8 hour - ദിവസത്തിൽ ₹${f.n8}\n24 hour - ദിവസത്തിൽ ₹${f.n24}`;
     return band === 'basic'
       ? `8 hour - ദിവസത്തിൽ ₹${f.b8}\n24 hour - ദിവസത്തിൽ ₹${f.b24}`
       : `8 hour - ദിവസത്തിൽ ₹${f.b8} മുതൽ ₹${f.g8} വരെ\n24 hour - ദിവസത്തിൽ ₹${f.b24} മുതൽ ₹${f.g24} വരെ`;
   }
+  if (band === 'nurse') return `8 hour - Rs ${f.n8} per day\n24 hour - Rs ${f.n24} per day`;
   return band === 'basic'
     ? `8 hour - Rs ${f.b8} per day\n24 hour - Rs ${f.b24} per day`
     : `8 hour - Rs ${f.b8} to Rs ${f.g8} per day\n24 hour - Rs ${f.b24} to Rs ${f.g24} per day`;
@@ -982,6 +1014,7 @@ module.exports = {
   getCertificateApprovedFor,
   getTermsRateFor,
   getDutyHourPaymentSummaryFor,
+  getSampleDutyOfferFor,
   getFlowConfig,
   getProviderFlowId,
   runWithFlow,
