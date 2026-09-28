@@ -4,6 +4,7 @@ const {
   listProviderSummaries,
   listProviderTermsReminderCandidates,
   listPendingVerificationNotificationProviders,
+  listPendingAppActivationProviders,
   listReviewerWorkflowProviders,
   saveProvider
 } = require('./storage');
@@ -174,6 +175,7 @@ module.exports = {
   listProviderSummaries,
   listProviderTermsReminderCandidates,
   listPendingVerificationNotificationProviders,
+  listPendingAppActivationProviders,
   listReviewerWorkflowProviders,
   getProvider
 };

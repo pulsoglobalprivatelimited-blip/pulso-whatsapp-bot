@@ -148,6 +148,41 @@ async function listProviderTermsReminderCandidates() {
   }));
 }
 
+// Every app-activation state short of verified: the person got the link, said
+// they installed it, asked for help, or said later. The sweep asks the hub
+// about each of them; nothing here decides who is due, only who is eligible.
+const PENDING_APP_ACTIVATION_STATUSES = [
+  'pending_verification',
+  'link_sent',
+  'help_requested',
+  'later_selected',
+  'required',
+  'manual_registration'
+];
+
+async function listPendingAppActivationProviders() {
+  const snapshot = await getFirestore()
+    .collection('providers')
+    .where('pulsoAppActivationStatus', 'in', PENDING_APP_ACTIVATION_STATUSES)
+    .select(
+      'phone',
+      'status',
+      'fullName',
+      'pulsoAppRequired',
+      'pulsoAppActivationStatus',
+      'pulsoAppInstalledConfirmedAt',
+      'pulsoAppHubCheckedAt',
+      'pulsoAppHubMatchStatus',
+      'lastMessageAt'
+    )
+    .get();
+
+  return snapshot.docs.map((doc) => ({
+    phone: doc.id,
+    ...doc.data()
+  }));
+}
+
 async function listPendingVerificationNotificationProviders() {
   const snapshot = await getFirestore()
     .collection('providers')
@@ -234,6 +269,8 @@ module.exports = {
   listProviderSummaries,
   listProviderTermsReminderCandidates,
   listPendingVerificationNotificationProviders,
+  listPendingAppActivationProviders,
+  PENDING_APP_ACTIVATION_STATUSES,
   listReviewerWorkflowProviders,
   saveProvider,
   saveWhatsappMessageStatus,

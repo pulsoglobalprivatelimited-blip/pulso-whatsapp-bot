@@ -23,6 +23,7 @@ const {
   runWithProviderFlow
 } = require('../flow');
 const { sendText, sendButtons, sendList, sendTemplate, sendVideoById } = require('./metaClient');
+const { getHubAppActivation } = require('./hubAppActivationService');
 const {
   getOrCreateProvider,
   updateProvider,
@@ -2573,6 +2574,9 @@ async function handlePulsoAppInstalledConfirmation(phone, message) {
       mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.ACTIVATION_PENDING
     });
     await appendHistory(phone, { type: 'system', event: 'pulso_app_installed_confirmed' });
+    // They just tapped, so the reply window is open: if the hub already saw
+    // this phone sign in, say so now instead of "we will verify".
+    await syncPulsoAppActivationFromHub(phone, { source: 'installed_tap', notify: true });
     const provider = await getProvider(phone);
     await sendOptionalVideo(
       () => sendDutyAcceptVideo(phone, provider),
@@ -2731,11 +2735,19 @@ async function handleCompleted(phone, message) {
   await sendAndLog(phone, 'text', MESSAGES.agentHelpAlreadyRequested);
 }
 
-async function markPulsoAppActivationVerified(phone, verifiedBy = config.adminDefaultReviewer) {
+// verifiedBy is whoever confirmed it: an admin from the dashboard, or
+// PULSO_APP_HUB_SYNC_ACTOR when the hub itself said the phone signed in. The
+// hub sync passes the uid and moment it found, and may ask not to message when
+// the person is outside the WhatsApp reply window.
+async function markPulsoAppActivationVerified(phone, verifiedBy = config.adminDefaultReviewer, options = {}) {
   const provider = await getProvider(phone);
   if (!provider) {
     throw new Error('Provider not found');
   }
+
+  const actor = verifiedBy || config.adminDefaultReviewer;
+  const notify = options.notify !== false;
+  const hub = options.hub || null;
 
   return runWithProviderFlow(provider, async () => {
     const verifiedAt = new Date().toISOString();
@@ -2743,20 +2755,117 @@ async function markPulsoAppActivationVerified(phone, verifiedBy = config.adminDe
       pulsoAppRequired: true,
       pulsoAppActivationStatus: 'verified',
       pulsoAppActivationVerifiedAt: verifiedAt,
-      pulsoAppActivationVerifiedBy: verifiedBy || config.adminDefaultReviewer,
+      pulsoAppActivationVerifiedBy: actor,
       pulsoAppPromptStage: null,
       mobileAppCampaignStage: null,
       mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.APP_VERIFIED,
-      mobileAppCampaignCompletedAt: verifiedAt
+      mobileAppCampaignCompletedAt: verifiedAt,
+      ...(hub
+        ? {
+            pulsoAppHubUid: hub.uid || null,
+            pulsoAppHubActivatedAt: hub.activatedAt || null,
+            pulsoAppHubMatchStatus: hub.matchStatus || null,
+            pulsoAppHubCheckedAt: verifiedAt
+          }
+        : {})
     });
     await appendHistory(phone, {
       type: 'system',
       event: 'pulso_app_activation_verified',
-      verifiedBy: verifiedBy || config.adminDefaultReviewer
+      verifiedBy: actor,
+      ...(hub ? { hubUid: hub.uid || null, hubActivatedAt: hub.activatedAt || null } : {}),
+      ...(notify ? {} : { notified: false })
     });
-    await sendAndLog(phone, 'text', MESSAGES.pulsoAppActivationVerified, verifiedBy || config.adminDefaultReviewer);
+    if (notify) {
+      await sendAndLog(phone, 'text', MESSAGES.pulsoAppActivationVerified, actor);
+    }
     return getProvider(phone);
   });
+}
+
+const PULSO_APP_HUB_SYNC_ACTOR = 'pulso_hub_sync';
+const WHATSAPP_REPLY_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+// The moment of the last WhatsApp message *from* the person. Free-form text
+// only reaches them within 24 hours of that, so the sweep stays quiet after.
+function lastWhatsappInboundAt(provider) {
+  const history = Array.isArray(provider && provider.history) ? provider.history : [];
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    const entry = history[i];
+    if (entry && entry.type === 'inbound_message' && entry.channel !== 'app' && entry.at) {
+      return entry.at;
+    }
+  }
+  return null;
+}
+
+function isWithinWhatsappReplyWindow(provider, nowMs = Date.now()) {
+  const at = lastWhatsappInboundAt(provider);
+  if (!at) {
+    return false;
+  }
+  const atMs = new Date(at).getTime();
+  return Number.isFinite(atMs) && nowMs - atMs <= WHATSAPP_REPLY_WINDOW_MS;
+}
+
+// Asks the hub whether this phone has signed into the app, and if so marks the
+// bot record verified without waiting for an admin. Never throws: a hub that is
+// unreachable is recorded on the provider and reported, not raised, because
+// this runs inside a WhatsApp turn and inside a sweep of hundreds.
+//   source  - 'installed_tap' | 'sweep' | 'admin'  (kept in history)
+//   notify  - true, false, or 'window' (only inside the 24h reply window)
+async function syncPulsoAppActivationFromHub(phone, options = {}) {
+  const source = options.source || 'sweep';
+  const provider = options.provider || (await getProvider(phone));
+  if (!provider) {
+    return { phone, result: 'not_found' };
+  }
+  if (provider.pulsoAppActivationStatus === 'verified') {
+    return { phone, result: 'already_verified', uid: provider.pulsoAppHubUid || null };
+  }
+
+  const checkedAt = new Date().toISOString();
+  let hub;
+  try {
+    hub = await getHubAppActivation(phone);
+  } catch (error) {
+    console.error('[PULSO_APP_HUB_SYNC_ERROR]', JSON.stringify({ phone, source, message: error.message }));
+    await updateProvider(phone, { pulsoAppHubCheckedAt: checkedAt, pulsoAppHubCheckError: error.message });
+    return { phone, result: 'hub_error', error: error.message };
+  }
+
+  if (!hub.activated) {
+    await updateProvider(phone, {
+      pulsoAppHubCheckedAt: checkedAt,
+      pulsoAppHubMatchStatus: hub.found ? hub.matchStatus || 'unmatched' : 'not_mirrored',
+      pulsoAppHubCheckError: null
+    });
+    return { phone, result: hub.found ? 'not_activated' : 'not_mirrored', matchStatus: hub.matchStatus };
+  }
+
+  let notify = options.notify;
+  if (notify === undefined || notify === 'window') {
+    // The sweep hands in a summary without history; the window needs the
+    // full record, but only now that there is something to say.
+    const full = Array.isArray(provider.history) ? provider : await getProvider(phone);
+    notify = isWithinWhatsappReplyWindow(full);
+  }
+
+  try {
+    await markPulsoAppActivationVerified(phone, PULSO_APP_HUB_SYNC_ACTOR, { notify: Boolean(notify), hub });
+  } catch (error) {
+    // The record may already read verified even if the WhatsApp send failed;
+    // either way this is reported, not raised.
+    console.error('[PULSO_APP_HUB_SYNC_ERROR]', JSON.stringify({ phone, source, message: error.message }));
+    const after = await getProvider(phone);
+    if (after && after.pulsoAppActivationStatus === 'verified') {
+      return { phone, result: 'verified', notified: false, uid: hub.uid, activatedAt: hub.activatedAt, error: error.message };
+    }
+    return { phone, result: 'verify_error', error: error.message };
+  }
+
+  await appendHistory(phone, { type: 'system', event: 'pulso_app_activation_synced_from_hub', source });
+  return { phone, result: 'verified', notified: Boolean(notify), uid: hub.uid, activatedAt: hub.activatedAt };
 }
 
 async function clearReviewerWorkflow(phone) {
@@ -3549,6 +3658,10 @@ module.exports = {
   rejectCertificate,
   requestAdditionalDocument,
   markPulsoAppActivationVerified,
+  syncPulsoAppActivationFromHub,
+  isWithinWhatsappReplyWindow,
+  lastWhatsappInboundAt,
+  PULSO_APP_HUB_SYNC_ACTOR,
   runMobileAppCampaignForCompletedProviders,
   reconcileAcceptedTermsProviders,
   runCurrentWaitingTermsReminderBackfill,

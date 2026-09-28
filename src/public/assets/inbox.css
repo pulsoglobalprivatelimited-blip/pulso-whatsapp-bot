@@ -897,6 +897,55 @@
   font-weight: 600;
 }
 
+/* One line under the header saying whether this person is in the Pulso app,
+   as the hub last reported it. Verified reads green; anything pending gets a
+   button that asks the hub again right now. */
+.thread-app {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 18px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.thread-app-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.thread-app.is-verified .thread-app-dot {
+  background: var(--success);
+}
+
+.thread-app.is-verified .thread-app-text {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.thread-app-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inbox-app .button.thread-app-check {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+}
+
+.thread-app.is-verified .thread-app-check {
+  display: none;
+}
+
 /* min-width:0 lets these flex children shrink below their content's
    intrinsic width instead of forcing the whole pane wider than the viewport. */
 .thread-view {

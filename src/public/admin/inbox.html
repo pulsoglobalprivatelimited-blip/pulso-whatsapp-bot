@@ -11,7 +11,7 @@
   <link rel="manifest" href="/admin/manifest.webmanifest">
   <link rel="icon" href="/admin/assets/pwa/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20260928a">
-  <link rel="stylesheet" href="/admin/assets/inbox.css?v=20260925a">
+  <link rel="stylesheet" href="/admin/assets/inbox.css?v=20260928a">
 </head>
 <body>
   <div class="inbox-app" id="inbox-app">
@@ -73,6 +73,12 @@
             <span class="thread-step" id="thread-step"></span>
           </div>
 
+          <div class="thread-app hidden" id="thread-app">
+            <span class="thread-app-dot" id="thread-app-dot"></span>
+            <span class="thread-app-text" id="thread-app-text"></span>
+            <button class="button secondary thread-app-check" id="thread-app-check" type="button">Check app</button>
+          </div>
+
           <div class="thread-scroll" id="thread-scroll">
             <div class="history-list" id="thread-history"></div>
           </div>
@@ -89,7 +95,7 @@
   </div>
 
   <script src="/admin/assets/chat-history.js?v=20260924c"></script>
-  <script src="/admin/assets/inbox.js?v=20260926a"></script>
+  <script src="/admin/assets/inbox.js?v=20260928a"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>
 </html>

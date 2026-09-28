@@ -110,6 +110,18 @@ module.exports = {
   certificateReviewCatchUpMaxPerSweep: Number(
     process.env.CERTIFICATE_REVIEW_CATCH_UP_MAX_PER_SWEEP || 3
   ),
+  // How often the bot asks the hub which pending providers have signed into
+  // the app. Someone who tapped "installed" in the last week is asked about
+  // every sweep; everyone else waits the recheck interval between asks.
+  pulsoAppActivationSweepIntervalMinutes: Number(
+    process.env.PULSO_APP_ACTIVATION_SWEEP_INTERVAL_MINUTES || 15
+  ),
+  pulsoAppActivationRecheckHours: Number(process.env.PULSO_APP_ACTIVATION_RECHECK_HOURS || 6),
+  pulsoAppActivationFreshDays: Number(process.env.PULSO_APP_ACTIVATION_FRESH_DAYS || 7),
+  pulsoAppActivationSweepMaxPerSweep: Number(
+    process.env.PULSO_APP_ACTIVATION_SWEEP_MAX_PER_SWEEP || 500
+  ),
+  pulsoAppActivationSweepEnabled: process.env.PULSO_APP_ACTIVATION_SWEEP_ENABLED !== 'false',
   termsFirstReminderDelayHours: Number(
     process.env.TERMS_FIRST_REMINDER_DELAY_HOURS || process.env.TERMS_REMINDER_DELAY_HOURS || 1
   ),

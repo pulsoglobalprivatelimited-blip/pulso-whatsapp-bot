@@ -12,6 +12,7 @@ const {
   rejectCertificate,
   requestAdditionalDocument,
   markPulsoAppActivationVerified,
+  syncPulsoAppActivationFromHub,
   adminUploadCertificateFiles,
   runTermsReminderSweep,
   startTermsReminderScheduler
@@ -58,6 +59,10 @@ const {
   runCertificateReviewCatchUpSweep,
   startCertificateReviewCatchUpScheduler
 } = require('./services/certificateReviewCatchUp');
+const {
+  runPulsoAppActivationSweep,
+  startPulsoAppActivationSweepScheduler
+} = require('./services/pulsoAppActivationSweep');
 const { getMediaMetadata, downloadMediaFile } = require('./services/metaClient');
 const appChannel = require('./services/appChannel');
 const { decideWebhook } = require('./services/webhookSignature');
@@ -1442,6 +1447,34 @@ app.post('/admin/providers/:phone/verify-app-activation', async (req, res) => {
   }
 });
 
+// Ask the hub right now whether this phone has signed into the app. Answers
+// with what it found and the provider as it stands afterwards.
+app.post('/admin/providers/:phone/sync-app-activation', async (req, res) => {
+  try {
+    const sync = await syncPulsoAppActivationFromHub(req.params.phone, {
+      source: 'admin',
+      notify: 'window'
+    });
+    if (sync.result === 'not_found') {
+      res.status(404).json({ error: 'Provider not found' });
+      return;
+    }
+    const provider = await getProvider(req.params.phone);
+    res.json({ sync, provider });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post('/admin/app-activation/sweep', async (req, res) => {
+  try {
+    const result = await runPulsoAppActivationSweep();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/admin/providers/:phone/upload-certificate', upload.array('certificates', 4), async (req, res) => {
   try {
     const provider = await adminUploadCertificateFiles(
@@ -1476,6 +1509,15 @@ initializeStorage()
   .then(() => {
     startTermsReminderScheduler();
     startCertificateReviewCatchUpScheduler();
+    startPulsoAppActivationSweepScheduler();
+    // The first pass runs behind the listener so a slow hub never delays boot.
+    if (config.pulsoAppActivationSweepEnabled) {
+      setTimeout(() => {
+        runPulsoAppActivationSweep().catch((error) => {
+          console.error('[PULSO_APP_SWEEP_STARTUP_ERROR]', error);
+        });
+      }, 5000);
+    }
     app.listen(config.port, () => {
       console.log(`Pulso WhatsApp bot listening on port ${config.port}`);
       console.log(`Webhook verify token: ${config.verifyToken}`);

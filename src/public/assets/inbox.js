@@ -26,7 +26,10 @@
     history: document.getElementById('thread-history'),
     openChat: document.getElementById('thread-open-chat'),
     openIntro: document.getElementById('thread-open-intro'),
-    saveContact: document.getElementById('thread-save-contact')
+    saveContact: document.getElementById('thread-save-contact'),
+    appStrip: document.getElementById('thread-app'),
+    appText: document.getElementById('thread-app-text'),
+    appCheck: document.getElementById('thread-app-check')
   };
 
   let providers = [];
@@ -295,6 +298,70 @@
     });
   }
 
+  /* ---- app status ------------------------------------------------------- */
+  const APP_STATUS_LABELS = {
+    verified: 'active',
+    pending_verification: 'said installed, not signed in yet',
+    link_sent: 'link sent, not signed in yet',
+    help_requested: 'asked for help, not signed in yet',
+    later_selected: 'said later, not signed in yet',
+    required: 'link not sent yet',
+    manual_registration: 'manual registration, not signed in yet'
+  };
+
+  // What the hub last told the bot about this phone: verified since when, or
+  // still waiting and when we last asked. No app status at all = nothing shown.
+  function renderAppStatus(provider) {
+    if (!els.appStrip) return;
+    const status = provider && provider.pulsoAppActivationStatus;
+    if (!status || !APP_STATUS_LABELS[status]) {
+      els.appStrip.classList.add('hidden');
+      return;
+    }
+    els.appStrip.classList.remove('hidden');
+    els.appStrip.classList.toggle('is-verified', status === 'verified');
+
+    let text = `App: ${APP_STATUS_LABELS[status]}`;
+    if (status === 'verified') {
+      const since = provider.pulsoAppHubActivatedAt || provider.pulsoAppActivationVerifiedAt;
+      const by = provider.pulsoAppActivationVerifiedBy;
+      text = `App: active${since ? ` since ${shortTime(since)}` : ''}${
+        by && by !== 'pulso_hub_sync' ? ` · marked by ${by}` : ''
+      }`;
+    } else if (provider.pulsoAppHubCheckedAt) {
+      text += ` · checked ${shortTime(provider.pulsoAppHubCheckedAt)}`;
+    }
+    els.appText.textContent = text;
+    els.appCheck.disabled = false;
+    els.appCheck.textContent = 'Check app';
+  }
+
+  async function checkAppNow() {
+    const phone = selectedPhone;
+    if (!phone || !els.appCheck) return;
+    els.appCheck.disabled = true;
+    els.appCheck.textContent = 'Checking…';
+    try {
+      const { sync, provider } = await fetchJson(
+        `/admin/providers/${encodeURIComponent(phone)}/sync-app-activation`,
+        { method: 'POST' }
+      );
+      if (selectedPhone !== phone) return;
+      renderThread(provider, { keepScroll: true });
+      if (sync && sync.result !== 'verified' && sync.result !== 'already_verified') {
+        els.appText.textContent = `${els.appText.textContent} · hub says: ${String(sync.result).replace(/_/g, ' ')}`;
+      }
+    } catch (error) {
+      els.appText.textContent = `App: check failed — ${error.message}`;
+      els.appCheck.disabled = false;
+      els.appCheck.textContent = 'Check app';
+    }
+  }
+
+  if (els.appCheck) {
+    els.appCheck.addEventListener('click', checkAppNow);
+  }
+
   /* ---- thread ----------------------------------------------------------- */
   function renderThread(provider, { keepScroll } = {}) {
     const history = Array.isArray(provider.history) ? provider.history : [];
@@ -308,6 +375,7 @@
     const stepText = [region, provider.currentStep ? `Step ${provider.currentStep}` : null].filter(Boolean).join(' · ');
     els.step.textContent = stepText;
     els.step.style.display = stepText ? '' : 'none';
+    renderAppStatus(provider);
 
     const atBottom = els.scroll.scrollHeight - els.scroll.scrollTop - els.scroll.clientHeight < 80;
     els.history.innerHTML = Chat.buildHistoryHtml(history);
@@ -330,6 +398,7 @@
     els.name.textContent = phone;
     els.status.textContent = '';
     els.step.style.display = 'none';
+    if (els.appStrip) els.appStrip.classList.add('hidden');
     document.querySelectorAll('.chat-row').forEach((row) => {
       row.classList.toggle('active', row.dataset.phone === phone);
     });
