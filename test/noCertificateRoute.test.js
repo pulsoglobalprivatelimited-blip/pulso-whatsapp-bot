@@ -195,6 +195,66 @@ test('an unreadable tier config still quotes a real rate, never ₹0', async () 
   });
 });
 
+test('age decides the band before the certificate does, and careTier beats both', async () => {
+  const T = { ...LIVE, basicTierAgeThreshold: 45 };
+  assert.equal(flow.rateBandFor({ qualification: 'gnm', age: 52 }, T), 'basic');
+  assert.equal(flow.rateBandFor({ qualification: 'gnm', age: 30 }, T), 'nurse');
+  assert.equal(flow.rateBandFor({ qualification: 'gda', age: 48 }, T), 'basic');
+
+  // "above 45" — 45 itself is not above it.
+  assert.equal(flow.rateBandFor({ qualification: 'gnm', age: 45 }, T), 'nurse');
+  assert.equal(flow.rateBandFor({ qualification: 'gnm', age: 46 }, T), 'basic');
+
+  // No age yet: she is quoted her claim, which is all we know.
+  assert.equal(flow.rateBandFor({ qualification: 'gnm' }, T), 'nurse');
+
+  // A stored decision wins over both, so an admin correction sticks.
+  assert.equal(flow.rateBandFor({ qualification: 'gnm', age: 30, careTier: 'basic' }, T), 'basic');
+  assert.equal(flow.rateBandFor({ qualification: 'no_certificate', careTier: 'gda' }, T), 'gda');
+
+  // The threshold is config, not code.
+  assert.equal(flow.rateBandFor({ qualification: 'gnm', age: 48 }, { ...LIVE, basicTierAgeThreshold: 55 }), 'nurse');
+});
+
+test('the age notice goes only to someone whose certificate would have earned more', async () => {
+  const T = { ...LIVE, basicTierAgeThreshold: 45 };
+  await flow.runWithFlow('kerala_english', async () => {
+    const nurse = flow.getBasicTierAgeNoticeFor({ qualification: 'gnm', age: 52 }, T);
+    assert.match(nurse, /above 45/);
+    assert.match(nurse, /8 hours ₹600\/day, 24 hours ₹700\/day/);
+
+    /* She is on the Basic rate because she has no course certificate, not
+       because of her age. An age rule would be irrelevant and unkind. */
+    assert.equal(flow.getBasicTierAgeNoticeFor({ qualification: 'no_certificate', age: 52 }, T), null);
+    assert.equal(flow.getBasicTierAgeNoticeFor({ qualification: 'gnm', age: 30 }, T), null);
+    assert.equal(flow.getBasicTierAgeNoticeFor({ qualification: 'gnm' }, T), null);
+  });
+});
+
+test('a qualified caregiver on the Basic rate is never told she has no certificate', async () => {
+  const T = { ...LIVE, basicTierAgeThreshold: 45 };
+  await flow.runWithFlow('kerala_english', async () => {
+    const nurse = { qualification: 'gnm', age: 52, careTier: 'basic' };
+
+    // Her certificate was verified, so she gets the ordinary approval line.
+    assert.match(flow.getCertificateApprovedFor(nurse), /certificate has been verified/);
+    assert.doesNotMatch(flow.getCertificateApprovedFor(nurse), /Basic Caregiver/);
+
+    const line = flow.getTermsRateFor(nurse, T);
+    assert.match(line, /certificate has been checked and approved/);
+    assert.match(line, /above 45/);
+    assert.doesNotMatch(line, /no Nursing\/Caregiving course certificate/);
+    assert.match(line, /8 hours ₹600\/day, 24 hours ₹700\/day/);
+
+    // And the person who really has no course certificate still gets that sentence.
+    const basic = flow.getTermsRateFor({ qualification: 'basic_caregiver' }, T);
+    assert.match(basic, /no Nursing\/Caregiving course certificate/);
+
+    // Everyone else gets no rate line at all.
+    assert.equal(flow.getTermsRateFor({ qualification: 'gnm', age: 30 }, T), null);
+  });
+});
+
 // ---- the tier the record lands in -----------------------------------------------
 
 test('no_certificate is the Basic tier; the fallback GDA pay matches live', () => {

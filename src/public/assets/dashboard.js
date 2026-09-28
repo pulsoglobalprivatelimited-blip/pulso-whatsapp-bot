@@ -142,6 +142,9 @@ document.getElementById('refresh-button').addEventListener('click', loadProvider
   const element = document.getElementById(id);
   if (element) element.addEventListener(event, () => markEdited(field));
 });
+
+const qualificationInput = document.getElementById('review-qualification-input');
+if (qualificationInput) qualificationInput.addEventListener('change', syncBasicReasonField);
 providerAll('.filter').forEach((button) => {
   if (!button.dataset.filter) {
     return;
@@ -1605,6 +1608,7 @@ async function renderDetail(provider) {
   setText('detail-region', formatRegionLabel(getProviderRegion(detailProvider)));
   setText('detail-language', detailProvider.language || (getProviderRegion(detailProvider) === 'karnataka' ? 'en' : 'ml'));
   setText('detail-qualification', formatQualificationReview(detailProvider));
+  setCareTierRow(detailProvider);
   setText('detail-interest', detailProvider.interestConfirmed ? 'Yes' : 'No');
   setText('detail-duty-hour', formatDutyHourPreference(detailProvider.dutyHourPreference));
   setText('detail-expected-duties', formatExpectedDuties(detailProvider.expectedDutiesAccepted));
@@ -1643,6 +1647,9 @@ async function renderDetail(provider) {
     detailPhone,
     'qualification'
   );
+  // The record decides this as much as the dropdown does: someone over the age
+  // threshold lands on the Basic rate whatever certificate they hold.
+  syncBasicReasonField();
   /* Which of the three pinned buttons this record should offer. The rule lives
      in desk-ui.js so it can be tested without a browser; this only applies it.
      All three share one .actions div - the one pinned to the bottom of the
@@ -1690,6 +1697,52 @@ const REVIEW_ACTION_BUTTON_IDS = [
   'undo-approval-button'
 ];
 
+/* The Basic rate is reached two ways — the qualification, or an age over the
+   threshold — and both need a reason recorded, because the sentence she reads
+   before accepting the terms depends on which one it was. The threshold is
+   config, so the desk asks the record rather than hard-coding 45: a provider
+   already over it shows the field whatever qualification is picked. */
+function landsOnBasicRate(provider, qualification) {
+  if (String(qualification || '').toLowerCase() === 'basic_caregiver') return true;
+  const threshold = Number(provider && provider.basicTierAgeThreshold) || 45;
+  return Number(provider && provider.age) > threshold;
+}
+
+function syncBasicReasonField() {
+  const field = document.getElementById('basic-reason-field');
+  if (!field) return;
+  const provider = providers.find((item) => item.phone === selectedPhone);
+  const qualification = (document.getElementById('review-qualification-input') || {}).value || '';
+  const needed = landsOnBasicRate(provider, qualification);
+  field.hidden = !needed;
+  if (!needed) {
+    providerAll('input[name="basicTierReason"]').forEach((box) => { box.checked = false; });
+  }
+}
+
+const BASIC_TIER_REASON_LABELS = {
+  age_over_threshold: 'age above the limit',
+  no_course_certificate: 'no caregiving course certificate'
+};
+
+/* Shown only when a tier was stored, which happens when someone was put on the
+   Basic rate deliberately. A GNM on the Basic rate is the case this exists for:
+   her qualification row still says GNM, and this says what she is paid and why,
+   so the two are never confused for each other. */
+function setCareTierRow(provider) {
+  const row = document.getElementById('detail-care-tier-row');
+  if (!row) return;
+  const tier = String((provider && provider.careTier) || '').toLowerCase();
+  if (!tier) {
+    row.hidden = true;
+    return;
+  }
+  const reasons = (provider && provider.basicTierReasons) || [];
+  const why = reasons.map((reason) => BASIC_TIER_REASON_LABELS[reason] || reason).join(' and ');
+  row.hidden = false;
+  setText('detail-care-tier', why ? `${PulsoDesk.label(tier)} — ${why}` : PulsoDesk.label(tier));
+}
+
 function setReviewBusy(busy, activeButtonId) {
   reviewInFlight = busy;
   REVIEW_ACTION_BUTTON_IDS.forEach((id) => {
@@ -1736,12 +1789,18 @@ async function submitReview(action) {
 
   const notes = document.getElementById('notes-input').value || '';
   const qualification = document.getElementById('review-qualification-input').value || '';
+  const basicTierReasons = Array.from(providerAll('input[name="basicTierReason"]:checked')).map((box) => box.value);
   const approving = action === 'approve-certificate';
   const record = providers.find((item) => item.phone === selectedPhone);
   const who = (record && record.fullName) || PulsoDesk.formatPhone(selectedPhone);
 
   if (approving && !qualification) {
     sayReviewResult('Select the qualification shown on the certificate before approving.', 'error');
+    return;
+  }
+
+  if (approving && landsOnBasicRate(record, qualification) && basicTierReasons.length === 0) {
+    sayReviewResult('Say why this approval is on the Basic rate before approving.', 'error');
     return;
   }
 
@@ -1759,7 +1818,7 @@ async function submitReview(action) {
     const reviewed = await fetchJson(`/admin/providers/${selectedPhone}/${action}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes, qualification })
+      body: JSON.stringify({ notes, qualification, basicTierReasons })
     });
 
     // Saved: what is on screen now came back from the server, so it is no

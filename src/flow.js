@@ -291,7 +291,17 @@ const MESSAGES = {
     // is already present here. Except the two figures, which
     // he wrote as ₹600 / ₹750 and are carried as {{payout8h}} / {{payout24h}} so a
     // repricing in app_config/provider_tiers reaches this line without a deploy.
-    'നിങ്ങൾക്ക് Nursing/Caregiving സർട്ടിഫിക്കറ്റ് ഇല്ലാത്തതിനാൽ, നിങ്ങളെ Basic Caregiver ആയാണ് തിരഞ്ഞെടുത്തിരിക്കുന്നത്.\n\nഡ്യൂട്ടി വേതനം:\n8 മണിക്കൂർ – ദിവസം ₹{{payout8h}}\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
+    'നിങ്ങൾക്ക് Nursing/Caregiving കോഴ്സ് സർട്ടിഫിക്കറ്റ് ഇല്ലാത്തതിനാൽ, നിങ്ങളെ Basic Caregiver ആയാണ് തിരഞ്ഞെടുത്തിരിക്കുന്നത്.\n\nഡ്യൂട്ടി വേതനം:\n8 മണിക്കൂർ – ദിവസം ₹{{payout8h}}\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
+  basicTierAgeNotice:
+    // Said the moment she gives her age, before she uploads anything or answers
+    // eight more questions. She used to read nurse money three times and find
+    // out at the terms screen; this is the same news, early enough to walk away.
+    'നന്ദി. {{ageThreshold}} വയസ്സിന് മുകളിലുള്ള caregivers-ന് Pulso duty നൽകുന്നത് Basic നിരക്കിലാണ്.\n\nഡ്യൂട്ടി വേതനം:\n8 മണിക്കൂർ – ദിവസം ₹{{payout8h}}\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
+  termsRateBasicAge:
+    // For someone whose certificate IS good — a nurse or a GDA — but who is
+    // above the age at which Pulso offers the Basic rate. She must not read
+    // that she has no certificate, because she has one and she just sent it.
+    'നിങ്ങളുടെ സർട്ടിഫിക്കറ്റ് പരിശോധിച്ചു അംഗീകരിച്ചു.\n\n45 വയസ്സിന് മുകളിലുള്ള caregivers-ന് Pulso duty നൽകുന്നത് Basic നിരക്കിലാണ്.\n\nഡ്യൂട്ടി വേതനം:\n8 മണിക്കൂർ – ദിവസം ₹{{payout8h}}\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
   certificateRejected:
     'ക്ഷമിക്കണം, താങ്കൾ അയച്ച certificate verify ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി വ്യക്തമായ certificate വീണ്ടും upload ചെയ്യുക.',
   /* Sent when a reviewer takes an approval back. The person already has
@@ -488,7 +498,11 @@ const KARNATAKA_MESSAGES = {
     'Your document has been reviewed. You are approved to join Pulso as a Basic Caregiver.',
   termsRateBasic:
     // Founder's wording, 26 Sep 2026. Figures from app_config/provider_tiers at send time.
-    'Because you have no Nursing/Caregiving certificate, you have been selected as a Basic Caregiver.\n\nDuty pay: 8 hours ₹{{payout8h}}/day, 24 hours ₹{{payout24h}}/day.',
+    'Because you have no Nursing/Caregiving course certificate, you have been selected as a Basic Caregiver.\n\nDuty pay: 8 hours ₹{{payout8h}}/day, 24 hours ₹{{payout24h}}/day.',
+  basicTierAgeNotice:
+    'Thank you. For caregivers above {{ageThreshold}}, Pulso offers duties at the Basic rate.\n\nDuty pay: 8 hours ₹{{payout8h}}/day, 24 hours ₹{{payout24h}}/day.',
+  termsRateBasicAge:
+    'Your certificate has been checked and approved.\n\nFor caregivers above 45, Pulso offers duties at the Basic rate.\n\nDuty pay: 8 hours ₹{{payout8h}}/day, 24 hours ₹{{payout24h}}/day.',
   certificateRejected:
     'Sorry, we could not verify your certificate. Please upload a clear certificate again.',
   approvalUndone:
@@ -768,9 +782,43 @@ function isBasicQualification(qualification) {
   return BASIC_QUALIFICATIONS.includes(String(qualification || '').toLowerCase());
 }
 
-function rateBandFor(qualification) {
-  if (isNurseQualification(qualification)) return 'nurse';
-  if (isBasicQualification(qualification)) return 'basic';
+const BASIC_TIER_AGE_DEFAULT = 45;
+const RATE_BANDS = ['basic', 'gda', 'nurse'];
+
+/* A record can say what she is and what she is paid separately: a 52-year-old
+   GNM is a nurse on the Basic rate, not a "Basic Caregiver". `careTier` is the
+   stored decision and wins; the hub's tierForProvider reads the same field the
+   same way. Age comes next, because it is a pay rule rather than a statement
+   about her qualification. Only then does the certificate decide. */
+function normalizeBand(value) {
+  const band = String(value || '').trim().toLowerCase();
+  return RATE_BANDS.includes(band) ? band : null;
+}
+
+function basicTierAgeThreshold(tiers) {
+  const n = Math.round(Number(tiers && tiers.basicTierAgeThreshold));
+  return Number.isFinite(n) && n > 0 ? n : BASIC_TIER_AGE_DEFAULT;
+}
+
+function isOverBasicTierAge(age, tiers) {
+  const n = Math.round(Number(age));
+  return Number.isFinite(n) && n > 0 && n > basicTierAgeThreshold(tiers);
+}
+
+/* Accepts a qualification string or the whole record. The string form is what
+   a caller with nothing else has; the record form is the one that can see age
+   and careTier, and is what every message path should pass. */
+function subjectOf(value) {
+  return value && typeof value === 'object' ? value : { qualification: value || null };
+}
+
+function rateBandFor(subject, tiers) {
+  const who = subjectOf(subject);
+  const stored = normalizeBand(who.careTier);
+  if (stored) return stored;
+  if (isOverBasicTierAge(who.age, tiers)) return 'basic';
+  if (isNurseQualification(who.qualification)) return 'nurse';
+  if (isBasicQualification(who.qualification)) return 'basic';
   return 'gda';
 }
 
@@ -876,17 +924,38 @@ function getSampleDutyOfferFor(qualification, tiers, choice) {
   /* No blank-rate guard here, unlike getTermsRateFor: tierFigures substitutes
      TIER_FALLBACK for anything zero or unreadable, so these are always real
      figures. A throw would look like protection while never firing. */
-  const { day8, day24 } = sampleDutyRates(rateBandFor(qualification), tierFigures(tiers));
+  const { day8, day24 } = sampleDutyRates(rateBandFor(qualification, tiers), tierFigures(tiers));
   return String(template)
     .split('{{payout8h}}').join(String(day8))
     .split('{{payout24h}}').join(String(day24))
     .split('{{total24h}}').join(String(day24 * SAMPLE_MONTH_DAYS));
 }
 
+/**
+ * The Basic-rate notice, or null when there is nothing to explain.
+ *
+ * Only for someone whose certificate would otherwise have earned more. A
+ * caregiver with no course certificate is on the Basic rate for a reason that
+ * has nothing to do with her age, and telling her about an age rule would be
+ * both irrelevant and unkind.
+ */
+function getBasicTierAgeNoticeFor(subject, tiers) {
+  const who = subjectOf(subject);
+  if (!isOverBasicTierAge(who.age, tiers)) return null;
+  if (rateBandFor({ qualification: who.qualification }, tiers) === 'basic') return null;
+  const template = getActiveFlow().MESSAGES.basicTierAgeNotice;
+  if (!template) return null;
+  const f = tierFigures(tiers);
+  return String(template)
+    .split('{{ageThreshold}}').join(String(basicTierAgeThreshold(tiers)))
+    .split('{{payout8h}}').join(String(f.b8))
+    .split('{{payout24h}}').join(String(f.b24));
+}
+
 /** The working model for the flow in play, at the rate this qualification earns. */
 function getWorkingModelFor(qualification, tiers) {
   const flow = getActiveFlow();
-  const band = rateBandFor(qualification);
+  const band = rateBandFor(qualification, tiers);
   const markers = WORKING_MODEL_MARKERS[flow.language] || WORKING_MODEL_MARKERS.en;
   const lines = workingModelRateLines(band, flow.language, tierFigures(tiers));
   return markers.reduce((text, marker, i) => swapExact(text, marker, lines[i]), String(flow.MESSAGES.workingModel));
@@ -897,9 +966,15 @@ function getWorkingModelFor(qualification, tiers) {
  * document was NOT a certificate, so "your certificate has been verified"
  * would be untrue; they get their own line instead.
  */
-function getCertificateApprovedFor(qualification) {
+function getCertificateApprovedFor(subject) {
   const messages = getActiveFlow().MESSAGES;
-  if (String(qualification || '').toLowerCase() === 'basic_caregiver' && messages.certificateApprovedBasic) {
+  /* Keyed on the qualification, not the band. A nurse placed on the Basic rate
+     because of her age still uploaded a real certificate and it really was
+     verified — telling her "your document has been reviewed" would take that
+     away from her. Only someone with no course certificate gets the other
+     line, because only for her is "your certificate is verified" untrue. */
+  const qualification = String(subjectOf(subject).qualification || '').toLowerCase();
+  if (qualification === 'basic_caregiver' && messages.certificateApprovedBasic) {
     return messages.certificateApprovedBasic;
   }
   return messages.certificateApproved;
@@ -910,9 +985,15 @@ function getCertificateApprovedFor(qualification) {
  * figures filled from the tier matrix — or null for every other qualification,
  * whose terms are unchanged. Sent so the person accepts knowing the number.
  */
-function getTermsRateFor(qualification, tiers) {
-  if (String(qualification || '').toLowerCase() !== 'basic_caregiver') return null;
-  const template = getActiveFlow().MESSAGES.termsRateBasic;
+function getTermsRateFor(subject, tiers) {
+  /* Keyed on the band, not the qualification: whoever is paid the Basic rate
+     reads the Basic rate before accepting, however they got there. Which
+     sentence explains it is a separate question — see termsRateBasicAge. */
+  const who = subjectOf(subject);
+  if (rateBandFor(who, tiers) !== 'basic') return null;
+  const messages = getActiveFlow().MESSAGES;
+  const isBasicQualified = String(who.qualification || '').toLowerCase() === 'basic_caregiver';
+  const template = isBasicQualified ? messages.termsRateBasic : messages.termsRateBasicAge;
   if (!template) return null;
   const basic = (tiers && tiers.basic) || {};
   if (!basic.payout8h || !basic.payout24h) {
@@ -927,7 +1008,7 @@ function getTermsRateFor(qualification, tiers) {
 function getDutyHourPaymentSummaryFor(qualification, tiers) {
   const flow = getActiveFlow();
   const messages = flow.MESSAGES;
-  const band = rateBandFor(qualification);
+  const band = rateBandFor(qualification, tiers);
   const f = tierFigures(tiers);
   if (flow.language === 'ml') {
     if (band === 'nurse') return `8 hour - ദിവസത്തിൽ ₹${f.n8}\n24 hour - ദിവസത്തിൽ ₹${f.n24}`;
@@ -1013,6 +1094,7 @@ module.exports = {
   rateBandFor,
   getCertificateApprovedFor,
   getTermsRateFor,
+  getBasicTierAgeNoticeFor,
   getDutyHourPaymentSummaryFor,
   getSampleDutyOfferFor,
   getFlowConfig,

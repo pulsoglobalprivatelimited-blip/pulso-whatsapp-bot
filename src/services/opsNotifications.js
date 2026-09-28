@@ -29,8 +29,21 @@ const REVIEW_ACTIONS = {
   CONFIRM_REQUEST_ADDITIONAL_DOCUMENT: 'review_confirm_request_additional_document_',
   CONFIRM_REJECT: 'review_confirm_reject_',
   CONFIRM_APPROVE: 'review_confirm_approve_',
+  BASIC_REASON_AGE: 'review_basic_reason_age_',
+  BASIC_REASON_NO_COURSE: 'review_basic_reason_no_course_',
+  BASIC_REASON_BOTH: 'review_basic_reason_both_',
   CANCEL: 'review_cancel_'
 };
+
+/* Why an approval is on the Basic rate. Three buttons rather than a list,
+   because WhatsApp allows three and "Both" covers the only combination there
+   is — over the age AND holding no course certificate. Titles stay under the
+   20-character button limit. */
+const BASIC_REASON_BUTTONS = [
+  { prefix: 'BASIC_REASON_AGE', title: 'Age above limit', reasons: ['age_over_threshold'] },
+  { prefix: 'BASIC_REASON_NO_COURSE', title: 'No course cert', reasons: ['no_course_certificate'] },
+  { prefix: 'BASIC_REASON_BOTH', title: 'Both', reasons: ['age_over_threshold', 'no_course_certificate'] }
+];
 
 // basic_caregiver: no formal certificate, taken on for practical experience.
 // Chosen by the reviewer looking at the upload, never offered to the candidate.
@@ -970,6 +983,28 @@ async function requestReviewQualificationSelection(provider, reviewerPhone) {
   }
 }
 
+async function requestBasicTierReasonSelection(provider, reviewerPhone) {
+  const to = getReviewerDestination(reviewerPhone);
+  if (!to || !provider || !provider.phone) {
+    return null;
+  }
+  const body = joinLines([
+    'This approval is on the Basic rate. Why?',
+    provider.age ? `Age on file: ${provider.age}` : 'No age on file',
+    ...formatProviderSummary(provider)
+  ]);
+  const buttons = BASIC_REASON_BUTTONS.map((option) => ({
+    id: `${REVIEW_ACTIONS[option.prefix]}${provider.phone}`,
+    title: option.title
+  }));
+  try {
+    return await sendButtons(to, body, buttons);
+  } catch (error) {
+    console.error('[OPS_BASIC_REASON_PROMPT_ERROR]', error && error.message);
+    return null;
+  }
+}
+
 async function requestReviewConfirmation(provider, action, reviewerPhone, qualification) {
   const to = getReviewerDestination(reviewerPhone);
   if (!to || !provider || !provider.phone) {
@@ -1291,6 +1326,17 @@ function parseReviewerAction(message) {
     };
   }
 
+  for (const option of BASIC_REASON_BUTTONS) {
+    const prefix = REVIEW_ACTIONS[option.prefix];
+    if (interactiveReplyId && interactiveReplyId.startsWith(prefix)) {
+      return {
+        action: 'basic_tier_reason',
+        reasons: option.reasons,
+        phone: interactiveReplyId.slice(prefix.length)
+      };
+    }
+  }
+
   if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.CONFIRM_APPROVE)) {
     return {
       action: 'confirm_approve',
@@ -1340,6 +1386,7 @@ function parseReviewerAction(message) {
 }
 
 module.exports = {
+  requestBasicTierReasonSelection,
   buildProviderContactLink,
   buildCertificateReviewBodyValues,
   getRejectReasonDetails,

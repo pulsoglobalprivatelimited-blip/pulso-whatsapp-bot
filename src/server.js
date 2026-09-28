@@ -16,6 +16,7 @@ const {
   runTermsReminderSweep,
   startTermsReminderScheduler
 } = require('./services/onboardingFlow');
+const { getProviderTiers } = require('./services/providerTiersConfig');
 const { processProviderSupportMessage } = require('./services/providerSupportFlow');
 const {
   getProviderSupportSessionDetail,
@@ -1269,9 +1270,15 @@ app.get('/admin/whatsapp-media/:mediaId', async (req, res) => {
 app.get('/admin/providers', async (req, res) => {
   try {
     const requestedRegion = normalizeRegion(req.query.region);
+    /* The desk decides whether to ask for a Basic-rate reason, and the age it
+       compares against is config. Sent with the record so the two cannot drift:
+       a threshold changed in app_config would otherwise leave the desk hiding a
+       field the server then refuses the approval for. */
+    const { basicTierAgeThreshold } = await getProviderTiers();
     const providers = (await listProviderSummaries()).map((provider) => ({
       ...provider,
       dashboardSummary: true,
+      basicTierAgeThreshold,
       region: inferProviderRegion(provider) || provider.region || null
     }));
 
@@ -1379,7 +1386,8 @@ app.post('/admin/providers/:phone/approve-certificate', async (req, res) => {
       req.params.phone,
       actor,
       req.body.notes,
-      req.body.qualification
+      req.body.qualification,
+      req.body.basicTierReasons
     );
     // Still answers with the provider, so the desk's existing rendering is
     // unchanged; the flags ride alongside so it can say "already approved"

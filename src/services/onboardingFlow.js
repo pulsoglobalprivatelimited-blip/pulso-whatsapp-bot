@@ -13,6 +13,7 @@ const {
   DEFAULT_FLOW_ID_BY_REGION,
   getFlowIdFor,
   getWorkingModelFor,
+  getBasicTierAgeNoticeFor,
   getDutyHourPaymentSummaryFor,
   getSampleDutyOfferFor,
   getCertificateApprovedFor,
@@ -48,6 +49,7 @@ const {
   requestRejectNoteOrConfirmation,
   requestRejectReason,
   requestReviewQualificationSelection,
+  requestBasicTierReasonSelection,
   requestReviewConfirmation
 } = require('./opsNotifications');
 const { isPreOnboardedPhone } = require('./preOnboardedService');
@@ -238,6 +240,26 @@ function normalizeApprovedQualification(value) {
   const normalized = String(value || '').trim().toLowerCase();
   const validQualifications = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving', 'basic_caregiver'];
   return validQualifications.includes(normalized) ? normalized : null;
+}
+
+/* Why someone is on the Basic rate. Two reasons, and both can be true at once:
+   she may be over the age and have no course certificate. Recorded because the
+   rate follows from it and because, if the age on file is a typo, this is the
+   only record of what the decision was actually made on. */
+const BASIC_TIER_REASONS = ['age_over_threshold', 'no_course_certificate'];
+
+function normalizeBasicTierReasons(value) {
+  const list = Array.isArray(value) ? value : [value];
+  const clean = list
+    .map((item) => String(item || '').trim().toLowerCase())
+    .filter((item) => BASIC_TIER_REASONS.includes(item));
+  return Array.from(new Set(clean));
+}
+
+/* Basic is a pay decision, so it is stored as one. Empty means "derive it from
+   the qualification", which is every ordinary approval. */
+function tierDecisionFor(reasons) {
+  return reasons && reasons.length ? 'basic' : null;
 }
 
 function hasCompletedProfile(provider) {
@@ -492,7 +514,7 @@ async function sendDutyHourPreferenceButtons(phone) {
     ]
   });
   const provider = await getProvider(phone);
-  await sendAndLog(phone, 'text', getDutyHourPaymentSummaryFor(provider && provider.qualification, await getProviderTiers()));
+  await sendAndLog(phone, 'text', getDutyHourPaymentSummaryFor(provider, await getProviderTiers()));
 }
 
 async function sendSampleDutyOfferPrompt(phone) {
@@ -512,9 +534,9 @@ function getOtherDutyPreference(value) {
 
 /* The sample is priced for the person reading it. `provider` is already loaded
    by every caller, and getProviderTiers is cached for a minute. */
-function getSampleDutyMessage(value, qualification, tiers) {
+function getSampleDutyMessage(value, provider, tiers) {
   if (value === 'both') return null;
-  return getSampleDutyOfferFor(qualification, tiers, value);
+  return getSampleDutyOfferFor(provider, tiers, value);
 }
 
 function getOtherSampleQuestion(value) {
@@ -1676,8 +1698,29 @@ async function handleQualification(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_INTEREST, 4, { qualification });
-  await sendAndLog(phone, 'text', getWorkingModelFor(qualification, await getProviderTiers()));
+  /* Age before any rate. She used to be quoted her claimed band three times —
+     working model, duty hours, sample offer — and only asked her age at step 10,
+     so a 52-year-old nurse read ₹48,000 a month and then met ₹21,000 at the
+     terms screen. Asking first means every figure she ever sees is her own.
+
+     It also moves the over-50 refusal here, instead of after she has uploaded a
+     certificate and answered eight questions. */
+  await updateStatus(phone, STATUS.AWAITING_AGE, 3, { qualification });
+  await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
+}
+
+/* Shared by both positions of the age question: the new one after the
+   qualification, and the legacy one after the name for anyone already
+   mid-flow when this shipped. */
+async function continueAfterEarlyAge(phone) {
+  const tiers = await getProviderTiers();
+  const provider = await getProvider(phone);
+  await updateStatus(phone, STATUS.AWAITING_INTEREST, 4, {});
+  const notice = getBasicTierAgeNoticeFor(provider, tiers);
+  if (notice) {
+    await sendAndLog(phone, 'text', notice);
+  }
+  await sendAndLog(phone, 'text', getWorkingModelFor(provider, tiers));
   await sendInterestButtons(phone);
 }
 
@@ -1758,15 +1801,14 @@ async function handleSampleDutyOfferPreference(phone, message) {
   if (action === 'show') {
     if (sampleDutyState.initialChoice === 'both') {
       const bothTiers = await getProviderTiers();
-      const bothQualification = provider && provider.qualification;
-      await sendAndLog(phone, 'text', getSampleDutyOfferFor(bothQualification, bothTiers, '8_hour'));
-      await sendAndLog(phone, 'text', getSampleDutyOfferFor(bothQualification, bothTiers, '24_hour'));
+      await sendAndLog(phone, 'text', getSampleDutyOfferFor(provider, bothTiers, '8_hour'));
+      await sendAndLog(phone, 'text', getSampleDutyOfferFor(provider, bothTiers, '24_hour'));
       await moveToExpectedDuties(phone, 'both');
       return;
     }
 
     if (sampleDutyState.stage === 'other_prompt') {
-      await sendAndLog(phone, 'text', getSampleDutyMessage(sampleDutyState.alternateChoice, provider && provider.qualification, await getProviderTiers()));
+      await sendAndLog(phone, 'text', getSampleDutyMessage(sampleDutyState.alternateChoice, provider, await getProviderTiers()));
       await updateProvider(phone, {
         sampleDutyState: {
           ...sampleDutyState,
@@ -1777,7 +1819,7 @@ async function handleSampleDutyOfferPreference(phone, message) {
       return;
     }
 
-    await sendAndLog(phone, 'text', getSampleDutyMessage(sampleDutyState.initialChoice, provider && provider.qualification, await getProviderTiers()));
+    await sendAndLog(phone, 'text', getSampleDutyMessage(sampleDutyState.initialChoice, provider, await getProviderTiers()));
     await updateProvider(phone, {
       sampleDutyState: {
         ...sampleDutyState,
@@ -2203,6 +2245,15 @@ async function handleName(phone, message) {
     return;
   }
 
+  /* Asked at step 3 now. Anyone who was already past that point when this
+     shipped has no age on file, and is asked here exactly as before. */
+  const known = await getProvider(phone);
+  if (known && known.age) {
+    await updateStatus(phone, STATUS.AWAITING_SEX, 11, { fullName: name });
+    await sendSexButtons(phone);
+    return;
+  }
+
   await updateStatus(phone, STATUS.AWAITING_AGE, 10, { fullName: name });
   await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
 }
@@ -2242,8 +2293,19 @@ async function handleAge(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_SEX, 11, { age });
-  await sendSexButtons(phone);
+  /* `interestConfirmed` is set at the duty-hours step, so it is true only for
+     someone who reached the age question the old way — after the name. They
+     carry on to sex as before; everyone else is at the new early position and
+     goes on to the rates. */
+  const asked = await getProvider(phone);
+  if (asked && asked.interestConfirmed) {
+    await updateStatus(phone, STATUS.AWAITING_SEX, 11, { age });
+    await sendSexButtons(phone);
+    return;
+  }
+
+  await updateProvider(phone, { age });
+  await continueAfterEarlyAge(phone);
 }
 
 async function handleAgeRejected(phone, message) {
@@ -2860,12 +2922,46 @@ async function handleReviewerMessage(phone, message) {
       return;
     }
 
+    /* One more question before the confirm, and only when it is needed: the
+       Basic rate has to say why, because the sentence she reads before
+       accepting the terms depends on the answer. */
+    const tiers = await getProviderTiers();
+    const onBasic =
+      qualification === 'basic_caregiver' ||
+      Number(provider.age) > Number(tiers.basicTierAgeThreshold);
+
     await updateProvider(
       providerPhone,
       buildReviewerWorkflowPatch(provider.verification && provider.verification.reviewerWorkflow, {
         reviewerPhone: phone,
+        stage: onBasic ? 'awaiting_basic_tier_reason' : 'awaiting_approve_confirmation',
+        qualification,
+        basicTierReasons: []
+      })
+    );
+    const refreshedProvider = await getProvider(providerPhone);
+    if (onBasic) {
+      await requestBasicTierReasonSelection(refreshedProvider, phone);
+      return;
+    }
+    await requestReviewConfirmation(refreshedProvider, 'approve', phone, qualification);
+    return;
+  }
+
+  if (reviewAction.action === 'basic_tier_reason') {
+    const workflow = provider.verification && provider.verification.reviewerWorkflow;
+    const qualification = normalizeApprovedQualification(workflow && workflow.qualification);
+    if (!qualification) {
+      await sendText(phone, 'Choose a qualification first.');
+      return;
+    }
+    await updateProvider(
+      providerPhone,
+      buildReviewerWorkflowPatch(workflow, {
+        reviewerPhone: phone,
         stage: 'awaiting_approve_confirmation',
-        qualification
+        qualification,
+        basicTierReasons: normalizeBasicTierReasons(reviewAction.reasons)
       })
     );
     const refreshedProvider = await getProvider(providerPhone);
@@ -2925,12 +3021,14 @@ async function handleReviewerMessage(phone, message) {
       return;
     }
 
+    const basicTierReasons = normalizeBasicTierReasons(workflow && workflow.basicTierReasons);
     await clearReviewerWorkflow(providerPhone);
     const approval = await approveCertificate(
       providerPhone,
       phone,
       'Approved from reviewer WhatsApp',
-      qualification
+      qualification,
+      basicTierReasons
     );
     // A second tap says so, the way the reject branch below already does.
     // Staying silent would leave the reviewer unsure whether either tap landed.
@@ -3162,7 +3260,7 @@ async function sendCertificateApprovalFollowup(phone, provider, reviewer) {
     {
       name: 'terms_rate_message',
       send: async () => {
-        const line = getTermsRateFor(approvedQualification, await getProviderTiers());
+        const line = getTermsRateFor({ qualification: approvedQualification, age: provider.age, careTier }, await getProviderTiers());
         if (!line) return false;
         await sendAndLog(phone, 'text', line, reviewer);
         return true;
@@ -3223,7 +3321,7 @@ function hasAlreadyBeenApproved(provider) {
    of Accept / Decline buttons on a record that had already moved past that
    step. Now the second call reports who approved and when, and sends nothing.
    Mirrors invitePartnerAfterTermsCore in pulso-hub, which answers the same way. */
-async function approveCertificate(phone, reviewedBy, notes, qualification) {
+async function approveCertificate(phone, reviewedBy, notes, qualification, reasons) {
   const provider = await getProvider(phone);
   if (!provider) {
     throw new Error('Provider not found');
@@ -3243,14 +3341,36 @@ async function approveCertificate(phone, reviewedBy, notes, qualification) {
     throw new Error('Approved qualification is required');
   }
 
+  /* The Basic rate needs a reason, whichever door it came through: the
+     qualification itself, or an age above the threshold. Without one there is
+     no way to tell later whether a lower rate was a decision or a slip — and
+     the message she reads depends on which reason it was. */
+  const basicTierReasons = normalizeBasicTierReasons(reasons);
+  const tiers = await getProviderTiers();
+  const landsOnBasic =
+    approvedQualification === 'basic_caregiver' ||
+    Number(provider.age) > Number(tiers.basicTierAgeThreshold);
+  if (landsOnBasic && basicTierReasons.length === 0) {
+    throw new Error('A reason is required when approving someone onto the Basic rate');
+  }
+  if (!landsOnBasic && basicTierReasons.length > 0) {
+    throw new Error('Basic-rate reasons were given for an approval that is not on the Basic rate');
+  }
+
   return runWithProviderFlow(provider, async () => {
   const reviewedAt = new Date().toISOString();
   const reviewer = reviewedBy || config.adminDefaultReviewer;
   const qualificationBeforeReview = provider.qualification || null;
   const candidateSelectedQualification = provider.candidateSelectedQualification || qualificationBeforeReview;
+  /* A 52-year-old GNM is a nurse on the Basic rate, not a Basic Caregiver.
+     Overwriting her qualification was how she stopped being findable as a
+     nurse at all; the tier is stored beside it instead, which is what the
+     hub's tierForProvider already expects to read. */
+  const careTier = tierDecisionFor(basicTierReasons);
   await updateProvider(phone, {
     candidateSelectedQualification,
     qualification: approvedQualification,
+    ...(careTier ? { careTier, basicTierReasons } : {}),
     status: STATUS.AWAITING_TERMS_ACCEPTANCE,
     currentStep: 14,
     termsSentAt: reviewedAt,
@@ -3266,7 +3386,12 @@ async function approveCertificate(phone, reviewedBy, notes, qualification) {
       reviewedBy: reviewedBy || config.adminDefaultReviewer
     }
   });
-  await appendHistory(phone, { type: 'system', event: 'certificate_verified' });
+  await appendHistory(phone, {
+    type: 'system',
+    event: 'certificate_verified',
+    approvedQualification,
+    ...(careTier ? { careTier, basicTierReasons } : {})
+  });
   let updatedProvider = await getProvider(phone);
   await sendCertificateApprovalFollowup(phone, updatedProvider, reviewer);
   updatedProvider = await getProvider(phone);
@@ -3413,6 +3538,8 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
 }
 
 module.exports = {
+  normalizeBasicTierReasons,
+  BASIC_TIER_REASONS,
   processIncomingMessage,
   approveCertificate,
   undoApproval,
