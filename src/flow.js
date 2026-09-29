@@ -830,9 +830,9 @@ function rateBandFor(subject, tiers) {
 // founder repriced all three bands on 28 Sep 2026 and a hardcoded nurse line
 // would have been the one figure left quoting the old money.
 const TIER_FALLBACK = {
-  basic: { payout24h: 700, payout8h: 600 },
-  gda: { payout24h: 900, payout8h: 700 },
-  nurse: { payout24h: 1600, payout8h: 1400 }
+  basic: { payout24h: 600, payout8h: 500 },
+  gda: { payout24h: 700, payout8h: 600 },
+  nurse: { payout24h: 1400, payout8h: 1200 }
 };
 
 function tierFigures(tiers) {
