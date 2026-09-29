@@ -2,6 +2,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+// These tests must never reach Google: a save with real credentials creates a
+// real contact in the ops phone book. dotenv does not override a variable that
+// is already set, so blanking them here beats whatever a local .env holds.
+process.env.GOOGLE_CONTACTS_CLIENT_ID = '';
+process.env.GOOGLE_CONTACTS_CLIENT_SECRET = '';
+process.env.GOOGLE_CONTACTS_REFRESH_TOKEN = '';
+
 const contacts = require('../src/services/googleContactsService');
 
 // Shaped from a real completed provider, so the assertions below describe what
@@ -162,4 +169,79 @@ test('a provider already saved is never created a second time', async () => {
   assert.equal(result.skipped, true);
   assert.equal(result.reason, 'already_saved');
   assert.equal(result.resourceName, 'people/c123');
+});
+
+/* ---- not creating what the phone book already has ------------------------ */
+
+// The ops account held 644 hand-typed contacts before the first backfill, and
+// 460 of the 507 completed providers were among them. Every one of these would
+// have been created a second time.
+test('the three spellings of one number share a key', () => {
+  assert.equal(contacts.phoneKey('919746185168'), '9746185168');
+  assert.equal(contacts.phoneKey('+91 97461 85168'), '9746185168');
+  assert.equal(contacts.phoneKey('+919746185168'), '9746185168');
+  assert.equal(contacts.phoneKey('9746185168'), '9746185168');
+});
+
+test('a Gulf number keeps enough digits to stay distinct', () => {
+  assert.equal(contacts.phoneKey('97156473475'), '7156473475');
+  assert.equal(contacts.phoneKey(''), '');
+  assert.equal(contacts.phoneKey(null), '');
+});
+
+test('the account index is keyed by every number a person has', () => {
+  const index = contacts.indexConnectionsByPhone([
+    {
+      resourceName: 'people/c1',
+      names: [{ displayName: 'P8 Jisna varghese GDA Female Ernakulam' }],
+      phoneNumbers: [{ value: '+91 90744 90963', canonicalForm: '+919074490963' }],
+    },
+    { resourceName: 'people/c2', phoneNumbers: [{ value: '97461 85168' }, { value: '' }] },
+    { resourceName: 'people/c3' },
+  ]);
+  assert.equal(index.get('9074490963').resourceName, 'people/c1');
+  assert.equal(index.get('9074490963').name, 'P8 Jisna varghese GDA Female Ernakulam');
+  assert.equal(index.get('9746185168').resourceName, 'people/c2');
+  assert.equal(index.size, 2);
+});
+
+test('a provider already in the account is linked to that entry, not created', async () => {
+  const existingByPhone = new Map([['9074490963', { resourceName: 'people/c1', name: 'P8 Jisna' }]]);
+  const result = await contacts.saveProviderContact(provider, { existingByPhone });
+  assert.deepEqual(result, {
+    ok: true,
+    skipped: true,
+    reason: 'already_in_google',
+    resourceName: 'people/c1',
+    name: 'P8 Jisna',
+  });
+});
+
+test('a stored resourceName still wins over the account lookup', async () => {
+  const existingByPhone = new Map([['9074490963', { resourceName: 'people/c1', name: 'x' }]]);
+  const result = await contacts.saveProviderContact(
+    { ...provider, contactSync: { resourceName: 'people/stored' } },
+    { existingByPhone }
+  );
+  assert.equal(result.reason, 'already_saved');
+  assert.equal(result.resourceName, 'people/stored');
+});
+
+/* ---- test identities never reach the phone book -------------------------- */
+
+// The app's device-test accounts (9000000xxx / 8000000xxx, OTP 123456) finish
+// onboarding like anyone else. Two of them sat among the completed providers.
+test('the device-test identities are recognised in every stored form', () => {
+  assert.equal(contacts.isTestIdentity('919000000133'), true);
+  assert.equal(contacts.isTestIdentity('918000000122'), true);
+  assert.equal(contacts.isTestIdentity('9000000156'), true);
+  assert.equal(contacts.isTestIdentity('+91 90000 00133'), true);
+  assert.equal(contacts.isTestIdentity('919074490963'), false);
+  assert.equal(contacts.isTestIdentity('919000001330'), false);
+  assert.equal(contacts.isTestIdentity(''), false);
+});
+
+test('a test identity is skipped before any credential or network is touched', async () => {
+  const result = await contacts.saveProviderContact({ ...provider, phone: '919000000133' });
+  assert.deepEqual(result, { ok: false, skipped: true, reason: 'test_identity' });
 });

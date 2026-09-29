@@ -15,6 +15,7 @@ const config = require('../config');
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const CREATE_CONTACT_URL = 'https://people.googleapis.com/v1/people:createContact';
+const LIST_CONNECTIONS_URL = 'https://people.googleapis.com/v1/people/me/connections';
 const CONTACTS_SCOPE = 'https://www.googleapis.com/auth/contacts';
 
 // The prefix is how ops finds people: typing "p24" in Contacts should return
@@ -183,6 +184,66 @@ function buildProviderContactBody(provider) {
   return body;
 }
 
+// One number, three spellings: the provider record holds 919746185168, the
+// ops phone was typed as +91 97461 85168, and Google canonicalises to
+// +919746185168. The last ten digits are the part every spelling shares.
+function phoneKey(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  return digits.length > 10 ? digits.slice(-10) : digits;
+}
+
+// The app's device-test identities (9000000xxx / 8000000xxx, OTP 123456) walk
+// through the whole onboarding, including completion. They are not people and
+// must never land in the ops phone book.
+function isTestIdentity(phone) {
+  return /^(91)?(9000000|8000000)\d{3}$/.test(String(phone || '').replace(/\D/g, ''));
+}
+
+// The ops account already held 644 hand-entered contacts before the backfill
+// ran, and 460 of the 507 completed providers were among them. Creating those
+// again would leave two entries per caregiver. Keyed by phoneKey; the first
+// entry seen for a number wins.
+function indexConnectionsByPhone(connections) {
+  const index = new Map();
+  for (const person of connections || []) {
+    const name =
+      (person.names && person.names[0] && (person.names[0].displayName || person.names[0].givenName)) ||
+      '';
+    for (const number of person.phoneNumbers || []) {
+      const key = phoneKey(number.canonicalForm || number.value);
+      if (key && !index.has(key)) {
+        index.set(key, { resourceName: person.resourceName || '', name });
+      }
+    }
+  }
+  return index;
+}
+
+// Reads the whole account once (a few pages at most) so a backfill can check
+// hundreds of providers without a search call each.
+async function listExistingContactsByPhone() {
+  const accessToken = await getAccessToken();
+  if (!accessToken) {
+    return new Map();
+  }
+  const connections = [];
+  let pageToken = '';
+  do {
+    const response = await axios.get(LIST_CONNECTIONS_URL, {
+      params: {
+        personFields: 'names,phoneNumbers',
+        pageSize: 1000,
+        ...(pageToken ? { pageToken } : {}),
+      },
+      headers: { authorization: `Bearer ${accessToken}` },
+      timeout: 30000,
+    });
+    connections.push(...((response.data && response.data.connections) || []));
+    pageToken = (response.data && response.data.nextPageToken) || '';
+  } while (pageToken);
+  return indexConnectionsByPhone(connections);
+}
+
 function contactsCredentials() {
   return {
     clientId: String(config.googleContactsClientId || '').trim(),
@@ -231,7 +292,7 @@ async function getAccessToken() {
 // Never throws for a configuration or API problem: a contact that failed to
 // save must not hold up a caregiver's onboarding. The caller records the reason
 // and the backfill script can retry later.
-async function saveProviderContact(provider) {
+async function saveProviderContact(provider, options = {}) {
   if (!provider || !provider.phone) {
     return { ok: false, skipped: true, reason: 'missing_provider' };
   }
@@ -242,6 +303,24 @@ async function saveProviderContact(provider) {
   const existing = provider.contactSync && provider.contactSync.resourceName;
   if (existing) {
     return { ok: true, skipped: true, reason: 'already_saved', resourceName: existing };
+  }
+
+  if (isTestIdentity(provider.phone)) {
+    return { ok: false, skipped: true, reason: 'test_identity' };
+  }
+
+  // Already in the phone book by hand. Record that entry as ours rather than
+  // making a second one; from here on it is skipped as already_saved.
+  const existingByPhone = options.existingByPhone;
+  const found = existingByPhone && existingByPhone.get(phoneKey(provider.phone));
+  if (found && found.resourceName) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: 'already_in_google',
+      resourceName: found.resourceName,
+      name: found.name || '',
+    };
   }
 
   const { clientId, clientSecret, refreshToken } = contactsCredentials();
@@ -295,6 +374,10 @@ async function saveProviderContact(provider) {
 
 module.exports = {
   saveProviderContact,
+  listExistingContactsByPhone,
+  indexConnectionsByPhone,
+  phoneKey,
+  isTestIdentity,
   getAccessToken,
   resetAccessTokenCache,
   // Exported for tests: the mapping is the part worth checking without a token.
