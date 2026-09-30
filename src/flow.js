@@ -835,16 +835,43 @@ const TIER_FALLBACK = {
   nurse: { payout24h: 1400, payout8h: 1200 }
 };
 
+/**
+ * What the GDA band is TOLD, as against what a booking is priced at.
+ *
+ * `payout24h` 700 is the floor Pulso will allow, not the wage. Of the 131
+ * bookings made since 1 July 2026, 76 of the 101 twenty-four-hour duties paid
+ * the caregiver ₹1,200 a day and the eight-hour ones sat around ₹900-960 —
+ * the agency sets its own rate above the floor. Quoting the floor as the wage
+ * cost us people who were being offered ₹1,200 the same week.
+ *
+ * So the band quotes a range the market really pays, and the sample duty offer
+ * uses a figure inside it — deliberately below the top, so the first real offer
+ * is a pleasant surprise rather than a let-down. The founder set these on
+ * 30 Sep 2026. Overridable per figure from app_config/provider_tiers.
+ */
+const GDA_SHOWN_FALLBACK = {
+  shownFrom8h: 800, shownTo8h: 900,
+  shownFrom24h: 900, shownTo24h: 1200,
+  sample8h: 800, sample24h: 1000
+};
+
 function tierFigures(tiers) {
   const t = tiers && typeof tiers === 'object' ? tiers : {};
   const pick = (name, key) => {
     const n = Math.round(Number((t[name] || {})[key]));
     return Number.isFinite(n) && n > 0 ? n : TIER_FALLBACK[name][key];
   };
+  const shown = (key) => {
+    const n = Math.round(Number((t.gda || {})[key]));
+    return Number.isFinite(n) && n > 0 ? n : GDA_SHOWN_FALLBACK[key];
+  };
   return {
     b8: pick('basic', 'payout8h'), b24: pick('basic', 'payout24h'),
     g8: pick('gda', 'payout8h'), g24: pick('gda', 'payout24h'),
-    n8: pick('nurse', 'payout8h'), n24: pick('nurse', 'payout24h')
+    n8: pick('nurse', 'payout8h'), n24: pick('nurse', 'payout24h'),
+    gFrom8: shown('shownFrom8h'), gTo8: shown('shownTo8h'),
+    gFrom24: shown('shownFrom24h'), gTo24: shown('shownTo24h'),
+    gSample8: shown('sample8h'), gSample24: shown('sample24h')
   };
 }
 
@@ -878,8 +905,8 @@ function workingModelRateLines(band, language, f) {
       ];
     }
     return [
-      `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b8} മുതൽ ₹${f.g8} വരെ ലഭിക്കും`,
-      `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b24} മുതൽ ₹${f.g24} വരെ ലഭിക്കും`
+      `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.gFrom8} മുതൽ ₹${f.gTo8} വരെ ലഭിക്കും`,
+      `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.gFrom24} മുതൽ ₹${f.gTo24} വരെ ലഭിക്കും`
     ];
   }
   if (band === 'nurse') {
@@ -889,8 +916,8 @@ function workingModelRateLines(band, language, f) {
     return [`For 8-hour duty, you will receive Rs ${f.b8} per day`, `For 24-hour duty, you will receive Rs ${f.b24} per day`];
   }
   return [
-    `For 8-hour duty, you will receive Rs ${f.b8} to Rs ${f.g8} per day`,
-    `For 24-hour duty, you will receive Rs ${f.b24} to Rs ${f.g24} per day`
+    `For 8-hour duty, you will receive Rs ${f.gFrom8} to Rs ${f.gTo8} per day`,
+    `For 24-hour duty, you will receive Rs ${f.gFrom24} to Rs ${f.gTo24} per day`
   ];
 }
 
@@ -910,7 +937,10 @@ const SAMPLE_MONTH_DAYS = 30;
 function sampleDutyRates(band, f) {
   if (band === 'nurse') return { day8: f.n8, day24: f.n24 };
   if (band === 'basic') return { day8: f.b8, day24: f.b24 };
-  return { day8: f.g8, day24: f.g24 };
+  /* Inside the quoted range, not at the floor and not at the top: the sample is
+     a picture of an ordinary duty, and ₹1,000 × 30 is the ₹30,000 the poster
+     promises. */
+  return { day8: f.gSample8, day24: f.gSample24 };
 }
 
 function getSampleDutyOfferFor(qualification, tiers, choice) {
@@ -1014,12 +1044,12 @@ function getDutyHourPaymentSummaryFor(qualification, tiers) {
     if (band === 'nurse') return `8 hour - ദിവസത്തിൽ ₹${f.n8}\n24 hour - ദിവസത്തിൽ ₹${f.n24}`;
     return band === 'basic'
       ? `8 hour - ദിവസത്തിൽ ₹${f.b8}\n24 hour - ദിവസത്തിൽ ₹${f.b24}`
-      : `8 hour - ദിവസത്തിൽ ₹${f.b8} മുതൽ ₹${f.g8} വരെ\n24 hour - ദിവസത്തിൽ ₹${f.b24} മുതൽ ₹${f.g24} വരെ`;
+      : `8 hour - ദിവസത്തിൽ ₹${f.gFrom8} മുതൽ ₹${f.gTo8} വരെ\n24 hour - ദിവസത്തിൽ ₹${f.gFrom24} മുതൽ ₹${f.gTo24} വരെ`;
   }
   if (band === 'nurse') return `8 hour - Rs ${f.n8} per day\n24 hour - Rs ${f.n24} per day`;
   return band === 'basic'
     ? `8 hour - Rs ${f.b8} per day\n24 hour - Rs ${f.b24} per day`
-    : `8 hour - Rs ${f.b8} to Rs ${f.g8} per day\n24 hour - Rs ${f.b24} to Rs ${f.g24} per day`;
+    : `8 hour - Rs ${f.gFrom8} to Rs ${f.gTo8} per day\n24 hour - Rs ${f.gFrom24} to Rs ${f.gTo24} per day`;
 }
 
 function getActiveFlow() {

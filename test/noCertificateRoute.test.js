@@ -117,9 +117,10 @@ test('the working model quotes Basic flat, GDA as a range, in both languages', a
     assert.doesNotMatch(basic, /₹700|₹1200|₹1400/, 'a Basic caregiver must never read a GDA or nurse figure');
     assert.doesNotMatch(basic, /ദിവസത്തിൽ ₹\d+ മുതൽ/, 'Basic is a flat rate, never a range');
     const gda = flow.getWorkingModelFor('gda', LIVE);
-    assert.match(gda, /₹500 മുതൽ ₹600 വരെ/);
-    assert.match(gda, /₹600 മുതൽ ₹700 വരെ/);
-    assert.doesNotMatch(gda, /₹1200 വരെ ലഭിക്കും/, 'the ₹1,200 over-promise is gone');
+    // The band is quoted the range agencies really pay, not the ₹700 floor.
+    assert.match(gda, /₹800 മുതൽ ₹900 വരെ/);
+    assert.match(gda, /₹900 മുതൽ ₹1200 വരെ/);
+    assert.doesNotMatch(gda, /₹600 മുതൽ ₹700 വരെ/, 'the floor is not the wage');
     const nurse = flow.getWorkingModelFor('gnm', LIVE);
     assert.match(nurse, /₹1200 ലഭിക്കും/);
     assert.match(nurse, /₹1400 ലഭിക്കും/);
@@ -129,7 +130,7 @@ test('the working model quotes Basic flat, GDA as a range, in both languages', a
     const basic = flow.getWorkingModelFor('basic_caregiver', LIVE);
     assert.match(basic, /For 8-hour duty, you will receive Rs 500 per day/);
     assert.match(basic, /For 24-hour duty, you will receive Rs 600 per day/);
-    assert.match(flow.getWorkingModelFor('hca', LIVE), /Rs 500 to Rs 600 per day[\s\S]*Rs 600 to Rs 700 per day/);
+    assert.match(flow.getWorkingModelFor('hca', LIVE), /Rs 800 to Rs 900 per day[\s\S]*Rs 900 to Rs 1200 per day/);
     assert.match(flow.getWorkingModelFor('bsc_nursing', LIVE), /Rs 1200 per day[\s\S]*Rs 1400 per day/);
   });
 });
@@ -139,19 +140,22 @@ test('the figures come from the tier settings, with the live matrix as fallback'
     const repriced = flow.getWorkingModelFor('no_certificate', { basic: { payout8h: 650, payout24h: 800 } });
     assert.match(repriced, /Rs 650 per day[\s\S]*Rs 800 per day/);
     const fallback = flow.getWorkingModelFor('gda', null);
-    assert.match(fallback, /Rs 500 to Rs 600 per day[\s\S]*Rs 600 to Rs 700 per day/);
+    assert.match(fallback, /Rs 800 to Rs 900 per day[\s\S]*Rs 900 to Rs 1200 per day/);
+    // Each shown figure is overridable on its own, like every other rate.
+    const wider = flow.getWorkingModelFor('gda', { gda: { shownTo24h: 1500 } });
+    assert.match(wider, /Rs 900 to Rs 1500 per day/);
   });
 });
 
 test('the duty-hours summary follows the same bands', async () => {
   await flow.runWithFlow('kerala_malayalam', async () => {
     assert.equal(flow.getDutyHourPaymentSummaryFor('no_certificate', LIVE), '8 hour - ദിവസത്തിൽ ₹500\n24 hour - ദിവസത്തിൽ ₹600');
-    assert.equal(flow.getDutyHourPaymentSummaryFor('gda', LIVE), '8 hour - ദിവസത്തിൽ ₹500 മുതൽ ₹600 വരെ\n24 hour - ദിവസത്തിൽ ₹600 മുതൽ ₹700 വരെ');
+    assert.equal(flow.getDutyHourPaymentSummaryFor('gda', LIVE), '8 hour - ദിവസത്തിൽ ₹800 മുതൽ ₹900 വരെ\n24 hour - ദിവസത്തിൽ ₹900 മുതൽ ₹1200 വരെ');
     assert.equal(flow.getDutyHourPaymentSummaryFor('gnm', LIVE), '8 hour - ദിവസത്തിൽ ₹1200\n24 hour - ദിവസത്തിൽ ₹1400');
   });
   await flow.runWithFlow('kerala_english', async () => {
     assert.equal(flow.getDutyHourPaymentSummaryFor('basic_caregiver', LIVE), '8 hour - Rs 500 per day\n24 hour - Rs 600 per day');
-    assert.equal(flow.getDutyHourPaymentSummaryFor('anm', LIVE), '8 hour - Rs 500 to Rs 600 per day\n24 hour - Rs 600 to Rs 700 per day');
+    assert.equal(flow.getDutyHourPaymentSummaryFor('anm', LIVE), '8 hour - Rs 800 to Rs 900 per day\n24 hour - Rs 900 to Rs 1200 per day');
   });
 });
 
@@ -167,16 +171,22 @@ test('the sample duty offer is priced for the band reading it', async () => {
     assert.match(basic, /₹ 18000 total/, 'the total is the rate × 30, not a written figure');
 
     const gda = flow.getSampleDutyOfferFor('gda', LIVE, '24_hour');
-    assert.match(gda, /₹ 700 per day × 30 days/);
-    assert.match(gda, /₹ 21000 total/);
+    // The sample sits inside the quoted range, below its top, and its month
+    // total is the ₹30,000 the recruitment poster promises.
+    assert.match(gda, /₹ 1000 per day × 30 days/);
+    assert.match(gda, /₹ 30000 total/);
 
     const nurse = flow.getSampleDutyOfferFor('gnm', LIVE, '24_hour');
     assert.match(nurse, /₹ 1400 per day × 30 days/);
     assert.match(nurse, /₹ 42000 total/);
 
-    // The figure the bug was made of must not reach anyone.
-    for (const text of [basic, gda, nurse]) assert.doesNotMatch(text, /1200|36000/);
+    // The figure the bug was made of must not reach anyone: ₹1,200 a day is
+    // the top of the GDA range now, but the SAMPLE must never quote it, and
+    // ₹36,000 must never appear at all.
+    for (const text of [basic, gda, nurse]) assert.doesNotMatch(text, /36000/);
+    for (const text of [basic, gda]) assert.doesNotMatch(text, /1200/);
 
+    assert.match(flow.getSampleDutyOfferFor('gda', LIVE, '8_hour'), /₹800 per day/);
     assert.match(flow.getSampleDutyOfferFor('no_certificate', LIVE, '8_hour'), /₹500 per day/);
     assert.match(flow.getSampleDutyOfferFor('gnm', LIVE, '8_hour'), /₹1200 per day/);
     assert.equal(flow.getSampleDutyOfferFor('gda', LIVE, 'both'), null, '"both" is sent as two messages, not one');
@@ -188,8 +198,8 @@ test('an unreadable tier config still quotes a real rate, never ₹0', async () 
   // against it. tierFigures substitutes the shipped matrix for anything zero
   // or unparseable, so the sample falls back rather than going out blank.
   await flow.runWithFlow('kerala_malayalam', async () => {
-    const broken = flow.getSampleDutyOfferFor('gda', { gda: { payout24h: 0, payout8h: 'abc' } }, '24_hour');
-    assert.match(broken, /₹ 700 per day/, 'falls back to the shipped GDA figure');
+    const broken = flow.getSampleDutyOfferFor('gda', { gda: { sample24h: 0, sample8h: 'abc' } }, '24_hour');
+    assert.match(broken, /₹ 1000 per day/, 'falls back to the shipped GDA sample figure');
     assert.doesNotMatch(broken, /₹ ?0 |₹ ?0$|NaN/);
     assert.match(flow.getSampleDutyOfferFor('gnm', null, '24_hour'), /₹ 1400 per day/, 'a missing config falls back too');
   });
