@@ -1,5 +1,6 @@
 const config = require('../config');
 const { getProviderTiers } = require('./providerTiersConfig');
+const { getDutyDaysProgress, dutyDaysMessage, isDutyDaysQuestion, milestoneDue, milestonesCoveredBy, milestoneMessage } = require('./dutyDaysService');
 const fs = require('fs');
 const path = require('path');
 const {
@@ -1272,6 +1273,87 @@ async function sendLegacyTermsReminder(provider) {
     source: 'legacy_backfill'
   });
   return true;
+}
+
+// ---------------------------------------------------------------------------
+// Experience certificate milestones: 90, 150 and 180 duty days.
+//
+// The count lives in the hub and is read, never recomputed here. Once a day is
+// enough — a caregiver gains at most one day per day, and a chattier sweep only
+// risks the number's quality rating for no new information.
+//
+// A caregiver who has not written to us in 24 hours is outside WhatsApp's free
+// window, so an ordinary text will not reach her. That is exactly how the terms
+// reminder has been failing silently, so this logs the skip by name instead of
+// pretending it sent. A template can be set later and the sweep will use it.
+// ---------------------------------------------------------------------------
+const DUTY_MILESTONE_HISTORY_EVENT = 'duty_days_milestone_sent';
+const WHATSAPP_FREE_WINDOW_MS = 24 * 60 * 60 * 1000;
+let dutyMilestoneInterval = null;
+
+function isInsideFreeWindow(provider, now = Date.now()) {
+  const at = provider && (provider.lastInboundAt || provider.lastMessageAt);
+  if (!at) return false;
+  const ms = Date.parse(at);
+  if (Number.isNaN(ms)) return false;
+  return now - ms < WHATSAPP_FREE_WINDOW_MS;
+}
+
+function milestonesAlreadySent(provider) {
+  const list = provider && provider.dutyDaysMilestonesSent;
+  return Array.isArray(list) ? list.map((v) => String(v)) : [];
+}
+
+async function runDutyDaysMilestoneSweep() {
+  const providers = await listProviders();
+  const candidates = providers.filter(
+    (p) => p && p.status === STATUS.COMPLETED && (p.appProviderUid || (p.sync && p.sync.matchedUserId))
+  );
+  let sent = 0;
+  let skippedOutsideWindow = 0;
+  for (const provider of candidates) {
+    try {
+      const progress = await getDutyDaysProgress(provider);
+      const milestone = milestoneDue(progress, milestonesAlreadySent(provider));
+      if (!milestone) continue;
+      if (!isInsideFreeWindow(provider)) {
+        skippedOutsideWindow += 1;
+        console.log('[DUTY_MILESTONE_SKIPPED_WINDOW]', provider.phone, milestone.days,
+          'needs an approved template to reach her');
+        continue;
+      }
+      await sendAndLog(provider.phone, 'text',
+        milestoneMessage(milestone, progress, provider.language || 'ml'), 'duty-milestone');
+      await updateProvider(provider.phone, {
+        dutyDaysMilestonesSent: [...new Set([...milestonesAlreadySent(provider), ...milestonesCoveredBy(milestone)])],
+        dutyDaysMilestoneLastSentAt: new Date().toISOString()
+      });
+      await appendHistory(provider.phone, {
+        type: 'system',
+        event: DUTY_MILESTONE_HISTORY_EVENT,
+        milestone: milestone.days,
+        completed: progress.completed
+      });
+      sent += 1;
+      console.log('[DUTY_MILESTONE_SENT]', provider.phone, milestone.days);
+    } catch (error) {
+      console.error('[DUTY_MILESTONE_ERROR]', provider.phone, error && error.message);
+    }
+  }
+  console.log(`[DUTY_MILESTONE] scanned ${candidates.length}, sent ${sent}, outside window ${skippedOutsideWindow}`);
+  return { scanned: candidates.length, sent, skippedOutsideWindow };
+}
+
+function startDutyDaysMilestoneScheduler() {
+  if (dutyMilestoneInterval) return dutyMilestoneInterval;
+  const everyMs = 24 * 60 * 60 * 1000;
+  dutyMilestoneInterval = setInterval(() => {
+    runDutyDaysMilestoneSweep().catch((error) => {
+      console.error('[DUTY_MILESTONE_SWEEP_ERROR]', error && error.message);
+    });
+  }, everyMs);
+  if (typeof dutyMilestoneInterval.unref === 'function') dutyMilestoneInterval.unref();
+  return dutyMilestoneInterval;
 }
 
 async function runTermsReminderSweep() {
@@ -2715,6 +2797,16 @@ async function handleCompleted(phone, message) {
     return;
   }
 
+  // She asks about the experience certificate. Answered with HER number, read
+  // from the hub, so the chat and the app never disagree. Checked only after
+  // onboarding is complete, because before that "certificate" means the GDA or
+  // GNM certificate she was asked to upload.
+  if (isDutyDaysQuestion(message)) {
+    const progress = await getDutyDaysProgress(provider);
+    await sendAndLog(phone, 'text', dutyDaysMessage(progress, (provider && provider.language) || 'ml'));
+    return;
+  }
+
   const action = parseTermsAcceptance(message);
   if (action === 'connect_agent') {
     await handleAgentHelpRequest(phone);
@@ -3668,6 +3760,8 @@ module.exports = {
   runLegacyTermsReminderBackfill,
   runTermsReminderSweep,
   startTermsReminderScheduler,
+  runDutyDaysMilestoneSweep,
+  startDutyDaysMilestoneScheduler,
   startFlow,
   adminUploadCertificateFiles
 };
