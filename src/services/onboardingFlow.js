@@ -1804,6 +1804,12 @@ async function continueAfterEarlyAge(phone) {
     await sendAndLog(phone, 'text', notice);
   }
   await sendAndLog(phone, 'text', getWorkingModelFor(provider, tiers));
+  // Its own bubble, between the working model and the interest question. Inside
+  // the working model this sat at character 1,836 of 1,935, below a "Read more"
+  // fold that falls at about 640 - correct, and invisible. It lands here
+  // because this is the moment she decides whether to go on, and 180 days of
+  // work is a large thing to ask without saying what it earns her.
+  await sendAndLog(phone, 'text', MESSAGES.experienceCertificateNotice);
   await sendInterestButtons(phone);
 }
 

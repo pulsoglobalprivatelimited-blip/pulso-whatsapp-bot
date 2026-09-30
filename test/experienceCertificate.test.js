@@ -4,20 +4,37 @@ const assert = require('node:assert/strict');
 const flow = require('../src/flow');
 const duty = require('../src/services/dutyDaysService');
 
-test('the working model tells her about the certificate, in both languages', async () => {
+test('the certificate is its own short message, not a line buried in a long one', async () => {
+  // It lived at character 1,836 of a 1,935-character message. WhatsApp folds at
+  // about 640 and shows "Read more", so it was 95% of the way down a message
+  // almost nobody unfolds — correct, and invisible. A short message is never
+  // folded, so this pins BOTH halves: the notice exists, and the long message
+  // no longer carries it.
+  for (const flowId of ['kerala_malayalam', 'kerala_english']) {
+    await flow.runWithFlow(flowId, async () => {
+      const notice = flow.MESSAGES.experienceCertificateNotice;
+      assert.ok(notice, `${flowId}: the notice exists`);
+      assert.match(notice, /180/);
+      assert.match(notice, /Experience Certificate/);
+      assert.match(notice, /CIN: U86201KL2023PTC084619/);
+      assert.match(notice, /pulso\.co\.in/);
+      assert.ok(notice.length < 640, `${flowId}: short enough never to be folded (${notice.length})`);
+      // Single asterisks, because WhatsApp reads *text* as bold and shows the
+      // second pair of a ** ** as literal characters.
+      assert.doesNotMatch(notice, /\*\*/, `${flowId}: no double asterisks`);
+      assert.doesNotMatch(flow.getWorkingModelFor('gda', null), /[Ee]xperience [Cc]ertificate/,
+        `${flowId}: the long message no longer carries it`);
+    });
+  }
+});
+
+test("the founder's Malayalam is carried word for word", async () => {
   await flow.runWithFlow('kerala_malayalam', async () => {
-    const text = flow.getWorkingModelFor('gda', null);
-    assert.match(text, /180 ദിവസത്തെ duty പൂർത്തിയാക്കിയാൽ/);
-    assert.match(text, /Pulso Global Private Limited-ന്റെ experience certificate/);
-    // It belongs in the "please note" list, beside the no-registration-fee
-    // line: that list is what she is weighing when she decides to continue.
-    const note = text.indexOf('ശ്രദ്ധിക്കുക');
-    const office = text.indexOf('Office Address');
-    const line = text.indexOf('experience certificate');
-    assert.ok(note < line && line < office, 'the line sits inside the please-note list');
-  });
-  await flow.runWithFlow('kerala_english', async () => {
-    assert.match(flow.getWorkingModelFor('gda', null), /180 days of duty with Pulso in total, you will receive an experience certificate/);
+    assert.ok(flow.MESSAGES.experienceCertificateNotice.includes(
+      'Pulso-യിൽ ആകെ 180 ദിവസത്തെ duty പൂർത്തിയാക്കുന്ന Caregivers / Nursing Professionals-ന്, '
+      + 'healthcare & senior care sector-ൽ പ്രവർത്തിക്കുന്ന Pulso Global Private Limited-ന്റെ '
+      + 'ഔദ്യോഗിക Experience Certificate ലഭിക്കുന്നതാണ്.'
+    ), 'the sentence the founder wrote on 30 Sep 2026, unedited');
   });
 });
 
