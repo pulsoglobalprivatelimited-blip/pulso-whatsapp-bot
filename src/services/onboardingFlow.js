@@ -73,6 +73,10 @@ const {
   parseDistrictListAction,
   parseTermsAcceptance,
   parsePulsoAppInstallInterest,
+  parseAgencyAnswer,
+  parseAddDutyInterest,
+  isAddDutyKeyword,
+  isAgencyKeyword,
   parsePulsoAppDevice,
   parsePulsoAppActivationAction,
   parsePulsoAppHelpReason,
@@ -116,6 +120,9 @@ const MOBILE_APP_STAGE_DEVICE = 'awaiting_device';
 const MOBILE_APP_STAGE_INSTALLED_CONFIRMATION = 'awaiting_installed_confirmation';
 const MOBILE_APP_STAGE_HELP_REASON = 'awaiting_help_reason';
 const MOBILE_APP_STAGE_ACTIVATION_PENDING = 'activation_pending_verification';
+// The Duty Card question, asked once after the app step, and its follow-up.
+const MOBILE_APP_STAGE_AGENCY_QUESTION = 'awaiting_agency_question';
+const MOBILE_APP_STAGE_ADD_DUTY_INTEREST = 'awaiting_add_duty_interest';
 
 let termsReminderInterval = null;
 
@@ -700,6 +707,137 @@ async function sendPulsoAppDeviceButtons(phone) {
   });
 }
 
+// ---- The Duty Card ---------------------------------------------------------
+// After onboarding is complete — the app step included — she is asked once
+// whether she works with an agency. A yes gets the founder's benefits message
+// and "add it now?"; a yes to that gets the steps. Nothing here blocks the app
+// install or any other reply: an unexpected message gets one retry with the
+// buttons, then the question is dropped and the chat behaves as before.
+
+async function sendAgencyQuestionButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.agencyQuestion,
+    buttons: [
+      { id: BUTTON_IDS.AGENCY_YES, title: UI_TEXT.agencyYesTitle },
+      { id: BUTTON_IDS.AGENCY_NO, title: UI_TEXT.agencyNoTitle }
+    ]
+  });
+}
+
+async function sendAddDutyInterestButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.addDutyInterestQuestion,
+    buttons: [
+      { id: BUTTON_IDS.ADD_DUTY_NOW, title: UI_TEXT.addDutyNowTitle },
+      { id: BUTTON_IDS.ADD_DUTY_LATER, title: UI_TEXT.addDutyLaterTitle }
+    ]
+  });
+}
+
+// The steps, with the install line first for someone who has not got the app.
+async function sendAddDutyProcedure(phone, provider) {
+  const hasApp = provider && (provider.pulsoAppActivationStatus === 'verified' || provider.pulsoAppActivationStatus === 'activation_pending');
+  if (!hasApp) {
+    await sendAndLog(phone, 'text', MESSAGES.addDutyInstallFirst);
+  }
+  await sendAndLog(phone, 'text', MESSAGES.addDutyProcedure);
+}
+
+// Called at the end of both wrap-ups. Asks once per person, ever.
+async function askAgencyQuestionAfterOnboarding(phone, sender = 'bot') {
+  const provider = await getProvider(phone);
+  if (!provider) return;
+  if (hasHistoryEvent(provider, (entry) => entry && entry.type === 'system' && entry.event === 'agency_question_sent')) {
+    return;
+  }
+  await updateProvider(phone, {
+    pulsoAppPromptStage: MOBILE_APP_STAGE_AGENCY_QUESTION,
+    mobileAppCampaignStage: MOBILE_APP_STAGE_AGENCY_QUESTION,
+    agencyQuestionAskedAt: new Date().toISOString()
+  });
+  await appendHistory(phone, { type: 'system', event: 'agency_question_sent' });
+  await sendAgencyQuestionButtons(phone);
+}
+
+async function clearAgencyStage(phone) {
+  await updateProvider(phone, { pulsoAppPromptStage: null, mobileAppCampaignStage: null });
+}
+
+async function handleAgencyQuestion(phone, message) {
+  const provider = await getProvider(phone);
+  const answer = parseAgencyAnswer(message);
+  if (!answer) {
+    if (provider && provider.agencyQuestionRetried) {
+      // Second stray message: drop the question, let the chat carry on as before.
+      await clearAgencyStage(phone);
+      await handleCompleted(phone, message);
+      return;
+    }
+    await updateProvider(phone, { agencyQuestionRetried: true });
+    await sendAndLog(phone, 'text', MESSAGES.agencyQuestionRetry);
+    await sendAgencyQuestionButtons(phone);
+    return;
+  }
+  await updateProvider(phone, {
+    worksWithAgency: answer === 'yes',
+    worksWithAgencyAnsweredAt: new Date().toISOString(),
+    agencyQuestionRetried: false
+  });
+  await appendHistory(phone, { type: 'system', event: 'agency_question_answered', answer });
+  if (answer === 'no') {
+    await clearAgencyStage(phone);
+    await syncAfterAgencyAnswer(phone);
+    return;
+  }
+  await sendAndLog(phone, 'text', MESSAGES.agencyYes);
+  await updateProvider(phone, {
+    pulsoAppPromptStage: MOBILE_APP_STAGE_ADD_DUTY_INTEREST,
+    mobileAppCampaignStage: MOBILE_APP_STAGE_ADD_DUTY_INTEREST
+  });
+  await sendAddDutyInterestButtons(phone);
+  await syncAfterAgencyAnswer(phone);
+}
+
+async function handleAddDutyInterest(phone, message) {
+  const provider = await getProvider(phone);
+  const interest = parseAddDutyInterest(message);
+  if (!interest) {
+    if (provider && provider.addDutyInterestRetried) {
+      await clearAgencyStage(phone);
+      await handleCompleted(phone, message);
+      return;
+    }
+    await updateProvider(phone, { addDutyInterestRetried: true });
+    await sendAndLog(phone, 'text', MESSAGES.agencyQuestionRetry);
+    await sendAddDutyInterestButtons(phone);
+    return;
+  }
+  await updateProvider(phone, {
+    addDutyInterest: interest,
+    addDutyInterestAnsweredAt: new Date().toISOString(),
+    addDutyInterestRetried: false,
+    pulsoAppPromptStage: null,
+    mobileAppCampaignStage: null
+  });
+  await appendHistory(phone, { type: 'system', event: 'add_duty_interest_answered', interest });
+  if (interest === 'later') {
+    await sendAndLog(phone, 'text', MESSAGES.addDutyLater);
+    return;
+  }
+  await sendAddDutyProcedure(phone, provider);
+}
+
+// The hub keeps worksWithAgency on the user, so the app can lead with
+// "Add my duty" for her. Best effort: a failed sync is logged, never shown.
+async function syncAfterAgencyAnswer(phone) {
+  try {
+    const provider = await getProvider(phone);
+    if (provider) await syncProviderToPulsoHub(provider);
+  } catch (error) {
+    console.error('[AGENCY_ANSWER_SYNC_FAILED]', phone, error && error.message);
+  }
+}
+
 async function sendPulsoAppInstalledConfirmationButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.pulsoAppInstalledQuestion,
@@ -732,6 +870,7 @@ async function sendPostOnboardingWrapUp(phone, sender = 'bot') {
   await sendAndLog(phone, 'text', MESSAGES.postOnboardingSupport, sender);
   await sendAndLog(phone, 'text', MESSAGES.postOnboardingContactSupport, sender);
   await sendAndLog(phone, 'text', MESSAGES.postOnboardingLinks, sender);
+  await askAgencyQuestionAfterOnboarding(phone, sender);
 }
 
 async function sendMobileAppCampaignClosing(phone, sender = 'bot') {
@@ -742,6 +881,7 @@ async function sendMobileAppCampaignClosing(phone, sender = 'bot') {
     mobileAppCampaignCompletedAt: new Date().toISOString()
   });
   await sendAndLog(phone, 'text', MESSAGES.mobileAppCampaignThanks, sender);
+  await askAgencyQuestionAfterOnboarding(phone, sender);
 }
 
 async function finishMobileAppFlow(phone, provider, sender = 'bot') {
@@ -2773,6 +2913,14 @@ async function sendPulsoAppPendingOptions(phone) {
 async function handleCompleted(phone, message) {
   const provider = await getProvider(phone);
   const mobileAppStage = provider && (provider.mobileAppCampaignStage || provider.pulsoAppPromptStage);
+  if (mobileAppStage === MOBILE_APP_STAGE_AGENCY_QUESTION) {
+    await handleAgencyQuestion(phone, message);
+    return;
+  }
+  if (mobileAppStage === MOBILE_APP_STAGE_ADD_DUTY_INTEREST) {
+    await handleAddDutyInterest(phone, message);
+    return;
+  }
   if (mobileAppStage === MOBILE_APP_STAGE_INSTALL_INTEREST) {
     await handlePulsoAppInstallInterest(phone, message);
     return;
@@ -2838,6 +2986,21 @@ async function handleCompleted(phone, message) {
   if (isDutyDaysQuestion(message)) {
     const progress = await getDutyDaysProgress(provider);
     await sendAndLog(phone, 'text', dutyDaysMessage(progress, (provider && provider.language) || 'ml'));
+    return;
+  }
+
+  // "duty" resends the Duty Card steps; "agency" asks the question again.
+  if (isAddDutyKeyword(message)) {
+    await sendAddDutyProcedure(phone, provider);
+    return;
+  }
+  if (isAgencyKeyword(message)) {
+    await updateProvider(phone, {
+      pulsoAppPromptStage: MOBILE_APP_STAGE_AGENCY_QUESTION,
+      mobileAppCampaignStage: MOBILE_APP_STAGE_AGENCY_QUESTION,
+      agencyQuestionRetried: false
+    });
+    await sendAgencyQuestionButtons(phone);
     return;
   }
 

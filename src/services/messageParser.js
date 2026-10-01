@@ -249,6 +249,41 @@ function parsePulsoAppInstallInterest(message) {
   return null;
 }
 
+// The Duty Card question after onboarding: "do you work with an agency?"
+function parseAgencyAnswer(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.AGENCY_YES) return 'yes';
+  if (replyId === BUTTON_IDS.AGENCY_NO) return 'no';
+  const normalized = normalizeText(getMessageText(message));
+  if (['yes', 'ok', 'okay', 'undu', 'ഉണ്ട്', 'അതെ', 'ഉണ്ട്.'].includes(normalized)) return 'yes';
+  if (['no', 'illa', 'ഇല്ല', 'ഇല്ല.'].includes(normalized)) return 'no';
+  return null;
+}
+
+// "Add the duty now?" — the follow-up when she said yes.
+function parseAddDutyInterest(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.ADD_DUTY_NOW) return 'now';
+  if (replyId === BUTTON_IDS.ADD_DUTY_LATER) return 'later';
+  const normalized = normalizeText(getMessageText(message));
+  if (['yes', 'ok', 'okay', 'now', 'ഉണ്ട്', 'അതെ'].includes(normalized)) return 'now';
+  if (['no', 'later', 'പിന്നീട്', 'ഇല്ല', 'വേണ്ട'].includes(normalized)) return 'later';
+  return null;
+}
+
+// Typed any time after onboarding: "duty" resends the steps, "agency" re-asks
+// the question. Kept to the bare words so "duty days" (the certificate
+// question, matched earlier) and ordinary chat never land here.
+function isAddDutyKeyword(message) {
+  const normalized = normalizeText(getMessageText(message));
+  return ['duty', 'add duty', 'add my duty', 'duty add'].includes(normalized);
+}
+
+function isAgencyKeyword(message) {
+  const normalized = normalizeText(getMessageText(message));
+  return ['agency', 'agency duty', 'ഏജൻസി'].includes(normalized);
+}
+
 function parsePulsoAppDevice(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId === BUTTON_IDS.PULSO_APP_DEVICE_IPHONE) return 'iphone';
@@ -378,6 +413,10 @@ module.exports = {
   parseTermsAcceptance,
   parsePulsoAppInstallInterest,
   parsePulsoAppDevice,
+  parseAgencyAnswer,
+  parseAddDutyInterest,
+  isAddDutyKeyword,
+  isAgencyKeyword,
   parsePulsoAppActivationAction,
   parsePulsoAppHelpReason,
   parseTermsReminderResume,

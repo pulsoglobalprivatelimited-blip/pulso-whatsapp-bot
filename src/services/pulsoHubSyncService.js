@@ -19,6 +19,9 @@ function buildProviderSyncPayload(provider) {
     dutyHourPreference: provider.dutyHourPreference || '',
     status: provider.status || '',
     termsAccepted: provider.termsAccepted === true,
+    // The Duty Card question after onboarding: true / false / null (not asked yet).
+    worksWithAgency: provider.worksWithAgency === true ? true : provider.worksWithAgency === false ? false : null,
+    addDutyInterest: provider.addDutyInterest || '',
     completedAt: provider.completedAt || null,
     verification: provider.verification || {},
     // Set when the person is onboarding through the Pulso app: the hub pushes

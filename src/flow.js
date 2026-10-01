@@ -88,7 +88,12 @@ const BUTTON_IDS = {
   PULSO_APP_HELP_LOGIN_OTP: 'pulso_app_help_login_otp',
   PULSO_APP_HELP_NO_SMARTPHONE: 'pulso_app_help_no_smartphone',
   PULSO_APP_DEVICE_IPHONE: 'pulso_app_device_iphone',
-  PULSO_APP_DEVICE_ANDROID: 'pulso_app_device_android'
+  PULSO_APP_DEVICE_ANDROID: 'pulso_app_device_android',
+  // The Duty Card question after onboarding, and the add-it-now follow-up.
+  AGENCY_YES: 'agency_yes',
+  AGENCY_NO: 'agency_no',
+  ADD_DUTY_NOW: 'add_duty_now',
+  ADD_DUTY_LATER: 'add_duty_later'
 };
 
 const QUALIFICATIONS = [
@@ -393,6 +398,22 @@ const MESSAGES = {
     'താങ്കൾ ഏത് phone ആണ് ഉപയോഗിക്കുന്നത്?',
   pulsoAppInstallRetry:
     'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും തിരഞ്ഞെടുക്കുക.',
+  // The Duty Card. Asked once, after the app step, as the last thing in
+  // onboarding. The founder's words, 1 Oct 2026 — do not rephrase.
+  agencyQuestion:
+    'താങ്കൾ ഇപ്പോൾ ഏതെങ്കിലും Home Care Agency / Caregiving Company വഴി duty ചെയ്യുന്നുണ്ടോ?',
+  agencyYes:
+    'നല്ലത് 👍\n\nഇപ്പോൾ ചെയ്യുന്ന duty Pulso App-ൽ add ചെയ്യാം. താങ്കൾ നൽകിയ duty details ഞങ്ങൾ Agency-യുമായി verify ചെയ്യും.\n\nDuty verify ആയാൽ താങ്കൾക്ക് ലഭിക്കുന്ന benefits:\n\n✓ Verify ആയ ഓരോ duty ദിവസവും Pulso-യുടെ 180-day Experience Certificate-ലേക്ക് count ചെയ്യും.\n\n✓ തുടർച്ചയായി 10 ദിവസം duty പൂർത്തിയാക്കി Agency-യിൽ നിന്ന് 5-star rating ലഭിച്ചാൽ ₹100 reward ലഭിക്കും.\n\n✓ കൂടുതൽ Verified Duty Days ഉണ്ടാകുമ്പോൾ Pulso-യിലെ താങ്കളുടെ Duty Ranking ഉയരും. അതിലൂടെ പുതിയ duty ലഭിക്കാനുള്ള chance മെച്ചപ്പെടും.',
+  addDutyInterestQuestion:
+    'ഇപ്പോൾ ചെയ്യുന്ന duty Pulso App-ൽ add ചെയ്യാൻ താൽപര്യമുണ്ടോ?',
+  addDutyProcedure:
+    'Pulso App-ൽ duty add ചെയ്യുന്ന വിധം:\n\n1️⃣ Pulso App open ചെയ്യുക\n2️⃣ Home screen-ൽ "Add my duty" tap ചെയ്യുക\n3️⃣ താഴെയുള്ള details നൽകുക:\n   • Agency-യുടെ പേര്\n   • Agency-യുടെ phone number — Google-ൽ കാണുന്ന number നൽകുക (Google Maps-ൽ agency-യുടെ പേര് search ചെയ്താൽ കാണാം)\n   • Duty ചെയ്യുന്ന area map-ൽ search ചെയ്ത് select ചെയ്യുക\n   • Duty തുടങ്ങിയ തീയതി\n   • Duty അവസാനിക്കുന്ന തീയതി\n   • Duty type (24 hour / Day / Night)\n4️⃣ Send tap ചെയ്യുക\n\nതാങ്കളുടെ Agency-ക്ക് Pulso-യിൽ നിന്ന് ഒരു WhatsApp message ലഭിക്കും. Agency "Yes" tap ചെയ്ത ശേഷം Pulso team agency-യെ verify ചെയ്യും. Verify ആയാൽ താങ്കൾക്ക് message ലഭിക്കും. അതിന് ശേഷം duty count തുടങ്ങും.\n\nഎല്ലാ ദിവസവും duty സ്ഥലത്ത് നിന്ന് Pulso App-ൽ selfie check-in ചെയ്യുക. Check-in ചെയ്ത ദിവസങ്ങൾ മാത്രമേ count ആകൂ.\n\nTip: Duty add ചെയ്യുന്നതിന് മുൻപ് Agency-യോട് പറയുക — "Pulso-യിൽ നിന്ന് ഒരു verification message വരും, Yes tap ചെയ്യണം."',
+  addDutyInstallFirst:
+    'ആദ്യം Pulso App install ചെയ്ത് onboarding-ൽ ഉപയോഗിച്ച അതേ number-ൽ login ചെയ്യുക.',
+  addDutyLater:
+    'ശരി. എപ്പോൾ വേണമെങ്കിലും "duty" എന്ന് message ചെയ്താൽ ഈ steps വീണ്ടും അയയ്ക്കാം.',
+  agencyQuestionRetry:
+    'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും തിരഞ്ഞെടുക്കുക.',
   pulsoAppDeviceQuestion:
     'താങ്കൾ ഏത് phone ആണ് ഉപയോഗിക്കുന്നത്?',
   pulsoAppDeviceRetry:
@@ -592,6 +613,20 @@ const KARNATAKA_MESSAGES = {
     'Watch this video to see how to install/login and activate your Pulso app profile.',
   pulsoAppInstallQuestion: 'Which phone do you use?',
   pulsoAppInstallRetry: 'Please select one option from below.',
+  // The Duty Card, in English. Same content as the Malayalam.
+  agencyQuestion:
+    'Are you currently doing duty through any Home Care Agency / Caregiving Company?',
+  agencyYes:
+    'Good 👍\n\nYou can add the duty you are doing now in the Pulso App. We will verify the duty details you give with the agency.\n\nOnce the duty is verified, you get:\n\n✓ Every verified duty day counts towards Pulso\u2019s 180-day Experience Certificate.\n\n✓ Complete 10 continuous days of duty and get a 5-star rating from the agency, and you receive a ₹100 reward.\n\n✓ As your Verified Duty Days grow, your Duty Ranking on Pulso rises, which improves your chance of getting new duties.',
+  addDutyInterestQuestion:
+    'Would you like to add the duty you are doing now in the Pulso App?',
+  addDutyProcedure:
+    'How to add a duty in the Pulso App:\n\n1️⃣ Open the Pulso App\n2️⃣ Tap "Add my duty" on the home screen\n3️⃣ Enter these details:\n   • The agency\u2019s name\n   • The agency\u2019s phone number — enter the number shown on Google (search the agency name on Google Maps to find it)\n   • Search and select the duty area on the map\n   • The date the duty started\n   • The date the duty ends\n   • Duty type (24 hour / Day / Night)\n4️⃣ Tap Send\n\nYour agency will get a WhatsApp message from Pulso. After the agency taps "Yes", the Pulso team verifies the agency. You will get a message once verified, and the duty count starts from then.\n\nEvery day, check in with a selfie in the Pulso App from the duty location. Only checked-in days are counted.\n\nTip: before adding the duty, tell your agency — "A verification message will come from Pulso, please tap Yes."',
+  addDutyInstallFirst:
+    'First install the Pulso App and log in with the same number you used for onboarding.',
+  addDutyLater:
+    'Okay. Message "duty" at any time and we will send these steps again.',
+  agencyQuestionRetry: 'Please select one option from below.',
   pulsoAppDeviceQuestion: 'Which phone do you use?',
   pulsoAppDeviceRetry: 'Please select Android / iPhone / Need help.',
   pulsoAppAndroidLink:
@@ -668,6 +703,10 @@ const UI_TEXT = {
   appHelpInstallTitle: 'Install help',
   appHelpLoginOtpTitle: 'Login / OTP issue',
   appHelpNoSmartphoneTitle: 'Smartphone ഇല്ല',
+  agencyYesTitle: 'ഉണ്ട്',
+  agencyNoTitle: 'ഇല്ല',
+  addDutyNowTitle: 'ഉണ്ട്',
+  addDutyLaterTitle: 'പിന്നീട്',
   districtPageSize: 7
 };
 
@@ -700,6 +739,10 @@ const KARNATAKA_UI_TEXT = {
   appHelpInstallTitle: 'Install help',
   appHelpLoginOtpTitle: 'Login / OTP issue',
   appHelpNoSmartphoneTitle: 'No smartphone',
+  agencyYesTitle: 'Yes',
+  agencyNoTitle: 'No',
+  addDutyNowTitle: 'Yes',
+  addDutyLaterTitle: 'Later',
   districtPageSize: 8
 };
 
