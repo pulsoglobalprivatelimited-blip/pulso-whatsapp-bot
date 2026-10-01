@@ -141,6 +141,34 @@ function buildAdditionalDocumentMessage(note) {
   return MESSAGES.additionalDocumentRequest.replace('{{note}}', note);
 }
 
+// The paper to ask for, named after the qualification she chose: "certificate"
+// alone made people send a CV (founder, 1 Oct 2026: no CV is needed).
+function certificatePaperFor(provider) {
+  const qualification = String((provider && provider.qualification) || '').toLowerCase();
+  const papers = MESSAGES.certificatePapers || {};
+  return papers[qualification] || '';
+}
+
+function buildCertificateRequestMessage(provider) {
+  const paper = certificatePaperFor(provider);
+  return paper ? MESSAGES.certificateRequestNamed.replace('{{paper}}', paper) : MESSAGES.certificateRequest;
+}
+
+function buildCertificateRetryMessage(provider) {
+  const paper = certificatePaperFor(provider);
+  return paper ? MESSAGES.certificateRetryNamed.replace('{{paper}}', paper) : MESSAGES.certificateRetry;
+}
+
+// A reviewer who got a CV types CERT as the Request doc note; she is then
+// asked for her own paper, in her own language.
+const CERTIFICATE_ONLY_NOTE_KEYWORDS = new Set(['cert', 'certificate', 'cv']);
+
+function expandCertificateOnlyNote(provider, note) {
+  if (!CERTIFICATE_ONLY_NOTE_KEYWORDS.has(String(note || '').trim().toLowerCase())) return note;
+  const paper = certificatePaperFor(provider) || 'certificate';
+  return MESSAGES.certificateOnlyNote.replace('{{paper}}', paper);
+}
+
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -286,11 +314,11 @@ async function sendCertificateCollectionButtons(phone, provider) {
 
 async function sendCertificateRetry(phone, provider, options = {}) {
   if (options.force) {
-    await sendAndLog(phone, 'text', MESSAGES.certificateRetry);
+    await sendAndLog(phone, 'text', buildCertificateRetryMessage(provider));
     return;
   }
 
-  await sendIfChanged(phone, provider, 'text', MESSAGES.certificateRetry);
+  await sendIfChanged(phone, provider, 'text', buildCertificateRetryMessage(provider));
 }
 
 function clearPendingCertificatePrompt(phone) {
@@ -1718,7 +1746,7 @@ async function sendPromptForCurrentStatus(phone, provider) {
       if (attachments.length) {
         await sendCertificateCollectionButtons(phone, provider);
       } else {
-        await sendAndLog(phone, 'text', MESSAGES.certificateRequest);
+        await sendAndLog(phone, 'text', buildCertificateRequestMessage(provider));
       }
       return;
     }
@@ -1951,7 +1979,7 @@ async function handleExpectedDutiesConfirmation(phone, message) {
   }
 
   await updateStatus(phone, STATUS.AWAITING_CERTIFICATE, 8, { expectedDutiesAccepted: true });
-  await sendAndLog(phone, 'text', MESSAGES.certificateRequest);
+  await sendAndLog(phone, 'text', buildCertificateRequestMessage(applicant));
 }
 
 // A certificate the reviewer cannot be shown is not a certificate we have.
@@ -2245,7 +2273,7 @@ async function requestAdditionalDocument(phone, requestedBy, note) {
   }
 
   return runWithProviderFlow(provider, async () => {
-  const trimmedNote = String(note || '').trim();
+  const trimmedNote = expandCertificateOnlyNote(provider, String(note || '').trim());
   if (!trimmedNote) {
     throw new Error('Custom note is required');
   }
@@ -3745,6 +3773,10 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
 }
 
 module.exports = {
+  // Exported for the certificate-wording test.
+  buildCertificateRequestMessage,
+  buildCertificateRetryMessage,
+  expandCertificateOnlyNote,
   normalizeBasicTierReasons,
   BASIC_TIER_REASONS,
   processIncomingMessage,

@@ -231,10 +231,29 @@ const MESSAGES = {
     'ശരി. ഈ തരത്തിലുള്ള duty responsibilities-ിൽ താൽപര്യമില്ലെങ്കിൽ പിന്നീട് വീണ്ടും message ചെയ്യാം.',
   notInterested:
     'ശരി. പിന്നീട് താൽപര്യമുണ്ടെങ്കിൽ വീണ്ടും message ചെയ്യാം.',
+  // People sent a CV here because "certificate" did not say which paper
+  // (founder, 1 Oct 2026: no CV is needed). The ask names the paper for the
+  // qualification she chose a step earlier; {{paper}} comes from
+  // certificatePapers below.
   certificateRequest:
-    'ദയവായി താങ്കളുടെ certificate upload ചെയ്യുക.',
+    'ദയവായി താങ്കളുടെ certificate-ന്റെ വ്യക്തമായ ഫോട്ടോ അയയ്ക്കുക.\n\nCV / resume അല്ല — certificate തന്നെയാണ് വേണ്ടത്.',
   certificateRetry:
-    'ദയവായി certificate image അല്ലെങ്കിൽ document ആയി upload ചെയ്യുക. പരമാവധി 4 image/PDF വരെ അയക്കാം.',
+    'ദയവായി certificate image അല്ലെങ്കിൽ PDF ആയി അയയ്ക്കുക. CV / resume അല്ല, certificate തന്നെ വേണം. പരമാവധി 4 image/PDF വരെ അയക്കാം.',
+  certificateRequestNamed:
+    'ദയവായി താങ്കളുടെ *{{paper}}*-ന്റെ വ്യക്തമായ ഫോട്ടോ അയയ്ക്കുക.\n\nCV / resume അല്ല — certificate തന്നെയാണ് വേണ്ടത്.',
+  certificateRetryNamed:
+    'ദയവായി താങ്കളുടെ *{{paper}}* image അല്ലെങ്കിൽ PDF ആയി അയയ്ക്കുക. CV / resume അല്ല, certificate തന്നെ വേണം. പരമാവധി 4 image/PDF വരെ അയക്കാം.',
+  certificateOnlyNote:
+    'താങ്കൾ അയച്ചത് certificate അല്ല. ദയവായി *{{paper}}*-ന്റെ ഫോട്ടോ അയയ്ക്കുക. CV / resume വേണ്ട.',
+  certificatePapers: {
+    gda: 'GDA course certificate',
+    gnm: 'GNM course certificate അല്ലെങ്കിൽ Nursing Council registration certificate',
+    anm: 'ANM course certificate അല്ലെങ്കിൽ Nursing Council registration certificate',
+    bsc_nursing: 'BSc Nursing degree certificate അല്ലെങ്കിൽ Nursing Council registration certificate',
+    hca: 'HCA course certificate',
+    other_caregiving: 'caregiving course certificate അല്ലെങ്കിൽ experience certificate',
+    basic_caregiver: 'caregiving course certificate അല്ലെങ്കിൽ experience certificate'
+  },
   certificateUploadFailed:
     'Certificate file receive ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി certificate വീണ്ടും image അല്ലെങ്കിൽ PDF ആയി അയയ്ക്കുക.',
   certificateUploadProgress:
@@ -468,9 +487,25 @@ const KARNATAKA_MESSAGES = {
   expectedDutiesDeclined:
     'Okay. If you are not interested in these care duties, you can message us later.',
   notInterested: 'Okay. If you are interested later, you can message us again.',
-  certificateRequest: 'Please upload your certificate as an image or PDF.',
+  certificateRequest:
+    'Please send a clear photo of your certificate.\n\nNot your CV or resume — we need the certificate itself.',
   certificateRetry:
-    'Please upload your certificate as an image or document. You can send up to 4 image/PDF files.',
+    'Please send your certificate as an image or PDF. Not your CV or resume — the certificate itself. You can send up to 4 image/PDF files.',
+  certificateRequestNamed:
+    'Please send a clear photo of your *{{paper}}*.\n\nNot your CV or resume — we need the certificate itself.',
+  certificateRetryNamed:
+    'Please send your *{{paper}}* as an image or PDF. Not your CV or resume — the certificate itself. You can send up to 4 image/PDF files.',
+  certificateOnlyNote:
+    'What you sent is not the certificate. Please send a photo of your *{{paper}}*. We do not need a CV or resume.',
+  certificatePapers: {
+    gda: 'GDA (General Duty Assistant) course certificate',
+    gnm: 'GNM course certificate or Nursing Council registration certificate',
+    anm: 'ANM course certificate or Nursing Council registration certificate',
+    bsc_nursing: 'BSc Nursing degree certificate or Nursing Council registration certificate',
+    hca: 'HCA (Home Care Assistant) course certificate',
+    other_caregiving: 'caregiving course certificate or experience certificate',
+    basic_caregiver: 'caregiving course certificate or experience certificate'
+  },
   certificateUploadFailed:
     'We could not receive the certificate file. Please resend it as an image or PDF.',
   certificateUploadProgress:

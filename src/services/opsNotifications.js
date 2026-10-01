@@ -1115,6 +1115,7 @@ async function promptAdditionalDocumentNoteEntry(provider, reviewerPhone) {
 
   const body = joinLines([
     'Send the note for the additional document request now.',
+    'Got a CV instead of the certificate? Reply CERT and she is asked for her own certificate by name.',
     'Example: Please upload Aadhaar front side.',
     'Your next WhatsApp text will be saved as the request note.'
   ]);
