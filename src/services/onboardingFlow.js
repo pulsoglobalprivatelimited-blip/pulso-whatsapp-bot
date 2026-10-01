@@ -1421,6 +1421,72 @@ async function runMobileAppCampaignForCompletedProviders(targetPhones = null) {
   };
 }
 
+// ---- The agency question for caregivers who finished before it existed -------
+// They are outside the 24-hour window, so it goes as the approved template
+// `duty_card_agency_question` (English; a Malayalam body was refused by Meta
+// before). The reply buttons carry "Yes" / "No", which parseAgencyAnswer reads,
+// and the person is put on the same stage as a fresh caregiver, so the rest of
+// the conversation is identical.
+const AGENCY_QUESTION_TEMPLATE = process.env.DUTY_CARD_AGENCY_QUESTION_TEMPLATE || 'duty_card_agency_question';
+
+function isCompletedProviderEligibleForAgencyQuestion(provider) {
+  return Boolean(
+    provider &&
+      provider.phone &&
+      provider.status === STATUS.COMPLETED &&
+      provider.termsAccepted === true &&
+      provider.worksWithAgency === undefined &&
+      !hasHistoryEvent(provider, (entry) => entry && entry.type === 'system' && entry.event === 'agency_question_sent')
+  );
+}
+
+async function runAgencyQuestionForCompletedProviders(targetPhones = null, { dryRun = false, limit = 0 } = {}) {
+  const providers = await listProviders();
+  const targetSet = Array.isArray(targetPhones) && targetPhones.length ? new Set(targetPhones) : null;
+  let candidates = providers.filter((provider) => {
+    if (targetSet && (!provider || !targetSet.has(provider.phone))) return false;
+    return isCompletedProviderEligibleForAgencyQuestion(provider);
+  });
+  if (limit > 0) candidates = candidates.slice(0, limit);
+  if (dryRun) {
+    return { scanned: providers.length, eligible: candidates.length, dryRun: true, phones: candidates.map((p) => p.phone) };
+  }
+  const results = [];
+  for (const provider of candidates) {
+    const phone = provider.phone;
+    try {
+      await runWithProviderFlow(provider, async () => {
+        // The body has one variable: her first name ("Dear caregiver" when we
+        // have none), so the question reads as addressed to her.
+        const firstName = String(provider.fullName || '').trim().split(/\s+/)[0] || 'Dear caregiver';
+        await sendAndLog(phone, 'template', {
+          name: AGENCY_QUESTION_TEMPLATE,
+          languageCode: 'en',
+          components: [{ type: 'body', parameters: [{ type: 'text', text: firstName.slice(0, 60) }] }]
+        }, 'bot');
+        await updateProvider(phone, {
+          pulsoAppPromptStage: MOBILE_APP_STAGE_AGENCY_QUESTION,
+          mobileAppCampaignStage: MOBILE_APP_STAGE_AGENCY_QUESTION,
+          agencyQuestionAskedAt: new Date().toISOString(),
+          agencyQuestionSource: 'backfill_template'
+        });
+        await appendHistory(phone, { type: 'system', event: 'agency_question_sent', source: 'backfill_template' });
+      });
+      results.push({ phone, sent: true });
+    } catch (error) {
+      results.push({ phone, sent: false, error: error.message || 'send_failed' });
+      console.error('[AGENCY_QUESTION_BACKFILL_ERROR]', phone, error.message, error.response ? JSON.stringify(error.response.data) : '');
+    }
+  }
+  return {
+    scanned: providers.length,
+    eligible: candidates.length,
+    sent: results.filter((r) => r.sent).length,
+    failed: results.filter((r) => !r.sent).length,
+    results
+  };
+}
+
 async function sendLegacyTermsReminder(provider) {
   if (!isLegacyWaitingForTermsProvider(provider)) {
     return false;
@@ -3956,6 +4022,8 @@ module.exports = {
   lastWhatsappInboundAt,
   PULSO_APP_HUB_SYNC_ACTOR,
   runMobileAppCampaignForCompletedProviders,
+  runAgencyQuestionForCompletedProviders,
+  isCompletedProviderEligibleForAgencyQuestion,
   reconcileAcceptedTermsProviders,
   runCurrentWaitingTermsReminderBackfill,
   runLegacyTermsReminderBackfill,
