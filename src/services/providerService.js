@@ -162,6 +162,11 @@ async function appendHistory(phone, event) {
   provider.lastMessageAt = at;
   provider.lastMessageDirection = summary.direction;
   provider.lastMessagePreview = summary.preview;
+  // Her own last word, kept apart from updatedAt and lastMessageAt, which every
+  // bot reply, sweep and backfill also moves. "Latest first" sorts on this.
+  if (summary.direction === 'in') {
+    provider.lastInboundAt = at;
+  }
   provider.updatedAt = at;
   return saveProvider(phone, provider);
 }
