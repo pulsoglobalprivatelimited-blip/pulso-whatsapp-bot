@@ -104,19 +104,19 @@
   /* ---- mode definitions -------------------------------------------------- */
 
   const SORT_CHIPS = [
-    { key: 'queue', label: 'Oldest waiting' },
-    { key: 'latest', label: 'Latest first' }
+    { key: 'latest', label: 'Latest first' },
+    { key: 'queue', label: 'Oldest waiting' }
   ];
 
   /* The same key the provider desk uses: one preference about how a person
      reads a list, not one per desk. */
-  const SORT_STORAGE_KEY = 'pulso-desk-sort';
+  const SORT_STORAGE_KEY = 'pulso-desk-sort-v2';
 
   function readStoredSort() {
     try {
-      return global.localStorage.getItem(SORT_STORAGE_KEY) === 'latest' ? 'latest' : 'queue';
+      return global.localStorage.getItem(SORT_STORAGE_KEY) === 'queue' ? 'queue' : 'latest';
     } catch (error) {
-      return 'queue';
+      return 'latest';
     }
   }
 
@@ -470,7 +470,7 @@
 
       wireChips('data-status-filter', (key) => { statusFilter = key; });
       wireChips('data-sort', (key) => {
-        sortMode = key === 'latest' ? 'latest' : 'queue';
+        sortMode = key === 'queue' ? 'queue' : 'latest';
         rememberSort(sortMode);
       });
       wireChips('data-call-filter', (key) => { callFilter = key; });

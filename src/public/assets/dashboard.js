@@ -9,7 +9,9 @@ let currentAppFilter = 'all';
 let currentQualificationFilter = 'all';
 /* Shared with the agency and customer boards: it is a preference about how a
    person reads a list, not about one desk. */
-const SORT_STORAGE_KEY = 'pulso-desk-sort';
+// v2 since 2 Oct 2026, when "Latest first" became the default (founder): a new
+// key so every reviewer starts on it once, whatever they last clicked.
+const SORT_STORAGE_KEY = 'pulso-desk-sort-v2';
 let currentSort = readStoredSort();
 let currentSearch = '';
 let currentCompletedRange = 'all';
@@ -110,9 +112,9 @@ const providerRoot = document.getElementById('side-provider') || document;
 
 function readStoredSort() {
   try {
-    return window.localStorage.getItem(SORT_STORAGE_KEY) === 'latest' ? 'latest' : 'queue';
+    return window.localStorage.getItem(SORT_STORAGE_KEY) === 'queue' ? 'queue' : 'latest';
   } catch (error) {
-    return 'queue';
+    return 'latest';
   }
 }
 
@@ -169,6 +171,10 @@ providerAll('[data-region-filter]').forEach((button) => {
     updateDashboardMetrics();
     renderList();
   });
+});
+// The chip that is lit must be the order in use, including a stored one.
+providerAll('[data-sort]').forEach((button) => {
+  button.classList.toggle('active', (button.dataset.sort === 'latest' ? 'latest' : 'queue') === currentSort);
 });
 providerAll('[data-sort]').forEach((button) => {
   button.addEventListener('click', () => {
@@ -892,7 +898,7 @@ function sortForQueue(list) {
   return PulsoDesk.sortRows(list, {
     mode: currentSort,
     toneOf: providerTone,
-    timeOf: providerSortTime
+    timeOf: currentSort === 'latest' ? providerLatestTime : providerSortTime
   });
 }
 
@@ -1149,6 +1155,18 @@ function providerSortTime(provider) {
   return provider.updatedAt || provider.lastMessageAt || provider.createdAt || null;
 }
 
+/* "Latest first" means the person who last wrote to us, not the record a job
+   last touched: updatedAt moves on every bot reply, reminder sweep and
+   backfill, which put a whole batch at "Just now" at the top. Records from
+   before lastInboundAt existed fall back to their last message if it was
+   theirs, then to when they first arrived. */
+function providerLatestTime(provider) {
+  if (!provider) return null;
+  if (provider.lastInboundAt) return provider.lastInboundAt;
+  if (provider.lastMessageDirection === 'in' && provider.lastMessageAt) return provider.lastMessageAt;
+  return provider.createdAt || provider.lastMessageAt || provider.updatedAt || null;
+}
+
 /* Their own last message, the way WhatsApp shows it — the single thing that
    makes a list scannable rather than merely readable.
 
@@ -1176,6 +1194,9 @@ function rowPreview(provider) {
 /* A row that needs a decision says how long it has been waiting; everything
    else says when it last moved. */
 function rowTime(provider, tone) {
+  if (currentSort === 'latest') {
+    return PulsoDesk.relativeTime(providerLatestTime(provider));
+  }
   if (tone === 'needs' || tone === 'stuck') {
     return PulsoDesk.waitLabel(providerSortTime(provider));
   }
@@ -1183,7 +1204,8 @@ function rowTime(provider, tone) {
 }
 
 function queueGroupLabel(provider, tone) {
-  return PulsoDesk.groupFor(currentSort, tone, providerSortTime(provider));
+  const at = currentSort === 'latest' ? providerLatestTime(provider) : providerSortTime(provider);
+  return PulsoDesk.groupFor(currentSort, tone, at);
 }
 
 /* An empty queue and a broken one used to look identical. This one also says
