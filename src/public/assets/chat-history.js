@@ -39,6 +39,7 @@
     if (value === 'other_caregiving') return 'Other caregiving';
     if (value === 'basic_caregiver') return 'Basic caregiver';
     if (value === 'no_certificate') return 'No certificate';
+    if (value === 'nursing_student') return 'Nursing student';
     return value ? formatStatus(value) : '-';
   }
 

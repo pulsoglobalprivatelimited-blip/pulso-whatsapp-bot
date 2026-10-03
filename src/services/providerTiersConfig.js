@@ -73,7 +73,7 @@ function tierForQualification(qualification) {
   // `no_certificate` is what she picked; `basic_caregiver` is what the reviewer
   // approved. Both are the Basic tier — nothing else is, so `other_caregiving`
   // stays GDA on purpose.
-  if (q === 'basic_caregiver' || q === 'no_certificate') return 'basic';
+  if (q === 'basic_caregiver' || q === 'no_certificate' || q === 'nursing_student') return 'basic';
   return 'gda';
 }
 

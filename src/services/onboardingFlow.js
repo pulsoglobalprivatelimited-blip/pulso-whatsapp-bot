@@ -279,7 +279,7 @@ function getStepForStatus(status) {
 
 function normalizeApprovedQualification(value) {
   const normalized = String(value || '').trim().toLowerCase();
-  const validQualifications = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving', 'basic_caregiver'];
+  const validQualifications = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving', 'basic_caregiver', 'nursing_student'];
   return validQualifications.includes(normalized) ? normalized : null;
 }
 
@@ -2720,8 +2720,11 @@ async function handleDistrict(phone, message) {
 /** "Your certificate has been sent for verification" is untrue for someone who
  *  has none; she is told a call is coming instead. */
 function verificationPendingMessageFor(provider) {
-  const noCertificate = String(provider && provider.qualification || '').toLowerCase() === 'no_certificate';
-  return noCertificate && MESSAGES.verificationPendingNoCertificate
+  const qualification = String(provider && provider.qualification || '').toLowerCase();
+  if (qualification === 'nursing_student' && MESSAGES.verificationPendingNursingStudent) {
+    return MESSAGES.verificationPendingNursingStudent;
+  }
+  return qualification === 'no_certificate' && MESSAGES.verificationPendingNoCertificate
     ? MESSAGES.verificationPendingNoCertificate
     : MESSAGES.verificationPending;
 }
@@ -3341,7 +3344,7 @@ async function resendNoCertificateReviewTo(reviewerPhone) {
 }
 
 const NO_CERTIFICATE_REVIEWER_HELP =
-  'You review "No certificate" applications only. Use the buttons on each alert: Call her, Approve (Basic) or Reject.';
+  'You review "No certificate" and nursing-student applications only. Use the buttons on each alert: Call her, Approve (Basic) or Reject.';
 
 async function handleReviewerMessage(phone, message) {
   let reviewAction = parseReviewerAction(message);

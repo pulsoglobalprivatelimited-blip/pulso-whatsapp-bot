@@ -709,7 +709,7 @@ function formatDutyHourPreference(value) {
 
 function normalizeQualification(value) {
   const normalized = String(value || '').trim().toLowerCase();
-  const validQualifications = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving', 'basic_caregiver', 'no_certificate'];
+  const validQualifications = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving', 'basic_caregiver', 'no_certificate', 'nursing_student'];
   return validQualifications.includes(normalized) ? normalized : '';
 }
 
@@ -722,6 +722,7 @@ function formatQualification(value) {
   if (value === 'other_caregiving') return 'Other caregiving';
   if (value === 'basic_caregiver') return 'Basic caregiver';
   if (value === 'no_certificate') return 'No certificate';
+  if (value === 'nursing_student') return 'Nursing student';
   return value ? formatStatus(value) : '-';
 }
 
@@ -1016,6 +1017,11 @@ function matchesQualificationFilter(provider) {
     return true;
   }
   const qualification = String((provider && provider.qualification) || '').toLowerCase();
+  // Nursing students are reviewed by a call like "No certificate", so they
+  // share its filter.
+  if (currentQualificationFilter === 'no_certificate') {
+    return qualification === 'no_certificate' || qualification === 'nursing_student';
+  }
   return qualification === currentQualificationFilter;
 }
 

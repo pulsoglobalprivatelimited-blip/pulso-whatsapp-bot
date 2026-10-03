@@ -75,8 +75,20 @@ function parseQualification(message) {
   if (replyId === BUTTON_IDS.QUALIFICATION_BSC_NURSING) return 'bsc_nursing';
   if (replyId === BUTTON_IDS.QUALIFICATION_OTHER_CAREGIVING) return 'other_caregiving';
   if (replyId === BUTTON_IDS.QUALIFICATION_NO_CERTIFICATE) return 'no_certificate';
+  if (replyId === BUTTON_IDS.QUALIFICATION_NURSING_STUDENT) return 'nursing_student';
 
   const normalized = normalizeText(getMessageText(message));
+  // Before GNM/ANM/BSc: "nursing student" and the row's own words name a course
+  // she is still studying, not one she holds.
+  if (
+    normalized.includes('nursing student') ||
+    normalized.includes('student nurse') ||
+    normalized.includes('നഴ്സിംഗ് വിദ്യാർത്ഥി') ||
+    normalized.includes('പഠിക്കുന്നു') ||
+    normalized.includes('studying')
+  ) {
+    return 'nursing_student';
+  }
   if (normalized.includes('gda')) return 'gda';
   if (normalized.includes('gnm')) return 'gnm';
   if (normalized.includes('anm')) return 'anm';

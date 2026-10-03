@@ -46,6 +46,7 @@
     other_caregiving: 'Other caregiving',
     basic_caregiver: 'Basic caregiver',
     no_certificate: 'No certificate',
+    nursing_student: 'Nursing student',
 
     /* provider onboarding status */
     certificate_verification_pending: 'Certificate to review',

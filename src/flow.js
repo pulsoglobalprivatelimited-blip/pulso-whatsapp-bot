@@ -57,6 +57,7 @@ const BUTTON_IDS = {
   QUALIFICATION_BSC_NURSING: 'qualification_bsc_nursing',
   QUALIFICATION_OTHER_CAREGIVING: 'qualification_other_caregiving',
   QUALIFICATION_NO_CERTIFICATE: 'qualification_no_certificate',
+  QUALIFICATION_NURSING_STUDENT: 'qualification_nursing_student',
   INTEREST_YES: 'interest_yes',
   INTEREST_NO: 'interest_no',
   DUTY_HOUR_8: 'duty_hour_8',
@@ -108,6 +109,13 @@ const QUALIFICATIONS = [
     description: 'Experience in caregiving'
   },
   {
+    // Founder, 3 Oct 2026: a nursing student is taken on as a Basic caregiver,
+    // shows her marks card, and is reviewed by phone like "No certificate".
+    id: BUTTON_IDS.QUALIFICATION_NURSING_STUDENT,
+    title: 'നഴ്സിംഗ് വിദ്യാർത്ഥി',
+    description: 'GNM / BSc / ANM പഠിക്കുന്നു'
+  },
+  {
     // Replaces "None of these" (27 Sep 2026), the one row that refused the
     // person it was shown to. Founder's wording. She is reviewed by phone,
     // not by document, and approved as Basic if the reviewer says so.
@@ -127,6 +135,11 @@ const ENGLISH_QUALIFICATIONS = [
     id: BUTTON_IDS.QUALIFICATION_OTHER_CAREGIVING,
     title: 'Other',
     description: 'Experience in caregiving'
+  },
+  {
+    id: BUTTON_IDS.QUALIFICATION_NURSING_STUDENT,
+    title: 'Nursing student',
+    description: 'Studying GNM / BSc / ANM'
   },
   {
     id: BUTTON_IDS.QUALIFICATION_NO_CERTIFICATE,
@@ -257,7 +270,8 @@ const MESSAGES = {
     bsc_nursing: 'BSc Nursing degree certificate അല്ലെങ്കിൽ Nursing Council registration certificate',
     hca: 'HCA course certificate',
     other_caregiving: 'caregiving course certificate അല്ലെങ്കിൽ experience certificate',
-    basic_caregiver: 'caregiving course certificate അല്ലെങ്കിൽ experience certificate'
+    basic_caregiver: 'caregiving course certificate അല്ലെങ്കിൽ experience certificate',
+    nursing_student: 'nursing course-ന്റെ marks card'
   },
   certificateUploadFailed:
     'Certificate file receive ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി certificate വീണ്ടും image അല്ലെങ്കിൽ PDF ആയി അയയ്ക്കുക.',
@@ -296,6 +310,8 @@ const MESSAGES = {
   // For the person with no certificate: nothing was "sent for verification".
   verificationPendingNoCertificate:
     'നന്ദി. നിങ്ങളുടെ വിവരങ്ങൾ ലഭിച്ചു. ഒരു പരിചരണ സർട്ടിഫിക്കറ്റ് ഇല്ലാത്തതിനാൽ, ഒരു ചെറിയ ഫോൺ സംഭാഷണത്തിനു ശേഷം തീരുമാനം അറിയിക്കും.',
+  verificationPendingNursingStudent:
+    'നന്ദി. നിങ്ങളുടെ വിവരങ്ങൾ ലഭിച്ചു. നിങ്ങൾ nursing student ആയതിനാൽ, ഒരു ചെറിയ ഫോൺ സംഭാഷണത്തിനു ശേഷം തീരുമാനം അറിയിക്കും.',
   additionalDocumentRequest:
     'Onboarding തുടരാൻ ഒരു additional document കൂടി ആവശ്യമാണ്.\n\nNote: {{note}}\n\nദയവായി image അല്ലെങ്കിൽ PDF ആയി ഇപ്പോൾ upload ചെയ്യുക.',
   additionalDocumentRetry:
@@ -525,7 +541,8 @@ const KARNATAKA_MESSAGES = {
     bsc_nursing: 'BSc Nursing degree certificate or Nursing Council registration certificate',
     hca: 'HCA (Home Care Assistant) course certificate',
     other_caregiving: 'caregiving course certificate or experience certificate',
-    basic_caregiver: 'caregiving course certificate or experience certificate'
+    basic_caregiver: 'caregiving course certificate or experience certificate',
+    nursing_student: 'nursing course marks card'
   },
   certificateUploadFailed:
     'We could not receive the certificate file. Please resend it as an image or PDF.',
@@ -556,6 +573,8 @@ const KARNATAKA_MESSAGES = {
     'Thank you. Your certificate has been sent for verification. We will inform you once it is reviewed.',
   verificationPendingNoCertificate:
     'Thank you. We have received your details. Since you do not have a caregiving certificate, our team will call you for a short talk and inform you after that.',
+  verificationPendingNursingStudent:
+    'Thank you. We have received your details. Since you are a nursing student, our team will call you for a short talk and inform you after that.',
   additionalDocumentRequest:
     'An additional document is required to continue onboarding.\n\nNote: {{note}}\n\nPlease upload it now as an image or PDF.',
   additionalDocumentRetry: 'Please upload the requested additional document as an image or PDF.',
@@ -873,7 +892,7 @@ function isNurseQualification(qualification) {
 // (`basic_caregiver`, what the reviewer chose) read the Basic figures, so she
 // never sees a rate she will not be paid — the GDA text was what she got until
 // 27 Sep 2026, ₹900/₹1200 against a real ₹600/₹750.
-const BASIC_QUALIFICATIONS = ['basic_caregiver', 'no_certificate'];
+const BASIC_QUALIFICATIONS = ['basic_caregiver', 'no_certificate', 'nursing_student'];
 
 function isBasicQualification(qualification) {
   return BASIC_QUALIFICATIONS.includes(String(qualification || '').toLowerCase());

@@ -101,8 +101,17 @@ function isNoCertificateReviewerPhone(phone) {
   return Boolean(scoped) && normalizePhone(phone) === scoped;
 }
 
+// "No certificate" and, since 3 Oct 2026, nursing students: both are reviewed
+// by a phone call and taken on as Basic, so both get the call-based alert and
+// go to the second reviewer.
+const CALL_REVIEW_QUALIFICATIONS = ['no_certificate', 'nursing_student'];
+
 function isNoCertificateProvider(provider) {
-  return String((provider && provider.qualification) || '').toLowerCase() === 'no_certificate';
+  return CALL_REVIEW_QUALIFICATIONS.includes(String((provider && provider.qualification) || '').toLowerCase());
+}
+
+function isNursingStudent(provider) {
+  return String((provider && provider.qualification) || '').toLowerCase() === 'nursing_student';
 }
 
 function reviewerDisplayName(phone) {
@@ -152,8 +161,9 @@ function buildNoCertificateReviewButtons(providerPhone) {
 // The template's body and buttons: Call her (link) / Approve (Basic) / Reject.
 // The body has six values; certificate_review_no_cert must stay in step.
 function buildNoCertificateTemplateBodyValues(provider, alsoSentTo) {
+  const name = (provider && provider.fullName) || '-';
   return [
-    (provider && provider.fullName) || '-',
+    isNursingStudent(provider) ? `${name} (nursing student)` : name,
     (provider && provider.phone) || '-',
     provider && provider.age ? String(provider.age) : '-',
     provider && provider.district ? String(provider.district) : '-',
@@ -310,6 +320,7 @@ function formatQualification(value) {
   if (value === 'other_caregiving') return 'Other caregiving';
   if (value === 'basic_caregiver') return 'Basic caregiver';
   if (value === 'no_certificate') return 'No certificate';
+  if (value === 'nursing_student') return 'Nursing student';
   return value ? formatStatus(value) : '-';
 }
 
@@ -835,7 +846,7 @@ async function notifyCertificateUploaded(provider, attachments) {
   }
 
   if (noCertificate) {
-    return notifyNoCertificateApplication(provider, recipients);
+    return notifyNoCertificateApplication(provider, recipients, { files: Array.isArray(attachments) ? attachments : attachments ? [attachments] : [] });
   }
 
   const body = joinLines([
@@ -990,7 +1001,9 @@ async function notifyNoCertificateApplication(provider, recipients, options = {}
     }
 
     const body = joinLines([
-      'No certificate — she asks to join as a Basic caregiver. Please call and interview her, then approve or reject.',
+      isNursingStudent(provider)
+        ? 'Nursing student — she is studying nursing and asks to join as a Basic caregiver. Her marks card follows. Please call and interview her, then approve or reject.'
+        : 'No certificate — she asks to join as a Basic caregiver. Please call and interview her, then approve or reject.',
       ...formatProviderSummary(provider),
       `Call her: ${buildCallLink(provider.phone)}`,
       alsoSentTo ? `Also sent to: ${alsoSentTo}. Whoever taps first decides.` : null,
@@ -1006,6 +1019,19 @@ async function notifyNoCertificateApplication(provider, recipients, options = {}
       console.error(
         '[OPS_REVIEW_NO_CERT_ERROR]',
         JSON.stringify({ to, providerPhone: provider && provider.phone, message: error.message }, null, 2)
+      );
+    }
+
+    // A nursing student's marks card, after the alert. Media reaches only a
+    // reviewer whose window is open; the desk always has it.
+    const files = Array.isArray(options.files) ? options.files : [];
+    for (let index = 0; index < files.length; index += 1) {
+      const result = await sendReviewMediaTo(to, provider, files[index], index + 1, files.length);
+      attempts.push(
+        buildNotificationAttempt(to, 'review_media', result, null, {
+          attachmentId: files[index] && files[index].id ? files[index].id : null,
+          attachmentType: files[index] && files[index].type ? files[index].type : null
+        })
       );
     }
   }
