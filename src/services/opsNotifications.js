@@ -212,6 +212,8 @@ function buildNoCertificateTemplateComponents(provider) {
 // GDA / HCA / GNM but sent a paper that is not that certificate. One tap puts
 // her in "Needs a call"; she is sent nothing.
 
+const CALL_BASIC_OFFER_DELAY_MS = Number(process.env.CALL_BASIC_OFFER_DELAY_MS || 6000);
+
 async function sendCallBasicOffer(to, provider) {
   const providerPhone = normalizePhone(provider && provider.phone);
   if (!to || !providerPhone) return null;
@@ -1009,8 +1011,23 @@ async function notifyCertificateUploaded(provider, attachments) {
 
   // Call (Basic), last, so it sits right under each reviewer's alert. Not
   // recorded as an alert attempt: the alert itself is what was delivered or not.
-  for (const to of recipients) {
-    await sendCallBasicOffer(to, provider);
+  // WhatsApp shows messages in the order they reach the phone, and a template
+  // with a picture arrives later than a plain button message sent a second
+  // after it, so the button landed ABOVE the alert (3 Oct 2026, Geethu
+  // Vincent). Wait first, so it arrives after.
+  // In the background, so the caregiver's own "thank you" is not held up.
+  const offerTo = recipients.slice();
+  const sendOffers = async () => {
+    for (const to of offerTo) {
+      await sendCallBasicOffer(to, provider);
+    }
+  };
+  if (CALL_BASIC_OFFER_DELAY_MS > 0) {
+    setTimeout(() => {
+      sendOffers().catch((error) => console.error('[OPS_CALL_BASIC_LATER_ERROR]', error.message));
+    }, CALL_BASIC_OFFER_DELAY_MS);
+  } else {
+    await sendOffers();
   }
 
   return { sent: notificationSent, recipients, attempts };
