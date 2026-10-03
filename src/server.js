@@ -689,6 +689,30 @@ app.all('/ivr/job-whatsapp', async (req, res) => {
   }
 });
 
+/* "Call her" on a "No certificate" review alert. WhatsApp's own call button
+   holds one fixed number, so the alert links here and this page opens the
+   dialler. The token is the number plus a signature made by the bot, so the
+   page dials only numbers we put in an alert. */
+app.get('/call/:token', (req, res) => {
+  const { verifyCallToken } = require('./services/opsNotifications');
+  const digits = verifyCallToken(req.params.token);
+  res.set('Cache-Control', 'no-store');
+  res.set('X-Robots-Tag', 'noindex');
+  if (!digits) {
+    return res.status(404).type('html').send('<!doctype html><meta charset="utf-8"><title>Link not valid</title><p style="font:18px system-ui;padding:24px">This call link is not valid.</p>');
+  }
+  const tel = `tel:+${digits}`;
+  const shown = digits.length === 12 && digits.startsWith('91') ? `+91 ${digits.slice(2, 7)} ${digits.slice(7)}` : `+${digits}`;
+  return res.type('html').send(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Call ${shown}</title><meta http-equiv="refresh" content="0;url=${tel}">
+<style>body{font:18px system-ui,sans-serif;margin:0;padding:32px 20px;background:#f4f6f5;color:#14211d;text-align:center}
+a{display:block;margin:24px auto 0;max-width:320px;padding:18px;border-radius:14px;background:#0b7a5c;color:#fff;font-weight:600;text-decoration:none;font-size:20px}</style>
+</head><body><p>Calling the applicant</p><p style="font-size:26px;font-weight:600">${shown}</p>
+<a href="${tel}">Call ${shown}</a>
+<script>location.href=${JSON.stringify(tel)};</script></body></html>`);
+});
+
 app.get('/privacy', (_req, res) => {
   res.sendFile(path.join(config.publicDir, 'privacy.html'));
 });

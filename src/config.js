@@ -87,6 +87,15 @@ module.exports = {
   adminUsername: process.env.ADMIN_USERNAME || 'admin',
   adminPassword: process.env.ADMIN_PASSWORD || '',
   sessionSecret: process.env.SESSION_SECRET || 'pulso-session-secret',
+  // A second reviewer who gets "No certificate" applications only, and may
+  // approve (as Basic) or reject those and nothing else (founder, 3 Oct 2026).
+  noCertificateReviewerPhone: process.env.NO_CERTIFICATE_REVIEWER_PHONE || '',
+  noCertificateReviewerName: process.env.NO_CERTIFICATE_REVIEWER_NAME || '',
+  // The one-template alert for "No certificate" (Call her / Approve (Basic) /
+  // Reject). Off until Meta approves it; until then the alert goes as text +
+  // buttons, with the call link in the text.
+  noCertificateReviewTemplateEnabled: process.env.NO_CERTIFICATE_REVIEW_TEMPLATE_ENABLED === 'true',
+  noCertificateReviewTemplateName: process.env.NO_CERTIFICATE_REVIEW_TEMPLATE_NAME || 'certificate_review_no_cert',
   sessionTtlHours: Number(process.env.SESSION_TTL_HOURS || 12),
   ownerNotificationPhone: process.env.OWNER_NOTIFICATION_PHONE || '919446600809',
   agentHelpWhatsappNumber: process.env.AGENT_HELP_WHATSAPP_NUMBER || '919446600809',

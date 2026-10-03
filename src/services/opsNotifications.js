@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const config = require('../config');
@@ -15,6 +16,7 @@ const {
 } = require('./metaClient');
 
 const REVIEW_ACTIONS = {
+  APPROVE_BASIC: 'review_approve_basic_',
   APPROVE: 'review_approve_',
   APPROVE_QUALIFICATION: 'review_approve_qualification_',
   REJECT: 'review_reject_',
@@ -81,6 +83,112 @@ function getCertificateReviewPhones() {
 
 function isReviewerPhone(phone) {
   return getReviewerPhones().includes(normalizePhone(phone));
+}
+
+// ---- the "No certificate" second reviewer ---------------------------------
+// One more number that gets "No certificate" applications only. Someone with
+// no certificate has nothing to check: the review is a phone call, which the
+// team can make. That number may approve (as Basic) or reject those people and
+// nothing else; the full reviewers keep everything.
+
+function getNoCertificateReviewerPhone() {
+  const phone = normalizePhone(config.noCertificateReviewerPhone);
+  return phone && !getReviewerPhones().includes(phone) ? phone : '';
+}
+
+function isNoCertificateReviewerPhone(phone) {
+  const scoped = getNoCertificateReviewerPhone();
+  return Boolean(scoped) && normalizePhone(phone) === scoped;
+}
+
+function isNoCertificateProvider(provider) {
+  return String((provider && provider.qualification) || '').toLowerCase() === 'no_certificate';
+}
+
+function reviewerDisplayName(phone) {
+  const digits = normalizePhone(phone);
+  if (!digits) return '';
+  if (digits === normalizePhone(config.noCertificateReviewerPhone) && config.noCertificateReviewerName) {
+    return config.noCertificateReviewerName;
+  }
+  return digits;
+}
+
+// The call link in a "No certificate" alert. The token is the number plus a
+// short signature, so the page dials only numbers we sent it, never one typed
+// into the address bar.
+function signCallToken(phone) {
+  const digits = normalizePhone(phone);
+  const signature = crypto
+    .createHmac('sha256', String(config.sessionSecret || ''))
+    .update(`call:${digits}`)
+    .digest('hex')
+    .slice(0, 16);
+  return `${digits}-${signature}`;
+}
+
+function verifyCallToken(token) {
+  const match = /^(\d{8,15})-([0-9a-f]{16})$/.exec(String(token || ''));
+  if (!match) return null;
+  const expected = signCallToken(match[1]);
+  const given = Buffer.from(token);
+  const wanted = Buffer.from(expected);
+  if (given.length !== wanted.length || !crypto.timingSafeEqual(given, wanted)) return null;
+  return match[1];
+}
+
+function buildCallLink(phone) {
+  const base = String(config.baseUrl || '').replace(/\/+$/, '');
+  return `${base}/call/${signCallToken(phone)}`;
+}
+
+function buildNoCertificateReviewButtons(providerPhone) {
+  return [
+    { id: `${REVIEW_ACTIONS.APPROVE_BASIC}${providerPhone}`, title: 'Approve (Basic)' },
+    { id: `${REVIEW_ACTIONS.REJECT}${providerPhone}`, title: 'Reject' }
+  ];
+}
+
+// The template's body and buttons: Call her (link) / Approve (Basic) / Reject.
+// The body has six values; certificate_review_no_cert must stay in step.
+function buildNoCertificateTemplateBodyValues(provider, alsoSentTo) {
+  return [
+    (provider && provider.fullName) || '-',
+    (provider && provider.phone) || '-',
+    provider && provider.age ? String(provider.age) : '-',
+    provider && provider.district ? String(provider.district) : '-',
+    formatDutyHourPreference(provider && provider.dutyHourPreference),
+    alsoSentTo || '-'
+  ].map(formatReviewTemplateValue);
+}
+
+function buildNoCertificateTemplateComponents(provider, alsoSentTo) {
+  const providerPhone = normalizePhone(provider && provider.phone);
+  return [
+    {
+      type: 'body',
+      parameters: buildNoCertificateTemplateBodyValues(provider, alsoSentTo).map((text) => ({ type: 'text', text }))
+    },
+    { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: signCallToken(providerPhone) }] },
+    {
+      type: 'button',
+      sub_type: 'quick_reply',
+      index: '1',
+      parameters: [{ type: 'payload', payload: `${REVIEW_ACTIONS.APPROVE_BASIC}${providerPhone}` }]
+    },
+    {
+      type: 'button',
+      sub_type: 'quick_reply',
+      index: '2',
+      parameters: [{ type: 'payload', payload: `${REVIEW_ACTIONS.REJECT}${providerPhone}` }]
+    }
+  ];
+}
+
+// Who else got this alert, in words, so two people do not both call her.
+function describeOtherRecipients(to, recipients) {
+  const others = recipients.filter((phone) => phone !== to).map(reviewerDisplayName).filter(Boolean);
+  return others.length ? others.join(', ') : '';
 }
 
 function joinLines(lines) {
@@ -714,15 +822,22 @@ async function sendAdditionalDocumentMedia(provider, attachment) {
 }
 
 async function notifyCertificateUploaded(provider, attachments) {
-  const recipients = getCertificateReviewPhones();
+  // Someone who picked "No certificate" sent nothing to look at: the reviewer
+  // has to ring her, then approve (as Basic) or reject. Say so up front, or the
+  // alert opens with "certificate uploaded" over an empty card.
+  const noCertificate = isNoCertificateProvider(provider);
+  const recipients = uniquePhones([
+    ...getCertificateReviewPhones(),
+    ...(noCertificate ? [getNoCertificateReviewerPhone()] : [])
+  ]);
   if (!recipients.length) {
     return { sent: false, recipients: [], attempts: [] };
   }
 
-  // Someone who picked "No certificate" sent nothing to look at: the reviewer
-  // has to ring her, then approve (as Basic) or reject. Say so up front, or the
-  // alert opens with "certificate uploaded" over an empty card.
-  const noCertificate = String(provider && provider.qualification || '').toLowerCase() === 'no_certificate';
+  if (noCertificate) {
+    return notifyNoCertificateApplication(provider, recipients);
+  }
+
   const body = joinLines([
     noCertificate
       ? 'No certificate — she asks to join as a Basic caregiver. Please call and interview her, then approve or reject.'
@@ -813,6 +928,84 @@ async function notifyCertificateUploaded(provider, attachments) {
           attachmentId: files[index] && files[index].id ? files[index].id : null,
           attachmentType: files[index] && files[index].type ? files[index].type : null
         })
+      );
+    }
+  }
+
+  return { sent: notificationSent, recipients, attempts };
+}
+
+// "No certificate": no file, so no media template. One template carries Call
+// her / Approve (Basic) / Reject and crosses the 24-hour window; until Meta has
+// approved it, or if it is refused, the alert goes as text with the call link
+// and two buttons, which reach a reviewer whose window is open.
+async function notifyNoCertificateApplication(provider, recipients, options = {}) {
+  const attempts = [];
+  let notificationSent = false;
+
+  for (const to of recipients) {
+    const alsoSentTo = describeOtherRecipients(to, recipients);
+
+    if (config.noCertificateReviewTemplateEnabled && config.noCertificateReviewTemplateName) {
+      try {
+        const result = await sendTemplate(
+          to,
+          config.noCertificateReviewTemplateName,
+          getCertificateReviewTemplateLanguage(),
+          buildNoCertificateTemplateComponents(provider, alsoSentTo)
+        );
+        attempts.push(
+          buildNotificationAttempt(to, 'review_template_no_cert', result, null, {
+            templateName: config.noCertificateReviewTemplateName
+          })
+        );
+        notificationSent = true;
+        continue;
+      } catch (error) {
+        attempts.push(
+          buildNotificationAttempt(to, 'review_template_no_cert', null, error, {
+            templateName: config.noCertificateReviewTemplateName
+          })
+        );
+      }
+    }
+
+    // The approved notice template ("pending review, reply REVIEW") crosses the
+    // 24-hour window; the buttons below only reach a reviewer whose window is
+    // open. A reply of REVIEW brings the full alert back.
+    if (!options.skipNotice) {
+      try {
+        const result = await sendCertificateReviewTemplate(to, provider);
+        if (result) {
+          attempts.push(buildNotificationAttempt(to, 'review_template', result, null, {
+            templateName: getCertificateReviewTemplateName()
+          }));
+          notificationSent = true;
+        }
+      } catch (error) {
+        attempts.push(buildNotificationAttempt(to, 'review_template', null, error, {
+          templateName: getCertificateReviewTemplateName()
+        }));
+      }
+    }
+
+    const body = joinLines([
+      'No certificate — she asks to join as a Basic caregiver. Please call and interview her, then approve or reject.',
+      ...formatProviderSummary(provider),
+      `Call her: ${buildCallLink(provider.phone)}`,
+      alsoSentTo ? `Also sent to: ${alsoSentTo}. Whoever taps first decides.` : null,
+      'Tap below to approve (Basic) or reject.'
+    ]);
+
+    try {
+      const result = await sendButtons(to, body, buildNoCertificateReviewButtons(provider.phone));
+      attempts.push(buildNotificationAttempt(to, 'review_buttons', result));
+      notificationSent = true;
+    } catch (error) {
+      attempts.push(buildNotificationAttempt(to, 'review_buttons', null, error));
+      console.error(
+        '[OPS_REVIEW_NO_CERT_ERROR]',
+        JSON.stringify({ to, providerPhone: provider && provider.phone, message: error.message }, null, 2)
       );
     }
   }
@@ -1257,6 +1450,13 @@ function parseReviewerAction(message) {
     }
   }
 
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.APPROVE_BASIC)) {
+    return {
+      action: 'approve_basic',
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.APPROVE_BASIC.length)
+    };
+  }
+
   if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.APPROVE)) {
     return {
       action: 'approve',
@@ -1392,10 +1592,21 @@ module.exports = {
   buildCertificateReviewBodyValues,
   getRejectReasonDetails,
   isReviewerPhone,
+  isNoCertificateReviewerPhone,
+  isNoCertificateProvider,
+  getNoCertificateReviewerPhone,
+  reviewerDisplayName,
+  signCallToken,
+  verifyCallToken,
+  buildCallLink,
+  buildNoCertificateTemplateComponents,
+  buildNoCertificateTemplateBodyValues,
+  REVIEW_ACTIONS,
   notifyAgentHelpRequested,
   notifyAdditionalDocumentRequested,
   notifyAdditionalDocumentUploaded,
   notifyCertificateUploaded,
+  notifyNoCertificateApplication,
   notifyCertificateReviewed,
   notifyOnboardingCompleted,
   parseReviewerAction,

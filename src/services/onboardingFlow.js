@@ -38,6 +38,10 @@ const {
 const {
   getRejectReasonDetails,
   isReviewerPhone,
+  isNoCertificateReviewerPhone,
+  isNoCertificateProvider,
+  reviewerDisplayName,
+  notifyNoCertificateApplication,
   notifyAgentHelpRequested,
   notifyAdditionalDocumentRequested,
   notifyAdditionalDocumentUploaded,
@@ -3272,8 +3276,90 @@ async function resendLatestPendingCertificateReview(reviewerPhone) {
   return pendingProvider.phone;
 }
 
+// Who decided, in words, for the second tap on the same person.
+function formatIstTime(iso) {
+  const at = iso ? new Date(iso) : null;
+  if (!at || Number.isNaN(at.getTime())) return '';
+  return at.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
+function describeReviewDecision(provider, providerPhone) {
+  const verification = (provider && provider.verification) || {};
+  const who = reviewerDisplayName(verification.reviewedBy) || verification.reviewedBy || '';
+  const when = formatIstTime(verification.reviewedAt);
+  const tail = `${who ? ` by ${who}` : ''}${when ? ` at ${when}` : ''}`;
+  if (verification.status === 'verified') return `Already approved${tail} (${providerPhone}).`;
+  if (verification.status === 'rejected') return `Already rejected${tail} (${providerPhone}).`;
+  return `Certificate review is not pending for ${providerPhone}.`;
+}
+
+// Taps that change the outcome. Any of them on a person someone else has
+// already decided gets "Already approved by …" and does nothing, so the first
+// reviewer to tap decides.
+const DECIDING_REVIEW_ACTIONS = new Set([
+  'approve',
+  'approve_basic',
+  'approve_qualification',
+  'basic_tier_reason',
+  'confirm_approve',
+  'request_additional_document',
+  'confirm_request_additional_document',
+  'reject',
+  'add_note',
+  'confirm_reject'
+]);
+
+// What the "No certificate" reviewer may do: call, approve as Basic, reject.
+const NO_CERTIFICATE_REVIEWER_ACTIONS = new Set([
+  'approve_basic',
+  'basic_tier_reason',
+  'confirm_approve',
+  'reject',
+  'add_note',
+  'confirm_reject',
+  'cancel',
+  'note_text'
+]);
+
+// Any text from the "No certificate" reviewer (REVIEW, hi, …) opens their
+// window, so the oldest waiting "No certificate" alert can now go to them in
+// full. Only to them, and only a "No certificate" one.
+async function resendNoCertificateReviewTo(reviewerPhone) {
+  const candidates = await listPendingVerificationNotificationProviders();
+  const waiting = candidates.filter((c) => isPendingCertificateReview(c) && isNoCertificateProvider(c));
+  if (!waiting.length) return null;
+  const provider = waiting[0];
+  await notifyNoCertificateApplication(provider, [reviewerPhone], { skipNotice: true });
+  return provider.phone;
+}
+
+const NO_CERTIFICATE_REVIEWER_HELP =
+  'You review "No certificate" applications only. Use the buttons on each alert: Call her, Approve (Basic) or Reject.';
+
 async function handleReviewerMessage(phone, message) {
-  const reviewAction = parseReviewerAction(message);
+  let reviewAction = parseReviewerAction(message);
+  const scopedReviewer = isNoCertificateReviewerPhone(phone) && !isReviewerPhone(phone);
+  // The second reviewer approves only on the Basic rate; an old "Approve"
+  // button means the same thing for them.
+  if (scopedReviewer && reviewAction && reviewAction.action === 'approve') {
+    reviewAction = { ...reviewAction, action: 'approve_basic' };
+  }
+  if (
+    scopedReviewer &&
+    reviewAction &&
+    !NO_CERTIFICATE_REVIEWER_ACTIONS.has(reviewAction.action) &&
+    !getRejectReasonDetails(reviewAction.action)
+  ) {
+    await sendText(phone, NO_CERTIFICATE_REVIEWER_HELP);
+    return;
+  }
   const providerPhone = reviewAction && reviewAction.phone ? reviewAction.phone : null;
 
   if (reviewAction && reviewAction.action === 'note_text') {
@@ -3287,6 +3373,12 @@ async function handleReviewerMessage(phone, message) {
         candidate.verification.reviewerWorkflow.reviewerPhone === phone &&
         ['awaiting_note', 'awaiting_additional_document_note'].includes(candidate.verification.reviewerWorkflow.stage)
     );
+
+    if (!pendingProvider && scopedReviewer) {
+      const resent = await resendNoCertificateReviewTo(phone);
+      if (!resent) await sendText(phone, `No "No certificate" application is waiting right now. ${NO_CERTIFICATE_REVIEWER_HELP}`);
+      return;
+    }
 
     if (!pendingProvider) {
       const resentProviderPhone = await resendLatestPendingCertificateReview(phone);
@@ -3335,6 +3427,12 @@ async function handleReviewerMessage(phone, message) {
     return;
   }
 
+  if ((!reviewAction || !providerPhone) && scopedReviewer) {
+    const resent = await resendNoCertificateReviewTo(phone);
+    if (!resent) await sendText(phone, `No "No certificate" application is waiting right now. ${NO_CERTIFICATE_REVIEWER_HELP}`);
+    return;
+  }
+
   if (!reviewAction || !providerPhone) {
     const resentProviderPhone = await resendLatestPendingCertificateReview(phone);
     if (resentProviderPhone) {
@@ -3351,11 +3449,37 @@ async function handleReviewerMessage(phone, message) {
     return;
   }
 
+  if (scopedReviewer && !isNoCertificateProvider(provider)) {
+    await sendText(phone, `${providerPhone} is not a "No certificate" application. ${NO_CERTIFICATE_REVIEWER_HELP}`);
+    return;
+  }
+
   if (
     !isPendingCertificateReview(provider) &&
-    ['approve', 'approve_qualification', 'request_additional_document', 'reject'].includes(reviewAction.action)
+    (DECIDING_REVIEW_ACTIONS.has(reviewAction.action) || getRejectReasonDetails(reviewAction.action))
   ) {
-    await sendText(phone, `Certificate review is not pending for ${providerPhone}.`);
+    await sendText(phone, describeReviewDecision(provider, providerPhone));
+    return;
+  }
+
+  /* Approve (Basic): someone with no certificate is taken on at the Basic rate,
+     and the reason is already known (no course certificate, plus age when she
+     is over the threshold), so this goes straight to Confirm approve. */
+  if (reviewAction.action === 'approve_basic') {
+    const tiers = await getProviderTiers();
+    const reasons = ['no_course_certificate'];
+    if (Number(provider.age) > Number(tiers.basicTierAgeThreshold)) reasons.unshift('age_over_threshold');
+    await updateProvider(
+      providerPhone,
+      buildReviewerWorkflowPatch(provider.verification && provider.verification.reviewerWorkflow, {
+        reviewerPhone: phone,
+        stage: 'awaiting_approve_confirmation',
+        qualification: 'basic_caregiver',
+        basicTierReasons: normalizeBasicTierReasons(reasons)
+      })
+    );
+    const refreshedProvider = await getProvider(providerPhone);
+    await requestReviewConfirmation(refreshedProvider, 'approve', phone, 'basic_caregiver');
     return;
   }
 
@@ -3602,7 +3726,7 @@ async function handleReviewerMessage(phone, message) {
 }
 
 async function processIncomingMessage(phone, message) {
-  if (isReviewerPhone(phone)) {
+  if (isReviewerPhone(phone) || isNoCertificateReviewerPhone(phone)) {
     await handleReviewerMessage(phone, message);
     return;
   }
