@@ -42,6 +42,7 @@ const {
   isNoCertificateProvider,
   reviewerDisplayName,
   notifyNoCertificateApplication,
+  requestCallBasicDecision,
   notifyAgentHelpRequested,
   notifyAdditionalDocumentRequested,
   notifyAdditionalDocumentUploaded,
@@ -2494,6 +2495,7 @@ async function requestAdditionalDocument(phone, requestedBy, note) {
   await updateProvider(phone, {
     status: STATUS.ADDITIONAL_DOCUMENT_REQUESTED,
     currentStep: 13,
+    verification: { ...(provider.verification || {}), needsCall: false },
     documents: {
       ...provider.documents,
       additionalDocumentRequest: {
@@ -3307,6 +3309,7 @@ function describeReviewDecision(provider, providerPhone) {
 // already decided gets "Already approved by …" and does nothing, so the first
 // reviewer to tap decides.
 const DECIDING_REVIEW_ACTIONS = new Set([
+  'call_basic',
   'approve',
   'approve_basic',
   'approve_qualification',
@@ -3345,6 +3348,26 @@ async function resendNoCertificateReviewTo(reviewerPhone) {
 
 const NO_CERTIFICATE_REVIEWER_HELP =
   'You review "No certificate" and nursing-student applications only. Use the buttons on each alert: Call her, Approve (Basic) or Reject.';
+
+/* Call (Basic): the paper she sent is not the certificate she claimed. She is
+   sent nothing; she goes into "Needs a call" on the desk, where the reviewer
+   rings her and approves her on the Basic rate or rejects her. Approving,
+   rejecting or asking for a document takes her out (her status moves on). */
+async function markNeedsCall(phone, by) {
+  const provider = await getProvider(phone);
+  if (!provider) throw new Error('Provider not found');
+  if (!isPendingCertificateReview(provider)) throw new Error('Certificate review is not pending');
+  await updateProvider(phone, {
+    verification: {
+      needsCall: true,
+      needsCallAt: new Date().toISOString(),
+      needsCallBy: String(by || config.adminDefaultReviewer || 'ops-team'),
+      needsCallReason: 'certificate_not_valid'
+    }
+  });
+  await appendHistory(phone, { type: 'system', event: 'needs_call_certificate_not_valid', by: String(by || '') });
+  return getProvider(phone);
+}
 
 async function handleReviewerMessage(phone, message) {
   let reviewAction = parseReviewerAction(message);
@@ -3462,6 +3485,13 @@ async function handleReviewerMessage(phone, message) {
     (DECIDING_REVIEW_ACTIONS.has(reviewAction.action) || getRejectReasonDetails(reviewAction.action))
   ) {
     await sendText(phone, describeReviewDecision(provider, providerPhone));
+    return;
+  }
+
+  if (reviewAction.action === 'call_basic') {
+    await markNeedsCall(providerPhone, phone);
+    const refreshedProvider = await getProvider(providerPhone);
+    await requestCallBasicDecision(refreshedProvider, phone);
     return;
   }
 
@@ -3973,6 +4003,7 @@ async function approveCertificate(phone, reviewedBy, notes, qualification, reaso
     verification: {
       status: 'verified',
       notes: notes || '',
+      needsCall: false,
       reviewedAt: new Date().toISOString(),
       reviewedBy: reviewedBy || config.adminDefaultReviewer
     }
@@ -4098,6 +4129,7 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
     verification: {
       status: 'rejected',
       notes: notes || '',
+      needsCall: false,
       reviewedAt: new Date().toISOString(),
       reviewedBy: reviewedBy || config.adminDefaultReviewer
     },
@@ -4129,6 +4161,7 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
 }
 
 module.exports = {
+  markNeedsCall,
   // Exported for the certificate-wording test.
   buildCertificateRequestMessage,
   buildCertificateRetryMessage,

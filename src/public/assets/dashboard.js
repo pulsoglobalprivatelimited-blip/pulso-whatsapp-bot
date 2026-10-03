@@ -264,6 +264,7 @@ historyBottomButton.addEventListener('click', () => {
 document.getElementById('approve-button').addEventListener('click', () => submitReview('approve-certificate'));
 document.getElementById('undo-approval-button').addEventListener('click', submitUndoApproval);
 document.getElementById('reject-button').addEventListener('click', () => submitReview('reject-certificate'));
+document.getElementById('call-basic-button').addEventListener('click', () => submitCallBasic());
 document
   .getElementById('request-additional-document-button')
   .addEventListener('click', submitAdditionalDocumentRequest);
@@ -1019,8 +1020,10 @@ function matchesQualificationFilter(provider) {
   const qualification = String((provider && provider.qualification) || '').toLowerCase();
   // Nursing students are reviewed by a call like "No certificate", so they
   // share its filter.
+  // "Needs a call": everyone reviewed by a phone call - no certificate, nursing
+  // student, or a certificate the reviewer marked not valid (Call (Basic)).
   if (currentQualificationFilter === 'no_certificate') {
-    return qualification === 'no_certificate' || qualification === 'nursing_student';
+    return qualification === 'no_certificate' || qualification === 'nursing_student' || needsCallMarked(provider);
   }
   return qualification === currentQualificationFilter;
 }
@@ -1181,9 +1184,23 @@ function providerLatestTime(provider) {
    rows in a row reading "Bot: നന്ദി. താങ്കളുടെ certificate verification-…" and
    no way to tell them apart. Where the last word was ours, the useful thing is
    what we are about to look at. */
+function needsCallMarked(provider) {
+  return Boolean(
+    provider &&
+      provider.verification &&
+      provider.verification.needsCall === true &&
+      getDashboardStatus(provider) === 'certificate_verification_pending'
+  );
+}
+
 function rowPreview(provider) {
   if (shouldShowCompletedListSummary()) {
     return formatListSummary(provider);
+  }
+
+  if (needsCallMarked(provider)) {
+    const claimed = provider.qualification ? formatQualification(provider.qualification) : '';
+    return claimed ? `Certificate not valid · claimed ${claimed}` : 'Certificate not valid · needs a call';
   }
 
   const theirs = provider && provider.lastMessageDirection === 'in';
@@ -1696,7 +1713,9 @@ async function renderDetail(provider) {
   [
     ['approve-button', stage.approve],
     ['reject-button', stage.reject],
-    ['undo-approval-button', stage.undo]
+    ['undo-approval-button', stage.undo],
+    // Only for a certificate application not already on the call list.
+    ['call-basic-button', stage.approve && !['no_certificate', 'nursing_student'].includes(String(detailProvider.qualification || '').toLowerCase()) && !needsCallMarked(detailProvider)]
   ].forEach(([id, visible]) => {
     const button = document.getElementById(id);
     if (button) button.classList.toggle('hidden', !visible);
@@ -1732,7 +1751,8 @@ const REVIEW_ACTION_BUTTON_IDS = [
   'request-additional-document-button',
   'verify-app-activation-button',
   'manual-certificate-upload-button',
-  'undo-approval-button'
+  'undo-approval-button',
+  'call-basic-button'
 ];
 
 /* The Basic rate is reached two ways — the qualification, or an age over the
@@ -1886,6 +1906,27 @@ async function submitReview(action) {
     sayReviewResult(error.message || 'That did not go through. Try again.', 'error');
   } finally {
     setReviewBusy(false, approving ? 'approve-button' : 'reject-button');
+  }
+}
+
+/* Call (Basic) from the desk: she is sent nothing and joins "Needs a call". */
+async function submitCallBasic() {
+  if (!selectedPhone || reviewInFlight) return;
+  const record = providers.find((item) => item.phone === selectedPhone);
+  const who = (record && record.fullName) || PulsoDesk.formatPhone(selectedPhone);
+  if (!confirm(`Certificate not valid? Move ${who} to "Needs a call"? Nothing is sent to her.`)) return;
+  setReviewBusy(true, 'call-basic-button');
+  try {
+    const updated = await fetchJson(`/admin/providers/${selectedPhone}/needs-call`, { method: 'POST' });
+    const index = providers.findIndex((item) => item.phone === updated.phone);
+    if (index >= 0) providers[index] = updated;
+    renderDetail(updated);
+    renderList();
+    sayReviewResult(`${who} is in "Needs a call". Call her, then approve as Basic caregiver or reject.`, 'success');
+  } catch (error) {
+    sayReviewResult(error.message || 'That did not go through. Try again.', 'error');
+  } finally {
+    setReviewBusy(false, 'call-basic-button');
   }
 }
 

@@ -96,6 +96,10 @@ module.exports = {
   // buttons, with the call link in the text.
   noCertificateReviewTemplateEnabled: process.env.NO_CERTIFICATE_REVIEW_TEMPLATE_ENABLED === 'true',
   noCertificateReviewTemplateName: process.env.NO_CERTIFICATE_REVIEW_TEMPLATE_NAME || 'certificate_review_no_cert',
+  // "Call (Basic)" under a certificate alert: as a one-button template once
+  // Meta approves it (reaches a reviewer cold), as an in-window button until then.
+  certificateCallBasicTemplateEnabled: process.env.CERTIFICATE_CALL_BASIC_TEMPLATE_ENABLED === 'true',
+  certificateCallBasicTemplateName: process.env.CERTIFICATE_CALL_BASIC_TEMPLATE_NAME || 'certificate_call_basic',
   sessionTtlHours: Number(process.env.SESSION_TTL_HOURS || 12),
   ownerNotificationPhone: process.env.OWNER_NOTIFICATION_PHONE || '919446600809',
   agentHelpWhatsappNumber: process.env.AGENT_HELP_WHATSAPP_NUMBER || '919446600809',

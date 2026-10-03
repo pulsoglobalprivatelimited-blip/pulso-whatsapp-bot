@@ -17,6 +17,7 @@ const {
 
 const REVIEW_ACTIONS = {
   APPROVE_BASIC: 'review_approve_basic_',
+  CALL_BASIC: 'review_call_basic_',
   APPROVE: 'review_approve_',
   APPROVE_QUALIFICATION: 'review_approve_qualification_',
   REJECT: 'review_reject_',
@@ -193,6 +194,64 @@ function buildNoCertificateTemplateComponents(provider, alsoSentTo) {
       parameters: [{ type: 'payload', payload: `${REVIEW_ACTIONS.REJECT}${providerPhone}` }]
     }
   ];
+}
+
+// ---- Call (Basic) ------------------------------------------------------------
+// Under every certificate alert to a full reviewer: for the person who claimed
+// GDA / HCA / GNM but sent a paper that is not that certificate. One tap puts
+// her in "Needs a call"; she is sent nothing.
+
+async function sendCallBasicOffer(to, provider) {
+  const providerPhone = normalizePhone(provider && provider.phone);
+  if (!to || !providerPhone) return null;
+  if (config.certificateCallBasicTemplateEnabled && config.certificateCallBasicTemplateName) {
+    try {
+      return await sendTemplate(to, config.certificateCallBasicTemplateName, getCertificateReviewTemplateLanguage(), [
+        {
+          type: 'body',
+          parameters: [
+            { type: 'text', text: formatReviewTemplateValue(provider.fullName) },
+            { type: 'text', text: formatReviewTemplateValue(providerPhone) }
+          ]
+        },
+        {
+          type: 'button',
+          sub_type: 'quick_reply',
+          index: '0',
+          parameters: [{ type: 'payload', payload: `${REVIEW_ACTIONS.CALL_BASIC}${providerPhone}` }]
+        }
+      ]);
+    } catch (error) {
+      console.error('[OPS_CALL_BASIC_TEMPLATE_ERROR]', JSON.stringify({ to, providerPhone, message: error.message }));
+    }
+  }
+  try {
+    return await sendButtons(to, 'Certificate not valid? Call and take her on as Basic.', [
+      { id: `${REVIEW_ACTIONS.CALL_BASIC}${providerPhone}`, title: 'Call (Basic)' }
+    ]);
+  } catch (error) {
+    console.error('[OPS_CALL_BASIC_ERROR]', JSON.stringify({ to, providerPhone, message: error.message }));
+    return null;
+  }
+}
+
+// After the tap: her call link and the two decisions, for this one person.
+async function requestCallBasicDecision(provider, reviewerPhone) {
+  const to = getReviewerDestination(reviewerPhone);
+  if (!to || !provider || !provider.phone) return null;
+  const claimed = provider.qualification ? formatQualification(provider.qualification) : '-';
+  const body = joinLines([
+    `Needs a call: certificate not valid (claimed ${claimed}). She has been sent nothing.`,
+    ...formatProviderSummary(provider),
+    `Call her: ${buildCallLink(provider.phone)}`,
+    'Then approve on the Basic rate or reject.'
+  ]);
+  try {
+    return await sendButtons(to, body, buildNoCertificateReviewButtons(provider.phone));
+  } catch (error) {
+    console.error('[OPS_CALL_BASIC_DECISION_ERROR]', JSON.stringify({ to, providerPhone: provider.phone, message: error.message }));
+    return null;
+  }
 }
 
 // Who else got this alert, in words, so two people do not both call her.
@@ -943,6 +1002,12 @@ async function notifyCertificateUploaded(provider, attachments) {
     }
   }
 
+  // Call (Basic), last, so it sits right under each reviewer's alert. Not
+  // recorded as an alert attempt: the alert itself is what was delivered or not.
+  for (const to of recipients) {
+    await sendCallBasicOffer(to, provider);
+  }
+
   return { sent: notificationSent, recipients, attempts };
 }
 
@@ -1476,6 +1541,13 @@ function parseReviewerAction(message) {
     }
   }
 
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.CALL_BASIC)) {
+    return {
+      action: 'call_basic',
+      phone: interactiveReplyId.slice(REVIEW_ACTIONS.CALL_BASIC.length)
+    };
+  }
+
   if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.APPROVE_BASIC)) {
     return {
       action: 'approve_basic',
@@ -1633,6 +1705,8 @@ module.exports = {
   notifyAdditionalDocumentUploaded,
   notifyCertificateUploaded,
   notifyNoCertificateApplication,
+  sendCallBasicOffer,
+  requestCallBasicDecision,
   notifyCertificateReviewed,
   notifyOnboardingCompleted,
   parseReviewerAction,

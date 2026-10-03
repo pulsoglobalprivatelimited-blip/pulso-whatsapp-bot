@@ -1454,6 +1454,17 @@ app.post('/admin/providers/:phone/reject-certificate', async (req, res) => {
   }
 });
 
+// Call (Basic) from the desk: the same as the WhatsApp button.
+app.post('/admin/providers/:phone/needs-call', async (req, res) => {
+  try {
+    const { markNeedsCall } = require('./services/onboardingFlow');
+    const provider = await markNeedsCall(req.params.phone, getAdminActor(req));
+    res.json(provider);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 app.post('/admin/providers/:phone/request-additional-document', async (req, res) => {
   try {
     const provider = await requestAdditionalDocument(req.params.phone, getAdminActor(req), req.body.note);
