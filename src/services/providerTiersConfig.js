@@ -41,6 +41,12 @@ function normalize(doc) {
       payout24h: posInt(s.payout24h, DEFAULTS[t].payout24h),
       payout8h: posInt(s.payout8h, DEFAULTS[t].payout8h)
     };
+    // What the bot tells a band, when it differs from the payout floor
+    // (flow.js tierFigures). Carried only when set.
+    for (const k of ['shown8h', 'shown24h', 'shownFrom8h', 'shownTo8h', 'shownFrom24h', 'shownTo24h', 'sample8h', 'sample24h']) {
+      const n = posInt(s[k], 0);
+      if (n > 0) out[t][k] = n;
+    }
   }
   return out;
 }

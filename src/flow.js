@@ -952,6 +952,15 @@ const GDA_SHOWN_FALLBACK = {
   sample8h: 800, sample24h: 1000
 };
 
+/**
+ * What the Basic band is TOLD. The founder set ₹650 for 8 hours and ₹750 for
+ * 24 hours on 3 Oct 2026 for the bot only — the payout floor in
+ * app_config/provider_tiers (500/600) stays where it is, so bookings still
+ * price from the floor. Overridable per figure as tiers.basic.shown8h /
+ * shown24h in that doc.
+ */
+const BASIC_SHOWN_FALLBACK = { shown8h: 650, shown24h: 750 };
+
 function tierFigures(tiers) {
   const t = tiers && typeof tiers === 'object' ? tiers : {};
   const pick = (name, key) => {
@@ -962,8 +971,12 @@ function tierFigures(tiers) {
     const n = Math.round(Number((t.gda || {})[key]));
     return Number.isFinite(n) && n > 0 ? n : GDA_SHOWN_FALLBACK[key];
   };
+  const basicShown = (key) => {
+    const n = Math.round(Number((t.basic || {})[key]));
+    return Number.isFinite(n) && n > 0 ? n : BASIC_SHOWN_FALLBACK[key];
+  };
   return {
-    b8: pick('basic', 'payout8h'), b24: pick('basic', 'payout24h'),
+    b8: basicShown('shown8h'), b24: basicShown('shown24h'),
     g8: pick('gda', 'payout8h'), g24: pick('gda', 'payout24h'),
     n8: pick('nurse', 'payout8h'), n24: pick('nurse', 'payout24h'),
     gFrom8: shown('shownFrom8h'), gTo8: shown('shownTo8h'),
@@ -1126,9 +1139,12 @@ function getTermsRateFor(subject, tiers) {
   if (!basic.payout8h || !basic.payout24h) {
     throw new Error('Basic caregiver rate is not configured; refusing to send a blank rate');
   }
+  // What Basic is told, not the payout floor — same figures as every other
+  // Basic quote (tierFigures).
+  const f = tierFigures(tiers);
   return String(template)
-    .split('{{payout8h}}').join(String(basic.payout8h))
-    .split('{{payout24h}}').join(String(basic.payout24h));
+    .split('{{payout8h}}').join(String(f.b8))
+    .split('{{payout24h}}').join(String(f.b24));
 }
 
 /** The two-line pay summary shown with the duty-hours question, per band. */
