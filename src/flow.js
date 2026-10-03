@@ -379,7 +379,7 @@ const MESSAGES = {
     // The count starts here, at zero, so the 180-day goal is in her head before
     // her first duty. She was told about the certificate at step 4; this is the
     // moment it becomes hers to work towards.
-    'നന്ദി. താങ്കളുടെ onboarding പൂർത്തിയായി.\n\nഇനി duty offers അയച്ചു തുടങ്ങാം. 180 ദിവസത്തെ duty പൂർത്തിയാക്കിയാൽ Pulso Global Private Limited-ന്റെ experience certificate ലഭിക്കും. ഇപ്പോൾ 0 ദിവസം പൂർത്തിയായി.',
+    'നന്ദി. താങ്കളുടെ onboarding വിജയകരമായി പൂർത്തിയായി.\n\nഇനി മുതൽ താങ്കൾക്ക് Pulso വഴി duty offers ലഭിച്ചു തുടങ്ങും.\n\nPulso വഴി ആകെ 180 ദിവസത്തെ verified duty പൂർത്തിയാക്കിയാൽ, Pulso Global Private Limited-ന്റെ Experience Certificate ലഭിക്കും.\n\nനിലവിൽ പൂർത്തിയാക്കിയ verified duty: **0 ദിവസം**.',
   termsDeclined:
     'ശരി. താൽപര്യമുണ്ടെങ്കിൽ പിന്നീട് വീണ്ടും message ചെയ്യാം.',
   postOnboardingSupport:

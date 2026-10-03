@@ -53,9 +53,10 @@ test('the certificate is promised to people we have accepted, never to people st
 
 test('onboarding ends with the goal and the count at zero', async () => {
   await flow.runWithFlow('kerala_malayalam', async () => {
-    assert.match(flow.MESSAGES.termsAccepted, /onboarding പൂർത്തിയായി/);
-    assert.match(flow.MESSAGES.termsAccepted, /180 ദിവസത്തെ duty/);
-    assert.match(flow.MESSAGES.termsAccepted, /0 ദിവസം പൂർത്തിയായി/);
+    // Founder's wording, 3 Oct 2026.
+    assert.match(flow.MESSAGES.termsAccepted, /onboarding വിജയകരമായി പൂർത്തിയായി/);
+    assert.match(flow.MESSAGES.termsAccepted, /180 ദിവസത്തെ verified duty/);
+    assert.match(flow.MESSAGES.termsAccepted, /verified duty: \*\*0 ദിവസം\*\*\.$/);
   });
   await flow.runWithFlow('kerala_english', async () => {
     assert.match(flow.MESSAGES.termsAccepted, /completed 0 days so far/);
