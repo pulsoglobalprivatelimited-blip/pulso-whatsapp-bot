@@ -1663,9 +1663,19 @@ async function renderDetail(provider) {
 
   document.getElementById('reviewer-input').value = getCurrentAdminName();
   document.getElementById('additional-reviewer-input').value = getCurrentAdminName();
+  // "No certificate" is not something a reviewer approves as, so it has no
+  // option; left as it was, the dropdown showed an empty box instead of
+  // "Select qualification". A value with no option falls back to the prompt.
+  const claimedQualification = normalizeQualification(
+    (verification && verification.qualificationApproved) || detailProvider.qualification
+  );
+  const qualificationSelect = document.getElementById('review-qualification-input');
+  const hasOption = Boolean(
+    qualificationSelect && Array.from(qualificationSelect.options).some((o) => o.value === claimedQualification)
+  );
   setReviewField(
     'review-qualification-input',
-    normalizeQualification((verification && verification.qualificationApproved) || detailProvider.qualification),
+    hasOption ? claimedQualification : '',
     detailPhone,
     'qualification'
   );
