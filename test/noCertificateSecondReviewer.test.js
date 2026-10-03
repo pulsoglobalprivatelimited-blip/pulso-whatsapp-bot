@@ -90,10 +90,9 @@ test('a "No certificate" alert goes to both numbers with the call link and Appro
     assert.ok(msg, `alert to ${who}`);
     assert.match(msg.body, /No certificate/);
     assert.match(msg.body, /Call her: https:\/\/whatsapp\.pulso\.co\.in\/call\/919000000201-[0-9a-f]{16}/);
-    assert.match(msg.body, /Also sent to: /);
+    assert.doesNotMatch(msg.body, /Also sent to/);
     assert.deepEqual(msg.buttons.map((b) => b.title), ['Approve (Basic)', 'Reject']);
   }
-  assert.match(toWho(OWNER).find((m) => m.kind === 'buttons').body, /Also sent to: Mohamed Afiq/);
 });
 
 test('a certificate alert (GDA) does not go to the second number', async () => {
@@ -104,8 +103,8 @@ test('a certificate alert (GDA) does not go to the second number', async () => {
 });
 
 test('the template, when switched on, carries the call token and both payloads', () => {
-  const c = ops.buildNoCertificateTemplateComponents(pending('919000000201'), 'Mohamed Afiq');
-  assert.equal(c[0].parameters.length, 6);
+  const c = ops.buildNoCertificateTemplateComponents(pending('919000000201'));
+  assert.equal(c[0].parameters.length, 5);
   assert.equal(c[1].sub_type, 'url');
   assert.equal(ops.verifyCallToken(c[1].parameters[0].text), '919000000201');
   assert.equal(c[2].parameters[0].payload, 'review_approve_basic_919000000201');

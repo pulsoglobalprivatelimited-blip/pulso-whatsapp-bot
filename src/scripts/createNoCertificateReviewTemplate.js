@@ -1,7 +1,7 @@
-// Submits certificate_review_no_cert to Meta: the "No certificate" review alert
+// Submits certificate_review_no_cert_v2 to Meta: the "No certificate" review alert
 // with Call her (link) / Approve (Basic) / Reject. Run once:
 //   node src/scripts/createNoCertificateReviewTemplate.js
-// The body's six values must stay in step with
+// The body's five values must stay in step with
 // buildNoCertificateTemplateBodyValues in src/services/opsNotifications.js.
 require('dotenv').config();
 const axios = require('axios');
@@ -9,7 +9,7 @@ const axios = require('axios');
 const token = process.env.WHATSAPP_ACCESS_TOKEN;
 const version = process.env.WHATSAPP_GRAPH_API_VERSION || 'v20.0';
 const WABA = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || '940659845043119';
-const NAME = 'certificate_review_no_cert';
+const NAME = 'certificate_review_no_cert_v2';
 
 const BODY = [
   'No certificate application: {{1}} asks to join as a Basic caregiver.',
@@ -17,7 +17,6 @@ const BODY = [
   'Age: {{3}}',
   'District: {{4}}',
   'Preferred duty hour: {{5}}',
-  'Also sent to: {{6}}',
   'Call her, then approve on the Basic rate or reject.'
 ].join('\n');
 
@@ -30,7 +29,7 @@ const BODY = [
       {
         type: 'BODY',
         text: BODY,
-        example: { body_text: [['Sindhu Sajeev', '919633495486', '25', 'Kannur', 'Both', 'Mohamed Afiq']] }
+        example: { body_text: [['Sindhu Sajeev', '919633495486', '25', 'Kannur', 'Both']] }
       },
       {
         type: 'BUTTONS',

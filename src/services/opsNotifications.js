@@ -160,25 +160,24 @@ function buildNoCertificateReviewButtons(providerPhone) {
 }
 
 // The template's body and buttons: Call her (link) / Approve (Basic) / Reject.
-// The body has six values; certificate_review_no_cert must stay in step.
-function buildNoCertificateTemplateBodyValues(provider, alsoSentTo) {
+// The body has five values; certificate_review_no_cert_v2 must stay in step.
+function buildNoCertificateTemplateBodyValues(provider) {
   const name = (provider && provider.fullName) || '-';
   return [
     isNursingStudent(provider) ? `${name} (nursing student)` : name,
     (provider && provider.phone) || '-',
     provider && provider.age ? String(provider.age) : '-',
     provider && provider.district ? String(provider.district) : '-',
-    formatDutyHourPreference(provider && provider.dutyHourPreference),
-    alsoSentTo || '-'
+    formatDutyHourPreference(provider && provider.dutyHourPreference)
   ].map(formatReviewTemplateValue);
 }
 
-function buildNoCertificateTemplateComponents(provider, alsoSentTo) {
+function buildNoCertificateTemplateComponents(provider) {
   const providerPhone = normalizePhone(provider && provider.phone);
   return [
     {
       type: 'body',
-      parameters: buildNoCertificateTemplateBodyValues(provider, alsoSentTo).map((text) => ({ type: 'text', text }))
+      parameters: buildNoCertificateTemplateBodyValues(provider).map((text) => ({ type: 'text', text }))
     },
     { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: signCallToken(providerPhone) }] },
     {
@@ -252,12 +251,6 @@ async function requestCallBasicDecision(provider, reviewerPhone) {
     console.error('[OPS_CALL_BASIC_DECISION_ERROR]', JSON.stringify({ to, providerPhone: provider.phone, message: error.message }));
     return null;
   }
-}
-
-// Who else got this alert, in words, so two people do not both call her.
-function describeOtherRecipients(to, recipients) {
-  const others = recipients.filter((phone) => phone !== to).map(reviewerDisplayName).filter(Boolean);
-  return others.length ? others.join(', ') : '';
 }
 
 function joinLines(lines) {
@@ -1020,15 +1013,13 @@ async function notifyNoCertificateApplication(provider, recipients, options = {}
   let notificationSent = false;
 
   for (const to of recipients) {
-    const alsoSentTo = describeOtherRecipients(to, recipients);
-
     if (config.noCertificateReviewTemplateEnabled && config.noCertificateReviewTemplateName) {
       try {
         const result = await sendTemplate(
           to,
           config.noCertificateReviewTemplateName,
           getCertificateReviewTemplateLanguage(),
-          buildNoCertificateTemplateComponents(provider, alsoSentTo)
+          buildNoCertificateTemplateComponents(provider)
         );
         attempts.push(
           buildNotificationAttempt(to, 'review_template_no_cert', result, null, {
@@ -1071,7 +1062,6 @@ async function notifyNoCertificateApplication(provider, recipients, options = {}
         : 'No certificate — she asks to join as a Basic caregiver. Please call and interview her, then approve or reject.',
       ...formatProviderSummary(provider),
       `Call her: ${buildCallLink(provider.phone)}`,
-      alsoSentTo ? `Also sent to: ${alsoSentTo}. Whoever taps first decides.` : null,
       'Tap below to approve (Basic) or reject.'
     ]);
 

@@ -95,7 +95,7 @@ module.exports = {
   // Reject). Off until Meta approves it; until then the alert goes as text +
   // buttons, with the call link in the text.
   noCertificateReviewTemplateEnabled: process.env.NO_CERTIFICATE_REVIEW_TEMPLATE_ENABLED === 'true',
-  noCertificateReviewTemplateName: process.env.NO_CERTIFICATE_REVIEW_TEMPLATE_NAME || 'certificate_review_no_cert',
+  noCertificateReviewTemplateName: process.env.NO_CERTIFICATE_REVIEW_TEMPLATE_NAME || 'certificate_review_no_cert_v2',
   // "Call (Basic)" under a certificate alert: as a one-button template once
   // Meta approves it (reaches a reviewer cold), as an in-window button until then.
   certificateCallBasicTemplateEnabled: process.env.CERTIFICATE_CALL_BASIC_TEMPLATE_ENABLED === 'true',
