@@ -113,7 +113,7 @@ const QUALIFICATIONS = [
     // shows her marks card, and is reviewed by phone like "No certificate".
     id: BUTTON_IDS.QUALIFICATION_NURSING_STUDENT,
     title: 'നഴ്സിംഗ് വിദ്യാർത്ഥി',
-    description: 'GNM / BSc / ANM പഠിക്കുന്നു'
+    description: 'GNM / BSc / ANM പഠിക്കുന്നു / waiting for registration'
   },
   {
     // Replaces "None of these" (27 Sep 2026), the one row that refused the
@@ -139,7 +139,7 @@ const ENGLISH_QUALIFICATIONS = [
   {
     id: BUTTON_IDS.QUALIFICATION_NURSING_STUDENT,
     title: 'Nursing student',
-    description: 'Studying GNM / BSc / ANM'
+    description: 'Studying GNM / BSc / ANM / waiting for registration'
   },
   {
     id: BUTTON_IDS.QUALIFICATION_NO_CERTIFICATE,

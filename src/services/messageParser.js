@@ -83,6 +83,7 @@ function parseQualification(message) {
   if (
     normalized.includes('nursing student') ||
     normalized.includes('student nurse') ||
+    normalized.includes('waiting for registration') ||
     normalized.includes('നഴ്സിംഗ് വിദ്യാർത്ഥി') ||
     normalized.includes('പഠിക്കുന്നു') ||
     normalized.includes('studying')

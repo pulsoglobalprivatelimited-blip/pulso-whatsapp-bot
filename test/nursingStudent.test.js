@@ -34,7 +34,7 @@ test('the row sits just above "No certificate" in both lists and fits WhatsApp l
 test('the tap and typed words both read as nursing_student, before GNM/BSc', () => {
   const tap = { type: 'interactive', interactive: { list_reply: { id: flow.BUTTON_IDS.QUALIFICATION_NURSING_STUDENT } } };
   assert.equal(parseQualification(tap), 'nursing_student');
-  for (const body of ['Nursing student', 'nursing student GNM', 'Studying GNM / BSc / ANM', 'നഴ്സിംഗ് വിദ്യാർത്ഥി']) {
+  for (const body of ['Nursing student', 'nursing student GNM', 'Studying GNM / BSc / ANM', 'നഴ്സിംഗ് വിദ്യാർത്ഥി', 'waiting for registration', 'Studying GNM / BSc / ANM / waiting for registration']) {
     assert.equal(parseQualification({ type: 'text', text: { body } }), 'nursing_student', body);
   }
   assert.equal(parseQualification({ type: 'text', text: { body: 'GNM' } }), 'gnm');
