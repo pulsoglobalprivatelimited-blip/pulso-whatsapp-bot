@@ -40,6 +40,7 @@ const {
   isReviewerPhone,
   isNoCertificateReviewerPhone,
   isNoCertificateProvider,
+  isAboveCallReviewAge,
   reviewerDisplayName,
   notifyNoCertificateApplication,
   requestCallBasicDecision,
@@ -2611,16 +2612,10 @@ async function handleAge(phone, message) {
     return;
   }
 
-  if (age > 50) {
-    await updateProvider(phone, {
-      status: STATUS.AWAITING_AGE,
-      currentStep: 10,
-      age
-    });
-    await sendAndLog(phone, 'text', MESSAGES.ageAboveLimit);
-    await sendAgeCorrectionButtons(phone);
-    return;
-  }
+  /* No upper age limit (founder, 3 Oct 2026). Above the Basic-age threshold
+     she is told now that her duties are at the Basic rate (the notice after
+     this step); above 50 she is also reviewed by a phone call, by the owner
+     and the second reviewer. */
 
   /* `interestConfirmed` is set at the duty-hours step, so it is true only for
      someone who reached the age question the old way — after the name. They
@@ -2725,6 +2720,9 @@ function verificationPendingMessageFor(provider) {
   const qualification = String(provider && provider.qualification || '').toLowerCase();
   if (qualification === 'nursing_student' && MESSAGES.verificationPendingNursingStudent) {
     return MESSAGES.verificationPendingNursingStudent;
+  }
+  if (qualification !== 'no_certificate' && isAboveCallReviewAge(provider) && MESSAGES.verificationPendingBasicAge) {
+    return MESSAGES.verificationPendingBasicAge;
   }
   return qualification === 'no_certificate' && MESSAGES.verificationPendingNoCertificate
     ? MESSAGES.verificationPendingNoCertificate
@@ -3347,7 +3345,7 @@ async function resendNoCertificateReviewTo(reviewerPhone) {
 }
 
 const NO_CERTIFICATE_REVIEWER_HELP =
-  'You review "No certificate" and nursing-student applications only. Use the buttons on each alert: Call her, Approve (Basic) or Reject.';
+  'You review "No certificate", nursing-student and above-50 applications only. Use the buttons on each alert: Call her, Approve (Basic) or Reject.';
 
 /* Call (Basic): the paper she sent is not the certificate she claimed. She is
    sent nothing; she goes into "Needs a call" on the desk, where the reviewer
@@ -3500,8 +3498,15 @@ async function handleReviewerMessage(phone, message) {
      is over the threshold), so this goes straight to Confirm approve. */
   if (reviewAction.action === 'approve_basic') {
     const tiers = await getProviderTiers();
-    const reasons = ['no_course_certificate'];
-    if (Number(provider.age) > Number(tiers.basicTierAgeThreshold)) reasons.unshift('age_over_threshold');
+    // Why the Basic rate: her age, the missing course certificate, or both. Above
+    // 50 with a real certificate it is the age alone.
+    const overAge = Number(provider.age) > Number(tiers.basicTierAgeThreshold);
+    const noCourse =
+      ['no_certificate', 'nursing_student', 'basic_caregiver'].includes(String(provider.qualification || '').toLowerCase()) ||
+      Boolean(provider.verification && provider.verification.needsCall);
+    const reasons = [];
+    if (overAge) reasons.push('age_over_threshold');
+    if (noCourse || !overAge) reasons.push('no_course_certificate');
     await updateProvider(
       providerPhone,
       buildReviewerWorkflowPatch(provider.verification && provider.verification.reviewerWorkflow, {

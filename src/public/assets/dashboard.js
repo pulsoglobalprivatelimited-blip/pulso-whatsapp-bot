@@ -1023,7 +1023,7 @@ function matchesQualificationFilter(provider) {
   // "Needs a call": everyone reviewed by a phone call - no certificate, nursing
   // student, or a certificate the reviewer marked not valid (Call (Basic)).
   if (currentQualificationFilter === 'no_certificate') {
-    return qualification === 'no_certificate' || qualification === 'nursing_student' || needsCallMarked(provider);
+    return qualification === 'no_certificate' || qualification === 'nursing_student' || needsCallMarked(provider) || aboveCallReviewAge(provider);
   }
   return qualification === currentQualificationFilter;
 }
@@ -1184,6 +1184,13 @@ function providerLatestTime(provider) {
    rows in a row reading "Bot: നന്ദി. താങ്കളുടെ certificate verification-…" and
    no way to tell them apart. Where the last word was ours, the useful thing is
    what we are about to look at. */
+// Above 50: no upper limit, reviewed by a call on the Basic rate (3 Oct 2026).
+function aboveCallReviewAge(provider) {
+  return Boolean(
+    provider && Number(provider.age) > 50 && getDashboardStatus(provider) === 'certificate_verification_pending'
+  );
+}
+
 function needsCallMarked(provider) {
   return Boolean(
     provider &&
@@ -1196,6 +1203,11 @@ function needsCallMarked(provider) {
 function rowPreview(provider) {
   if (shouldShowCompletedListSummary()) {
     return formatListSummary(provider);
+  }
+
+  if (aboveCallReviewAge(provider) && !['no_certificate', 'nursing_student'].includes(String(provider.qualification || '').toLowerCase())) {
+    const claimed = provider.qualification ? formatQualification(provider.qualification) : '';
+    return `Age ${provider.age} · above 50, Basic rate${claimed ? ` · claimed ${claimed}` : ''}`;
   }
 
   if (needsCallMarked(provider)) {
@@ -1715,7 +1727,7 @@ async function renderDetail(provider) {
     ['reject-button', stage.reject],
     ['undo-approval-button', stage.undo],
     // Only for a certificate application not already on the call list.
-    ['call-basic-button', stage.approve && !['no_certificate', 'nursing_student'].includes(String(detailProvider.qualification || '').toLowerCase()) && !needsCallMarked(detailProvider)]
+    ['call-basic-button', stage.approve && !['no_certificate', 'nursing_student'].includes(String(detailProvider.qualification || '').toLowerCase()) && !needsCallMarked(detailProvider) && !(Number(detailProvider.age) > 50)]
   ].forEach(([id, visible]) => {
     const button = document.getElementById(id);
     if (button) button.classList.toggle('hidden', !visible);

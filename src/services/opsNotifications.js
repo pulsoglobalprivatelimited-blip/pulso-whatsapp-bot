@@ -107,8 +107,20 @@ function isNoCertificateReviewerPhone(phone) {
 // go to the second reviewer.
 const CALL_REVIEW_QUALIFICATIONS = ['no_certificate', 'nursing_student'];
 
+// Above 50 (founder, 3 Oct 2026): no upper limit any more. She is taken on as
+// Basic after a call, like "No certificate", and goes to the second reviewer.
+const CALL_REVIEW_AGE_ABOVE = 50;
+
+function isAboveCallReviewAge(provider) {
+  return Number(provider && provider.age) > CALL_REVIEW_AGE_ABOVE;
+}
+
+// Everyone reviewed by a phone call: no certificate, nursing student, above 50.
 function isNoCertificateProvider(provider) {
-  return CALL_REVIEW_QUALIFICATIONS.includes(String((provider && provider.qualification) || '').toLowerCase());
+  return (
+    CALL_REVIEW_QUALIFICATIONS.includes(String((provider && provider.qualification) || '').toLowerCase()) ||
+    isAboveCallReviewAge(provider)
+  );
 }
 
 function isNursingStudent(provider) {
@@ -1008,12 +1020,86 @@ async function notifyCertificateUploaded(provider, attachments) {
 // her / Approve (Basic) / Reject and crosses the 24-hour window; until Meta has
 // approved it, or if it is refused, the alert goes as text with the call link
 // and two buttons, which reach a reviewer whose window is open.
+function buildBasicAgeTemplateComponents(provider) {
+  const providerPhone = normalizePhone(provider && provider.phone);
+  const claimed = provider && provider.qualification ? formatQualification(provider.qualification) : '-';
+  const values = [
+    (provider && provider.fullName) || '-',
+    provider && provider.age ? String(provider.age) : '-',
+    providerPhone || '-',
+    claimed,
+    provider && provider.district ? String(provider.district) : '-',
+    formatDutyHourPreference(provider && provider.dutyHourPreference)
+  ].map(formatReviewTemplateValue);
+  return [
+    { type: 'body', parameters: values.map((text) => ({ type: 'text', text })) },
+    { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: signCallToken(providerPhone) }] },
+    { type: 'button', sub_type: 'quick_reply', index: '1', parameters: [{ type: 'payload', payload: `${REVIEW_ACTIONS.APPROVE_BASIC}${providerPhone}` }] },
+    { type: 'button', sub_type: 'quick_reply', index: '2', parameters: [{ type: 'payload', payload: `${REVIEW_ACTIONS.REJECT}${providerPhone}` }] }
+  ];
+}
+
+// The first line of the call-review alert, by why it is a call review.
+function callReviewHeadline(provider) {
+  if (isNursingStudent(provider)) {
+    return 'Nursing student — she is studying nursing and asks to join as a Basic caregiver. Her marks card follows. Please call and interview her, then approve or reject.';
+  }
+  const qualification = String((provider && provider.qualification) || '').toLowerCase();
+  if (qualification !== 'no_certificate' && isAboveCallReviewAge(provider)) {
+    const claimed = provider.qualification ? formatQualification(provider.qualification) : 'no qualification given';
+    return `Age ${provider.age} — above 50, so the Basic rate. Claimed: ${claimed}; her certificate follows. Please call and interview her, then approve (Basic) or reject.`;
+  }
+  const age = isAboveCallReviewAge(provider) ? ` Age ${provider.age}, above 50.` : '';
+  return `No certificate — she asks to join as a Basic caregiver.${age} Please call and interview her, then approve or reject.`;
+}
+
+// A marks card or certificate, after a call-review alert. Media reaches only a
+// reviewer whose window is open; the desk always has it.
+async function sendCallReviewFiles(to, provider, files, attempts) {
+  const list = Array.isArray(files) ? files : [];
+  for (let index = 0; index < list.length; index += 1) {
+    const result = await sendReviewMediaTo(to, provider, list[index], index + 1, list.length);
+    attempts.push(
+      buildNotificationAttempt(to, 'review_media', result, null, {
+        attachmentId: list[index] && list[index].id ? list[index].id : null,
+        attachmentType: list[index] && list[index].type ? list[index].type : null
+      })
+    );
+  }
+}
+
 async function notifyNoCertificateApplication(provider, recipients, options = {}) {
   const attempts = [];
   let notificationSent = false;
+  // Above 50 with a qualification claimed: her own template (the No certificate
+  // one would say "No certificate application").
+  const ageReview =
+    isAboveCallReviewAge(provider) &&
+    !['no_certificate', 'nursing_student'].includes(String((provider && provider.qualification) || '').toLowerCase());
 
   for (const to of recipients) {
-    if (config.noCertificateReviewTemplateEnabled && config.noCertificateReviewTemplateName) {
+    if (ageReview && config.basicAgeReviewTemplateEnabled && config.basicAgeReviewTemplateName) {
+      try {
+        const result = await sendTemplate(
+          to,
+          config.basicAgeReviewTemplateName,
+          getCertificateReviewTemplateLanguage(),
+          buildBasicAgeTemplateComponents(provider)
+        );
+        attempts.push(buildNotificationAttempt(to, 'review_template_basic_age', result, null, {
+          templateName: config.basicAgeReviewTemplateName
+        }));
+        notificationSent = true;
+        await sendCallReviewFiles(to, provider, options.files, attempts);
+        continue;
+      } catch (error) {
+        attempts.push(buildNotificationAttempt(to, 'review_template_basic_age', null, error, {
+          templateName: config.basicAgeReviewTemplateName
+        }));
+      }
+    }
+
+    if (!ageReview && config.noCertificateReviewTemplateEnabled && config.noCertificateReviewTemplateName) {
       try {
         const result = await sendTemplate(
           to,
@@ -1057,9 +1143,7 @@ async function notifyNoCertificateApplication(provider, recipients, options = {}
     }
 
     const body = joinLines([
-      isNursingStudent(provider)
-        ? 'Nursing student — she is studying nursing and asks to join as a Basic caregiver. Her marks card follows. Please call and interview her, then approve or reject.'
-        : 'No certificate — she asks to join as a Basic caregiver. Please call and interview her, then approve or reject.',
+      callReviewHeadline(provider),
       ...formatProviderSummary(provider),
       `Call her: ${buildCallLink(provider.phone)}`,
       'Tap below to approve (Basic) or reject.'
@@ -1077,18 +1161,7 @@ async function notifyNoCertificateApplication(provider, recipients, options = {}
       );
     }
 
-    // A nursing student's marks card, after the alert. Media reaches only a
-    // reviewer whose window is open; the desk always has it.
-    const files = Array.isArray(options.files) ? options.files : [];
-    for (let index = 0; index < files.length; index += 1) {
-      const result = await sendReviewMediaTo(to, provider, files[index], index + 1, files.length);
-      attempts.push(
-        buildNotificationAttempt(to, 'review_media', result, null, {
-          attachmentId: files[index] && files[index].id ? files[index].id : null,
-          attachmentType: files[index] && files[index].type ? files[index].type : null
-        })
-      );
-    }
+    await sendCallReviewFiles(to, provider, options.files, attempts);
   }
 
   return { sent: notificationSent, recipients, attempts };
@@ -1682,6 +1755,8 @@ module.exports = {
   isReviewerPhone,
   isNoCertificateReviewerPhone,
   isNoCertificateProvider,
+  isAboveCallReviewAge,
+  buildBasicAgeTemplateComponents,
   getNoCertificateReviewerPhone,
   reviewerDisplayName,
   signCallToken,

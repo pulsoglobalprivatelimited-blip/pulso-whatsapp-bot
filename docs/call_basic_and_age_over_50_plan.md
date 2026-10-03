@@ -74,3 +74,21 @@ with "Correct age" / "Stop here". She never reaches review.
   `basicTierAgeNotice` already exists for > threshold; alert line from
   `provider.age > threshold`; the `ageAboveLimit` buttons stay only for the
   upper limit if one is chosen.
+
+## Built, 3 Oct 2026
+
+Part 1 live (0bf3594). Part 2, founder's answers: **no upper limit**; **above
+50 goes to Afiq too**.
+- The "above 50" stop is gone. Above 45 she is told the Basic rate (as before);
+  the chat carries on to the end.
+- Above 50 (whatever she claimed) is a call review: alert to you and Afiq,
+  "Age 56 — above 50, so the Basic rate. Claimed: GDA; her certificate
+  follows", Call her / Approve (Basic) / Reject, her certificate after it.
+- Closing message: "Since you are above 50, our team will call you".
+- Approve (Basic): reason "age above the limit", plus "no course certificate"
+  only when she has none.
+- Desk: in "Needs a call", row "Age 56 · above 50, Basic rate · claimed GDA".
+- Template certificate_review_basic_age submitted to Meta; switched on with
+  BASIC_AGE_REVIEW_TEMPLATE_ENABLED after approval. Until then: the notice
+  template + the in-window alert.
+- Tests: test/ageAbove50.test.js (6); suite 238/238.

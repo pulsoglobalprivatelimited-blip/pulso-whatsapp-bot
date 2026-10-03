@@ -98,6 +98,10 @@ module.exports = {
   noCertificateReviewTemplateName: process.env.NO_CERTIFICATE_REVIEW_TEMPLATE_NAME || 'certificate_review_no_cert_v2',
   // "Call (Basic)" under a certificate alert: as a one-button template once
   // Meta approves it (reaches a reviewer cold), as an in-window button until then.
+  // Above 50 (founder, 3 Oct 2026: no upper limit, reviewed by call, also to the
+  // second reviewer): its own template once Meta approves it.
+  basicAgeReviewTemplateEnabled: process.env.BASIC_AGE_REVIEW_TEMPLATE_ENABLED === 'true',
+  basicAgeReviewTemplateName: process.env.BASIC_AGE_REVIEW_TEMPLATE_NAME || 'certificate_review_basic_age',
   certificateCallBasicTemplateEnabled: process.env.CERTIFICATE_CALL_BASIC_TEMPLATE_ENABLED === 'true',
   certificateCallBasicTemplateName: process.env.CERTIFICATE_CALL_BASIC_TEMPLATE_NAME || 'certificate_call_basic',
   sessionTtlHours: Number(process.env.SESSION_TTL_HOURS || 12),

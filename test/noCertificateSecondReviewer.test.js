@@ -152,7 +152,7 @@ test('the second reviewer cannot request a document', async () => {
   await flow.processIncomingMessage(SECOND, tap('review_request_additional_document_919000000206'));
   assert.equal(records.get('919000000206').verification.reviewerWorkflow, undefined);
   assert.equal(toWho(SECOND).length, 1);
-  assert.match(toWho(SECOND)[0].body, /"No certificate" and nursing-student applications only/);
+  assert.match(toWho(SECOND)[0].body, /"No certificate", nursing-student and above-50 applications only/);
 });
 
 test('REVIEW from the second reviewer brings back a waiting "No certificate" alert, never a certificate one', async () => {

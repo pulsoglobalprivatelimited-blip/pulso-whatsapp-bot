@@ -312,6 +312,8 @@ const MESSAGES = {
     'നന്ദി. നിങ്ങളുടെ വിവരങ്ങൾ ലഭിച്ചു. ഒരു പരിചരണ സർട്ടിഫിക്കറ്റ് ഇല്ലാത്തതിനാൽ, ഒരു ചെറിയ ഫോൺ സംഭാഷണത്തിനു ശേഷം തീരുമാനം അറിയിക്കും.',
   verificationPendingNursingStudent:
     'നന്ദി. നിങ്ങളുടെ വിവരങ്ങൾ ലഭിച്ചു. നിങ്ങൾ nursing student ആയതിനാൽ, ഒരു ചെറിയ ഫോൺ സംഭാഷണത്തിനു ശേഷം തീരുമാനം അറിയിക്കും.',
+  verificationPendingBasicAge:
+    'നന്ദി. നിങ്ങളുടെ വിവരങ്ങൾ ലഭിച്ചു. 50 വയസിന് മുകളിലായതിനാൽ, ഒരു ചെറിയ ഫോൺ സംഭാഷണത്തിനു ശേഷം തീരുമാനം അറിയിക്കും.',
   additionalDocumentRequest:
     'Onboarding തുടരാൻ ഒരു additional document കൂടി ആവശ്യമാണ്.\n\nNote: {{note}}\n\nദയവായി image അല്ലെങ്കിൽ PDF ആയി ഇപ്പോൾ upload ചെയ്യുക.',
   additionalDocumentRetry:
@@ -575,6 +577,8 @@ const KARNATAKA_MESSAGES = {
     'Thank you. We have received your details. Since you do not have a caregiving certificate, our team will call you for a short talk and inform you after that.',
   verificationPendingNursingStudent:
     'Thank you. We have received your details. Since you are a nursing student, our team will call you for a short talk and inform you after that.',
+  verificationPendingBasicAge:
+    'Thank you. We have received your details. Since you are above 50, our team will call you for a short talk and inform you after that.',
   additionalDocumentRequest:
     'An additional document is required to continue onboarding.\n\nNote: {{note}}\n\nPlease upload it now as an image or PDF.',
   additionalDocumentRetry: 'Please upload the requested additional document as an image or PDF.',
