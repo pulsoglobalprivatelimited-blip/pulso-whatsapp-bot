@@ -677,8 +677,7 @@ function createAdminBookingFlow(deps = {}) {
       case 'patientGender':
         return buttons(to, "Patient's gender?", [
           { id: ID.FEMALE, title: 'Female' },
-          { id: ID.MALE, title: 'Male' },
-          { id: ID.OTHER, title: 'Other' }
+          { id: ID.MALE, title: 'Male' }
         ]);
       case 'weight':
         return say(to, 'Weight in kg?');
@@ -871,7 +870,7 @@ function createAdminBookingFlow(deps = {}) {
             memberId: p.memberId,
             name: p.name || 'Patient',
             agencyLabel: p.agencyLabel || '',
-            gender: ['female', 'male', 'other'].includes(p.gender) ? p.gender : '',
+            gender: ['female', 'male'].includes(p.gender) ? p.gender : '',
             ageYears: Number(p.ageYears) > 0 ? Math.round(Number(p.ageYears)) : 0
           };
           return true;
@@ -891,7 +890,8 @@ function createAdminBookingFlow(deps = {}) {
       }
       case 'newPatientGender':
       case 'patientGender': {
-        const gender = parseGender(message);
+        // Pulso Hub books only a male or female patient (memberGender).
+        const gender = parseGender(message, { allowOther: false });
         if (!gender) return false;
         if (step === 'patientGender') {
           d.patient.gender = gender;

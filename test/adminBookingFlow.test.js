@@ -322,7 +322,7 @@ test('a new patient: age, then gender, then addPatient; under 45 asks a reason',
   assert.match(r.replies[0].body, /18 to 110/);
   r = await h.say(text('40'));
   assert.equal(r.replies[0].body, "Patient's gender?");
-  assert.deepEqual(r.replies[0].buttons.map((b) => b.title), ['Female', 'Male', 'Other']);
+  assert.deepEqual(r.replies[0].buttons.map((b) => b.title), ['Female', 'Male']);
   r = await h.say(btn('ab_g_male'));
   assert.deepEqual(h.callsOf('addPatient')[0].data, { familyId: 'fam_b1', gender: 'male', ageYears: 40 });
   assert.equal(r.replies[0].body, 'Weight in kg?');
