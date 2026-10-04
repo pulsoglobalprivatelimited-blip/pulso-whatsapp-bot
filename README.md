@@ -89,6 +89,10 @@ SESSION_SECRET=long-random-secret
 MEDIA_STORAGE_DIR=./storage/media
 PULSO_HUB_BOT_SYNC_URL=https://<region>-<project>.cloudfunctions.net/syncProviderOnboardingFromBot
 PULSO_HUB_BOT_SYNC_SECRET=shared-secret
+# Admin booking bot on the support number (docs/admin_booking_bot_plan.md)
+ADMIN_BOOKING_BOT_PHONES=8714105666,9446600809,7736108778
+# Optional: defaults to the sync URL with the function name swapped for adminBookingFromBot
+PULSO_HUB_ADMIN_BOOKING_URL=
 ```
 
 4. Initialize Firestore access:

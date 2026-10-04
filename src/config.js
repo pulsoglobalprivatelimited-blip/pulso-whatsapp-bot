@@ -158,6 +158,18 @@ module.exports = {
   // Same project and the same Cloud Run hash, so this is derived from the sync
   // URL rather than needing its own setting. Override only if that changes.
   pulsoHubPartnerReviewUrl: process.env.PULSO_HUB_PARTNER_REVIEW_URL || '',
+  /* Admin booking bot (docs/admin_booking_bot_plan.md). On the support number
+     only, these phones get the booking chat when they type "booking" or "book";
+     everything else they send is handled as today. Pulso Hub still checks each
+     number has an admin login before anything is read or written. */
+  adminBookingBotPhones: parseList(process.env.ADMIN_BOOKING_BOT_PHONES, [
+    '8714105666',
+    '9446600809',
+    '7736108778'
+  ]),
+  // The Pulso Hub function the booking bot calls. Derived from the sync URL
+  // (same project, same Cloud Run hash) unless set here.
+  pulsoHubAdminBookingUrl: process.env.PULSO_HUB_ADMIN_BOOKING_URL || '',
   /* Meta signs every webhook POST with an HMAC of the raw body keyed on the
      app secret. Without this set, anyone who knows the callback URL — and it
      is a conventional path on a public host — can post a message that looks
