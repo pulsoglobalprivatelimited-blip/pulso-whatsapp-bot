@@ -1191,6 +1191,13 @@ function aboveCallReviewAge(provider) {
   );
 }
 
+// Reviewed by a call (no certificate, student, above 50): a rejection closes
+// the application with a polite message instead of asking for a certificate.
+function isCallReviewRecord(provider) {
+  const q = String((provider && provider.qualification) || '').toLowerCase();
+  return q === 'no_certificate' || q === 'nursing_student' || Number(provider && provider.age) > 50;
+}
+
 function needsCallMarked(provider) {
   return Boolean(
     provider &&
@@ -1910,7 +1917,9 @@ async function submitReview(action) {
       sayReviewResult(
         approving
           ? `Approved. Terms sent to ${who} on WhatsApp.`
-          : `Certificate rejected. ${who} has been asked to send another.`,
+          : isCallReviewRecord(record)
+            ? `Rejected. ${who} has been sent the closing message.`
+            : `Certificate rejected. ${who} has been asked to send another.`,
         'success'
       );
     }

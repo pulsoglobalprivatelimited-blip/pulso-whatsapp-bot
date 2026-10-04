@@ -18,6 +18,13 @@ const {
 const REVIEW_ACTIONS = {
   APPROVE_BASIC: 'review_approve_basic_',
   CALL_BASIC: 'review_call_basic_',
+  // Reject after a call (No certificate / student / above 50): three reasons,
+  // then one confirm. Their own prefix, so none collides with the certificate
+  // reject reasons.
+  CALL_REJECT_UNSUITABLE: 'review_callrej_unsuitable_',
+  CALL_REJECT_UNREACHABLE: 'review_callrej_unreachable_',
+  CALL_REJECT_NOT_INTERESTED: 'review_callrej_notinterested_',
+  CONFIRM_CALL_REJECT: 'review_callrej_confirm_',
   APPROVE: 'review_approve_',
   APPROVE_QUALIFICATION: 'review_approve_qualification_',
   REJECT: 'review_reject_',
@@ -249,6 +256,47 @@ async function sendCallBasicOffer(to, provider) {
 }
 
 // After the tap: her call link and the two decisions, for this one person.
+const CALL_REJECT_REASONS = {
+  unsuitable: 'Not suitable',
+  unreachable: 'Could not reach',
+  not_interested: 'Not interested'
+};
+
+async function requestCallRejectReason(provider, reviewerPhone) {
+  const to = getReviewerDestination(reviewerPhone);
+  if (!to || !provider || !provider.phone) return null;
+  const body = joinLines([`Reject ${provider.fullName || provider.phone}? Choose why.`, ...formatProviderSummary(provider)]);
+  try {
+    return await sendButtons(to, body, [
+      { id: `${REVIEW_ACTIONS.CALL_REJECT_UNSUITABLE}${provider.phone}`, title: CALL_REJECT_REASONS.unsuitable },
+      { id: `${REVIEW_ACTIONS.CALL_REJECT_UNREACHABLE}${provider.phone}`, title: CALL_REJECT_REASONS.unreachable },
+      { id: `${REVIEW_ACTIONS.CALL_REJECT_NOT_INTERESTED}${provider.phone}`, title: CALL_REJECT_REASONS.not_interested }
+    ]);
+  } catch (error) {
+    console.error('[OPS_CALL_REJECT_REASON_ERROR]', JSON.stringify({ to, providerPhone: provider.phone, message: error.message }));
+    return null;
+  }
+}
+
+async function requestCallRejectConfirmation(provider, reasonCode, reviewerPhone, providerMessage) {
+  const to = getReviewerDestination(reviewerPhone);
+  if (!to || !provider || !provider.phone) return null;
+  const body = joinLines([
+    `Reject ${provider.fullName || provider.phone}?`,
+    `Reason: ${CALL_REJECT_REASONS[reasonCode] || reasonCode}`,
+    providerMessage ? `She will be sent: "${providerMessage}"` : null
+  ]);
+  try {
+    return await sendButtons(to, body, [
+      { id: `${REVIEW_ACTIONS.CONFIRM_CALL_REJECT}${provider.phone}`, title: 'Confirm reject' },
+      { id: `${REVIEW_ACTIONS.CANCEL}${provider.phone}`, title: 'Cancel' }
+    ]);
+  } catch (error) {
+    console.error('[OPS_CALL_REJECT_CONFIRM_ERROR]', JSON.stringify({ to, providerPhone: provider.phone, message: error.message }));
+    return null;
+  }
+}
+
 async function requestCallBasicDecision(provider, reviewerPhone) {
   const to = getReviewerDestination(reviewerPhone);
   if (!to || !provider || !provider.phone) return null;
@@ -1621,6 +1669,20 @@ function parseReviewerAction(message) {
     }
   }
 
+  for (const [prefix, code] of [
+    [REVIEW_ACTIONS.CALL_REJECT_UNSUITABLE, 'unsuitable'],
+    [REVIEW_ACTIONS.CALL_REJECT_UNREACHABLE, 'unreachable'],
+    [REVIEW_ACTIONS.CALL_REJECT_NOT_INTERESTED, 'not_interested']
+  ]) {
+    if (interactiveReplyId && interactiveReplyId.startsWith(prefix)) {
+      return { action: 'call_reject_reason', reason: code, phone: interactiveReplyId.slice(prefix.length) };
+    }
+  }
+
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.CONFIRM_CALL_REJECT)) {
+    return { action: 'confirm_call_reject', phone: interactiveReplyId.slice(REVIEW_ACTIONS.CONFIRM_CALL_REJECT.length) };
+  }
+
   if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.CALL_BASIC)) {
     return {
       action: 'call_basic',
@@ -1788,6 +1850,9 @@ module.exports = {
   notifyCertificateUploaded,
   notifyNoCertificateApplication,
   sendCallBasicOffer,
+  requestCallRejectReason,
+  requestCallRejectConfirmation,
+  CALL_REJECT_REASONS,
   requestCallBasicDecision,
   notifyCertificateReviewed,
   notifyOnboardingCompleted,

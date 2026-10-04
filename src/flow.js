@@ -362,6 +362,10 @@ const MESSAGES = {
     'താങ്കൾ certificate അല്ലാത്ത image ആണ് അയച്ചിരിക്കുന്നത്. Onboarding തുടരാൻ ദയവായി താങ്കളുടെ certificate upload ചെയ്യുക.',
   certificateRejectedPermanent:
     'ക്ഷമിക്കണം, നിലവിലെ review അടിസ്ഥാനത്തിൽ ഈ onboarding അപേക്ഷ ഇനി തുടരാൻ കഴിയില്ല. പിന്നീട് സഹായം ആവശ്യമെങ്കിൽ ഓഫീസുമായി ബന്ധപ്പെടാം.',
+  // A "No certificate" / student / above-50 applicant turned down after the
+  // call (4 Oct 2026). Never "upload your certificate again": she has none.
+  callReviewRejected:
+    'നന്ദി. ഇപ്പോൾ ഞങ്ങൾക്ക് താങ്കളുടെ അപേക്ഷ മുന്നോട്ട് കൊണ്ടുപോകാൻ കഴിയില്ല. താൽപര്യത്തിന് നന്ദി.',
   /* Sent on its own, between the working model and the interest question.
      Inside the working model this sat at character 1,836 of 1,935 - WhatsApp
      folds that message at about 640 and shows "Read more", so the line was
@@ -608,6 +612,8 @@ const KARNATAKA_MESSAGES = {
     'The image you sent does not look like a certificate. To continue onboarding, please upload your certificate.',
   certificateRejectedPermanent:
     'Sorry, based on the current review, this onboarding application cannot continue. You can contact the office if you need help later.',
+  callReviewRejected:
+    'Thank you. We cannot take your application forward now. Thank you for your interest.',
   /* The English half of the same message. The Malayalam is the founder's own
      wording; this renders it, and the company block below is identical. */
   experienceCertificateNotice:

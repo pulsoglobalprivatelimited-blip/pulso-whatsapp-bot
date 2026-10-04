@@ -44,6 +44,9 @@ const {
   reviewerDisplayName,
   notifyNoCertificateApplication,
   requestCallBasicDecision,
+  requestCallRejectReason,
+  requestCallRejectConfirmation,
+  CALL_REJECT_REASONS,
   notifyAgentHelpRequested,
   notifyAdditionalDocumentRequested,
   notifyAdditionalDocumentUploaded,
@@ -3307,6 +3310,8 @@ function describeReviewDecision(provider, providerPhone) {
 // already decided gets "Already approved by …" and does nothing, so the first
 // reviewer to tap decides.
 const DECIDING_REVIEW_ACTIONS = new Set([
+  'call_reject_reason',
+  'confirm_call_reject',
   'call_basic',
   'approve',
   'approve_basic',
@@ -3322,6 +3327,8 @@ const DECIDING_REVIEW_ACTIONS = new Set([
 
 // What the "No certificate" reviewer may do: call, approve as Basic, reject.
 const NO_CERTIFICATE_REVIEWER_ACTIONS = new Set([
+  'call_reject_reason',
+  'confirm_call_reject',
   'approve_basic',
   'basic_tier_reason',
   'confirm_approve',
@@ -3483,6 +3490,51 @@ async function handleReviewerMessage(phone, message) {
     (DECIDING_REVIEW_ACTIONS.has(reviewAction.action) || getRejectReasonDetails(reviewAction.action))
   ) {
     await sendText(phone, describeReviewDecision(provider, providerPhone));
+    return;
+  }
+
+  /* Reject for someone reviewed by a call: three reasons, then one confirm,
+     and a closing message that never asks for a certificate she does not have. */
+  if (reviewAction.action === 'reject' && isNoCertificateProvider(provider)) {
+    await updateProvider(
+      providerPhone,
+      buildReviewerWorkflowPatch(provider.verification && provider.verification.reviewerWorkflow, {
+        reviewerPhone: phone,
+        stage: 'choose_call_reject_reason',
+        reason: null,
+        reasonLabel: null,
+        note: ''
+      })
+    );
+    await requestCallRejectReason(await getProvider(providerPhone), phone);
+    return;
+  }
+
+  if (reviewAction.action === 'call_reject_reason') {
+    const label = CALL_REJECT_REASONS[reviewAction.reason] || reviewAction.reason;
+    await updateProvider(
+      providerPhone,
+      buildReviewerWorkflowPatch(provider.verification && provider.verification.reviewerWorkflow, {
+        reviewerPhone: phone,
+        stage: 'awaiting_call_reject_confirmation',
+        reason: reviewAction.reason,
+        reasonLabel: label
+      })
+    );
+    const providerMessage = await runWithProviderFlow(provider, async () => MESSAGES.callReviewRejected);
+    await requestCallRejectConfirmation(await getProvider(providerPhone), reviewAction.reason, phone, providerMessage);
+    return;
+  }
+
+  if (reviewAction.action === 'confirm_call_reject') {
+    const workflow = provider.verification && provider.verification.reviewerWorkflow;
+    if (!workflow || !workflow.reason || workflow.stage !== 'awaiting_call_reject_confirmation') {
+      await requestCallRejectReason(provider, phone);
+      return;
+    }
+    await clearReviewerWorkflow(providerPhone);
+    await rejectCallReviewApplicant(providerPhone, phone, workflow.reasonLabel || workflow.reason);
+    await sendText(phone, `Rejected ${provider.fullName || providerPhone} (${workflow.reasonLabel || workflow.reason}). She has been sent the closing message.`);
     return;
   }
 
@@ -4117,10 +4169,28 @@ async function undoApproval(phone, reviewedBy, reason) {
   });
 }
 
+// A call-review applicant (No certificate, nursing student, above 50) turned
+// down: closed for good, her details kept, and a closing message instead of
+// "upload your certificate again".
+async function rejectCallReviewApplicant(phone, reviewedBy, reasonLabel) {
+  return rejectCertificate(phone, reviewedBy, `Reason: ${reasonLabel} (after call)`, {
+    rejectMessageKey: 'callReviewRejected',
+    nextStatus: STATUS.CERTIFICATE_REJECTED_PERMANENT,
+    nextStep: 13,
+    resetCertificate: false
+  });
+}
+
 async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
   const provider = await getProvider(phone);
   if (!provider) {
     throw new Error('Provider not found');
+  }
+
+  // From the desk (no options): a call-review applicant gets the call-review
+  // rejection, never the certificate one.
+  if (!options.nextStatus && !options.rejectMessageKey && !options.providerMessage && isNoCertificateProvider(provider)) {
+    options = { rejectMessageKey: 'callReviewRejected', nextStatus: STATUS.CERTIFICATE_REJECTED_PERMANENT, nextStep: 13, resetCertificate: false };
   }
 
   return runWithProviderFlow(provider, async () => {
@@ -4167,6 +4237,7 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
 
 module.exports = {
   markNeedsCall,
+  rejectCallReviewApplicant,
   // Exported for the certificate-wording test.
   buildCertificateRequestMessage,
   buildCertificateRetryMessage,
