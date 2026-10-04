@@ -133,9 +133,18 @@ async function sendDutyBroadcast({ broadcastId, duty, bookingLabel, recipients, 
       result.optedOut += 1;
       continue;
     }
-    const language = await languageFor(r.phone);
+    let language = await languageFor(r.phone);
     try {
-      await sendTemplate(r.phone, config.dutyOfferTemplateName, language, buildOfferComponents(duty, id, language));
+      try {
+        await sendTemplate(r.phone, config.dutyOfferTemplateName, language, buildOfferComponents(duty, id, language));
+      } catch (error) {
+        // The Malayalam template may not be approved yet; English always is
+        // (it is the one the switch-on waits for).
+        if (language === 'en') throw error;
+        console.warn('[DUTY_BROADCAST_ML_FALLBACK]', r.phone, error.message);
+        language = 'en';
+        await sendTemplate(r.phone, config.dutyOfferTemplateName, language, buildOfferComponents(duty, id, language));
+      }
       sent[r.phone] = before
         ? { ...before, resentAt: now }
         : { name: r.name, language, sentAt: now, answer: null, answeredAt: null };

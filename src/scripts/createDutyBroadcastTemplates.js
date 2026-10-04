@@ -24,7 +24,9 @@ const templates = [
     components: [
       {
         type: 'BODY',
-        text: '*പുതിയ duty:* {{1}}\n{{2}} · {{3}} മുതൽ {{4}} ദിവസം\nശമ്പളം: ദിവസം ₹{{5}}\nതാൽപര്യമുണ്ടെങ്കിൽ താഴെ അമർത്തുക.',
+        // Meta rejected the first ml version (INVALID_FORMAT, 4 Oct); resubmitted
+        // without the bold stars.
+        text: 'പുതിയ duty: {{1}}\n{{2}} · {{3}} മുതൽ {{4}} ദിവസം\nശമ്പളം: ദിവസം ₹{{5}}\nതാൽപര്യമുണ്ടെങ്കിൽ താഴെ അമർത്തുക.',
         example: { body_text: OFFER_EXAMPLE }
       },
       {

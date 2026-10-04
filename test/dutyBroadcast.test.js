@@ -31,13 +31,15 @@ const fakeDb = {
   })
 };
 const sent = [];
+const tried = [];
+let failMl = false;
 function stub(rel, impl) {
   const file = require.resolve(path.join('../src/services', rel));
   require.cache[file] = { id: file, filename: file, loaded: true, exports: new Proxy(impl, { get: (t, k) => (k in t ? t[k] : async () => null) }) };
 }
 stub('storage', { getFirestore: () => fakeDb });
 stub('metaClient', {
-  sendTemplate: async (to, name, lang, components) => { sent.push({ to, kind: 'template', name, lang, components }); return { messages: [{ id: 'w' }] }; },
+  sendTemplate: async (to, name, lang, components) => { tried.push(lang); if (failMl && lang === 'ml') throw new Error('template not approved'); sent.push({ to, kind: 'template', name, lang, components }); return { messages: [{ id: 'w' }] }; },
   sendText: async (to, body) => { sent.push({ to, kind: 'text', body }); return { messages: [{ id: 'w' }] }; },
   sendButtons: async (to, body) => { sent.push({ to, kind: 'buttons', body }); return {}; },
   isAppMediaId: () => false
@@ -135,4 +137,17 @@ test('refuses to send before the templates are approved, and refuses a bad duty'
   await assert.rejects(() => bc.sendDutyBroadcast({ broadcastId: 'REQ0004', duty, recipients: [] }), /not approved/);
   config.dutyBroadcastEnabled = true;
   await assert.rejects(() => bc.sendDutyBroadcast({ broadcastId: 'REQ0004', duty: { ...duty, hours: '12h' }, recipients: [] }), /24h or 8h/);
+});
+
+test('a Malayalam send that Meta refuses falls back to the English template', async () => {
+  store.set('providers/919000000811', { flowId: 'kerala_malayalam', fullName: 'Deepa' });
+  tried.length = 0;
+  failMl = true;
+  try {
+    const r = await bc.sendDutyBroadcast({ broadcastId: 'REQ0005', duty, recipients: [{ phone: '919000000811' }] });
+    assert.equal(r.sent, 1);
+    assert.deepEqual(tried, ['ml', 'en']);
+  } finally {
+    failMl = false;
+  }
 });
