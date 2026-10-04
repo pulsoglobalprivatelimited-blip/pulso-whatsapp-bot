@@ -689,6 +689,36 @@ app.all('/ivr/job-whatsapp', async (req, res) => {
   }
 });
 
+/* Duty broadcast, called by the Pulso server when ops press "Send broadcast"
+   on a booking. Signed with the same shared secret the bot uses towards the
+   Pulso server. */
+function hasPulsoServerSecret(req) {
+  const expected = String(config.pulsoHubBotSyncSecret || '').trim();
+  const given = String(req.get('x-pulso-bot-secret') || '').trim();
+  return Boolean(expected) && given === expected;
+}
+
+app.post('/internal/duty-broadcast', async (req, res) => {
+  if (!hasPulsoServerSecret(req)) return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const { sendDutyBroadcast } = require('./services/dutyBroadcast');
+    const result = await sendDutyBroadcast(req.body || {});
+    return res.json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.get('/internal/duty-broadcast/:id', async (req, res) => {
+  if (!hasPulsoServerSecret(req)) return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const { getDutyBroadcastStatus } = require('./services/dutyBroadcast');
+    return res.json({ ok: true, status: await getDutyBroadcastStatus(req.params.id) });
+  } catch (error) {
+    return res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
 /* "Call her" on a "No certificate" review alert. WhatsApp's own call button
    holds one fixed number, so the alert links here and this page opens the
    dialler. The token is the number plus a signature made by the bot, so the

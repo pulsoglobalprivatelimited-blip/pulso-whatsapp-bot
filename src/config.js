@@ -102,6 +102,12 @@ module.exports = {
   // second reviewer): its own template once Meta approves it.
   basicAgeReviewTemplateEnabled: process.env.BASIC_AGE_REVIEW_TEMPLATE_ENABLED === 'true',
   basicAgeReviewTemplateName: process.env.BASIC_AGE_REVIEW_TEMPLATE_NAME || 'certificate_review_basic_age',
+  // Duty broadcast to Basic caregivers (4 Oct 2026). Answers go to this ONE
+  // number and nowhere else. Off until Meta approves the templates.
+  dutyBroadcastEnabled: process.env.DUTY_BROADCAST_ENABLED === 'true',
+  dutyInterestPhone: process.env.DUTY_INTEREST_PHONE || '918714105333',
+  dutyOfferTemplateName: process.env.DUTY_OFFER_TEMPLATE_NAME || 'basic_duty_offer',
+  dutyInterestTemplateName: process.env.DUTY_INTEREST_TEMPLATE_NAME || 'duty_interest_ops',
   certificateCallBasicTemplateEnabled: process.env.CERTIFICATE_CALL_BASIC_TEMPLATE_ENABLED === 'true',
   certificateCallBasicTemplateName: process.env.CERTIFICATE_CALL_BASIC_TEMPLATE_NAME || 'certificate_call_basic',
   sessionTtlHours: Number(process.env.SESSION_TTL_HOURS || 12),

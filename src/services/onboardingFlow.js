@@ -3816,6 +3816,15 @@ async function handleReviewerMessage(phone, message) {
 }
 
 async function processIncomingMessage(phone, message) {
+  // A tap on a duty broadcast (I'm interested / Not now) is handled there and
+  // goes only to the duty-interest number; typed words fall through.
+  try {
+    const { handleDutyBroadcastReply } = require('./dutyBroadcast');
+    if (await handleDutyBroadcastReply(phone, message)) return;
+  } catch (error) {
+    console.error('[DUTY_BROADCAST_REPLY_ERROR]', error.message);
+  }
+
   if (isReviewerPhone(phone) || isNoCertificateReviewerPhone(phone)) {
     await handleReviewerMessage(phone, message);
     return;
