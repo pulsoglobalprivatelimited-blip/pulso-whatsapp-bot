@@ -357,3 +357,17 @@ test('a failed alert reports which template it tried', () => {
   });
   assert.equal(state.messages[0].templateName, 'certificate_review_v3_image');
 });
+
+
+test('a call-review template counts as the alert getting through, so it is not re-sent', () => {
+  for (const type of ['review_template_no_cert', 'review_template_basic_age']) {
+    const state = buildReviewAlertState({
+      attempts: [{ to: '919446600809', type, ok: true, messages: [{ id: `wamid.${type}` }] }]
+    });
+    assert.equal(state.undeliverable, false, type);
+    assert.equal(state.failed, false, type);
+    assert.equal(needsCatchUp({
+      phone: '919000000601', status: 'certificate_verification_pending', verification: { status: 'pending', reviewAlert: state }
+    }, Date.now() + 3 * 60 * 60 * 1000), false, type);
+  }
+});

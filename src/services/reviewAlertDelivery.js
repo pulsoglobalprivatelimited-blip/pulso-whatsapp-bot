@@ -14,7 +14,16 @@ const MESSAGE_LOOKUP_COLLECTION = 'reviewAlertMessages';
 // template, and the interactive buttons of the old path. The bare
 // `review_template` is only a nudge — today's incident was it arriving alone —
 // so its delivery does not count as the alert getting through.
-const ACTIONABLE_ALERT_TYPES = ['review_template_v2', 'review_buttons'];
+// The call-review templates (No certificate / nursing student, above 50) carry
+// Call her / Approve (Basic) / Reject, so they are actionable too. Left out,
+// every one of them read as "nothing delivered" and the catch-up sweep sent it
+// three more times, half an hour apart, to both reviewers (found 4 Oct 2026).
+const ACTIONABLE_ALERT_TYPES = [
+  'review_template_v2',
+  'review_buttons',
+  'review_template_no_cert',
+  'review_template_basic_age'
+];
 const TRACKED_ALERT_TYPES = [...ACTIONABLE_ALERT_TYPES, 'review_template', 'review_media'];
 
 const DELIVERED_STATUSES = ['delivered', 'read'];
