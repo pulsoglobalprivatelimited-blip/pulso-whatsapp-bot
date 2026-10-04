@@ -1165,11 +1165,14 @@ function createAdminBookingFlow(deps = {}) {
     await store.delete(phone);
     const draft = { phone, data: {}, history: [], view: { fresh: true }, step: 'agency', createdAtMillis: now() };
     const who = await hub.call(phone, 'whoami', {});
-    if (!who || who.ok === false || !who.admin) {
+    // Pulso Hub answers { ok, uid, name, viaPhone }; { admin: { uid, name } }
+    // is read too. Either way there must be an admin login (uid).
+    const admin = who && who.ok !== false ? (who.admin && who.admin.uid ? who.admin : who) : null;
+    if (!admin || !admin.uid) {
       await say(phone, "This number can't make bookings. Ask the owner to add it as an admin.");
       return;
     }
-    draft.admin = { uid: who.admin.uid || '', name: who.admin.name || '' };
+    draft.admin = { uid: admin.uid, name: admin.name || '', viaPhone: admin.viaPhone || '' };
     await ask(draft, 'agency');
     await saveDraft(draft);
   }

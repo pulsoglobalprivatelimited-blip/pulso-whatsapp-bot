@@ -581,6 +581,16 @@ test('a number Pulso Hub does not know as an admin is refused and left in the no
   assert.equal(r.handled, false);
 });
 
+test('whoami in the endpoint\'s flat shape { uid, name, viaPhone } is accepted; no uid is refused', async () => {
+  const h = harness({ whoami: () => ({ ok: true, uid: 'u9', name: 'Anu', viaPhone: '919446600809' }) });
+  let r = await h.say(text('booking'));
+  assert.match(r.replies[0].body, /^New booking\./);
+  assert.deepEqual(h.store.docs.get(ADMIN).admin, { uid: 'u9', name: 'Anu', viaPhone: '919446600809' });
+  const h2 = harness({ whoami: () => ({ ok: true, name: 'Nobody' }) });
+  r = await h2.say(text('booking'));
+  assert.equal(r.replies[0].body, "This number can't make bookings. Ask the owner to add it as an admin.");
+});
+
 test('only listed admins, and only on the start word or a draft', async () => {
   const h = harness();
   let r = await h.say(text('booking'), '919000000001');
