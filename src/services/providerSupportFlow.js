@@ -10,6 +10,7 @@ const {
 } = require('./providerSupportNotifications');
 const { PARTNER_KIND, resolveCarePartner } = require('./carePartnerService');
 const carePartnerFlow = require('./carePartnerFlow');
+const adminBookingFlow = require('./adminBookingFlow');
 
 const COLLECTION = 'providerSupportSessions';
 const SUPPORT_HELP_COOLDOWN_MS = 12 * 60 * 60 * 1000;
@@ -786,6 +787,11 @@ async function handleAppIssue(phone, message, session = {}) {
 }
 
 async function processProviderSupportMessage(phone, message) {
+  // Admin booking bot (docs/admin_booking_bot_plan.md): only the admin phones,
+  // and only on "booking"/"book" or an open draft. Everyone else, and an
+  // admin's other messages, carry on below exactly as before.
+  if (await adminBookingFlow.maybeHandleAdminBooking(phone, message)) return;
+
   await addSessionEvent(phone, {
     type: 'inbound_message',
     messageId: message.id || null,
