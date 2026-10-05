@@ -83,7 +83,10 @@ async function handleCallerMessage({ phone, text, buttonId, now = new Date(), op
     return true;
   }
 
-  if (command.kind === 'skip') {
+  // "skip" at the note question means "no note", not "skip this agency": he
+  // already tapped Interested, and losing that would send the agency to the
+  // back of the list as if nobody had called.
+  if (command.kind === 'skip' && state !== flow.STATES.awaitingNote) {
     if (!inHand) {
       await sendText(phone, flow.MESSAGES.nothingInHand, options);
       return true;

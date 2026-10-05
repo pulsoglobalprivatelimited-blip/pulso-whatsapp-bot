@@ -227,7 +227,7 @@ const MESSAGES = Object.freeze({
   stopped: 'Stopped. Type *call* when you want the next one.',
   allDone: 'That is everyone on the list. Nothing left to call.',
   noneDue: 'Nothing due right now. The follow-ups come back on their date.',
-  askNote: 'What do they need? (district, type of staff) — or send *skip*.',
+  askNote: 'Note anything relevant they said — or send *skip*.',
   askFollowUp: 'When should we call again? Try *1 week*, *monday*, or *12/10*.',
   savedNext: 'Saved.',
   notUnderstood: 'I did not catch that. Type *help* to see the commands.',

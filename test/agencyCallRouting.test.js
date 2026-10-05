@@ -15,6 +15,7 @@ const ADMIN = '917736108778';
 const STRANGER = '919876543210';
 
 const sent = [];
+const storeCalls = [];
 let callerState = { state: 'idle', inHand: null };
 
 const fakeStore = {
@@ -27,9 +28,9 @@ const fakeStore = {
     total: 1,
   }),
   statsFor: async () => ({ total: 1, dueToday: 1 }),
-  recordOutcome: async () => {},
+  recordOutcome: async (id, outcome, extra) => { storeCalls.push({ fn: 'recordOutcome', id, outcome, note: extra && extra.note }); },
   releaseAgency: async () => {},
-  skipAgency: async () => {},
+  skipAgency: async (id) => { storeCalls.push({ fn: 'skipAgency', id }); },
   addNote: async () => {},
 };
 
@@ -59,6 +60,7 @@ const flow = require('../src/services/agencyCallFlow');
 test.after(() => { Module._load = realLoad; });
 test.beforeEach(() => {
   sent.length = 0;
+  storeCalls.length = 0;
   callerState = { state: 'idle', inHand: null };
 });
 
@@ -115,4 +117,23 @@ test('takesPriority is pure and narrow', () => {
   assert.equal(flow.takesPriority({ text: 'yes', state: 'awaiting_outcome' }), false);
   assert.equal(flow.takesPriority({ buttonId: 'ab_cancel' }), false);
   assert.equal(flow.takesPriority({}), false);
+});
+
+test('"skip" at the note question saves Interested with no note, and keeps the agency', async () => {
+  callerState = { state: 'awaiting_note', inHand: '919000000001', pendingOutcome: 'interested' };
+  assert.equal(await maybeHandleAgencyCall(ADMIN, textMessage('skip')), true);
+  assert.deepEqual(storeCalls[0], { fn: 'recordOutcome', id: '919000000001', outcome: 'interested', note: '' });
+  assert.ok(!storeCalls.some((c) => c.fn === 'skipAgency'), 'an Interested agency must not go to the back of the list');
+});
+
+test('a note at the note question is saved with Interested', async () => {
+  callerState = { state: 'awaiting_note', inHand: '919000000001', pendingOutcome: 'interested' };
+  assert.equal(await maybeHandleAgencyCall(ADMIN, textMessage('Needs 2 GDAs in Aluva, call Monday')), true);
+  assert.equal(storeCalls[0].note, 'Needs 2 GDAs in Aluva, call Monday');
+});
+
+test('"skip" with an agency in hand still skips it', async () => {
+  callerState = { state: 'awaiting_outcome', inHand: '919000000001' };
+  assert.equal(await maybeHandleAgencyCall(ADMIN, textMessage('skip')), true);
+  assert.equal(storeCalls[0].fn, 'skipAgency');
 });
