@@ -194,6 +194,20 @@ async function sendDocumentByUrl(to, link, filename, caption, options) {
   }, options);
 }
 
+/**
+ * A contact card. WhatsApp shows it with a Call button, so a number can be
+ * dialled from the chat instead of copied out of a message — which is the
+ * difference between calling fifty agencies and calling five.
+ */
+async function sendContacts(to, contacts, options) {
+  return sendRequest({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'contacts',
+    contacts: Array.isArray(contacts) ? contacts : [contacts]
+  }, options);
+}
+
 async function sendDocumentById(to, mediaId, filename, caption, options) {
   return sendRequest({
     messaging_product: 'whatsapp',
@@ -353,6 +367,7 @@ module.exports = {
   sendDocumentByUrl,
   sendVideoById,
   sendButtons,
+  sendContacts,
   sendList,
   sendTemplate,
   sendAudio,

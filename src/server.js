@@ -20,6 +20,8 @@ const {
 } = require('./services/onboardingFlow');
 const { getProviderTiers } = require('./services/providerTiersConfig');
 const { processProviderSupportMessage } = require('./services/providerSupportFlow');
+const { handleCallerMessage } = require('./services/agencyCallService');
+const { isCallAdmin } = require('./services/agencyCallStore');
 const {
   getProviderSupportSessionDetail,
   listProviderSupportSessions,
@@ -558,6 +560,29 @@ function isProviderSupportWebhookValue(value) {
   );
 }
 
+/**
+ * Hand an inbound message to the agency calling bot when, and only when, it
+ * comes from a number on the admin list. Anything that throws is swallowed:
+ * a fault in the calling bot must not swallow a real support message.
+ */
+async function handleAgencyCallingBot(message) {
+  try {
+    const from = (message && message.from) || '';
+    if (!from) return false;
+    if (!(await isCallAdmin(from))) return false;
+    const text =
+      (message.type === 'text' && message.text && message.text.body) ||
+      (message.interactive && message.interactive.list_reply && message.interactive.list_reply.title) ||
+      '';
+    const buttonId =
+      (message.interactive && message.interactive.button_reply && message.interactive.button_reply.id) || '';
+    return await handleCallerMessage({ phone: from, text, buttonId });
+  } catch (error) {
+    console.error('[AGENCY_CALL_BOT_ERROR]', (message && message.from) || '', error && error.message);
+    return false;
+  }
+}
+
 function isIgnoredWebhookValue(value) {
   const metadata = value && value.metadata ? value.metadata : {};
   const inboundPhoneNumberId = (metadata.phone_number_id || '').toString();
@@ -838,12 +863,23 @@ app.post('/webhook', async (req, res) => {
           );
           const messageStartedAt = Date.now();
           try {
-            if (useProviderSupportBot) {
+            // The calling bot comes first, and only for a number on the admin
+            // list. The gate is deliberately before everything else: an agency
+            // typing "call" must never be handed somebody else's contact list.
+            // It returns false when the admin said something the calling bot
+            // does not own, so an admin can still use the ordinary bot.
+            const handledByCallingBot = useProviderSupportBot
+              ? await handleAgencyCallingBot(message)
+              : false;
+            if (handledByCallingBot) {
+              markMessageProcessed(message.id);
+            } else if (useProviderSupportBot) {
               await processProviderSupportMessage(message.from, message);
+              markMessageProcessed(message.id);
             } else {
               await processIncomingMessage(message.from, message);
+              markMessageProcessed(message.id);
             }
-            markMessageProcessed(message.id);
           } finally {
             clearMessageProcessing(message.id);
             logTiming('[WEBHOOK_MESSAGE_TIMING]', messageStartedAt, {
