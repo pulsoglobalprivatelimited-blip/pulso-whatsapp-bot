@@ -791,6 +791,10 @@ async function processProviderSupportMessage(phone, message) {
   // Admin booking bot (docs/admin_booking_bot_plan.md): only the admin phones,
   // and only on "booking"/"book" or an open draft. Everyone else, and an
   // admin's other messages, carry on below exactly as before.
+  // Except for "call", our call buttons, and an answer the calling bot just
+  // asked for: an open booking draft answers everything, so without this an
+  // admin with a half-finished booking could never reach the call list.
+  if (await maybeHandleAgencyCall(phone, message, { priorityOnly: true })) return;
   if (await adminBookingFlow.maybeHandleAdminBooking(phone, message)) return;
   // The calling bot comes after the booking bot on purpose: a half-finished
   // booking is the more fragile of the two, so an open booking draft keeps the

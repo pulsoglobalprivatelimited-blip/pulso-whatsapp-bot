@@ -266,6 +266,22 @@ function asksNote(outcome) {
   return outcome === OUTCOMES.interested;
 }
 
+/**
+ * Does this turn belong to the calling bot even while a booking draft is open?
+ *
+ * The booking bot runs first, and an open draft answers everything — so an
+ * admin with a half-finished booking typed "call" and got "What do you want to
+ * change?" back, every time, and each try kept the draft alive another day.
+ * Only what cannot be a booking answer jumps the queue: the word "call" itself,
+ * our own outcome buttons, and the follow-up date or note we just asked for.
+ * "c", "next", "yes" and "no" stay with the draft, where they may be answers.
+ */
+function takesPriority({ text, buttonId, state } = {}) {
+  if (Object.values(BUTTON_IDS).includes(clean(buttonId))) return true;
+  if (lower(text) === 'call') return true;
+  return state === STATES.awaitingFollowUp || state === STATES.awaitingNote;
+}
+
 module.exports = {
   OUTCOMES,
   BUTTON_IDS,
@@ -274,6 +290,7 @@ module.exports = {
   NO_ANSWER_RETRY_DAYS,
   MESSAGES,
   parseCommand,
+  takesPriority,
   parseFollowUpDate,
   toDayKey,
   agencyMessage,

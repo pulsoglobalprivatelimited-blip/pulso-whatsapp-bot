@@ -11,6 +11,7 @@
  */
 const flow = require('./agencyCallFlow');
 const store = require('./agencyCallStore');
+const config = require('../config');
 const { sendText, sendButtons, sendContacts } = require('./metaClient');
 
 /**
@@ -166,22 +167,51 @@ async function handleCallerMessage({ phone, text, buttonId, now = new Date(), op
  * him. Nothing is read from Firestore for a stranger — the gate is checked
  * first, on the number alone.
  */
-async function maybeHandleAgencyCall(phone, message) {
+/**
+ * Replies leave from the support number, where the caller wrote to us.
+ *
+ * Without this every send fell back to the onboarding number: the agency
+ * arrived in a different chat, and a tap on its buttons went to the onboarding
+ * bot, which knows nothing about calls — so no outcome was ever saved.
+ */
+function senderOptions() {
+  return config.providerSupportPhoneNumberId
+    ? { phoneNumberId: config.providerSupportPhoneNumberId }
+    : undefined;
+}
+
+function readMessage(message) {
+  const text =
+    (message && message.type === 'text' && message.text && message.text.body) ||
+    (message && message.interactive && message.interactive.list_reply && message.interactive.list_reply.title) ||
+    '';
+  const buttonId =
+    (message && message.interactive && message.interactive.button_reply && message.interactive.button_reply.id) || '';
+  return { text, buttonId };
+}
+
+/**
+ * Answer an admin's message, if it is ours.
+ *
+ * With `priorityOnly`, answer only a turn that must not wait behind an open
+ * booking draft (flow.takesPriority); everything else is left for the booking
+ * bot, and this is called again without it once the booking bot has passed.
+ */
+async function maybeHandleAgencyCall(phone, message, { priorityOnly = false } = {}) {
   try {
     if (!phone) return false;
+    const { text, buttonId } = readMessage(message);
     if (!(await store.isCallAdmin(phone))) return false;
-    const text =
-      (message && message.type === 'text' && message.text && message.text.body) ||
-      (message && message.interactive && message.interactive.list_reply && message.interactive.list_reply.title) ||
-      '';
-    const buttonId =
-      (message && message.interactive && message.interactive.button_reply && message.interactive.button_reply.id) || '';
-    return await handleCallerMessage({ phone, text, buttonId });
+    if (priorityOnly && !flow.takesPriority({ text, buttonId })) {
+      // Not the word or our button, but it may be the date or note we asked for.
+      const caller = await store.getCaller(phone);
+      if (!flow.takesPriority({ text, buttonId, state: caller && caller.state })) return false;
+    }
+    return await handleCallerMessage({ phone, text, buttonId, options: senderOptions() });
   } catch (error) {
     // A fault here must never swallow a real support message.
     console.error('[AGENCY_CALL_BOT_ERROR]', phone, error && error.message);
     return false;
   }
 }
-
 module.exports = { handOutNext, handleCallerMessage, maybeHandleAgencyCall };
