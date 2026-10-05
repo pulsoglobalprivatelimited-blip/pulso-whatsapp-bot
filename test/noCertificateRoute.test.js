@@ -107,8 +107,9 @@ test('no_certificate and basic_caregiver are the Basic band; other_caregiving is
 test('the working model quotes Basic flat, GDA as a range, in both languages', async () => {
   await flow.runWithFlow('kerala_malayalam', async () => {
     const basic = flow.getWorkingModelFor('no_certificate', LIVE);
-    assert.match(basic, /8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹650 ലഭിക്കും/);
     assert.match(basic, /24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 ലഭിക്കും/);
+    // 24-hour only since 6 Oct 2026: no 8-hour line, figure or timing anywhere.
+    assert.doesNotMatch(basic, /8 മണിക്കൂർ|8 hour|₹650/);
     // ₹600 is Basic's own 24-hour rate *and* GDA's 8-hour rate after the
     // 28 Sep 2026 reprice, so the bands no longer separate by figure alone.
     // What still separates them is shape: Basic is quoted flat, GDA as a
@@ -118,20 +119,22 @@ test('the working model quotes Basic flat, GDA as a range, in both languages', a
     assert.doesNotMatch(basic, /ദിവസത്തിൽ ₹\d+ മുതൽ/, 'Basic is a flat rate, never a range');
     const gda = flow.getWorkingModelFor('gda', LIVE);
     // The band is quoted the range agencies really pay, not the ₹700 floor.
-    assert.match(gda, /₹800 മുതൽ ₹900 വരെ/);
     assert.match(gda, /₹900 മുതൽ ₹1200 വരെ/);
+    assert.doesNotMatch(gda, /₹800 മുതൽ ₹900 വരെ/, 'the 8-hour range is gone');
     assert.doesNotMatch(gda, /₹600 മുതൽ ₹700 വരെ/, 'the floor is not the wage');
     const nurse = flow.getWorkingModelFor('gnm', LIVE);
-    assert.match(nurse, /₹1200 ലഭിക്കും/);
     assert.match(nurse, /₹1400 ലഭിക്കും/);
+    assert.doesNotMatch(nurse, /₹1200 ലഭിക്കും/, 'the 8-hour figure is gone');
     assert.doesNotMatch(nurse, /₹2200/, 'the old hand-written nurse range is gone');
   });
   await flow.runWithFlow('kerala_english', async () => {
     const basic = flow.getWorkingModelFor('basic_caregiver', LIVE);
-    assert.match(basic, /For 8-hour duty, you will receive Rs 650 per day/);
     assert.match(basic, /For 24-hour duty, you will receive Rs 750 per day/);
-    assert.match(flow.getWorkingModelFor('hca', LIVE), /Rs 800 to Rs 900 per day[\s\S]*Rs 900 to Rs 1200 per day/);
-    assert.match(flow.getWorkingModelFor('bsc_nursing', LIVE), /Rs 1200 per day[\s\S]*Rs 1400 per day/);
+    assert.doesNotMatch(basic, /8-hour|8 hours|Rs 650/);
+    assert.match(flow.getWorkingModelFor('hca', LIVE), /Rs 900 to Rs 1200 per day/);
+    assert.doesNotMatch(flow.getWorkingModelFor('hca', LIVE), /Rs 800 to Rs 900 per day/);
+    assert.match(flow.getWorkingModelFor('bsc_nursing', LIVE), /Rs 1400 per day/);
+    assert.doesNotMatch(flow.getWorkingModelFor('bsc_nursing', LIVE), /Rs 1200 per day/);
   });
 });
 
@@ -140,11 +143,12 @@ test('the figures come from the tier settings, with the live matrix as fallback'
     // Basic is told ₹650/₹750 (founder, 3 Oct 2026) whatever the payout floor
     // says; the told figures are overridable on their own.
     const floorMoved = flow.getWorkingModelFor('no_certificate', { basic: { payout8h: 550, payout24h: 650 } });
-    assert.match(floorMoved, /Rs 650 per day[\s\S]*Rs 750 per day/);
+    assert.match(floorMoved, /Rs 750 per day/);
     const repriced = flow.getWorkingModelFor('no_certificate', { basic: { payout8h: 500, payout24h: 600, shown8h: 700, shown24h: 800 } });
-    assert.match(repriced, /Rs 700 per day[\s\S]*Rs 800 per day/);
+    assert.match(repriced, /Rs 800 per day/);
+    assert.doesNotMatch(repriced, /Rs 700 per day/, 'shown8h no longer reaches anyone');
     const fallback = flow.getWorkingModelFor('gda', null);
-    assert.match(fallback, /Rs 800 to Rs 900 per day[\s\S]*Rs 900 to Rs 1200 per day/);
+    assert.match(fallback, /Rs 900 to Rs 1200 per day/);
     // Each shown figure is overridable on its own, like every other rate.
     const wider = flow.getWorkingModelFor('gda', { gda: { shownTo24h: 1500 } });
     assert.match(wider, /Rs 900 to Rs 1500 per day/);
@@ -153,13 +157,13 @@ test('the figures come from the tier settings, with the live matrix as fallback'
 
 test('the duty-hours summary follows the same bands', async () => {
   await flow.runWithFlow('kerala_malayalam', async () => {
-    assert.equal(flow.getDutyHourPaymentSummaryFor('no_certificate', LIVE), '8 hour - ദിവസത്തിൽ ₹650\n24 hour - ദിവസത്തിൽ ₹750');
-    assert.equal(flow.getDutyHourPaymentSummaryFor('gda', LIVE), '8 hour - ദിവസത്തിൽ ₹800 മുതൽ ₹900 വരെ\n24 hour - ദിവസത്തിൽ ₹900 മുതൽ ₹1200 വരെ');
-    assert.equal(flow.getDutyHourPaymentSummaryFor('gnm', LIVE), '8 hour - ദിവസത്തിൽ ₹1200\n24 hour - ദിവസത്തിൽ ₹1400');
+    assert.equal(flow.getDutyHourPaymentSummaryFor('no_certificate', LIVE), '24 hour - ദിവസത്തിൽ ₹750');
+    assert.equal(flow.getDutyHourPaymentSummaryFor('gda', LIVE), '24 hour - ദിവസത്തിൽ ₹900 മുതൽ ₹1200 വരെ');
+    assert.equal(flow.getDutyHourPaymentSummaryFor('gnm', LIVE), '24 hour - ദിവസത്തിൽ ₹1400');
   });
   await flow.runWithFlow('kerala_english', async () => {
-    assert.equal(flow.getDutyHourPaymentSummaryFor('basic_caregiver', LIVE), '8 hour - Rs 650 per day\n24 hour - Rs 750 per day');
-    assert.equal(flow.getDutyHourPaymentSummaryFor('anm', LIVE), '8 hour - Rs 800 to Rs 900 per day\n24 hour - Rs 900 to Rs 1200 per day');
+    assert.equal(flow.getDutyHourPaymentSummaryFor('basic_caregiver', LIVE), '24 hour - Rs 750 per day');
+    assert.equal(flow.getDutyHourPaymentSummaryFor('anm', LIVE), '24 hour - Rs 900 to Rs 1200 per day');
   });
 });
 
@@ -190,10 +194,9 @@ test('the sample duty offer is priced for the band reading it', async () => {
     for (const text of [basic, gda, nurse]) assert.doesNotMatch(text, /36000/);
     for (const text of [basic, gda]) assert.doesNotMatch(text, /1200/);
 
-    assert.match(flow.getSampleDutyOfferFor('gda', LIVE, '8_hour'), /₹800 per day/);
-    assert.match(flow.getSampleDutyOfferFor('no_certificate', LIVE, '8_hour'), /₹650 per day/);
-    assert.match(flow.getSampleDutyOfferFor('gnm', LIVE, '8_hour'), /₹1200 per day/);
-    assert.equal(flow.getSampleDutyOfferFor('gda', LIVE, 'both'), null, '"both" is sent as two messages, not one');
+    // 24-hour only since 6 Oct 2026: there is no 8-hour sample to send.
+    assert.equal(flow.getSampleDutyOfferFor('gda', LIVE, '8_hour'), null);
+    assert.equal(flow.getSampleDutyOfferFor('gda', LIVE, 'both'), null);
   });
 });
 
@@ -235,7 +238,8 @@ test('the age notice goes only to someone whose certificate would have earned mo
   await flow.runWithFlow('kerala_english', async () => {
     const nurse = flow.getBasicTierAgeNoticeFor({ qualification: 'gnm', age: 52 }, T);
     assert.match(nurse, /above 45/);
-    assert.match(nurse, /8 hours ₹650\/day, 24 hours ₹750\/day/);
+    assert.match(nurse, /Duty pay: 24 hours ₹750\/day\./);
+    assert.doesNotMatch(nurse, /8 hours/);
 
     /* She is on the Basic rate because she has no course certificate, not
        because of her age. An age rule would be irrelevant and unkind. */
@@ -258,7 +262,8 @@ test('a qualified caregiver on the Basic rate is never told she has no certifica
     assert.match(line, /certificate has been checked and approved/);
     assert.match(line, /above 45/);
     assert.doesNotMatch(line, /no Nursing\/Caregiving course certificate/);
-    assert.match(line, /8 hours ₹650\/day, 24 hours ₹750\/day/);
+    assert.match(line, /Duty pay: 24 hours ₹750\/day\./);
+    assert.doesNotMatch(line, /8 hours/);
 
     // And the person who really has no course certificate still gets that sentence.
     const basic = flow.getTermsRateFor({ qualification: 'basic_caregiver' }, T);

@@ -72,7 +72,6 @@ const {
   isQualificationDeclined,
   isInterested,
   isNotInterested,
-  parseDutyHourPreference,
   parseSampleDutyOfferPreference,
   parseExpectedDutiesResponse,
   parseAge,
@@ -550,14 +549,15 @@ async function sendSexButtons(phone) {
   });
 }
 
+// Pulso duties are 24-hour live-in (founder, 5 Oct 2026). There is nothing to
+// choose, so this is a statement with one button that means "understood, go
+// on". The pay line under it is the 24-hour figure for her band.
+const DUTY_HOUR_ONLY = '24_hour';
+
 async function sendDutyHourPreferenceButtons(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.dutyHourPreferenceQuestion,
-    buttons: [
-      { id: BUTTON_IDS.DUTY_HOUR_8, title: '8 hour' },
-      { id: BUTTON_IDS.DUTY_HOUR_24, title: '24 hour' },
-      { id: BUTTON_IDS.DUTY_HOUR_BOTH, title: UI_TEXT.dutyBothTitle }
-    ]
+    buttons: [{ id: BUTTON_IDS.DUTY_HOUR_24, title: '24 hour' }]
   });
   const provider = await getProvider(phone);
   await sendAndLog(phone, 'text', getDutyHourPaymentSummaryFor(provider, await getProviderTiers()));
@@ -573,58 +573,9 @@ async function sendSampleDutyOfferPrompt(phone) {
   });
 }
 
-function getOtherDutyPreference(value) {
-  if (value === 'both') return null;
-  return value === '24_hour' ? '8_hour' : '24_hour';
-}
-
-/* The sample is priced for the person reading it. `provider` is already loaded
-   by every caller, and getProviderTiers is cached for a minute. */
-function getSampleDutyMessage(value, provider, tiers) {
-  if (value === 'both') return null;
-  return getSampleDutyOfferFor(provider, tiers, value);
-}
-
-function getOtherSampleQuestion(value) {
-  if (value === 'both') return null;
-  return value === '24_hour'
-    ? MESSAGES.sampleDutyOtherOffer24HourQuestion
-    : MESSAGES.sampleDutyOtherOffer8HourQuestion;
-}
-
-async function sendOtherSamplePrompt(phone, dutyHourPreference) {
-  await sendAndLog(phone, 'buttons', {
-    body: getOtherSampleQuestion(dutyHourPreference),
-    buttons: [
-      { id: BUTTON_IDS.SAMPLE_DUTY_YES, title: UI_TEXT.sampleYesTitle },
-      { id: BUTTON_IDS.SAMPLE_DUTY_NO, title: UI_TEXT.sampleNoTitle }
-    ]
-  });
-}
-
-async function sendFinalDutyChoiceButtons(phone) {
-  await sendAndLog(phone, 'buttons', {
-    body: MESSAGES.sampleDutyFinalChoiceQuestion,
-    buttons: [
-      { id: BUTTON_IDS.DUTY_HOUR_8, title: '8 hour' },
-      { id: BUTTON_IDS.DUTY_HOUR_24, title: '24 hour' },
-      { id: BUTTON_IDS.DUTY_HOUR_BOTH, title: UI_TEXT.dutyBothTitle }
-    ]
-  });
-}
-
-async function notify8HourNoStayOrFood(phone, dutyHourPreference) {
-  if (!['8_hour', 'both'].includes(dutyHourPreference)) {
-    return;
-  }
-
-  await sendAndLog(phone, 'text', MESSAGES.dutyHourPreference8HourNotice);
-}
-
-async function moveToExpectedDuties(phone, dutyHourPreference) {
-  await notify8HourNoStayOrFood(phone, dutyHourPreference);
+async function moveToExpectedDuties(phone) {
   await updateStatus(phone, STATUS.AWAITING_EXPECTED_DUTIES_CONFIRMATION, 7, {
-    dutyHourPreference,
+    dutyHourPreference: DUTY_HOUR_ONLY,
     sampleDutyState: null
   });
   await sendExpectedDutiesFlow(phone);
@@ -2077,92 +2028,31 @@ async function handleInterest(phone, message) {
   await sendDutyHourPreferenceButtons(phone);
 }
 
-async function handleDutyHourPreference(phone, message) {
-  const dutyHourPreference = parseDutyHourPreference(message);
-  if (!dutyHourPreference) {
-    await sendAndLog(phone, 'text', MESSAGES.dutyHourPreferenceRetry);
-    await sendDutyHourPreferenceButtons(phone);
-    return;
-  }
-
-  await notify8HourNoStayOrFood(phone, dutyHourPreference);
+// Any reply moves her on. A phone that was mid-chat when this went live may
+// still show the old three buttons (8 hour / 24 hour / both), and a typed
+// answer is as good as a tap: nobody waits at this step.
+async function handleDutyHourPreference(phone) {
   await updateStatus(phone, STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE, 6, {
-    dutyHourPreference,
-    sampleDutyState: {
-      stage: dutyHourPreference === 'both' ? 'both_prompt' : 'initial_prompt',
-      initialChoice: dutyHourPreference,
-      alternateChoice: getOtherDutyPreference(dutyHourPreference)
-    }
+    dutyHourPreference: DUTY_HOUR_ONLY,
+    sampleDutyState: null
   });
   await sendSampleDutyOfferPrompt(phone);
 }
 
 async function handleSampleDutyOfferPreference(phone, message) {
-  const provider = await getProvider(phone);
-  const sampleDutyState = provider && provider.sampleDutyState
-    ? provider.sampleDutyState
-    : {
-        stage: 'initial_prompt',
-        initialChoice: provider ? provider.dutyHourPreference : null,
-        alternateChoice: getOtherDutyPreference(provider ? provider.dutyHourPreference : null)
-      };
-
-  if (sampleDutyState.stage === 'final_choice') {
-    const finalChoice = parseDutyHourPreference(message);
-    if (!finalChoice) {
-      await sendAndLog(phone, 'text', MESSAGES.sampleDutyFinalChoiceRetry);
-      await sendFinalDutyChoiceButtons(phone);
-      return;
-    }
-
-    await moveToExpectedDuties(phone, finalChoice);
-    return;
-  }
-
   const action = parseSampleDutyOfferPreference(message);
   if (!action) {
+    // Also an old "8 hour" or "both" tap from before 6 Oct 2026, when this
+    // step asked the preference a second time: ask the one open question.
     await sendAndLog(phone, 'text', MESSAGES.sampleDutyOfferRetry);
-    if (sampleDutyState.stage === 'other_prompt') {
-      await sendOtherSamplePrompt(phone, sampleDutyState.alternateChoice);
-      return;
-    }
     await sendSampleDutyOfferPrompt(phone);
     return;
   }
-
   if (action === 'show') {
-    if (sampleDutyState.initialChoice === 'both') {
-      const bothTiers = await getProviderTiers();
-      await sendAndLog(phone, 'text', getSampleDutyOfferFor(provider, bothTiers, '8_hour'));
-      await sendAndLog(phone, 'text', getSampleDutyOfferFor(provider, bothTiers, '24_hour'));
-      await moveToExpectedDuties(phone, 'both');
-      return;
-    }
-
-    if (sampleDutyState.stage === 'other_prompt') {
-      await sendAndLog(phone, 'text', getSampleDutyMessage(sampleDutyState.alternateChoice, provider, await getProviderTiers()));
-      await updateProvider(phone, {
-        sampleDutyState: {
-          ...sampleDutyState,
-          stage: 'final_choice'
-        }
-      });
-      await sendFinalDutyChoiceButtons(phone);
-      return;
-    }
-
-    await sendAndLog(phone, 'text', getSampleDutyMessage(sampleDutyState.initialChoice, provider, await getProviderTiers()));
-    await updateProvider(phone, {
-      sampleDutyState: {
-        ...sampleDutyState,
-        stage: 'other_prompt'
-      }
-    });
-    await sendOtherSamplePrompt(phone, sampleDutyState.alternateChoice);
-    return;
+    const provider = await getProvider(phone);
+    await sendAndLog(phone, 'text', getSampleDutyOfferFor(provider, await getProviderTiers(), DUTY_HOUR_ONLY));
   }
-
-  await moveToExpectedDuties(phone, sampleDutyState.initialChoice);
+  await moveToExpectedDuties(phone);
 }
 
 async function handleExpectedDutiesConfirmation(phone, message) {

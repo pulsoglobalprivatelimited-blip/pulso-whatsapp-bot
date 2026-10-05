@@ -26,7 +26,7 @@ A production-oriented WhatsApp Business onboarding bot for care providers from M
 8. System creates verification queue entry
 9. Certificate stays in `pending verification`
 10. Team approves or rejects the certificate
-11. If approved, bot asks duty preference: `8 hour` or `24 hour`
+11. If approved, bot states the duty hours (`24 hour`, one button; 24-hour only since 6 Oct 2026)
 12. Bot sends onboarding confirmation and terms and conditions
 
 ## Status model
@@ -338,7 +338,7 @@ Ask region
 ↓
 Main menu
 ├─ Join Pulso → existing registration chatbot
-├─ Duty availability → ask 8-hour / 24-hour → app Offer Inbox + app links
+├─ Duty hours → 24-hour only, one button → app Offer Inbox + app links
 ├─ Payment help → support phone only
 ├─ App/Login/OTP → app links / support phone / customer care WhatsApp
 ├─ Duty/Family issue → support phone + customer care WhatsApp
