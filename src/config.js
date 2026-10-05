@@ -167,6 +167,12 @@ module.exports = {
     '9446600809',
     '7736108778'
   ]),
+  // Who may use the agency calling bot. Same shape as the booking bot's list
+  // above, and deliberately its own key: the two bots guard different things,
+  // and the call list is 500 agencies' numbers and what each said about us.
+  agencyCallBotPhones: parseList(process.env.AGENCY_CALL_BOT_PHONES, [
+    '7736108778'
+  ]),
   // The Pulso Hub function the booking bot calls. Derived from the sync URL
   // (same project, same Cloud Run hash) unless set here.
   pulsoHubAdminBookingUrl: process.env.PULSO_HUB_ADMIN_BOOKING_URL || '',

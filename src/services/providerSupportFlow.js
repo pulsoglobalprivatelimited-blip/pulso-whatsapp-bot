@@ -11,6 +11,7 @@ const {
 const { PARTNER_KIND, resolveCarePartner } = require('./carePartnerService');
 const carePartnerFlow = require('./carePartnerFlow');
 const adminBookingFlow = require('./adminBookingFlow');
+const { maybeHandleAgencyCall } = require('./agencyCallService');
 
 const COLLECTION = 'providerSupportSessions';
 const SUPPORT_HELP_COOLDOWN_MS = 12 * 60 * 60 * 1000;
@@ -791,6 +792,11 @@ async function processProviderSupportMessage(phone, message) {
   // and only on "booking"/"book" or an open draft. Everyone else, and an
   // admin's other messages, carry on below exactly as before.
   if (await adminBookingFlow.maybeHandleAdminBooking(phone, message)) return;
+  // The calling bot comes after the booking bot on purpose: a half-finished
+  // booking is the more fragile of the two, so an open booking draft keeps the
+  // conversation. Neither trigger word overlaps ("book" vs "call"), and both
+  // ignore anyone not on their own admin list.
+  if (await maybeHandleAgencyCall(phone, message)) return;
 
   await addSessionEvent(phone, {
     type: 'inbound_message',
