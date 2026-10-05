@@ -54,11 +54,22 @@ async function callAdminBooking(adminPhone, action, data = {}, { post = axios.po
     // A refusal sent with an error status still carries a message for the admin.
     const body = err.response && err.response.data;
     if (body && typeof body === 'object' && body.ok === false && body.message) return body;
+    // A refusal without words (a care coordinator calling an admin action gets
+    // HTTP 403 { ok:false, error:'not-allowed' }) is still a refusal, not a fault.
+    const status = err.response && err.response.status;
+    if (body && typeof body === 'object' && body.ok === false && body.error && status >= 400 && status < 500) {
+      return { ...body, message: refusalMessage(body.error) };
+    }
     const message = (body && (body.message || body.error)) || err.message || 'Admin booking failed';
     const error = new Error(String(message).slice(0, 300));
     error.statusCode = (err.response && err.response.status) || 502;
     throw error;
   }
+}
+
+function refusalMessage(code) {
+  if (code === 'not-allowed') return 'Pulso Hub does not allow this number to do that.';
+  return `Pulso Hub refused this (${String(code).slice(0, 60)}).`;
 }
 
 /** A client bound to one admin's phone, the shape adminBookingFlow expects. */

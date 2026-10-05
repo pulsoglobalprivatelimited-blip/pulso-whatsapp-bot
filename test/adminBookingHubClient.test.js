@@ -99,3 +99,30 @@ test('a transport failure throws; not configured throws 503', async () => {
     restore();
   }
 });
+
+test('a 403 { ok:false, error:"not-allowed" } (a coordinator calling an admin action) comes back as a refusal, not a fault', async () => {
+  const { client, restore } = loadClient({
+    PULSO_HUB_ADMIN_BOOKING_URL: `${HUB}/adminBookingFromBot`,
+    PULSO_HUB_BOT_SYNC_SECRET: 'shh'
+  });
+  try {
+    const post = async () => {
+      const e = new Error('Request failed with status code 403');
+      e.response = { status: 403, data: { ok: false, error: 'not-allowed' } };
+      throw e;
+    };
+    const result = await client.callAdminBooking('916238378859', 'create', {}, { post });
+    assert.equal(result.ok, false);
+    assert.equal(result.error, 'not-allowed');
+    assert.equal(result.message, 'Pulso Hub does not allow this number to do that.');
+    // A 500 without words is still a fault.
+    const crash = async () => {
+      const e = new Error('Request failed with status code 500');
+      e.response = { status: 500, data: { ok: false, error: 'internal' } };
+      throw e;
+    };
+    await assert.rejects(client.callAdminBooking('916238378859', 'whoami', {}, { post: crash }), (e) => e.statusCode === 500);
+  } finally {
+    restore();
+  }
+});

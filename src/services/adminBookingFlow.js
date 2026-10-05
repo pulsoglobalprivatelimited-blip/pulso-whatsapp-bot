@@ -25,6 +25,7 @@ const config = require('../config');
 const { getInteractiveReplyId } = require('./messageParser');
 
 const DRAFTS = 'adminBookingDrafts';
+const COORDINATOR_DRAFTS = 'coordinatorRequestDrafts';
 const DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
 const START_HOUR_IST = 8; // senior care starts at 8 am
@@ -40,6 +41,9 @@ const MAX_DATE_AHEAD_DAYS = 365;
 const LIMITS = { listRows: 10, rowTitle: 24, rowDescription: 72, buttons: 3, buttonTitle: 20, body: 1024 };
 
 const START_WORDS = new Set(['booking', 'book']);
+// The care coordinator's request chat (docs/coordinator_booking_request_plan.md)
+// runs on this same machine in 'coordinator' mode, started by its own word.
+const COORDINATOR_START_WORDS = new Set(['request']);
 
 const TIER_LABEL = { basic: 'Basic', gda: 'GDA', nurse: 'Nurse' };
 const TIER_LONG_LABEL = { basic: 'Basic', gda: 'GDA and above', nurse: 'Nurse' };
@@ -47,7 +51,8 @@ const GENDER_SHORT = { female: 'F', male: 'M', other: 'Other' };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-const ID = {
+const ADMIN_ID = {
+  GENDER: 'ab_g_',
   NEW_AGENCY: 'ab_ag_new',
   AGENCY: 'ab_ag_',
   DISTRICT: 'ab_dist_',
@@ -78,6 +83,12 @@ const ID = {
   CANCEL: 'ab_cancel',
   CHANGE_FIELD: 'ab_chg_'
 };
+
+/* The coordinator chat's buttons carry their own prefix, so a tap on an old
+   message from one chat can never be read as an answer in the other (one
+   number, 7736108778, has both). */
+const ID = ADMIN_ID;
+const COORDINATOR_ID = Object.fromEntries(Object.entries(ADMIN_ID).map(([k, v]) => [k, v.replace(/^ab_/, 'cr_')]));
 
 const YES_NO_STEPS = {
   bedridden: 'Bedridden?',
@@ -110,8 +121,12 @@ function command(message) {
   return messageText(message).toLowerCase().replace(/[.!?]+$/, '').trim();
 }
 
-function isStartWord(message) {
-  return START_WORDS.has(command(message));
+function isStartWord(message, words = START_WORDS) {
+  return words.has(command(message));
+}
+
+function isCoordinatorStartWord(message) {
+  return COORDINATOR_START_WORDS.has(command(message));
 }
 
 function money(n) {
@@ -142,19 +157,19 @@ function parseWeight(message) {
   return n > 0 && n < 1000 ? n : null;
 }
 
-function parseYesNo(message) {
+function parseYesNo(message, ids = ID) {
   const id = getInteractiveReplyId(message);
-  if (id === ID.YES) return true;
-  if (id === ID.NO) return false;
+  if (id === ids.YES) return true;
+  if (id === ids.NO) return false;
   const t = command(message);
   if (['yes', 'y', 'yeah', 'haan', 'ok'].includes(t)) return true;
   if (['no', 'n', 'nope', 'illa'].includes(t)) return false;
   return null;
 }
 
-function parseGender(message, { allowAny = false, allowOther = true } = {}) {
+function parseGender(message, { allowAny = false, allowOther = true } = {}, ids = ID) {
   const id = getInteractiveReplyId(message);
-  const t = id ? id.replace('ab_g_', '') : command(message);
+  const t = id ? id.replace(ids.GENDER, '') : command(message);
   const map = { female: 'female', f: 'female', woman: 'female', male: 'male', m: 'male', man: 'male', other: 'other', any: 'any' };
   const g = map[t];
   if (!g) return null;
@@ -248,6 +263,13 @@ function shiftOf(d) {
   return d.service === 'senior_care_8h' ? '8h' : '24h';
 }
 
+/** The patient's age, whether picked from the list or still to be added. */
+function patientAgeOf(d) {
+  if (d.patient) return Number(d.patient.ageYears);
+  if (d.newPatient) return Number(d.newPatient.ageYears);
+  return NaN;
+}
+
 function ratesValid(d) {
   return Boolean(d.rates && d.rates.requestedTier === effectiveTier(d) && d.rates.shift === shiftOf(d));
 }
@@ -271,7 +293,7 @@ const STEPS = [
   { key: 'catheter', done: (d) => typeof d.catheter === 'boolean' },
   { key: 'stoma', done: (d) => typeof d.stoma === 'boolean' },
   { key: 'trach', done: (d) => typeof d.trach === 'boolean' },
-  { key: 'ageReason', applies: (d) => Number(d.patient && d.patient.ageYears) < AGE_REASON_BELOW, done: (d) => Boolean(d.ageReason) },
+  { key: 'ageReason', applies: (d) => patientAgeOf(d) < AGE_REASON_BELOW, done: (d) => Boolean(d.ageReason) },
   { key: 'service', done: (d) => Boolean(d.service) },
   { key: 'cgGender', done: (d) => Boolean(d.cgGender) },
   { key: 'startDate', done: (d) => Boolean(d.startDate) },
@@ -284,12 +306,21 @@ const STEPS = [
   { key: 'summary', done: () => false }
 ];
 
-function nextStep(d) {
-  for (const step of STEPS) {
+/* The coordinator gives the note only: no agency phone to save, no rates and
+   nothing about what happens after creation. The reviewer does those. */
+const ADMIN_ONLY_STEPS = new Set(['agencyPhone', 'rates', 'afterCreate', 'audience']);
+const COORDINATOR_STEPS = STEPS.filter((s) => !ADMIN_ONLY_STEPS.has(s.key));
+
+function nextStepIn(d, steps = STEPS) {
+  for (const step of steps) {
     if (step.applies && !step.applies(d)) continue;
     if (!step.done(d)) return step.key;
   }
   return 'summary';
+}
+
+function nextStep(d) {
+  return nextStepIn(d, STEPS);
 }
 
 const AGENCY_FIELDS = ['agency', 'newAgency', 'client'];
@@ -364,6 +395,11 @@ const CHANGE_FIELDS = [
   { key: 'afterCreate', title: 'After creation', description: 'Push online or assign manually', clear: ['afterCreate'] }
 ];
 
+const COORDINATOR_CHANGE_FIELDS = [
+  ...CHANGE_FIELDS.filter((f) => !['whoRates', 'afterCreate'].includes(f.key)),
+  { key: 'tier', title: 'Who should do it', description: 'Basic, GDA and above, Nurse', clear: ['tier'] }
+];
+
 /* Which step a refusal from `create` sends the admin back to. Pulso Hub may
    name it (`step`/`field`); otherwise the error code is read for a hint. */
 function stepForRefusal(result) {
@@ -388,9 +424,9 @@ function stepForRefusal(result) {
 
 /* ----------------------------------------------------------- storage --- */
 
-function firestoreDraftStore() {
+function firestoreDraftStore(collection = DRAFTS) {
   const { getFirestore } = require('./storage');
-  const ref = (phone) => getFirestore().collection(DRAFTS).doc(phone);
+  const ref = (phone) => getFirestore().collection(collection).doc(phone);
   return {
     async get(phone) {
       const snap = await ref(phone).get();
@@ -433,14 +469,93 @@ function metaSender() {
   };
 }
 
+/* ------------------------------------------------------- request note --- */
+
+function phoneLabel(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+  return digits ? `+${digits}` : '';
+}
+
+/* The lines of a care coordinator's request (docs/coordinator_booking_request_plan.md),
+   shared by the coordinator's own summary and the reviewers' note, so the two
+   always say the same thing. `mapLink` adds a Google Maps link to the pin. */
+function requestLines(d, { mapLink = false } = {}) {
+  const lines = [];
+  if (d.agency) {
+    lines.push(`Agency: ${d.agency.name}`);
+  } else if (d.newAgency) {
+    const district = d.newAgency.district && (d.newAgency.district.label || d.newAgency.district.key || d.newAgency.district);
+    lines.push(
+      `Agency: ${[`New: ${d.newAgency.name || '?'}`, d.newAgency.phone ? `owner ${phoneLabel(d.newAgency.phone)}` : '', district || '']
+        .filter(Boolean)
+        .join(' · ')}`
+    );
+  }
+  const flags = [
+    d.bedridden ? 'bedridden' : '',
+    d.ryles ? 'Ryles tube' : '',
+    d.catheter ? 'catheter' : '',
+    d.stoma ? 'stoma' : '',
+    d.trach ? 'tracheostomy' : ''
+  ].filter(Boolean);
+  const p = d.patient || d.newPatient || {};
+  const name = d.patient ? d.patient.name || 'Patient' : 'New patient';
+  const label = d.patient && d.patient.agencyLabel ? `"${d.patient.agencyLabel}"` : '';
+  const patientParts = [
+    name,
+    label,
+    GENDER_SHORT[p.gender] || '',
+    Number(p.ageYears) > 0 ? String(p.ageYears) : '',
+    Number(d.weight) > 0 ? `${d.weight} kg` : '',
+    ...(Number(d.weight) > 0 ? (flags.length ? flags : ['not bedridden, no tubes']) : [])
+  ].filter(Boolean);
+  lines.push(`Patient: ${patientParts.join(' · ')}`);
+  if (d.ageReason) lines.push(`Under 45, because: ${d.ageReason}`);
+  if (d.service) {
+    const service = d.service === 'senior_care_8h' ? '8 hours' : '24 hours';
+    const caregiver = d.cgGender === 'any' || !d.cgGender ? 'any caregiver' : `${d.cgGender} caregiver`;
+    lines.push(`Service: ${service} · ${caregiver}`);
+  }
+  if (d.startDate && Number(d.days) > 0) {
+    lines.push(`Dates: ${dayLabel(d.startDate)} to ${dayLabel(addDays(d.startDate, d.days - 1))} · ${d.days} days`);
+  }
+  if (d.location) {
+    const where = d.location.addressSummary || 'pin sent';
+    const link = mapLink ? ` https://maps.google.com/?q=${d.location.lat},${d.location.lng}` : '';
+    lines.push(`Location: ${where}${link}`);
+  }
+  const tier = effectiveTier(d);
+  if (tier) lines.push(`Who: ${TIER_LONG_LABEL[tier] || tier}`);
+  return lines;
+}
+
 /* -------------------------------------------------------------- flow --- */
 
+/* deps.mode 'coordinator' is the care coordinator's request chat
+   (docs/coordinator_booking_request_plan.md): the same questions, without the
+   agency phone, rates and after-creation steps; nothing is written to Pulso
+   Hub, and the summary's button sends the answers to deps.onSubmit instead of
+   creating a booking.
+
+   deps.hooks (admin mode) lets the coordinator requests follow a booking the
+   reviewer makes from one: beforeCreate(draft) → { ok, message },
+   onCreated(draft, result), onReleased(draft) when such a draft is cancelled
+   or replaced. Only drafts carrying `coordinatorRequest` call them. */
 function createAdminBookingFlow(deps = {}) {
+  const coordinatorMode = deps.mode === 'coordinator';
+  const ID = coordinatorMode ? COORDINATOR_ID : ADMIN_ID;
+  const steps = coordinatorMode ? COORDINATOR_STEPS : STEPS;
+  const changeFields = coordinatorMode ? COORDINATOR_CHANGE_FIELDS : CHANGE_FIELDS;
+  const startWords = coordinatorMode ? COORDINATOR_START_WORDS : START_WORDS;
+  const hooks = deps.hooks || {};
   const hub = deps.hub || require('./adminBookingHubClient').createHubClient();
-  const store = deps.store || firestoreDraftStore();
+  const store = deps.store || firestoreDraftStore(coordinatorMode ? COORDINATOR_DRAFTS : DRAFTS);
   const sender = deps.send || metaSender();
   const now = deps.now || (() => Date.now());
-  const admins = () => adminPhoneSet(deps.adminPhones || config.adminBookingBotPhones);
+  const admins = () =>
+    adminPhoneSet(deps.adminPhones || (coordinatorMode ? config.coordinatorPhones : config.adminBookingBotPhones));
+  const nextStep = (d) => nextStepIn(d, steps);
 
   /* Sends, trimmed to WhatsApp's limits so a long agency name can never make
      Meta refuse the whole message. */
@@ -502,14 +617,21 @@ function createAdminBookingFlow(deps = {}) {
       title: a.name,
       description: [a.district, a.hasPhone === false ? 'no phone on file' : ''].filter(Boolean).join(' · ')
     }));
-    rows.push({ id: ID.NEW_AGENCY, title: '+ New agency', description: 'Add an agency that is not listed' });
+    rows.push(
+      coordinatorMode
+        ? { id: ID.NEW_AGENCY, title: 'Not in the list', description: 'Type its name, number and district' }
+        : { id: ID.NEW_AGENCY, title: '+ New agency', description: 'Add an agency that is not listed' }
+    );
     let body;
     if (query) {
       body = shown.length
         ? `Agencies matching "${cut(query, 40)}". Pick one, or type another name.`
-        : `No agency matches "${cut(query, 40)}". Type another name, or add a new agency.`;
+        : coordinatorMode
+          ? `No agency matches "${cut(query, 40)}". Type another name, or tap Not in the list.`
+          : `No agency matches "${cut(query, 40)}". Type another name, or add a new agency.`;
     } else {
-      body = `${draft.view.fresh ? 'New booking. ' : ''}Which agency is it for? Type part of a name to search.`;
+      const fresh = draft.view.fresh ? (coordinatorMode ? 'New booking request. ' : 'New booking. ') : '';
+      body = `${fresh}Which agency is it for? Type part of a name to search.`;
     }
     draft.view.fresh = false;
     await list(draft.phone, body, 'Agencies', rows);
@@ -540,7 +662,9 @@ function createAdminBookingFlow(deps = {}) {
   }
 
   async function showPatients(draft) {
-    const result = await call(draft, 'listPatients', { familyId: draft.data.client.familyId });
+    const d = draft.data;
+    if (coordinatorMode) return showAgencyPatients(draft);
+    const result = await call(draft, 'listPatients', { familyId: d.client.familyId });
     if (!result || result.ok === false) {
       await say(draft.phone, (result && result.message) || 'Could not load the patients. Try again.');
       return;
@@ -560,6 +684,45 @@ function createAdminBookingFlow(deps = {}) {
     }));
     rows.push({ id: ID.NEW_PATIENT, title: '+ New patient', description: `Adds ${draft.view.nextName}` });
     await list(draft.phone, shown.length ? 'Which patient?' : 'No patients yet for this agency. Add one.', 'Patients', rows);
+  }
+
+  function patientRows(patients) {
+    return patients.map((p) => ({
+      id: `${ID.PATIENT}${p.memberId}`,
+      title: p.name || 'Patient',
+      description: [
+        GENDER_SHORT[p.gender] || '',
+        Number(p.ageYears) > 0 ? `${p.ageYears} yrs` : '',
+        p.agencyLabel ? `"${p.agencyLabel}"` : ''
+      ].filter(Boolean).join(' · ')
+    }));
+  }
+
+  /* Coordinator: the agency's patients are read without creating its client
+     record (listAgencyPatients). A new agency, or one with no client record or
+     no patients yet, goes straight to a new patient. */
+  async function showAgencyPatients(draft) {
+    const d = draft.data;
+    if (!d.agency) {
+      d.newPatient = { name: 'New patient' };
+      return ask(draft, nextStep(d));
+    }
+    const result = await call(draft, 'listAgencyPatients', { bureauId: d.agency.id });
+    if (!result || result.ok === false) {
+      await say(draft.phone, (result && result.message) || 'Could not load the patients. Try again.');
+      return undefined;
+    }
+    const patients = Array.isArray(result.patients) ? result.patients : [];
+    draft.view.nextName = result.nextName || `Patient ${patients.length + 1}`;
+    if (!patients.length) {
+      d.newPatient = { name: draft.view.nextName };
+      return ask(draft, nextStep(d));
+    }
+    const shown = patients.slice(0, LIMITS.listRows - 1);
+    draft.view.patientOptions = shown;
+    const rows = patientRows(shown);
+    rows.push({ id: ID.NEW_PATIENT, title: 'New patient', description: `Would be ${draft.view.nextName}` });
+    return list(draft.phone, 'Which patient?', 'Patients', rows);
   }
 
   function ratesText(d) {
@@ -614,6 +777,7 @@ function createAdminBookingFlow(deps = {}) {
   }
 
   function summaryText(d) {
+    if (coordinatorMode) return ['Check the request', '', ...requestLines(d)].join('\n');
     const p = d.patient || {};
     const flags = [
       d.bedridden ? 'bedridden' : '',
@@ -660,7 +824,7 @@ function createAdminBookingFlow(deps = {}) {
       case 'agency':
         return showAgencies(draft, draft.view.agencyQuery || '');
       case 'newAgencyName':
-        return say(to, "New agency. What is the agency's name?");
+        return say(to, coordinatorMode ? "Agency not in the list. What is the agency's name?" : "New agency. What is the agency's name?");
       case 'newAgencyPhone':
         return say(to, "Owner's WhatsApp number?");
       case 'newAgencyDistrict':
@@ -670,6 +834,7 @@ function createAdminBookingFlow(deps = {}) {
       case 'patient':
         return showPatients(draft);
       case 'newPatientAge':
+        if (coordinatorMode) return say(to, "New patient. Patient's age in years?");
         return say(to, `New patient: ${d.newPatient.name}. The agency can give a name in its app.\n\nPatient's age in years?`);
       case 'patientAge':
         return say(to, "Patient's age in years?");
@@ -744,7 +909,7 @@ function createAdminBookingFlow(deps = {}) {
         ]);
       case 'summary':
         return buttons(to, summaryText(d), [
-          { id: ID.CREATE, title: 'Create booking' },
+          { id: ID.CREATE, title: coordinatorMode ? 'Send for review' : 'Create booking' },
           { id: ID.CHANGE, title: 'Change something' },
           { id: ID.CANCEL, title: 'Cancel' }
         ]);
@@ -753,7 +918,7 @@ function createAdminBookingFlow(deps = {}) {
           to,
           'What do you want to change?',
           'Change',
-          CHANGE_FIELDS.map((f) => ({ id: `${ID.CHANGE_FIELD}${f.key}`, title: f.title, description: f.description }))
+          changeFields.map((f) => ({ id: `${ID.CHANGE_FIELD}${f.key}`, title: f.title, description: f.description }))
         );
       default:
         return undefined;
@@ -768,6 +933,7 @@ function createAdminBookingFlow(deps = {}) {
 
   async function settleAgency(draft) {
     const d = draft.data;
+    if (coordinatorMode) return true; // nothing is opened in Pulso Hub for a request
     if (!d.agency || !d.agency.hasPhone || d.client) return true;
     const result = await call(draft, 'ensureClient', { bureauId: d.agency.id });
     if (!result || result.ok === false) {
@@ -846,6 +1012,11 @@ function createAdminBookingFlow(deps = {}) {
         if (id.startsWith(ID.DISTRICT)) district = districts.find((x) => `${ID.DISTRICT}${x.key}` === id);
         else if (text) district = districts.find((x) => String(x.label).toLowerCase() === text.toLowerCase() || String(x.key).toLowerCase() === text.toLowerCase());
         if (!district) return false;
+        if (coordinatorMode) {
+          // Written in the note only; the reviewer adds the agency when booking.
+          d.newAgency.district = { key: district.key, label: district.label || district.key };
+          return true;
+        }
         const result = await call(draft, 'createAgency', { name: d.newAgency.name, ownerPhone: d.newAgency.phone, district: district.key });
         if (!result || result.ok === false || !result.agency) {
           await say(to, (result && result.message) || 'Could not add the agency. Try again.');
@@ -891,10 +1062,14 @@ function createAdminBookingFlow(deps = {}) {
       case 'newPatientGender':
       case 'patientGender': {
         // Pulso Hub books only a male or female patient (memberGender).
-        const gender = parseGender(message, { allowOther: false });
+        const gender = parseGender(message, { allowOther: false }, ID);
         if (!gender) return false;
         if (step === 'patientGender') {
           d.patient.gender = gender;
+          return true;
+        }
+        if (coordinatorMode) {
+          d.newPatient.gender = gender; // the reviewer adds the patient when booking
           return true;
         }
         const result = await call(draft, 'addPatient', {
@@ -931,7 +1106,7 @@ function createAdminBookingFlow(deps = {}) {
       case 'catheter':
       case 'stoma':
       case 'trach': {
-        const yes = parseYesNo(message);
+        const yes = parseYesNo(message, ID);
         if (yes === null) return false;
         const wasForced = nurseForced(d);
         d[step] = yes;
@@ -953,7 +1128,7 @@ function createAdminBookingFlow(deps = {}) {
         else return false;
         return true;
       case 'cgGender': {
-        const g = parseGender(message, { allowAny: true, allowOther: false });
+        const g = parseGender(message, { allowAny: true, allowOther: false }, ID);
         if (!g) return false;
         d.cgGender = g;
         return true;
@@ -1093,7 +1268,7 @@ function createAdminBookingFlow(deps = {}) {
         else return false;
         return true;
       case 'changePick': {
-        const field = CHANGE_FIELDS.find((f) => `${ID.CHANGE_FIELD}${f.key}` === id);
+        const field = changeFields.find((f) => `${ID.CHANGE_FIELD}${f.key}` === id);
         if (!field) return false;
         for (const key of field.clear) clearStep(d, key);
         return 'reopen';
@@ -1136,7 +1311,22 @@ function createAdminBookingFlow(deps = {}) {
 
   async function createBooking(draft) {
     const d = draft.data;
-    const result = await call(draft, 'create', createPayload(d));
+    const linked = draft.coordinatorRequest && draft.coordinatorRequest.id;
+    if (linked && typeof hooks.beforeCreate === 'function') {
+      // The request may have been taken back or decided since the draft opened.
+      const check = await hooks.beforeCreate(draft);
+      if (!check || check.ok === false) {
+        await store.delete(draft.phone);
+        await say(draft.phone, (check && check.message) || `${linked} can't be booked from here any more.`);
+        return false;
+      }
+    }
+    const payload = createPayload(d);
+    if (linked) {
+      payload.coordinatorRequestId = draft.coordinatorRequest.id;
+      payload.coordinatorPhone = draft.coordinatorRequest.coordinatorPhone || '';
+    }
+    const result = await call(draft, 'create', payload);
     if (result && result.ok !== false && result.requestId) {
       await store.delete(draft.phone);
       const lines = [
@@ -1146,6 +1336,13 @@ function createAdminBookingFlow(deps = {}) {
       if (result.adminUrl) lines.push(result.adminUrl);
       lines.push('Type booking for another one.');
       await say(draft.phone, lines.join('\n'));
+      if (linked && typeof hooks.onCreated === 'function') {
+        try {
+          await hooks.onCreated(draft, result);
+        } catch (error) {
+          console.error('[COORDINATOR_REQUEST_BOOKED_HOOK_FAILED]', linked, error && error.message);
+        }
+      }
       return true;
     }
     const message = (result && result.message) || 'Pulso Hub did not create the booking.';
@@ -1159,22 +1356,149 @@ function createAdminBookingFlow(deps = {}) {
     return false;
   }
 
-  /* ---- entry points ---- */
+  /* A draft made from a coordinator request gives the request back (to
+     'pending') when it is cancelled, or dropped for another booking. */
+  async function release(draft) {
+    if (!draft || !draft.coordinatorRequest || typeof hooks.onReleased !== 'function') return;
+    try {
+      await hooks.onReleased(draft);
+    } catch (error) {
+      console.error('[COORDINATOR_REQUEST_RELEASE_FAILED]', draft.coordinatorRequest.id, error && error.message);
+    }
+  }
+
+  /* The person behind the number, from Pulso Hub. Admin mode needs an admin
+     login (uid); coordinator mode takes a coordinator or an admin. Pulso Hub
+     answers { role, admin | coordinator }; the older flat { uid, name } is
+     read too. */
+  function whoFrom(who) {
+    if (!who || who.ok === false) return null;
+    if (coordinatorMode) {
+      const person = who.coordinator || who.admin || (who.uid ? who : null);
+      return person ? { uid: person.uid || '', name: person.name || '', viaPhone: person.viaPhone || '', role: who.role || (who.coordinator ? 'coordinator' : 'admin') } : null;
+    }
+    if (who.role === 'coordinator') return null;
+    const admin = who.admin && who.admin.uid ? who.admin : who;
+    return admin && admin.uid ? { uid: admin.uid, name: admin.name || '', viaPhone: admin.viaPhone || '' } : null;
+  }
+
+  const REFUSED = coordinatorMode
+    ? "This number can't send booking requests. Ask the owner to add it as a care coordinator."
+    : "This number can't make bookings. Ask the owner to add it as an admin.";
 
   async function startBooking(phone) {
+    const previous = coordinatorMode ? null : await loadDraft(phone).catch(() => null);
     await store.delete(phone);
+    await release(previous);
     const draft = { phone, data: {}, history: [], view: { fresh: true }, step: 'agency', createdAtMillis: now() };
     const who = await hub.call(phone, 'whoami', {});
-    // Pulso Hub answers { ok, uid, name, viaPhone }; { admin: { uid, name } }
-    // is read too. Either way there must be an admin login (uid).
-    const admin = who && who.ok !== false ? (who.admin && who.admin.uid ? who.admin : who) : null;
-    if (!admin || !admin.uid) {
-      await say(phone, "This number can't make bookings. Ask the owner to add it as an admin.");
+    const person = whoFrom(who);
+    if (!person) {
+      // The admin chat keeps its own words; a coordinator sees Pulso Hub's.
+      await say(phone, (coordinatorMode && who && who.ok === false && who.message) || REFUSED);
       return;
     }
-    draft.admin = { uid: admin.uid, name: admin.name || '', viaPhone: admin.viaPhone || '' };
+    if (coordinatorMode) draft.coordinator = { name: person.name, role: person.role };
+    else draft.admin = { uid: person.uid, name: person.name, viaPhone: person.viaPhone };
     await ask(draft, 'agency');
     await saveDraft(draft);
+  }
+
+  /* Coordinator: "Change something" on a request already sent reopens its
+     answers in a new draft; sending it makes a replacement request. */
+  async function reopenRequest(phone, data, { replaces, coordinator } = {}) {
+    const draft = {
+      phone,
+      data: JSON.parse(JSON.stringify(data || {})),
+      history: [],
+      view: {},
+      step: 'changePick',
+      createdAtMillis: now(),
+      ...(replaces ? { replaces } : {}),
+      coordinator: coordinator || {}
+    };
+    draft.history = answeredSteps(draft.data);
+    await ask(draft, 'changePick');
+    await saveDraft(draft);
+  }
+
+  /** Steps already answered, in order: what "back" walks through. */
+  function answeredSteps(d) {
+    const out = [];
+    for (const step of steps) {
+      if (step.key === 'summary') break;
+      if (step.applies && !step.applies(d)) continue;
+      if (!step.done(d)) break;
+      out.push(step.key);
+    }
+    return out;
+  }
+
+  /* Admin: a booking from a coordinator's request. The answers come in as
+     draft data; the agency's client record is opened (ensureClient) and a new
+     patient added (addPatient) as this admin, and the chat lands on the first
+     thing still missing, which is the rates step. */
+  async function openPrefilled(phone, data, { admin, coordinatorRequest } = {}) {
+    const p = normalizePhone(phone);
+    const previous = await loadDraft(p).catch(() => null);
+    await store.delete(p);
+    if (previous && !(previous.coordinatorRequest && coordinatorRequest && previous.coordinatorRequest.id === coordinatorRequest.id)) {
+      await release(previous);
+    }
+    const draft = {
+      phone: p,
+      data: JSON.parse(JSON.stringify(data || {})),
+      history: [],
+      view: {},
+      step: 'agency',
+      createdAtMillis: now(),
+      admin: admin || {},
+      ...(coordinatorRequest ? { coordinatorRequest } : {})
+    };
+    const d = draft.data;
+    if (!(await settleAgency(draft))) {
+      // settleAgency said why; the admin picks the agency again.
+      draft.history = answeredSteps(d);
+      await askNext(draft);
+      await saveDraft(draft);
+      return { ok: false };
+    }
+    if (!(await settlePatient(draft))) {
+      draft.history = answeredSteps(d);
+      await askNext(draft);
+      await saveDraft(draft);
+      return { ok: false };
+    }
+    draft.history = answeredSteps(d);
+    await askNext(draft);
+    await saveDraft(draft);
+    return { ok: true, step: draft.step };
+  }
+
+  /* A new patient whose age and gender are already known (from a request) is
+     added once the client record is open. */
+  async function settlePatient(draft) {
+    const d = draft.data;
+    if (coordinatorMode || d.patient || !d.newPatient || !d.client || !(Number(d.newPatient.ageYears) > 0) || !d.newPatient.gender) return true;
+    const result = await call(draft, 'addPatient', {
+      familyId: d.client.familyId,
+      gender: d.newPatient.gender,
+      ageYears: d.newPatient.ageYears
+    });
+    if (!result || result.ok === false || !result.memberId) {
+      await say(draft.phone, (result && result.message) || 'Could not add the patient. Add one below.');
+      delete d.newPatient.gender;
+      return false;
+    }
+    d.patient = {
+      memberId: result.memberId,
+      name: result.name || d.newPatient.name,
+      agencyLabel: '',
+      gender: d.newPatient.gender,
+      ageYears: d.newPatient.ageYears
+    };
+    delete d.newPatient;
+    return true;
   }
 
   async function goBack(draft) {
@@ -1198,11 +1522,38 @@ function createAdminBookingFlow(deps = {}) {
     await saveDraft(draft);
   }
 
+  async function submitRequest(draft) {
+    if (typeof deps.onSubmit !== 'function') throw new Error('No reviewer is set up for requests');
+    const result = await deps.onSubmit(draft);
+    if (result && result.ok === false) {
+      await say(draft.phone, result.message || 'Could not send the request. Try again.');
+      await ask(draft, 'summary');
+      await saveDraft(draft);
+      return;
+    }
+    await store.delete(draft.phone);
+  }
+
   async function handleTurn(draft, message) {
     const cmd = command(message);
     if (cmd === 'cancel' || getInteractiveReplyId(message) === ID.CANCEL) {
       await store.delete(draft.phone);
-      await say(draft.phone, 'Booking cancelled. Type booking to start again.');
+      if (coordinatorMode) {
+        await say(
+          draft.phone,
+          draft.replaces
+            ? `Change cancelled. ${draft.replaces} stays as it was sent.`
+            : 'Request cancelled. Type request to start again.'
+        );
+        return;
+      }
+      await say(
+        draft.phone,
+        draft.coordinatorRequest
+          ? `Booking cancelled. ${draft.coordinatorRequest.id} is back to waiting for review.`
+          : 'Booking cancelled. Type booking to start again.'
+      );
+      await release(draft);
       return;
     }
     if (cmd === 'back') {
@@ -1215,7 +1566,8 @@ function createAdminBookingFlow(deps = {}) {
     if (step === 'summary') {
       const id = getInteractiveReplyId(message);
       if (id === ID.CREATE) {
-        await createBooking(draft);
+        if (coordinatorMode) await submitRequest(draft);
+        else await createBooking(draft);
         return;
       }
       if (id === ID.CHANGE) {
@@ -1243,22 +1595,34 @@ function createAdminBookingFlow(deps = {}) {
       const recorded = typeof outcome === 'string' ? outcome : step;
       if (draft.history[draft.history.length - 1] !== recorded) draft.history.push(recorded);
     }
-    await settleAgency(draft);
+    if (await settleAgency(draft)) await settlePatient(draft);
     await askNext(draft);
     await saveDraft(draft);
+  }
+
+  /** The open draft for this number, if any (expired ones are dropped). */
+  async function peekDraft(phone) {
+    return loadDraft(normalizePhone(phone));
+  }
+
+  /** Drops this admin's draft if it was made from that request. */
+  async function discardRequestDraft(phone, requestId) {
+    const p = normalizePhone(phone);
+    const draft = await loadDraft(p).catch(() => null);
+    if (draft && draft.coordinatorRequest && draft.coordinatorRequest.id === requestId) await store.delete(p);
   }
 
   /** True when this message was the booking bot's to answer. */
   async function maybeHandle(phone, message) {
     const p = normalizePhone(phone);
     if (!admins().has(p)) return false;
-    const start = isStartWord(message);
+    const start = isStartWord(message, startWords);
     let draft = null;
     if (!start) {
       try {
         draft = await loadDraft(p);
       } catch (error) {
-        console.error('[ADMIN_BOOKING_DRAFT_READ_FAILED]', error && error.message);
+        console.error(coordinatorMode ? '[COORDINATOR_REQUEST_DRAFT_READ_FAILED]' : '[ADMIN_BOOKING_DRAFT_READ_FAILED]', error && error.message);
         return false;
       }
       if (!draft) return false;
@@ -1267,13 +1631,26 @@ function createAdminBookingFlow(deps = {}) {
       if (start) await startBooking(p);
       else await handleTurn(draft, message);
     } catch (error) {
-      console.error('[ADMIN_BOOKING_FAILED]', JSON.stringify({ phone: p, message: error && error.message }));
+      console.error(coordinatorMode ? '[COORDINATOR_REQUEST_FAILED]' : '[ADMIN_BOOKING_FAILED]', JSON.stringify({ phone: p, message: error && error.message }));
       await say(p, `Something went wrong: ${cut((error && error.message) || 'unknown error', 200)}. Try again, or type cancel.`).catch(() => {});
     }
     return true;
   }
 
-  return { maybeHandle, nextStep, createPayload, summaryText };
+  return {
+    mode: coordinatorMode ? 'coordinator' : 'admin',
+    ids: ID,
+    maybeHandle,
+    nextStep,
+    createPayload,
+    summaryText,
+    peekDraft,
+    openPrefilled,
+    reopenRequest,
+    discardRequestDraft,
+    isStartWord: (message) => isStartWord(message, startWords),
+    setHooks: (next) => Object.assign(hooks, next || {})
+  };
 }
 
 let defaultFlow = null;
@@ -1283,17 +1660,30 @@ async function maybeHandleAdminBooking(phone, message) {
   const p = normalizePhone(phone);
   // No Firestore read, no hub call, nothing for anyone not on the list.
   if (!adminPhoneSet(config.adminBookingBotPhones).has(p)) return false;
+  return getDefaultFlow().maybeHandle(phone, message);
+}
+
+/** The live admin flow (the one the support number uses). */
+function getDefaultFlow() {
   if (!defaultFlow) defaultFlow = createAdminBookingFlow();
-  return defaultFlow.maybeHandle(phone, message);
+  return defaultFlow;
 }
 
 module.exports = {
   createAdminBookingFlow,
   maybeHandleAdminBooking,
+  getDefaultFlow,
   memoryDraftStore,
   firestoreDraftStore,
   normalizePhone,
   isStartWord,
+  isCoordinatorStartWord,
+  requestLines,
+  phoneLabel,
+  dayLabel,
+  addDays,
+  adminPhoneSet,
+  cut,
   parseTypedDate,
   istDayKey,
   startMillisOf,
@@ -1301,6 +1691,7 @@ module.exports = {
   stepForRefusal,
   LIMITS,
   ID,
+  COORDINATOR_ID,
   DRAFT_TTL_MS,
   _setDefaultFlow: (flow) => {
     defaultFlow = flow;
