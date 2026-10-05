@@ -32,6 +32,7 @@ const BUTTON_IDS = Object.freeze({
   interested: 'agency_call_interested',
   later: 'agency_call_later',
   noAnswer: 'agency_call_no_answer',
+  skipNote: 'agency_call_skip_note',
 });
 
 /** Where the conversation is. Held on his caller record, not guessed. */
@@ -68,6 +69,7 @@ function parseCommand(input = {}) {
   if (buttonId === BUTTON_IDS.interested) return { kind: 'outcome', outcome: OUTCOMES.interested };
   if (buttonId === BUTTON_IDS.later) return { kind: 'outcome', outcome: OUTCOMES.later };
   if (buttonId === BUTTON_IDS.noAnswer) return { kind: 'outcome', outcome: OUTCOMES.noAnswer };
+  if (buttonId === BUTTON_IDS.skipNote) return { kind: 'skipNote' };
 
   const text = lower(input.text);
   if (!text) return { kind: null };
@@ -169,6 +171,11 @@ function agencyMessage(agency, { position, total } = {}) {
 }
 
 /** The three buttons under it. */
+/** One tap for "no note", under the note question. */
+function noteButtons() {
+  return [{ id: BUTTON_IDS.skipNote, title: 'Skip' }];
+}
+
 function outcomeButtons() {
   return [
     { id: BUTTON_IDS.interested, title: 'Interested' },
@@ -295,6 +302,7 @@ module.exports = {
   toDayKey,
   agencyMessage,
   outcomeButtons,
+  noteButtons,
   agencyContactCard,
   statsMessage,
   recordFor,

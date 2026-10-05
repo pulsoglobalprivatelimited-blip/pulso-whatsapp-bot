@@ -121,7 +121,7 @@ async function handleCallerMessage({ phone, text, buttonId, now = new Date(), op
     }
     if (flow.asksNote(command.outcome)) {
       await store.setCaller(phone, { state: flow.STATES.awaitingNote, inHand, pendingOutcome: command.outcome });
-      await sendText(phone, flow.MESSAGES.askNote, options);
+      await sendButtons(phone, flow.MESSAGES.askNote, flow.noteButtons(), options);
       return true;
     }
     await store.recordOutcome(inHand, command.outcome, { callerPhone: phone, now });
@@ -145,13 +145,17 @@ async function handleCallerMessage({ phone, text, buttonId, now = new Date(), op
   }
 
   if (state === flow.STATES.awaitingNote && inHand) {
-    const note = command.kind === 'skip' ? '' : String(text || '').trim();
+    const note = command.kind === 'skip' || command.kind === 'skipNote' ? '' : String(text || '').trim();
     await store.recordOutcome(inHand, flow.OUTCOMES.interested, { callerPhone: phone, note, now });
     await store.setCaller(phone, { state: flow.STATES.idle, inHand: null, pendingOutcome: null });
     await sendText(phone, flow.MESSAGES.savedNext, options);
     await handOutNext(phone, { now, options });
     return true;
   }
+
+  // A Skip tapped on an old note question, after it was already answered:
+  // ours, so it must not reach the support bot, and there is nothing to do.
+  if (command.kind === 'skipNote') return true;
 
   if (state === flow.STATES.awaitingOutcome && inHand) {
     await sendText(phone, flow.MESSAGES.notUnderstood, options);

@@ -137,3 +137,26 @@ test('"skip" with an agency in hand still skips it', async () => {
   assert.equal(await maybeHandleAgencyCall(ADMIN, textMessage('skip')), true);
   assert.equal(storeCalls[0].fn, 'skipAgency');
 });
+
+test('the note question comes with a Skip button, from the support number', async () => {
+  callerState = { state: 'awaiting_outcome', inHand: '919000000001' };
+  assert.equal(await maybeHandleAgencyCall(ADMIN, buttonMessage(flow.BUTTON_IDS.interested)), true);
+  assert.deepEqual(sent.map((s) => s.kind), ['buttons']);
+  assert.deepEqual(sent[0].options, { phoneNumberId: SUPPORT_ID });
+  assert.equal(callerState.state, 'awaiting_note');
+});
+
+test('tapping Skip saves Interested with no note, even with a booking open', async () => {
+  callerState = { state: 'awaiting_note', inHand: '919000000001', pendingOutcome: 'interested' };
+  const tap = buttonMessage(flow.BUTTON_IDS.skipNote);
+  assert.equal(await maybeHandleAgencyCall(ADMIN, tap, { priorityOnly: true }), true);
+  assert.deepEqual(storeCalls[0], { fn: 'recordOutcome', id: '919000000001', outcome: 'interested', note: '' });
+  assert.ok(!storeCalls.some((c) => c.fn === 'skipAgency'));
+});
+
+test('a Skip tapped on an old note question does nothing to the agency in hand', async () => {
+  callerState = { state: 'awaiting_outcome', inHand: '919000000002' };
+  assert.equal(await maybeHandleAgencyCall(ADMIN, buttonMessage(flow.BUTTON_IDS.skipNote)), true);
+  assert.equal(storeCalls.length, 0, 'the next agency must not be skipped or recorded');
+  assert.equal(sent.length, 0);
+});
