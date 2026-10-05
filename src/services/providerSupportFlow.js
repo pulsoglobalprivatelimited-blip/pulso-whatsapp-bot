@@ -10,7 +10,7 @@ const {
 } = require('./providerSupportNotifications');
 const { PARTNER_KIND, resolveCarePartner } = require('./carePartnerService');
 const carePartnerFlow = require('./carePartnerFlow');
-const adminBookingFlow = require('./adminBookingFlow');
+const coordinatorRequests = require('./coordinatorRequestFlow');
 const { maybeHandleAgencyCall } = require('./agencyCallService');
 
 const COLLECTION = 'providerSupportSessions';
@@ -794,8 +794,16 @@ async function processProviderSupportMessage(phone, message) {
   // Except for "call", our call buttons, and an answer the calling bot just
   // asked for: an open booking draft answers everything, so without this an
   // admin with a half-finished booking could never reach the call list.
+  // Care coordinator requests (docs/coordinator_booking_request_plan.md): a
+  // reviewer's tap on a request note, the question or reason a reviewer was
+  // just asked to type, and a coordinator's answer to a question go first.
+  // Only the coordinator and reviewer numbers are looked at.
+  if (await coordinatorRequests.maybeHandleCoordinatorPriority(phone, message)) return;
   if (await maybeHandleAgencyCall(phone, message, { priorityOnly: true })) return;
-  if (await adminBookingFlow.maybeHandleAdminBooking(phone, message)) return;
+  // The admin booking bot, and for a coordinator the "request" chat beside it
+  // (one number has both: "booking" and "request" each open their own, and an
+  // open draft keeps the conversation). Anyone else: the admin bot as before.
+  if (await coordinatorRequests.maybeHandleBookingChats(phone, message)) return;
   // The calling bot comes after the booking bot on purpose: a half-finished
   // booking is the more fragile of the two, so an open booking draft keeps the
   // conversation. Neither trigger word overlaps ("book" vs "call"), and both

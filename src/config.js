@@ -173,6 +173,21 @@ module.exports = {
   agencyCallBotPhones: parseList(process.env.AGENCY_CALL_BOT_PHONES, [
     '7736108778'
   ]),
+  /* Care coordinator booking requests (docs/coordinator_booking_request_plan.md,
+     founder, 6 Oct 2026). Coordinators type "request" on the support number
+     and send a note; nothing is created in Pulso Hub from their side. The note
+     goes to every reviewer; the first tap decides. */
+  coordinatorPhones: parseList(process.env.COORDINATOR_PHONES, ['7736108778', '6238378859']),
+  coordinatorReviewerPhones: parseList(process.env.COORDINATOR_REVIEWER_PHONES, [
+    '9446600809',
+    '8714105666',
+    '7736108778'
+  ]),
+  // Outside a reviewer's 24-hour window only an approved template arrives.
+  // Off until Meta has approved coordinator_booking_review.
+  coordinatorReviewTemplateEnabled: process.env.COORDINATOR_REVIEW_TEMPLATE_ENABLED === 'true',
+  coordinatorReviewTemplateName: process.env.COORDINATOR_REVIEW_TEMPLATE_NAME || 'coordinator_booking_review',
+  coordinatorReviewTemplateLanguage: process.env.COORDINATOR_REVIEW_TEMPLATE_LANGUAGE || 'en',
   // The Pulso Hub function the booking bot calls. Derived from the sync URL
   // (same project, same Cloud Run hash) unless set here.
   pulsoHubAdminBookingUrl: process.env.PULSO_HUB_ADMIN_BOOKING_URL || '',
