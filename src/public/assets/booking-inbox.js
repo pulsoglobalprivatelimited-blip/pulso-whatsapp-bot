@@ -111,9 +111,10 @@
       if (!deepLinked) {
         deepLinked = true;
         const want = Back ? Back.param('chat') : null;
-        if (want && chats.some((item) => chatPhone(item) === want)) {
+        const hit = want ? chats.find((item) => Back.samePhone(chatPhone(item), want)) : null;
+        if (hit) {
           renderList();
-          selectChat(want);
+          selectChat(chatPhone(hit));
         }
       }
       renderList();

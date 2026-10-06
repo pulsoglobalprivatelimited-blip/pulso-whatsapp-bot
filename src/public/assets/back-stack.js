@@ -178,6 +178,14 @@
       return location ? new URL(location.href).searchParams.get(key) : null;
     }
 
+    /* A number pasted from WhatsApp carries +91 and spaces; the console stores
+       digits. A link should find the record either way. */
+    function samePhone(a, b) {
+      const da = String(a || '').replace(/\D/g, '');
+      const db = String(b || '').replace(/\D/g, '');
+      return da.length > 0 && da === db;
+    }
+
     /* Desktop: the detail is a pane beside the list, not a layer, so it gets
        no step - but the address still remembers it. */
     function remember(params) {
@@ -301,6 +309,7 @@
       withParam,
       param,
       remember,
+      samePhone,
       mount,
       _stack: () => stack.map((entry) => ({ name: entry.name, closed: entry.closed }))
     };

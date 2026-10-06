@@ -354,7 +354,8 @@ async function loadProviders() {
   if (!deepLinkedPhone) {
     deepLinkedPhone = true;
     const want = Back ? Back.param('phone') : null;
-    if (want && providers.some((item) => item.phone === want)) selectedPhone = want;
+    const hit = want ? providers.find((item) => Back.samePhone(item.phone, want)) : null;
+    if (hit) selectedPhone = hit.phone;
   }
 
   if (suppressAutoSelectOnce) {

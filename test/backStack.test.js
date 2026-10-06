@@ -129,3 +129,12 @@ test('the address helpers keep the chat in the URL', () => {
   back.remember({ chat: '' });
   assert.equal(back.param('chat'), null);
 });
+
+test('a pasted number with +91 and spaces finds the stored digits', () => {
+  const back = createBackStack(fakeWindow('https://x.test/admin'));
+  assert.equal(back.samePhone('919074319853', '+91 90743 19853'), true);
+  assert.equal(back.samePhone('+919074319853', '919074319853'), true);
+  assert.equal(back.samePhone('919074319853', '919074319854'), false);
+  assert.equal(back.samePhone('', ''), false);
+});
+

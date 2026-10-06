@@ -105,7 +105,8 @@ async function loadSessions() {
   if (!deepLinked) {
     deepLinked = true;
     const want = Back ? Back.param('phone') : null;
-    if (want && sessions.some((item) => item.phone === want || item.id === want)) selectedPhone = want;
+    const hit = want ? sessions.find((item) => Back.samePhone(item.phone || item.id, want)) : null;
+    if (hit) selectedPhone = hit.phone || hit.id;
   }
 
   if (selectedPhone) {

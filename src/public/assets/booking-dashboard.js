@@ -1342,9 +1342,10 @@
         deepLinked = true;
         const sideParam = Back ? Back.param('side') : null;
         const want = Back ? Back.param('chat') : null;
-        if (want && (!sideParam || sideParam === mode) && chats.some((item) => (item.phone || item.id) === want)) {
-          selectedPhone = want;
-        }
+        const hit = want && (!sideParam || sideParam === mode)
+          ? chats.find((item) => Back.samePhone(item.phone || item.id, want))
+          : null;
+        if (hit) selectedPhone = hit.phone || hit.id;
       }
 
       if (selectedPhone) {

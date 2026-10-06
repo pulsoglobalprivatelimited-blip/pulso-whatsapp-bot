@@ -29,6 +29,9 @@ test('layers open and close through the stack', () => {
   assert.match(inbox, /Back\.push\('chat', hideThread, \{ url: Back\.withParam\('chat', phone\) \}\)/);
   assert.match(inbox, /Back\.dismiss\('chat'\)/);
   assert.match(inbox, /Back\.param\('chat'\)/);
+  for (const f of ['inbox.js', 'booking-inbox.js', 'dashboard.js', 'booking-dashboard.js', 'provider-support-dashboard.js']) {
+    assert.match(read(`assets/${f}`), /Back\.samePhone\(/, `${f} matches a link by digits`);
+  }
 
   const bookingInbox = read('assets/booking-inbox.js');
   assert.match(bookingInbox, /Back\.push\('chat', hideThread/);

@@ -66,7 +66,8 @@
       if (!deepLinked) {
         deepLinked = true;
         const want = Back ? Back.param('chat') : null;
-        if (want && providers.some((item) => item.phone === want)) selectChat(want);
+        const hit = want ? providers.find((item) => Back.samePhone(item.phone, want)) : null;
+        if (hit) selectChat(hit.phone);
       }
     } catch (error) {
       els.list.innerHTML = `<p class="is-loading">${Chat.escapeHtml(error.message || 'Could not load conversations.')}</p>`;
