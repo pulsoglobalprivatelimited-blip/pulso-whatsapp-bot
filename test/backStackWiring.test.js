@@ -59,5 +59,5 @@ test('layers open and close through the stack', () => {
 });
 
 test('the service worker cache was bumped so old scripts are dropped', () => {
-  assert.match(read('admin/sw.js'), /pulso-admin-v22/);
+  assert.match(read('admin/sw.js'), /pulso-admin-v23/);
 });
