@@ -73,7 +73,10 @@
         return;
       }
 
-      if (event.target.closest('.desk-scrim')) {
+      // The dimmed top bar (its ::after, which reports the bar itself as the
+      // target) closes the sheet just like the scrim.
+      if (event.target.closest('.desk-scrim') ||
+          (event.target.classList && event.target.classList.contains('hero') && body.classList.contains('desk-sheet-open'))) {
         closeSheet();
         return;
       }

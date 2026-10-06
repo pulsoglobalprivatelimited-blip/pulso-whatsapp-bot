@@ -2434,6 +2434,24 @@ dd {
     transform: translateY(0);
   }
 
+  /* The numbers sheet lives inside the fixed top bar, and the bar's z-index
+     (30) makes it its own layer: the sheet's 60 only counted inside the bar,
+     so the scrim (55) dimmed the open sheet along with the page (founder,
+     7 Oct 2026). While a sheet in the bar is open, the bar rises above the
+     scrim and dims itself, so only the sheet stays bright. A tap on the dimmed
+     bar closes the sheet, as the scrim does (desk-shell.js). */
+  body.desk-shell.desk-sheet-open .hero:has(.desk-sheet.is-open) {
+    z-index: 56;
+  }
+
+  body.desk-shell.desk-sheet-open .hero:has(.desk-sheet.is-open)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 59;
+    background: rgba(40, 26, 16, 0.38);
+  }
+
   .desk-sheet-head {
     display: block;
     position: sticky;
