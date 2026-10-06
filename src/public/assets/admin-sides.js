@@ -172,8 +172,12 @@
   }
 
   function startingSide() {
-    const fromUrl = new URL(global.location.href).searchParams.get('side');
+    const params = new URL(global.location.href).searchParams;
+    const fromUrl = params.get('side');
     if (fromUrl && SIDES[fromUrl]) return fromUrl;
+    // A link to a provider record (?phone=) is a link to the provider desk,
+    // whatever tab this phone was last on (docs/easy_back_plan.md).
+    if (params.get('phone')) return DEFAULT_SIDE;
     try {
       const stored = global.localStorage.getItem(STORAGE_KEY);
       if (stored && SIDES[stored]) return stored;

@@ -52,6 +52,7 @@ test('layers open and close through the stack', () => {
   const sides = read('assets/admin-sides.js');
   assert.match(sides, /history\.pushState\(\{ pulsoSide: side, sideDepth \}/);
   assert.match(sides, /PulsoBack\.setRoot\(/);
+  assert.match(sides, /if \(params\.get\('phone'\)\) return DEFAULT_SIDE;/, 'a ?phone= link opens the provider desk');
 });
 
 test('the service worker cache was bumped so old scripts are dropped', () => {
