@@ -65,9 +65,11 @@ const pendingMetric = document.getElementById('pending-metric');
 const completedTotalCount = document.getElementById('completed-total-count');
 const completedMaleCount = document.getElementById('completed-male-count');
 const completedFemaleCount = document.getElementById('completed-female-count');
+const completedBasicCount = document.getElementById('completed-basic-count');
 const completedTotalMetric = document.getElementById('completed-total-metric');
 const completedMaleMetric = document.getElementById('completed-male-metric');
 const completedFemaleMetric = document.getElementById('completed-female-metric');
+const completedBasicMetric = document.getElementById('completed-basic-metric');
 const completedCount = document.getElementById('completed-count');
 const completedYesterdayCount = document.getElementById('completed-yesterday-count');
 const completedTodayMetric = document.getElementById('completed-today-metric');
@@ -219,6 +221,9 @@ completedMaleMetric.addEventListener('click', () => {
 });
 completedFemaleMetric.addEventListener('click', () => {
   applyCompletedMetricFilter('all', 'female');
+});
+completedBasicMetric.addEventListener('click', () => {
+  applyCompletedMetricFilter('all', 'basic');
 });
 newConversationsMetric.addEventListener('click', () => {
   applyStartedMetricFilter('today');
@@ -671,6 +676,9 @@ function matchesCompletedSex(provider) {
     return true;
   }
 
+  // 'basic' rides on the same switch as male/female: one group at a time,
+  // reset by every other filter exactly like the sex chips.
+  if (currentCompletedSex === 'basic') return isCompletedBasic(provider);
   return isCompletedWithSex(provider, currentCompletedSex);
 }
 
@@ -973,6 +981,15 @@ function normalizeSex(value) {
   return '';
 }
 
+/* "Basic completed" (founder, 7 Oct 2026): joined and on the Basic rate —
+   approved as a Basic caregiver, or on the Basic rate for another reason
+   (above 50, say) with her real qualification kept beside it as careTier. */
+function isCompletedBasic(provider) {
+  return getDashboardStatus(provider) === 'completed' &&
+    (String((provider && provider.careTier) || '').toLowerCase() === 'basic' ||
+      String((provider && provider.qualification) || '').toLowerCase() === 'basic_caregiver');
+}
+
 function isCompletedWithSex(provider, sex) {
   return getDashboardStatus(provider) === 'completed' && normalizeSex(provider && provider.sex) === sex;
 }
@@ -1037,6 +1054,7 @@ function updateDashboardMetrics() {
   completedTotalCount.textContent = metricProviders.filter((item) => getDashboardStatus(item) === 'completed').length;
   completedMaleCount.textContent = metricProviders.filter((item) => isCompletedWithSex(item, 'male')).length;
   completedFemaleCount.textContent = metricProviders.filter((item) => isCompletedWithSex(item, 'female')).length;
+  completedBasicCount.textContent = metricProviders.filter(isCompletedBasic).length;
   completedCount.textContent = metricProviders.filter((item) => isCompletedToday(item)).length;
   completedYesterdayCount.textContent = metricProviders.filter((item) => isCompletedYesterday(item)).length;
   newConversationsCount.textContent = metricProviders.filter((item) => isSameLocalDate(item.createdAt)).length;
