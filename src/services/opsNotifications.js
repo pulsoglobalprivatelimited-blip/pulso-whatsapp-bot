@@ -130,6 +130,14 @@ function isNoCertificateProvider(provider) {
   );
 }
 
+// Back through the Basic Caregiver invite (src/scripts/sendBasicInvite.js):
+// she was turned away before, so the reviewer should know why she is here.
+const BASIC_INVITE_LINE = 'Came back from the Basic invite';
+
+function basicInviteLine(provider) {
+  return provider && provider.basicInviteAt ? BASIC_INVITE_LINE : null;
+}
+
 function isNursingStudent(provider) {
   return String((provider && provider.qualification) || '').toLowerCase() === 'nursing_student';
 }
@@ -183,7 +191,7 @@ function buildNoCertificateReviewButtons(providerPhone) {
 function buildNoCertificateTemplateBodyValues(provider) {
   const name = (provider && provider.fullName) || '-';
   return [
-    isNursingStudent(provider) ? `${name} (nursing student)` : name,
+    `${name}${isNursingStudent(provider) ? ' (nursing student)' : ''}${basicInviteLine(provider) ? ' (Basic invite)' : ''}`,
     (provider && provider.phone) || '-',
     provider && provider.age ? String(provider.age) : '-',
     provider && provider.district ? String(provider.district) : '-',
@@ -967,6 +975,7 @@ async function notifyCertificateUploaded(provider, attachments) {
     noCertificate
       ? 'No certificate — she asks to join as a Basic caregiver. Please call and interview her, then approve or reject.'
       : 'New certificate uploaded for review.',
+    basicInviteLine(provider),
     ...formatProviderSummary(provider),
     'Tap below to approve or reject.'
   ]);
@@ -1089,7 +1098,7 @@ function buildBasicAgeTemplateComponents(provider) {
   const providerPhone = normalizePhone(provider && provider.phone);
   const claimed = provider && provider.qualification ? formatQualification(provider.qualification) : '-';
   const values = [
-    (provider && provider.fullName) || '-',
+    `${(provider && provider.fullName) || '-'}${basicInviteLine(provider) ? ' (Basic invite)' : ''}`,
     provider && provider.age ? String(provider.age) : '-',
     providerPhone || '-',
     claimed,
@@ -1209,6 +1218,7 @@ async function notifyNoCertificateApplication(provider, recipients, options = {}
 
     const body = joinLines([
       callReviewHeadline(provider),
+      basicInviteLine(provider),
       ...formatProviderSummary(provider),
       `Call her: ${buildCallLink(provider.phone)}`,
       'Tap below to approve (Basic) or reject.'
@@ -1835,6 +1845,7 @@ module.exports = {
   isNoCertificateReviewerPhone,
   isNoCertificateProvider,
   isAboveCallReviewAge,
+  basicInviteLine,
   buildBasicAgeTemplateComponents,
   getNoCertificateReviewerPhone,
   reviewerDisplayName,

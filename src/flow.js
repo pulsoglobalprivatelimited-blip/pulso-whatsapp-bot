@@ -270,6 +270,9 @@ const MESSAGES = {
     'താങ്കളുടെ പൂർണ്ണ പേര് അയയ്ക്കുക.',
   ageQuestion:
     'താങ്കളുടെ വയസ് എത്രയാണ്?',
+  // "No thanks" on the Basic Caregiver invite (basic_invite_*_ml, 7 Oct 2026).
+  basicInviteDeclined:
+    'ശരി, നന്ദി. ഇനി ഇതിനെക്കുറിച്ച് ഞങ്ങൾ message അയക്കില്ല.',
   ageRetry:
     'ദയവായി വയസ് അക്കങ്ങളായി അയയ്ക്കുക. ഉദാ: 32',
   ageAboveLimit:
@@ -538,6 +541,7 @@ const KARNATAKA_MESSAGES = {
     'Maximum 4 certificate files received. Moving to the next step.',
   nameQuestion: 'Please send your full name.',
   ageQuestion: 'What is your age?',
+  basicInviteDeclined: "Okay, thank you. We won't message you about this again.",
   ageRetry: 'Please enter your age in numbers. Example: 32',
   ageAboveLimit:
     'Sorry. As per the current onboarding criteria, we cannot proceed with applicants above 50 years of age. If the age was entered wrongly, you can enter it again.',

@@ -2546,6 +2546,116 @@ async function handleAgeRejected(phone, message) {
   await sendAgeFinalRejectionButtons(phone);
 }
 
+// ---- The Basic Caregiver invite (7 Oct 2026) -------------------------------
+// People turned away for age, or for no completed nursing certificate, were
+// sent basic_invite_age_ml / basic_invite_nursing_ml by
+// src/scripts/sendBasicInvite.js. Its two quick replies carry these payloads.
+const BASIC_INVITE_PAYLOAD_YES = 'basic_invite_yes';
+const BASIC_INVITE_PAYLOAD_NO = 'basic_invite_no';
+// Where an invitee may still be standing. Anyone else has come back, or
+// finished, on her own.
+const BASIC_INVITE_STATUSES = [
+  STATUS.AGE_REJECTED,
+  STATUS.NEEDS_HUMAN_REVIEW,
+  STATUS.CERTIFICATE_REJECTED_PERMANENT,
+  STATUS.AWAITING_CERTIFICATE,
+  STATUS.ADDITIONAL_DOCUMENT_REQUESTED
+];
+const BASIC_INVITE_BUTTON_TEXT = { 'താൽപര്യമുണ്ട്': 'yes', 'വേണ്ട': 'no' };
+
+function parseBasicInviteReply(message) {
+  if (!message || message.type !== 'button' || !message.button) return null;
+  const payload = String(message.button.payload || '').trim();
+  if (payload === BASIC_INVITE_PAYLOAD_YES) return 'yes';
+  if (payload === BASIC_INVITE_PAYLOAD_NO) return 'no';
+  // A template tap with no payload of its own (should not happen; the send sets
+  // both) is read from the button's words, which only this template uses.
+  if (!payload) return BASIC_INVITE_BUTTON_TEXT[String(message.button.text || '').trim()] || null;
+  return null;
+}
+
+function inferBasicInviteGroup(provider) {
+  if (provider && ['age', 'nursing'].includes(provider.basicInviteGroup)) return provider.basicInviteGroup;
+  const notes = String((provider && provider.verification && provider.verification.notes) || '');
+  if ((provider && provider.status === STATUS.AGE_REJECTED) || /age limit/i.test(notes)) return 'age';
+  return 'nursing';
+}
+
+function hasSystemEvent(provider, event) {
+  return hasHistoryEvent(provider, (entry) => entry && entry.type === 'system' && entry.event === event);
+}
+
+/* Returns true when the message was an invite tap and has been answered. */
+async function handleBasicInviteReply(phone, provider, message) {
+  const answer = parseBasicInviteReply(message);
+  if (!answer) return false;
+
+  const invited = Boolean(provider.basicInviteGroup) || hasSystemEvent(provider, 'basic_invite_sent');
+  const stuck = BASIC_INVITE_STATUSES.includes(provider.status);
+  // Never invited and moving normally: not ours, the normal flow answers.
+  if (!invited && !stuck) return false;
+
+  if (answer === 'no') {
+    if (!hasSystemEvent(provider, 'basic_invite_declined')) {
+      await appendHistory(phone, { type: 'system', event: 'basic_invite_declined', group: inferBasicInviteGroup(provider) });
+    }
+    await sendAndLog(phone, 'text', MESSAGES.basicInviteDeclined);
+    return true;
+  }
+
+  // A second tap after she is moving again: ask the step she is on, no reset.
+  // (Accepted once and stopped again since: the normal flow answers.)
+  if (hasSystemEvent(provider, 'basic_invite_accepted') || !stuck) {
+    if (stuck) return false;
+    await sendPromptForCurrentStatus(phone, provider);
+    return true;
+  }
+
+  const group = inferBasicInviteGroup(provider);
+  const previous = { ...(provider.verification || {}) };
+  delete previous.previousRejection;
+  delete previous.reviewerWorkflow;
+  const nowIso = new Date().toISOString();
+  const patch = {
+    basicInviteGroup: group,
+    basicInviteAt: nowIso,
+    // Cleared so the age answer leads to the rates, the Basic notice and the
+    // rest of the chat (handleAge sends anyone with it set straight to sex).
+    interestConfirmed: false,
+    verification: {
+      status: 'not_started',
+      notes: '',
+      reviewedAt: null,
+      reviewedBy: null,
+      notificationSentAt: null,
+      reviewerWorkflow: null,
+      previousRejection: { ...previous, clearedAt: nowIso, clearedBy: 'basic_invite' }
+    }
+  };
+  // The invite went to a Kerala list only; a record with no region would be
+  // stopped by updateProvider before the age question.
+  if (!inferProviderRegion(provider)) patch.region = 'kerala';
+
+  if (group === 'age') {
+    // The age on file may be wrong: ask again. Over 50 goes on at Basic with a
+    // call review, as for anyone (handleAge).
+    await updateStatus(phone, STATUS.AWAITING_AGE, 3, { ...patch, age: null });
+  } else {
+    // Exactly what picking "No certificate" in the chat does (handleQualification).
+    await updateStatus(phone, STATUS.AWAITING_AGE, 3, { ...patch, qualification: 'no_certificate' });
+  }
+  await appendHistory(phone, {
+    type: 'system',
+    event: 'basic_invite_accepted',
+    group,
+    previousStatus: provider.status || null,
+    previousQualification: provider.qualification || null,
+    previousVerification: previous
+  });
+  await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
+  return true;
+}
+
 async function handleSex(phone, message) {
   const sex = parseSex(message);
   if (!sex) {
@@ -3753,6 +3863,11 @@ async function processIncomingMessage(phone, message) {
   }
 
   await runWithProviderFlow(provider, async () => {
+  // The Basic Caregiver invite's two buttons, whatever status she is in.
+  if (await handleBasicInviteReply(phone, provider, message)) {
+    return;
+  }
+
   if (provider.status === STATUS.NOT_INTERESTED_RESTARTABLE) {
     await startFlow(phone);
     return;
