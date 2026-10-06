@@ -196,7 +196,7 @@ test('the full happy path sends the exact create payload', async () => {
   r = await h.say(pin(10.0159, 76.3419, 'Kakkanad', 'Kakkanad, Kochi, Kerala'));
   assert.deepEqual(h.callsOf('checkLocation')[0].data, { lat: 10.0159, lng: 76.3419, name: 'Kakkanad', address: 'Kakkanad, Kochi, Kerala' });
   assert.equal(r.replies[0].body, 'Who should do this work?');
-  assert.deepEqual(r.replies[0].buttons.map((b) => b.title), ['Basic', 'GDA and above', 'Nurse']);
+  assert.deepEqual(r.replies[0].sections[0].rows.map((x) => x.title), ['Basic', 'GDA and above', 'Nurse', 'All three']);
   r = await h.say(btn('ab_tier_gda'));
   assert.deepEqual(h.callsOf('rates')[0].data, { tier: 'gda', shift: '24h', hasStoma: false, hasTracheostomy: false });
   assert.equal(r.replies[0].body, 'Suggested rates for GDA, per day\nCaregiver gets ₹700\nAgency is charged ₹800\nPulso keeps ₹100');
@@ -601,4 +601,42 @@ test('only listed admins, and only on the start word or a draft', async () => {
   assert.equal(h.calls.length, 0);
   r = await h.say(text('BOOKING'), '918714105666');
   assert.equal(r.handled, true);
+});
+
+test('All three: the pay is typed, the offer goes to every tier, no "Send the offer to"', async () => {
+  const h = harness();
+  await toWeight(h);
+  await detailsToLocation(h);
+  await h.say(pin(10.0, 76.3));
+  let r = await h.say(row('ab_tier_all'));
+  assert.deepEqual(h.callsOf('rates')[0].data, { tier: 'basic', shift: '24h', hasStoma: false, hasTracheostomy: false });
+  assert.equal(r.replies[0].body, "Basic, GDA and Nurse are all offered, so type the caregiver's pay per day. At least ₹500.");
+  r = await h.say(text('400'));
+  assert.match(r.replies[0].body, /can't be under ₹500/);
+  r = await h.say(text('800'));
+  assert.equal(r.replies[0].body, 'Rates for All three, per day\nCaregiver gets ₹800\nAgency is charged ₹900\nPulso keeps ₹100 · ₹1,000 for 10 days');
+  r = await h.say(btn('ab_rates_keep'));
+  assert.deepEqual(r.replies[0].buttons.map((b) => b.title), ['Push online', 'Assign manually']);
+  r = await h.say(btn('ab_after_push'));
+  // Straight to the summary: the tiers already say who is offered the work.
+  assert.deepEqual(r.replies[0].buttons.map((b) => b.title), ['Create booking', 'Change something', 'Cancel']);
+  assert.ok(r.replies[0].body.split('\n').includes('Who: All three (Basic, GDA, Nurse)'), r.replies[0].body);
+  await h.say(btn('ab_create'));
+  const payload = h.callsOf('create')[0].data;
+  assert.equal(payload.providerTier, 'basic');
+  assert.deepEqual(payload.dispatchTiers, ['basic', 'gda', 'nurse']);
+  assert.equal(payload.dispatchAudience, 'all');
+  assert.equal(payload.partnerProviderRate, 800);
+  assert.equal(payload.partnerCustomerRate, 900);
+});
+
+test('All three: Keep before any pay is typed asks for the pay', async () => {
+  const h = harness();
+  await toWeight(h);
+  await detailsToLocation(h);
+  await h.say(pin(10.0, 76.3));
+  await h.say(row('ab_tier_all'));
+  const r = await h.say(btn('ab_rates_keep'));
+  assert.equal(r.replies[0].body, "Caregiver's pay per day? At least ₹500.");
+  assert.equal(h.callsOf('create').length, 0);
 });

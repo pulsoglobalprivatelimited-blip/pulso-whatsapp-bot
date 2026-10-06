@@ -45,8 +45,11 @@ const START_WORDS = new Set(['booking', 'book']);
 // runs on this same machine in 'coordinator' mode, started by its own word.
 const COORDINATOR_START_WORDS = new Set(['request']);
 
-const TIER_LABEL = { basic: 'Basic', gda: 'GDA', nurse: 'Nurse' };
-const TIER_LONG_LABEL = { basic: 'Basic', gda: 'GDA and above', nurse: 'Nurse' };
+const TIER_LABEL = { basic: 'Basic', gda: 'GDA', nurse: 'Nurse', all: 'All three' };
+const TIER_LONG_LABEL = { basic: 'Basic', gda: 'GDA and above', nurse: 'Nurse', all: 'All three (Basic, GDA, Nurse)' };
+// "All three" (6 Oct 2026, as the app's tick boxes): offered to every tier;
+// the lowest is the booking's tier and the pay is typed, as the app asks.
+const ALL_TIERS = ['basic', 'gda', 'nurse'];
 const GENDER_SHORT = { female: 'F', male: 'M', other: 'Other' };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -302,7 +305,8 @@ const STEPS = [
   { key: 'tier', applies: (d) => !nurseForced(d), done: (d) => Boolean(d.tier) },
   { key: 'rates', done: (d) => Boolean(d.ratesConfirmed) && ratesValid(d) },
   { key: 'afterCreate', done: (d) => Boolean(d.afterCreate) },
-  { key: 'audience', applies: (d) => d.afterCreate === 'push_online', done: (d) => Boolean(d.audience) },
+  // All three already says who is offered the work.
+  { key: 'audience', applies: (d) => d.afterCreate === 'push_online' && effectiveTier(d) !== 'all', done: (d) => Boolean(d.audience) },
   { key: 'summary', done: () => false }
 ];
 
@@ -397,7 +401,7 @@ const CHANGE_FIELDS = [
 
 const COORDINATOR_CHANGE_FIELDS = [
   ...CHANGE_FIELDS.filter((f) => !['whoRates', 'afterCreate'].includes(f.key)),
-  { key: 'tier', title: 'Who should do it', description: 'Basic, GDA and above, Nurse', clear: ['tier'] }
+  { key: 'tier', title: 'Who should do it', description: 'Basic, GDA, Nurse or all three', clear: ['tier'] }
 ];
 
 /* Which step a refusal from `create` sends the admin back to. Pulso Hub may
@@ -745,7 +749,7 @@ function createAdminBookingFlow(deps = {}) {
     if (!ratesValid(d)) {
       const tier = effectiveTier(d);
       const result = await call(draft, 'rates', {
-        tier,
+        tier: tier === 'all' ? ALL_TIERS[0] : tier,
         shift: shiftOf(d),
         hasStoma: d.stoma === true,
         hasTracheostomy: d.trach === true
@@ -768,6 +772,16 @@ function createAdminBookingFlow(deps = {}) {
         changed: false
       };
       delete d.ratesConfirmed;
+      if (tier === 'all') {
+        // More than one tier: no usual pay to suggest; the admin types it.
+        d.rates.tier = 'all';
+        d.rates.pay = null;
+        d.rates.agencyCharge = null;
+        d.rates.changed = true;
+        draft.view.rateEditing = 'pay';
+        await say(draft.phone, `Basic, GDA and Nurse are all offered, so type the caregiver's pay per day. At least ${money(MIN_PAY)}.`);
+        return;
+      }
     }
     await buttons(draft.phone, ratesText(d), [
       { id: ID.RATES_KEEP, title: 'Keep' },
@@ -886,10 +900,11 @@ function createAdminBookingFlow(deps = {}) {
       case 'location':
         return say(to, 'Where is the care? Send the location pin: tap 📎, then Location, then Send.');
       case 'tier':
-        return buttons(to, 'Who should do this work?', [
+        return list(to, 'Who should do this work?', 'Choose', [
           { id: `${ID.TIER}basic`, title: 'Basic' },
           { id: `${ID.TIER}gda`, title: 'GDA and above' },
-          { id: `${ID.TIER}nurse`, title: 'Nurse' }
+          { id: `${ID.TIER}nurse`, title: 'Nurse' },
+          { id: `${ID.TIER}all`, title: 'All three', description: 'Basic, GDA and Nurse' }
         ]);
       case 'rates':
         if (draft.view.rateEditing === 'pay') return say(to, `Caregiver's pay per day? At least ${money(MIN_PAY)}.`);
@@ -1202,7 +1217,7 @@ function createAdminBookingFlow(deps = {}) {
         return true;
       }
       case 'tier': {
-        const t = id.startsWith(ID.TIER) ? id.slice(ID.TIER.length) : { basic: 'basic', gda: 'gda', 'gda and above': 'gda', nurse: 'nurse' }[command(message)];
+        const t = id.startsWith(ID.TIER) ? id.slice(ID.TIER.length) : { basic: 'basic', gda: 'gda', 'gda and above': 'gda', nurse: 'nurse', all: 'all', 'all three': 'all' }[command(message)];
         if (!TIER_LABEL[t]) return false;
         d.tier = t;
         delete d.ratesConfirmed;
@@ -1211,6 +1226,11 @@ function createAdminBookingFlow(deps = {}) {
       case 'rates': {
         const r = d.rates;
         if (id === ID.RATES_KEEP) {
+          if (!r || !(r.pay > 0) || !(r.agencyCharge > 0)) {
+            draft.view.rateEditing = 'pay';
+            await ask(draft, 'rates');
+            return null;
+          }
           delete draft.view.rateEditing;
           d.ratesConfirmed = true;
           return true;
@@ -1301,11 +1321,13 @@ function createAdminBookingFlow(deps = {}) {
       addressLng: d.location.lng,
       addressSummary: d.location.addressSummary,
       city: d.location.city,
-      providerTier: d.rates.tier || effectiveTier(d),
+      ...(effectiveTier(d) === 'all'
+        ? { providerTier: ALL_TIERS[0], dispatchTiers: ALL_TIERS.slice() }
+        : { providerTier: d.rates.tier || effectiveTier(d) }),
       partnerProviderRate: d.rates.pay,
       partnerCustomerRate: d.rates.agencyCharge,
       offlinePostCreateAction: d.afterCreate,
-      dispatchAudience: d.afterCreate === 'push_online' ? d.audience || 'all' : 'all'
+      dispatchAudience: d.afterCreate === 'push_online' && effectiveTier(d) !== 'all' ? d.audience || 'all' : 'all'
     };
   }
 
