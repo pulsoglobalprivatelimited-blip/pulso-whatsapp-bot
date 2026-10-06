@@ -5,6 +5,8 @@ let currentRegionFilter = 'all';
 let currentAudienceFilter = 'all';
 let currentSearch = '';
 let mobileDetailOpen = false;
+const Back = window.PulsoBack;
+let deepLinked = false;
 
 const sessionList = document.getElementById('session-list');
 const sessionDetail = document.getElementById('session-detail');
@@ -19,10 +21,17 @@ document.getElementById('clear-search-button').addEventListener('click', () => {
   currentSearch = '';
   renderList();
 });
-document.getElementById('back-to-list-button').addEventListener('click', () => {
+function hideMobileDetail() {
   mobileDetailOpen = false;
   updateMobileDetailState();
-});
+}
+const backToListButton = document.getElementById('back-to-list-button');
+if (backToListButton) {
+  backToListButton.addEventListener('click', () => {
+    if (Back && Back.dismiss('detail')) return;
+    hideMobileDetail();
+  });
+}
 document.getElementById('history-bottom-button').addEventListener('click', scrollHistoryToBottom);
 document.getElementById('reset-session-button').addEventListener('click', resetSelectedSession);
 sessionSearchInput.addEventListener('input', () => {
@@ -93,6 +102,12 @@ async function loadSessions() {
   updateMetrics();
   renderList();
 
+  if (!deepLinked) {
+    deepLinked = true;
+    const want = Back ? Back.param('phone') : null;
+    if (want && sessions.some((item) => item.phone === want || item.id === want)) selectedPhone = want;
+  }
+
   if (selectedPhone) {
     const selected = sessions.find((item) => item.phone === selectedPhone || item.id === selectedPhone);
     if (selected) {
@@ -101,11 +116,13 @@ async function loadSessions() {
     }
   }
 
-  const first = getVisibleSessions()[0];
+  // On a phone the queue is the screen; nothing opens until someone taps a row.
+  const first = isMobileViewport() ? null : getVisibleSessions()[0];
   if (first) {
     await renderDetail(first.phone || first.id);
   } else {
     sessionDetail.classList.add('hidden');
+    if (Back) Back.drop('detail');
   }
 }
 
@@ -247,6 +264,10 @@ async function renderDetail(phone) {
   detailPanel.classList.remove('hidden');
   updateMobileDetailState();
   renderList();
+  if (Back) {
+    if (mobileDetailOpen) Back.push('detail', hideMobileDetail, { url: Back.withParam('phone', selectedPhone) });
+    else Back.remember({ phone: selectedPhone });
+  }
 
   document.getElementById('detail-phone').innerHTML = renderPhoneLink(selectedPhone);
   setText('detail-status', formatStatus(session.status || 'unknown'));

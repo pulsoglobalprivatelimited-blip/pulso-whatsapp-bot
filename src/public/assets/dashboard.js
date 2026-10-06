@@ -88,6 +88,8 @@ const phoneSearchInput = document.getElementById('phone-search');
 const clearSearchButton = document.getElementById('clear-search-button');
 const completedRangeFilters = document.getElementById('completed-range-filters');
 const backToListButton = document.getElementById('back-to-list-button');
+const Back = window.PulsoBack;
+let deepLinkedPhone = false;
 const historyBottomButton = document.getElementById('history-bottom-button');
 const manualCertificateUploadButton = document.getElementById('manual-certificate-upload-button');
 const manualCertificateUploadStatus = document.getElementById('manual-certificate-upload-status');
@@ -258,10 +260,16 @@ clearSearchButton.addEventListener('click', () => {
   currentSearch = '';
   renderList();
 });
-backToListButton.addEventListener('click', () => {
+if (backToListButton) {
+  backToListButton.addEventListener('click', hideMobileDetail);
+}
+
+/* The detail as a layer the back stack owns (phone only; on a wide screen it
+   is a pane beside the list). */
+function hideMobileDetail() {
   mobileDetailOpen = false;
   updateMobileDetailState();
-});
+}
 historyBottomButton.addEventListener('click', () => {
   scrollHistoryToBottom();
 });
@@ -341,6 +349,13 @@ async function loadProviders() {
   updateDashboardMetrics();
   updateCompletedRangeFilterState();
   renderList();
+
+  // A refresh, or the installed app reopening, lands on the record in the address.
+  if (!deepLinkedPhone) {
+    deepLinkedPhone = true;
+    const want = Back ? Back.param('phone') : null;
+    if (want && providers.some((item) => item.phone === want)) selectedPhone = want;
+  }
 
   if (suppressAutoSelectOnce) {
     suppressAutoSelectOnce = false;
@@ -567,6 +582,7 @@ function resetListSelectionForMetric() {
   suppressAutoSelectOnce = true;
   providerDetail.classList.add('hidden');
   updateMobileDetailState();
+  if (Back) Back.drop('detail');
 }
 
 /* Scoped to the status chips. Matching every `.filter` on the desk meant that
@@ -1118,6 +1134,7 @@ function renderList() {
     mobileDetailOpen = false;
     providerDetail.classList.add('hidden');
     updateMobileDetailState();
+    if (Back) Back.drop('detail');
   }
 
   if (!hasLoadedOnce) {
@@ -1659,6 +1676,10 @@ async function renderDetail(provider) {
   detailPanel.classList.remove('hidden');
   updateMobileDetailState();
   renderList();
+  if (Back) {
+    if (mobileDetailOpen) Back.push('detail', hideMobileDetail, { url: Back.withParam('phone', provider.phone) });
+    else Back.remember({ phone: provider.phone });
+  }
 
   const requestToken = ++detailRequestToken;
   let detailProvider = provider;

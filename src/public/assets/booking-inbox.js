@@ -7,6 +7,9 @@
   'use strict';
 
   const Chat = window.PulsoChat;
+  const Back = window.PulsoBack;
+  const phoneLayout = window.matchMedia('(max-width: 860px)');
+  let deepLinked = false;
   const Partner = window.PulsoPartnerReview;
   const REFRESH_MS = 25000;
 
@@ -105,6 +108,14 @@
     try {
       const data = await fetchJson('/admin/booking-chats');
       chats = Array.isArray(data.chats) ? data.chats : [];
+      if (!deepLinked) {
+        deepLinked = true;
+        const want = Back ? Back.param('chat') : null;
+        if (want && chats.some((item) => chatPhone(item) === want)) {
+          renderList();
+          selectChat(want);
+        }
+      }
       renderList();
       if (isSheetOpen()) refreshSheet();
     } catch (error) {
@@ -331,6 +342,7 @@
     if (!selectedPhone) return;
     els.viewer.classList.remove('hidden');
     els.app.classList.add('sheet-open');
+    if (Back) Back.push('viewer', hideViewer);
     els.viewerBody.innerHTML = '<p class="viewer-msg">Opening the document…</p>';
     try {
       const data = await Partner.openDocument(selectedPhone);
@@ -343,10 +355,15 @@
     }
   }
 
-  function closeViewer() {
+  function hideViewer() {
     els.viewer.classList.add('hidden');
     if (!isSheetOpen()) els.app.classList.remove('sheet-open');
     els.viewerBody.innerHTML = '';
+  }
+
+  function closeViewer() {
+    if (Back && Back.dismiss('viewer')) return;
+    hideViewer();
   }
 
   /* Approving sends a real message to a real agency, so this waits on the
@@ -436,6 +453,7 @@
     els.sheetNoteText.value = '';
     els.sheetBackdrop.classList.remove('hidden');
     els.app.classList.add('sheet-open');
+    if (Back) Back.push('callsheet', hideSheet);
     renderSheet();
 
     try {
@@ -448,12 +466,17 @@
     }
   }
 
-  function closeSheet() {
+  function hideSheet() {
     sheetPhone = '';
     sheetLog = null;
     pendingDeleteId = '';
     els.sheetBackdrop.classList.add('hidden');
     els.app.classList.remove('sheet-open');
+  }
+
+  function closeSheet() {
+    if (Back && Back.dismiss('callsheet')) return;
+    hideSheet();
   }
 
   /* Keeps the row in the list in step with what the sheet just changed. */
@@ -735,6 +758,10 @@
     document.querySelectorAll('.chat-row').forEach((row) => {
       row.classList.toggle('active', row.dataset.phone === phone);
     });
+    if (Back) {
+      if (phoneLayout.matches) Back.push('chat', hideThread, { url: Back.withParam('chat', phone) });
+      else Back.remember({ chat: phone });
+    }
 
     try {
       const chat = await fetchJson(`/admin/booking-chats/${encodeURIComponent(phone)}`);
@@ -759,12 +786,17 @@
     }
   }
 
-  function closeThread() {
+  function hideThread() {
     selectedPhone = null;
     els.app.classList.remove('thread-open');
     els.view.classList.add('hidden');
     els.empty.style.display = '';
     document.querySelectorAll('.chat-row.active').forEach((row) => row.classList.remove('active'));
+  }
+
+  function closeThread() {
+    if (Back && Back.dismiss('chat')) return;
+    hideThread();
   }
 
   /* ---- events ----------------------------------------------------------- */
@@ -852,9 +884,6 @@
   els.viewer.addEventListener('click', (event) => {
     if (event.target === els.viewer) closeViewer();
   });
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !els.viewer.classList.contains('hidden')) closeViewer();
-  });
 
   els.reviewApprove.addEventListener('click', () => submitReview('approve'));
   els.viewerApprove.addEventListener('click', () => submitReview('approve'));
@@ -884,9 +913,6 @@
     if (event.target === els.sheetBackdrop) closeSheet();
   });
 
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && isSheetOpen()) closeSheet();
-  });
 
   els.sheetShortlist.addEventListener('click', () => {
     if (!sheetLog) return;
@@ -956,7 +982,7 @@
     await refreshOpenThread();
   });
 
-  els.back.addEventListener('click', closeThread);
+  if (els.back) els.back.addEventListener('click', closeThread);
 
   els.copyRequest.addEventListener('click', async () => {
     if (!selectedChat || !selectedChat.requestId) return;

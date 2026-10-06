@@ -53,6 +53,10 @@
   const subtitle = document.getElementById('dashboard-subtitle');
   const tabs = Array.from(switcher.querySelectorAll('[data-side]'));
   const boards = {};
+  let currentSide = '';
+  /* How many tab changes the phone's back can still undo on this page. Carried
+     in the history state so a back that lands on a tab entry knows the count. */
+  let sideDepth = 0;
 
   /* The region lives in the path (/admin/kerala), so the whole desk — every
      side of it — stays scoped to that region. */
@@ -106,6 +110,8 @@
   function showSide(side, options) {
     const config = SIDES[side];
     if (!config) return;
+    const changed = side !== currentSide;
+    currentSide = side;
 
     if (eyebrow) eyebrow.textContent = config.eyebrow;
     if (title) title.textContent = titleFor(side);
@@ -127,11 +133,15 @@
     ensureBoard(side);
 
     if (!options || options.push !== false) {
-      rememberSide(side);
+      rememberSide(side, changed);
     }
   }
 
-  function rememberSide(side) {
+  /* `push`: a tab change the user made, so it becomes a step the phone's back
+     can undo (docs/easy_back_plan.md). The first paint and a back-step only
+     rewrite the address. A tab change also clears any open chat from the
+     address: it belonged to the side being left. */
+  function rememberSide(side, push) {
     try {
       global.localStorage.setItem(STORAGE_KEY, side);
     } catch (error) {
@@ -144,7 +154,21 @@
     } else {
       url.searchParams.set('side', side);
     }
-    global.history.replaceState({}, '', url);
+    if (push) {
+      url.searchParams.delete('chat');
+      url.searchParams.delete('phone');
+      sideDepth += 1;
+      global.history.pushState({ pulsoSide: side, sideDepth }, '', url);
+    } else {
+      const state = Object.assign({}, global.history.state || {}, { pulsoSide: side, sideDepth });
+      global.history.replaceState(state, '', url);
+    }
+    if (global.PulsoBack) global.PulsoBack.refresh();
+  }
+
+  function sideFromUrl() {
+    const side = new URL(global.location.href).searchParams.get('side');
+    return side && SIDES[side] ? side : DEFAULT_SIDE;
   }
 
   function startingSide() {
@@ -198,8 +222,22 @@
   }
 
   tabs.forEach((tab) => {
-    tab.addEventListener('click', () => showSide(tab.dataset.side));
+    tab.addEventListener('click', () => {
+      if (tab.dataset.side !== currentSide) showSide(tab.dataset.side);
+    });
   });
+
+  /* With nothing open on top, the phone's back and the round arrow walk the
+     tabs in reverse; the arrow greys out once there is nowhere left to go. */
+  if (global.PulsoBack) {
+    global.PulsoBack.setRoot({
+      canBack: () => sideDepth > 0,
+      onPop: (state) => {
+        sideDepth = Math.max(0, Number(state && state.sideDepth) || 0);
+        showSide(sideFromUrl(), { push: false });
+      }
+    });
+  }
 
   showSide(startingSide(), { push: false });
   // The chosen side is only in the URL once it differs from the default, so a

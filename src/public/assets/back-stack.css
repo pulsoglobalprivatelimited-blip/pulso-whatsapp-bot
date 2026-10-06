@@ -1,0 +1,79 @@
+/* The round back arrow (docs/easy_back_plan.md). One button, top left of
+   every page; on a phone it floats above the open detail, sheet or photo so it
+   is always in the same spot under the thumb. */
+.desk-back {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  margin: 0 10px 0 0;
+  border: 1px solid rgba(0, 128, 105, 0.35);
+  border-radius: 50%;
+  background: #fff;
+  color: #008069;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.desk-back svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.desk-back:active:not([aria-disabled="true"]) {
+  background: rgba(0, 128, 105, 0.12);
+}
+
+.desk-back[aria-disabled="true"] {
+  color: #9aa3a0;
+  border-color: #e1e5e3;
+  cursor: default;
+}
+
+/* Desktop: the arrow sits in the same row as the tabs. */
+.hero .desk-back {
+  margin-top: 24px;
+}
+
+.inbox-topbar .desk-back {
+  margin-top: 0;
+}
+
+@media (max-width: 960px), (hover: none) and (pointer: coarse) {
+  /* Named with its desktop hosts too, so their margins never win here. */
+  .desk-back,
+  .hero .desk-back,
+  .inbox-topbar .desk-back {
+    position: fixed;
+    top: calc(6px + env(safe-area-inset-top));
+    left: 8px;
+    z-index: 100;
+    margin: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Room for the arrow in every top bar and every detail header. */
+  body.desk-shell .hero {
+    padding-left: 54px;
+  }
+
+  body:not(.desk-shell) .layout > .hero {
+    padding-left: 60px;
+  }
+
+  /* inbox.css loads after this file and sets the shorthand; outrank it. */
+  body .inbox-topbar {
+    padding-left: 56px;
+  }
+
+  .content.mobile-detail-open .detail-header {
+    padding-left: 46px;
+  }
+}

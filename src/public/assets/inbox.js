@@ -5,7 +5,12 @@
   'use strict';
 
   const Chat = window.PulsoChat;
+  const Back = window.PulsoBack;
   const REFRESH_MS = 25000;
+  // On a phone the thread replaces the list, so it is a layer the back stack
+  // owns; on a wide screen it is a pane beside the list.
+  const phoneLayout = window.matchMedia('(max-width: 860px)');
+  let deepLinked = false;
 
   const els = {
     app: document.getElementById('inbox-app'),
@@ -57,6 +62,12 @@
       const data = await fetchJson('/admin/providers');
       providers = Array.isArray(data.providers) ? data.providers : [];
       renderList();
+      // A refresh, or the installed app reopening, lands on the chat in the address.
+      if (!deepLinked) {
+        deepLinked = true;
+        const want = Back ? Back.param('chat') : null;
+        if (want && providers.some((item) => item.phone === want)) selectChat(want);
+      }
     } catch (error) {
       els.list.innerHTML = `<p class="is-loading">${Chat.escapeHtml(error.message || 'Could not load conversations.')}</p>`;
       els.count.textContent = '';
@@ -402,6 +413,10 @@
     document.querySelectorAll('.chat-row').forEach((row) => {
       row.classList.toggle('active', row.dataset.phone === phone);
     });
+    if (Back) {
+      if (phoneLayout.matches) Back.push('chat', hideThread, { url: Back.withParam('chat', phone) });
+      else Back.remember({ chat: phone });
+    }
 
     try {
       const provider = await fetchJson(`/admin/providers/${encodeURIComponent(phone)}`);
@@ -426,12 +441,17 @@
     }
   }
 
-  function closeThread() {
+  function hideThread() {
     selectedPhone = null;
     els.app.classList.remove('thread-open');
     els.view.classList.add('hidden');
     els.empty.style.display = '';
     document.querySelectorAll('.chat-row.active').forEach((row) => row.classList.remove('active'));
+  }
+
+  function closeThread() {
+    if (Back && Back.dismiss('chat')) return;
+    hideThread();
   }
 
   /* ---- events ----------------------------------------------------------- */
@@ -465,7 +485,7 @@
     await refreshOpenThread();
   });
 
-  els.back.addEventListener('click', closeThread);
+  if (els.back) els.back.addEventListener('click', closeThread);
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {

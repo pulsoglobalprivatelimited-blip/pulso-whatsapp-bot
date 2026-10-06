@@ -11,6 +11,7 @@
   <link rel="manifest" href="/admin/manifest.webmanifest">
   <link rel="icon" href="/admin/assets/pwa/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20261007a">
+  <link rel="stylesheet" href="/admin/assets/back-stack.css?v=20261007b">
   <link rel="stylesheet" href="/admin/assets/inbox.css?v=20260925a">
 </head>
 <body>
@@ -93,7 +94,6 @@
 
         <div class="thread-view hidden" id="thread-view" style="display:flex; flex-direction:column; min-height:0; flex:1;">
           <div class="thread-header">
-            <button class="button secondary thread-back" id="thread-back" type="button">Back</button>
             <span class="chat-avatar" id="thread-avatar"></span>
             <div class="thread-id">
               <strong id="thread-name"></strong>
@@ -174,9 +174,10 @@
     </div>
   </div>
 
+  <script src="/admin/assets/back-stack.js?v=20261007b"></script>
   <script src="/admin/assets/chat-history.js?v=20261003b"></script>
   <script src="/admin/assets/partner-review.js?v=20260924a"></script>
-  <script src="/admin/assets/booking-inbox.js?v=20260925a"></script>
+  <script src="/admin/assets/booking-inbox.js?v=20261007b"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>
 </html>

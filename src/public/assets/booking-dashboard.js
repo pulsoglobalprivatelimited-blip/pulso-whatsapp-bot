@@ -396,6 +396,8 @@
     let search = '';
     let mobileDetailOpen = false;
     let detailToken = 0;
+    const Back = global.PulsoBack;
+    let deepLinked = false;
 
     const el = (name) => root.querySelector(`[data-el="${name}"]`);
     const all = (selector) => Array.from(root.querySelectorAll(selector));
@@ -1193,6 +1195,10 @@
       if (detailPanel) detailPanel.classList.remove('hidden');
       updateMobileDetailState();
       renderList();
+      if (Back) {
+        if (mobileDetailOpen) Back.push(`detail-${mode}`, hideMobileDetail, { url: Back.withParam('chat', selectedPhone) });
+        else Back.remember({ chat: selectedPhone });
+      }
 
       const phoneTarget = el('detail-phone');
       if (phoneTarget) phoneTarget.innerHTML = renderPhoneLink(selectedPhone);
@@ -1299,6 +1305,11 @@
       bookingContent.classList.toggle('mobile-detail-open', mobileDetailOpen);
     }
 
+    function hideMobileDetail() {
+      mobileDetailOpen = false;
+      updateMobileDetailState();
+    }
+
     function isMobileViewport() {
       return global.matchMedia('(max-width: 960px), (hover: none) and (pointer: coarse)').matches;
     }
@@ -1326,6 +1337,16 @@
       updateMetrics();
       renderList();
 
+      // A refresh lands on the chat in the address - on this board's side only.
+      if (!deepLinked) {
+        deepLinked = true;
+        const sideParam = Back ? Back.param('side') : null;
+        const want = Back ? Back.param('chat') : null;
+        if (want && (!sideParam || sideParam === mode) && chats.some((item) => (item.phone || item.id) === want)) {
+          selectedPhone = want;
+        }
+      }
+
       if (selectedPhone) {
         const selected = chats.find((item) => (item.phone || item.id) === selectedPhone);
         if (selected) {
@@ -1341,6 +1362,7 @@
         await renderDetail(first.phone || first.id);
       } else {
         bookingDetail.classList.add('hidden');
+        if (Back) Back.drop(`detail-${mode}`);
       }
     }
 
@@ -1369,8 +1391,8 @@
     const backButton = el('back-to-list-button');
     if (backButton) {
       backButton.addEventListener('click', () => {
-        mobileDetailOpen = false;
-        updateMobileDetailState();
+        if (Back && Back.dismiss(`detail-${mode}`)) return;
+        hideMobileDetail();
       });
     }
 

@@ -35,12 +35,20 @@
       doc.querySelector(`[data-sheet="${name}"]`);
   }
 
-  function closeSheet() {
+  function hideSheet() {
     if (!openSheet) return;
     openSheet.classList.remove('is-open');
     openSheet.setAttribute('aria-hidden', 'true');
     body.classList.remove('desk-sheet-open');
     openSheet = null;
+  }
+
+  /* Closing goes through the back stack (back-stack.js), so the scrim, the
+     phone's back and the round arrow all do the same thing. */
+  function closeSheet() {
+    if (!openSheet) return;
+    if (global.PulsoBack && global.PulsoBack.dismiss('sheet')) return;
+    hideSheet();
   }
 
   function showSheet(name, trigger) {
@@ -50,11 +58,12 @@
       closeSheet();
       return;
     }
-    closeSheet();
+    hideSheet();
     openSheet = sheet;
     sheet.classList.add('is-open');
     sheet.setAttribute('aria-hidden', 'false');
     body.classList.add('desk-sheet-open');
+    if (global.PulsoBack) global.PulsoBack.push('sheet', hideSheet);
   }
 
   /* Delegated rather than bound: the agency and customer boards are cloned
@@ -89,10 +98,7 @@
       if (chip.type === 'submit') return;
       closeSheet();
     });
-
-    global.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') closeSheet();
-    });
+    // Escape is the back stack's: one handler closes the top layer, whatever it is.
   }
 
   /* ---- search in the bar -------------------------------------------------
@@ -252,7 +258,7 @@
       '<button class="doc-viewer-close" type="button" aria-label="Close">&times;</button><img alt="">';
     viewer.addEventListener('click', (event) => {
       if (event.target === viewer || event.target.closest('.doc-viewer-close')) {
-        viewer.classList.remove('is-open');
+        closeDocument();
       }
     });
     body.append(viewer);
@@ -266,6 +272,16 @@
     image.src = src;
     image.alt = alt || 'Document';
     node.classList.add('is-open');
+    if (global.PulsoBack) global.PulsoBack.push('doc', hideDocument);
+  }
+
+  function hideDocument() {
+    if (viewer) viewer.classList.remove('is-open');
+  }
+
+  function closeDocument() {
+    if (global.PulsoBack && global.PulsoBack.dismiss('doc')) return;
+    hideDocument();
   }
 
   function wireDocumentViewer() {
@@ -274,10 +290,6 @@
       if (!image || !image.src) return;
       event.preventDefault();
       openDocument(image.src, image.alt);
-    });
-
-    global.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && viewer) viewer.classList.remove('is-open');
     });
   }
 

@@ -11,6 +11,7 @@
   <link rel="manifest" href="/admin/manifest.webmanifest">
   <link rel="icon" href="/admin/assets/pwa/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/admin/assets/dashboard.css?v=20261007a">
+  <link rel="stylesheet" href="/admin/assets/back-stack.css?v=20261007b">
 </head>
 <body>
   <!-- The marker tells booking-dashboard.js this page owns a board of its own.
@@ -62,10 +63,6 @@
 
         <section data-el="detail-panel" class="detail-panel">
           <div data-el="booking-detail" class="detail hidden">
-            <div class="mobile-detail-bar">
-              <button data-el="back-to-list-button" class="button secondary" type="button">Back to list</button>
-            </div>
-
             <div class="detail-header">
               <div>
                 <p data-el="detail-phone" class="detail-phone"></p>
@@ -97,10 +94,11 @@
   <!-- The board reads its row vocabulary from PulsoDesk and its sheet and
        pull-to-refresh from PulsoDeskShell. /admin loads both before it; this
        page did not, so every Desk call here was reaching an undefined global. -->
+  <script src="/admin/assets/back-stack.js?v=20261007b"></script>
   <script src="/admin/assets/desk-ui.js?v=20260928a"></script>
-  <script src="/admin/assets/desk-shell.js?v=20261007a"></script>
+  <script src="/admin/assets/desk-shell.js?v=20261007b"></script>
   <script src="/admin/assets/partner-review.js?v=20260924a"></script>
-  <script src="/admin/assets/booking-dashboard.js?v=20260928a"></script>
+  <script src="/admin/assets/booking-dashboard.js?v=20261007b"></script>
   <script src="/admin/assets/admin-pwa.js?v=20260419c"></script>
 </body>
 </html>

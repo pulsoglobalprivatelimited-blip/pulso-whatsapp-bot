@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pulso-admin-v20';
+const CACHE_NAME = 'pulso-admin-v21';
 const STATIC_ASSETS = [
   '/admin/login',
   '/admin/provider-support',
