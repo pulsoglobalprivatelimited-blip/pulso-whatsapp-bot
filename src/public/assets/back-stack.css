@@ -37,9 +37,11 @@
   cursor: default;
 }
 
-/* Desktop: the arrow sits in the same row as the tabs. */
+/* Desktop: the arrow sits in the same row as the tabs, top-aligned with the
+   tab pill, which carries the same 24px above it. */
 .hero .desk-back {
   margin-top: 24px;
+  vertical-align: top;
 }
 
 .inbox-topbar .desk-back {

@@ -192,6 +192,28 @@
 
     /* ---- the round arrow ------------------------------------------------- */
 
+    /* On a phone the arrow floats (position: fixed) and must sit above the
+       open detail, sheet or photo. Inside the top bar it cannot: the desk's bar
+       is itself a fixed layer, so anything inside it stays under the detail
+       (found on the iPhone, 7 Oct 2026). So on a phone the button lives on the
+       body, drawn at the bar's top-left by the stylesheet; on a wide screen it
+       sits in the bar's own flow, left of the tabs. */
+    const phoneQuery = global.matchMedia
+      ? global.matchMedia('(max-width: 960px), (hover: none) and (pointer: coarse)')
+      : null;
+    let inFlowHost = null;
+    let inFlowBefore = null;
+
+    function place() {
+      if (!button || !doc.body) return;
+      const floating = Boolean(phoneQuery && phoneQuery.matches);
+      if (floating) {
+        if (button.parentNode !== doc.body) doc.body.appendChild(button);
+      } else if (inFlowHost && button.parentNode !== inFlowHost) {
+        inFlowHost.insertBefore(button, inFlowBefore && inFlowBefore.parentNode === inFlowHost ? inFlowBefore : inFlowHost.firstChild);
+      }
+    }
+
     function mount() {
       if (!doc || button) return;
       const sideSwitch = doc.querySelector('#side-switch');
@@ -205,10 +227,17 @@
       button.className = 'desk-back';
       button.setAttribute('aria-label', 'Back');
       button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>';
-      host.insertBefore(button, sideSwitch || host.firstChild);
+      inFlowHost = host;
+      inFlowBefore = sideSwitch || host.firstChild;
+      host.insertBefore(button, inFlowBefore);
       button.addEventListener('click', () => {
         if (canGoBack()) pop();
       });
+      place();
+      if (phoneQuery) {
+        if (phoneQuery.addEventListener) phoneQuery.addEventListener('change', place);
+        else if (phoneQuery.addListener) phoneQuery.addListener(place);
+      }
       refresh();
     }
 
