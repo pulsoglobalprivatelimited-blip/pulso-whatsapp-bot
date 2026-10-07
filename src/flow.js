@@ -208,20 +208,33 @@ const MESSAGES = {
   qualificationRetry:
     'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും qualification തിരഞ്ഞെടുക്കുക: GDA / GNM / ANM / HCA / BSc Nursing / Other with experience in caregiving / സർട്ടിഫിക്കറ്റ് ഇല്ല.',
   workingModel:
-    `**Pulso Global Private Limited** ഒരു homecare കമ്പനിയാണ്. പ്രായമായർക്കും കിടപ്പ് രോഗികൾക്കും അവരുടെ വീടുകളിൽ പരിചരണം നൽകുന്നതാണ് ഞങ്ങളുടെ സർവീസ്.\n\nGDA (General Duty Assistant) staff-നും nurse-നും ഞങ്ങളോടൊപ്പം join ചെയ്യാൻ കഴിയും. നിങ്ങൾ interested ആണെങ്കിൽ ഞങ്ങൾ നിങ്ങൾക്ക് Pulso App വഴി duty offers അയച്ചു തരും.\n\n**Duty details:**\n\n1. Duty area കേരളത്തിൽ എവിടെയും ആയിരിക്കാം\n2. Duty timing 24 hours ആയിരിക്കും\n3. Duty duration 1 week, 2 week, 1 month എന്നിങ്ങനെ വ്യത്യാസപ്പെടാം\n4. 24 hours duty-ക്ക് patient-ന്റെ വീട്ടിൽ stay-യും food-ും ലഭിക്കും\n5. 24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 മുതൽ ₹1000 വരെ ലഭിക്കും\n6. Payment daily നിങ്ങളുടെ account-ിൽ credit ആവുന്നതാണ്\n7. നിങ്ങൾ work ചെയ്യുന്ന ദിവസങ്ങളിൽ മാത്രമായിരിക്കും payment ലഭിക്കുക\n8. House maid ജോലി ഉണ്ടായിരിക്കില്ല. Patient care duties മാത്രം ആയിരിക്കും\n\n**Working model:**\n\n1. Pulso App വഴി duty offers ലഭിക്കും\n2. നിങ്ങൾക്ക് താല്പര്യമുള്ള duty-കൾ മാത്രം accept ചെയ്യാം\n3. താല്പര്യമില്ലെങ്കിൽ reject ചെയ്യാം അല്ലെങ്കിൽ ignore ചെയ്യാം\n4. Duty accept ചെയ്തതിന് ശേഷം office verification call ഉണ്ടാകും\n5. എല്ലാ instructions-ും duty details-ും office staff clear ആയി അറിയിക്കും\n6. പിന്നീട് നിങ്ങൾ നേരിട്ട് duty location-ലേക്ക് പോകണം\n7. സമയത്തിന് duty ആരംഭിച്ച് ഉത്തരവാദിത്വത്തോടെ care നൽകണം\n\n**Emergency leave:**\n\nEmergency leave ആവശ്യമായി വന്നാൽ വേറെ staff-നെ ഞങ്ങൾ arrange ചെയ്ത് തരുന്നതായിരിക്കും.\n\n**ശ്രദ്ധിക്കുക:**\n\n- Duty offer accept ചെയ്യണോ വേണ്ടയോ എന്നത് മുഴുവൻ നിങ്ങളുടെ ഇഷ്ടമാണ്\n- ഇഷ്ടമുള്ള duty-കൾ മാത്രം സ്വീകരിച്ചാൽ മതി\n- ഇതിനായി പ്രത്യേക registration fee ഒന്നും നൽകേണ്ടതില്ല\n\n**Office Address:**\nPulso Elderlycare, Kalamassery, Kochi - 682021`,
+    `**Pulso Global Private Limited** ഒരു homecare കമ്പനിയാണ്. പ്രായമായർക്കും കിടപ്പ് രോഗികൾക്കും അവരുടെ വീടുകളിൽ പരിചരണം നൽകുന്നതാണ് ഞങ്ങളുടെ സർവീസ്.\n\nGDA (General Duty Assistant) staff-നും nurse-നും ഞങ്ങളോടൊപ്പം join ചെയ്യാൻ കഴിയും. നിങ്ങൾ interested ആണെങ്കിൽ ഞങ്ങൾ നിങ്ങൾക്ക് Pulso App വഴി duty offers അയച്ചു തരും.\n\n**Duty details:**\n\n1. Duty area കേരളത്തിൽ എവിടെയും ആയിരിക്കാം\n2. Duty timing 8 hours, 24 hours എന്നീ രീതികളിലായിരിക്കും\n3. 8 hours duty സമയം രാവിലെ 8 മണി മുതൽ വൈകുന്നേരം 4 മണിവരെ ആയിരിക്കും\n4. Duty duration 1 week, 2 week, 1 month എന്നിങ്ങനെ വ്യത്യാസപ്പെടാം\n5. 24 hours duty-ക്ക് patient-ന്റെ വീട്ടിൽ stay-യും food-ും ലഭിക്കും\n6. 8 hour duty-ക്ക് stay ഉണ്ടായിരിക്കില്ല\n7. 8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹600 മുതൽ ₹900 വരെ ലഭിക്കും\n8. 24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 മുതൽ ₹1000 വരെ ലഭിക്കും\n9. Payment daily നിങ്ങളുടെ account-ിൽ credit ആവുന്നതാണ്\n10. നിങ്ങൾ work ചെയ്യുന്ന ദിവസങ്ങളിൽ മാത്രമായിരിക്കും payment ലഭിക്കുക\n11. House maid ജോലി ഉണ്ടായിരിക്കില്ല. Patient care duties മാത്രം ആയിരിക്കും\n\n**Working model:**\n\n1. Pulso App വഴി duty offers ലഭിക്കും\n2. നിങ്ങൾക്ക് താല്പര്യമുള്ള duty-കൾ മാത്രം accept ചെയ്യാം\n3. താല്പര്യമില്ലെങ്കിൽ reject ചെയ്യാം അല്ലെങ്കിൽ ignore ചെയ്യാം\n4. Duty accept ചെയ്തതിന് ശേഷം office verification call ഉണ്ടാകും\n5. എല്ലാ instructions-ും duty details-ും office staff clear ആയി അറിയിക്കും\n6. പിന്നീട് നിങ്ങൾ നേരിട്ട് duty location-ലേക്ക് പോകണം\n7. സമയത്തിന് duty ആരംഭിച്ച് ഉത്തരവാദിത്വത്തോടെ care നൽകണം\n\n**Emergency leave:**\n\nEmergency leave ആവശ്യമായി വന്നാൽ വേറെ staff-നെ ഞങ്ങൾ arrange ചെയ്ത് തരുന്നതായിരിക്കും.\n\n**ശ്രദ്ധിക്കുക:**\n\n- Duty offer accept ചെയ്യണോ വേണ്ടയോ എന്നത് മുഴുവൻ നിങ്ങളുടെ ഇഷ്ടമാണ്\n- ഇഷ്ടമുള്ള duty-കൾ മാത്രം സ്വീകരിച്ചാൽ മതി\n- ഇതിനായി പ്രത്യേക registration fee ഒന്നും നൽകേണ്ടതില്ല\n\n**Office Address:**\nPulso Elderlycare, Kalamassery, Kochi - 682021`,
   interestQuestion:
     'മുകളിലെ working model മനസ്സിലായോ? തുടരാൻ താൽപര്യമുണ്ടോ?',
   interestRetry:
     'തുടരാൻ താൽപര്യമുണ്ടെങ്കിൽ താഴെയുള്ള button തിരഞ്ഞെടുക്കുക.',
-  // Founder, 5 Oct 2026: Pulso duties are 24-hour only. One button under it.
   dutyHourPreferenceQuestion:
-    'Duty hours: 24 hour. Patient-ന്റെ വീട്ടിൽ stay ചെയ്യണം. Stay-യും food-ും ലഭിക്കും.',
+    'താങ്കൾക്ക് ഏത് duty hour ആണ് preference?',
+  dutyHourPreferenceRetry:
+    'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും ഒരു duty hour preference തിരഞ്ഞെടുക്കുക: 8 hour / 24 hour / രണ്ടും.',
+  dutyHourPreference8HourNotice:
+    '8 hour duty തിരഞ്ഞെടുക്കുന്നവർ ശ്രദ്ധിക്കുക: stay ഉം food ഉം ലഭിക്കില്ല. Food ഉം stay ഉം 24 hour duty-ക്ക് മാത്രമാണ് ലഭിക്കുക.',
   sampleDutyOfferQuestion:
     'ഒരു sample duty offer എങ്ങനെയിരിക്കും എന്ന് കാണണോ?',
   sampleDutyOfferRetry:
     'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും ഒരു മറുപടി തിരഞ്ഞെടുക്കുക.',
+  sampleDutyOtherOffer8HourQuestion:
+    '8 hour duty കാണണോ?',
+  sampleDutyOtherOffer24HourQuestion:
+    '24 hour duty കാണണോ?',
+  sampleDutyFinalChoiceQuestion:
+    'ഏത് duty hour ആണ് താങ്കളുടെ final preference?',
+  sampleDutyFinalChoiceRetry:
+    'ദയവായി 8 hour / 24 hour / രണ്ടും എന്നിവയിൽ ഒന്നിനെ തിരഞ്ഞെടുക്കുക.',
   sampleDutyOffer24Hour:
     `Elderly female Patient (71 yrs)\nCondition: Supportive care\n\n🟡 Care Level: Assisted care (with walker support)\n\n🕘 Duty: 24-hour care\n\n📅 Duration: 1 month (continuous) – from 21 Jan\n\n📍 Location: Vennala (nearby)\n\n🩺 Care Needed (Supportive &\n Assisted):\n\n•⁠  ⁠Washroom support\n•⁠  ⁠Bed making\n•⁠  ⁠Assistance while feeding\n•⁠  ⁠Helping with medicines\n•⁠  ⁠Assistance in lifting & walking using walker\n•⁠  ⁠Assistance during physiotherapy exercises\n(Supportive home care – not hospital duty)\n💰 Earnings:\n\n₹ {{payout24h}} per day × 30 days\n👉 ₹ {{total24h}} total\n\n🛡 Safety & Support\n✔ Family verified\n✔ Payment guaranteed\n✔ Support available during duty`,
+  sampleDutyOffer8Hour:
+    `👤 Patient:\nfemale – 65 yrs\n\n🩺 Condition:\nPost-surgery recovery (Hip surgery)\n\n👨‍⚕ Care Type:\nHome supportive care (not complex)\n\n🕘 Duty:\n8 hours (8:00 AM – 4:00 PM)\n\n⏳ Duration:\nFrom 14 Feb – continuous\n\n📍 Location:\nThevakkal, Ernakulam\n\n🩺 Care Needed:\n•⁠  ⁠Walking / mobility support\n•⁠  ⁠Assistance with daily activities\n•⁠  ⁠Washroom support (if needed)\n•⁠  ⁠Helping with medicines\n•⁠  ⁠General supervision & comfort care\n\n💰 Earnings:\n₹{{payout8h}} per day\n👉 Stable regular day-duty\n\n🛡 Pulso Support:\n✔ Family verified\n✔ Payment guaranteed\n✔ Full support during duty`,
   expectedDutiesIntroOne:
     `Caregiver duty-യിൽ സാധാരണയായി വരാവുന്ന ചില ജോലികൾ താഴെ കൊടുക്കുന്നു.\nPatient-ന്റെ condition അനുസരിച്ച് duty responsibilities മാറാം.\n\n*Personal care*\n- Bathing / sponge bath (non-clinical)\n- Dressing\n- Oral care, grooming, hair combing\n\n*Toileting & continence support*\n- Diaper change\n- Bedpan / urinal support\n- Cleaning and maintaining hygiene`,
   expectedDutiesIntroTwo:
@@ -323,21 +336,20 @@ const MESSAGES = {
     // caregiving experience" the same day: she is about to accept terms, and the
     // sentence that matters there is the pay, not the reasoning. The rate lines
     // already read "ദിവസം ₹600" — per day — so the "/day" he added to the English
-    // is already present here. Except the figure, which he wrote as ₹750 and is
-    // carried as {{payout24h}} so a repricing in app_config/provider_tiers
-    // reaches this line without a deploy. The 8-hour line he also wrote was
-    // dropped on 5 Oct 2026: Pulso duties are 24-hour only.
-    'നിങ്ങൾക്ക് Nursing/Caregiving കോഴ്സ് സർട്ടിഫിക്കറ്റ് ഇല്ലാത്തതിനാൽ, നിങ്ങളെ Basic Caregiver ആയാണ് തിരഞ്ഞെടുത്തിരിക്കുന്നത്.\n\nഡ്യൂട്ടി വേതനം:\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
+    // is already present here. Except the two figures, which
+    // he wrote as ₹600 / ₹750 and are carried as {{payout8h}} / {{payout24h}} so a
+    // repricing in app_config/provider_tiers reaches this line without a deploy.
+    'നിങ്ങൾക്ക് Nursing/Caregiving കോഴ്സ് സർട്ടിഫിക്കറ്റ് ഇല്ലാത്തതിനാൽ, നിങ്ങളെ Basic Caregiver ആയാണ് തിരഞ്ഞെടുത്തിരിക്കുന്നത്.\n\nഡ്യൂട്ടി വേതനം:\n8 മണിക്കൂർ – ദിവസം ₹{{payout8h}}\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
   basicTierAgeNotice:
     // Said the moment she gives her age, before she uploads anything or answers
     // eight more questions. She used to read nurse money three times and find
     // out at the terms screen; this is the same news, early enough to walk away.
-    'നന്ദി. {{ageThreshold}} വയസ്സിന് മുകളിലുള്ള caregivers-ന് Pulso duty നൽകുന്നത് Basic നിരക്കിലാണ്.\n\nഡ്യൂട്ടി വേതനം:\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
+    'നന്ദി. {{ageThreshold}} വയസ്സിന് മുകളിലുള്ള caregivers-ന് Pulso duty നൽകുന്നത് Basic നിരക്കിലാണ്.\n\nഡ്യൂട്ടി വേതനം:\n8 മണിക്കൂർ – ദിവസം ₹{{payout8h}}\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
   termsRateBasicAge:
     // For someone whose certificate IS good — a nurse or a GDA — but who is
     // above the age at which Pulso offers the Basic rate. She must not read
     // that she has no certificate, because she has one and she just sent it.
-    'നിങ്ങളുടെ സർട്ടിഫിക്കറ്റ് പരിശോധിച്ചു അംഗീകരിച്ചു.\n\n45 വയസ്സിന് മുകളിലുള്ള caregivers-ന് Pulso duty നൽകുന്നത് Basic നിരക്കിലാണ്.\n\nഡ്യൂട്ടി വേതനം:\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
+    'നിങ്ങളുടെ സർട്ടിഫിക്കറ്റ് പരിശോധിച്ചു അംഗീകരിച്ചു.\n\n45 വയസ്സിന് മുകളിലുള്ള caregivers-ന് Pulso duty നൽകുന്നത് Basic നിരക്കിലാണ്.\n\nഡ്യൂട്ടി വേതനം:\n8 മണിക്കൂർ – ദിവസം ₹{{payout8h}}\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
   certificateRejected:
     'ക്ഷമിക്കണം, താങ്കൾ അയച്ച certificate verify ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി വ്യക്തമായ certificate വീണ്ടും upload ചെയ്യുക.',
   /* Sent when a reviewer takes an approval back. The person already has
@@ -493,15 +505,23 @@ const KARNATAKA_MESSAGES = {
   qualificationRetry:
     'Please select one option: GDA / GNM / ANM / HCA / BSc Nursing / Other caregiving experience / No certificate.',
   workingModel:
-    `Pulso Global Private Limited is a home care company. We provide care services for elderly people and bedridden patients at their homes.\n\nGDA staff, caregivers, and nurses can join Pulso. If you are interested, we will send duty offers to you through Pulso mobile app\n\nDuty details:\n\n1. Duty location can be anywhere in Karnataka\n2. Duty timing is 24 hours\n3. Duty duration may be 1 week, 2 weeks, 1 month, or more depending on the case\n4. For 24-hour duty, stay and food will be provided at the patient's home\n5. For 24-hour duty, you will receive Rs 750 to Rs 1000 per day\n6. Payment will be credited daily to your account\n7. You will receive payment only for the days you work\n8. There will be no housemaid work. Only patient care duties\n\nWorking model:\n\n1. Duty offers will be sent through Pulso App\n2. You can accept only the duties you are interested in\n3. If you are not interested in a duty, you can reject or ignore it\n4. After you accept a duty, the office team will call you for verification and confirmation\n5. The office team will clearly explain all duty details and instructions\n6. After confirmation, you should go directly to the duty location\n7. You should start duty on time and provide care responsibly\n\nEmergency leave:\n\nIf you need emergency leave, Pulso will try to arrange another staff member.\n\nImportant:\n\n- Accepting or rejecting a duty offer is completely your choice\n- You only need to accept duties you are interested in\n- There is no registration fee to join Pulso\n\nHead Office Address:\nPulso Elderlycare, cochin, kerala - 682036`,
+    `Pulso Global Private Limited is a home care company. We provide care services for elderly people and bedridden patients at their homes.\n\nGDA staff, caregivers, and nurses can join Pulso. If you are interested, we will send duty offers to you through Pulso mobile app\n\nDuty details:\n\n1. Duty location can be anywhere in Karnataka\n2. Duty timing may be 8 hours or 24 hours\n3. 8-hour duty timing will usually be from morning 8 am to evening 4pm\n4. Duty duration may be 1 week, 2 weeks, 1 month, or more depending on the case\n5. For 24-hour duty, stay and food will be provided at the patient's home\n6. For 8-hour duty, stay will not be provided\n7. For 8-hour duty, you will receive Rs 600 to Rs 900 per day\n8. For 24-hour duty, you will receive Rs 750 to Rs 1000 per day\n9. Payment will be credited daily to your account\n10. You will receive payment only for the days you work\n11. There will be no housemaid work. Only patient care duties\n\nWorking model:\n\n1. Duty offers will be sent through Pulso App\n2. You can accept only the duties you are interested in\n3. If you are not interested in a duty, you can reject or ignore it\n4. After you accept a duty, the office team will call you for verification and confirmation\n5. The office team will clearly explain all duty details and instructions\n6. After confirmation, you should go directly to the duty location\n7. You should start duty on time and provide care responsibly\n\nEmergency leave:\n\nIf you need emergency leave, Pulso will try to arrange another staff member.\n\nImportant:\n\n- Accepting or rejecting a duty offer is completely your choice\n- You only need to accept duties you are interested in\n- There is no registration fee to join Pulso\n\nHead Office Address:\nPulso Elderlycare, cochin, kerala - 682036`,
   interestQuestion: 'Did you understand the working model? Are you interested to continue?',
   interestRetry: 'If you are interested to continue, please select the button below.',
-  // Founder, 5 Oct 2026: Pulso duties are 24-hour only. One button under it.
-  dutyHourPreferenceQuestion: "Duty hours: 24 hour. You stay at the patient's home. Stay and food are given.",
+  dutyHourPreferenceQuestion: 'Which duty hour do you prefer?',
+  dutyHourPreferenceRetry: 'Please select one duty hour preference: 8 hour / 24 hour / Both.',
+  dutyHourPreference8HourNotice:
+    'Please note: stay and food are not provided for 8-hour duty. Stay and food are available only for 24-hour duty.',
   sampleDutyOfferQuestion: 'Would you like to see how a sample duty offer looks?',
   sampleDutyOfferRetry: 'Please select one option from below.',
+  sampleDutyOtherOffer8HourQuestion: 'Do you want to see an 8-hour duty sample?',
+  sampleDutyOtherOffer24HourQuestion: 'Do you want to see a 24-hour duty sample?',
+  sampleDutyFinalChoiceQuestion: 'What is your final duty hour preference?',
+  sampleDutyFinalChoiceRetry: 'Please select 8 hour / 24 hour / Both.',
   sampleDutyOffer24Hour:
     `Patient: Elderly female, 71 years\nCondition: Supportive care\n\nCare Level: Assisted care with walker support\n\nDuty: 24-hour care\n\nDuration: 1 month\n\nLocation: Bengaluru\n\nCare Needed:\n- Washroom support\n- Bed making\n- Assistance while feeding\n- Helping with medicines\n- Assistance in lifting and walking using walker\n- Assistance during physiotherapy exercises\n\nEarnings:\nRs {{payout24h}} per day x 30 days\nRs {{total24h}} total\n\nSafety and Support:\n- Family verified\n- Payment guaranteed\n- Pulso support available during duty`,
+  sampleDutyOffer8Hour:
+    `Patient: Female, 65 years\n\nCondition: Post-surgery recovery\n\nCare Type: Home supportive care\n\nDuty: 8 hours\n\nDuration: Continuous\n\nLocation: Bengaluru\n\nCare Needed:\n- Walking / mobility support\n- Assistance with daily activities\n- Washroom support if needed\n- Helping with medicines\n- General supervision and comfort care\n\nEarnings:\nRs {{payout8h}} per day\n\nSupport:\n- Family verified\n- Payment guaranteed\n- Pulso support available during duty`,
   expectedDutiesIntroOne:
     `Caregiver duties may include the following. Duties may change depending on the patient's condition.\n\n*Personal care*\n- Bathing or sponge bath support\n- Dressing\n- Oral care\n- Grooming\n- Hair combing\n\n*Toileting and hygiene support*\n- Diaper change\n- Bedpan or urinal support\n- Cleaning and maintaining hygiene`,
   expectedDutiesIntroTwo:
@@ -579,11 +599,11 @@ const KARNATAKA_MESSAGES = {
     'Your document has been reviewed. You are approved to join Pulso as a Basic Caregiver.',
   termsRateBasic:
     // Founder's wording, 26 Sep 2026. Figures from app_config/provider_tiers at send time.
-    'Because you have no Nursing/Caregiving course certificate, you have been selected as a Basic Caregiver.\n\nDuty pay: 24 hours ₹{{payout24h}}/day.',
+    'Because you have no Nursing/Caregiving course certificate, you have been selected as a Basic Caregiver.\n\nDuty pay: 8 hours ₹{{payout8h}}/day, 24 hours ₹{{payout24h}}/day.',
   basicTierAgeNotice:
-    'Thank you. For caregivers above {{ageThreshold}}, Pulso offers duties at the Basic rate.\n\nDuty pay: 24 hours ₹{{payout24h}}/day.',
+    'Thank you. For caregivers above {{ageThreshold}}, Pulso offers duties at the Basic rate.\n\nDuty pay: 8 hours ₹{{payout8h}}/day, 24 hours ₹{{payout24h}}/day.',
   termsRateBasicAge:
-    'Your certificate has been checked and approved.\n\nFor caregivers above 45, Pulso offers duties at the Basic rate.\n\nDuty pay: 24 hours ₹{{payout24h}}/day.',
+    'Your certificate has been checked and approved.\n\nFor caregivers above 45, Pulso offers duties at the Basic rate.\n\nDuty pay: 8 hours ₹{{payout8h}}/day, 24 hours ₹{{payout24h}}/day.',
   certificateRejected:
     'Sorry, we could not verify your certificate. Please upload a clear certificate again.',
   approvalUndone:
@@ -695,6 +715,7 @@ const UI_TEXT = {
   previousListDescription: 'മുൻപത്തെ ജില്ലകൾ കാണുക',
   interestYesTitle: 'താൽപര്യമുണ്ട്',
   interestNoTitle: 'താൽപര്യമില്ല',
+  dutyBothTitle: 'രണ്ടും',
   sampleYesTitle: 'കാണാം',
   sampleNoTitle: 'വേണ്ട',
   expectedDutiesYesTitle: 'തയ്യാറാണ്',
@@ -732,6 +753,7 @@ const KARNATAKA_UI_TEXT = {
   previousListDescription: 'See previous districts',
   interestYesTitle: 'Yes, interested',
   interestNoTitle: 'Not interested',
+  dutyBothTitle: 'Both',
   sampleYesTitle: 'Yes',
   sampleNoTitle: 'No',
   expectedDutiesYesTitle: 'Yes',
@@ -777,6 +799,11 @@ const KERALA_ENGLISH_MESSAGES = {
     'Duty location can be anywhere in Karnataka',
     'Duty location can be anywhere in Kerala'
   ),
+  sampleDutyOffer8Hour: swapExact(
+    KARNATAKA_MESSAGES.sampleDutyOffer8Hour,
+    'Location: Bengaluru',
+    'Location: Thevakkal, Ernakulam'
+  ),
   sampleDutyOffer24Hour: swapExact(
     KARNATAKA_MESSAGES.sampleDutyOffer24Hour,
     'Location: Bengaluru',
@@ -790,6 +817,11 @@ const KARNATAKA_MALAYALAM_MESSAGES = {
     MESSAGES.workingModel,
     'Duty area കേരളത്തിൽ എവിടെയും ആയിരിക്കാം',
     'Duty area കർണാടകയിൽ എവിടെയും ആയിരിക്കാം'
+  ),
+  sampleDutyOffer8Hour: swapExact(
+    MESSAGES.sampleDutyOffer8Hour,
+    'Thevakkal, Ernakulam',
+    'Bengaluru'
   ),
   sampleDutyOffer24Hour: swapExact(
     MESSAGES.sampleDutyOffer24Hour,
@@ -986,25 +1018,50 @@ function tierFigures(tiers) {
   };
 }
 
-// The working model quotes the rate inside one long block, so the band's
-// line is swapped in by exact match. The marker is the GDA-range 24-hour line
-// as written in MESSAGES.workingModel; swapExact throws if it is reworded
-// without this table, rather than silently sending the wrong band. There is
-// no 8-hour line since 6 Oct 2026: Pulso duties are 24-hour.
+// The working model quotes the rate inside one long block, so the band's two
+// lines are swapped in by exact match. The markers are the GDA-range lines as
+// written in MESSAGES.workingModel; swapExact throws if either is reworded
+// without this table, rather than silently sending the wrong band.
 const WORKING_MODEL_MARKERS = {
-  ml: ['24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 മുതൽ ₹1000 വരെ ലഭിക്കും'],
-  en: ['For 24-hour duty, you will receive Rs 750 to Rs 1000 per day']
+  ml: [
+    '8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹600 മുതൽ ₹900 വരെ ലഭിക്കും',
+    '24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 മുതൽ ₹1000 വരെ ലഭിക്കും'
+  ],
+  en: [
+    'For 8-hour duty, you will receive Rs 600 to Rs 900 per day',
+    'For 24-hour duty, you will receive Rs 750 to Rs 1000 per day'
+  ]
 };
 
 function workingModelRateLines(band, language, f) {
   if (language === 'ml') {
-    if (band === 'nurse') return [`24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.n24} ലഭിക്കും`];
-    if (band === 'basic') return [`24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b24} ലഭിക്കും`];
-    return [`24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.gFrom24} മുതൽ ₹${f.gTo24} വരെ ലഭിക്കും`];
+    if (band === 'nurse') {
+      return [
+        `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.n8} ലഭിക്കും`,
+        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.n24} ലഭിക്കും`
+      ];
+    }
+    if (band === 'basic') {
+      return [
+        `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b8} ലഭിക്കും`,
+        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b24} ലഭിക്കും`
+      ];
+    }
+    return [
+      `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.gFrom8} മുതൽ ₹${f.gTo8} വരെ ലഭിക്കും`,
+      `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.gFrom24} മുതൽ ₹${f.gTo24} വരെ ലഭിക്കും`
+    ];
   }
-  if (band === 'nurse') return [`For 24-hour duty, you will receive Rs ${f.n24} per day`];
-  if (band === 'basic') return [`For 24-hour duty, you will receive Rs ${f.b24} per day`];
-  return [`For 24-hour duty, you will receive Rs ${f.gFrom24} to Rs ${f.gTo24} per day`];
+  if (band === 'nurse') {
+    return [`For 8-hour duty, you will receive Rs ${f.n8} per day`, `For 24-hour duty, you will receive Rs ${f.n24} per day`];
+  }
+  if (band === 'basic') {
+    return [`For 8-hour duty, you will receive Rs ${f.b8} per day`, `For 24-hour duty, you will receive Rs ${f.b24} per day`];
+  }
+  return [
+    `For 8-hour duty, you will receive Rs ${f.gFrom8} to Rs ${f.gTo8} per day`,
+    `For 24-hour duty, you will receive Rs ${f.gFrom24} to Rs ${f.gTo24} per day`
+  ];
 }
 
 /**
@@ -1021,26 +1078,28 @@ function workingModelRateLines(band, language, f) {
 const SAMPLE_MONTH_DAYS = 30;
 
 function sampleDutyRates(band, f) {
-  if (band === 'nurse') return { day24: f.n24 };
-  if (band === 'basic') return { day24: f.b24 };
+  if (band === 'nurse') return { day8: f.n8, day24: f.n24 };
+  if (band === 'basic') return { day8: f.b8, day24: f.b24 };
   /* Inside the quoted range, not at the floor and not at the top: the sample is
      a picture of an ordinary duty, and ₹1,000 × 30 is the ₹30,000 the poster
      promises. */
-  return { day24: f.gSample24 };
+  return { day8: f.gSample8, day24: f.gSample24 };
 }
 
 function getSampleDutyOfferFor(qualification, tiers, choice) {
-  // Only the 24-hour sample exists since 6 Oct 2026: Pulso duties are 24-hour.
-  if (choice !== '24_hour') return null;
+  if (choice !== '24_hour' && choice !== '8_hour') return null;
   const flow = getActiveFlow();
-  const template = flow.MESSAGES.sampleDutyOffer24Hour;
+  const template = choice === '24_hour'
+    ? flow.MESSAGES.sampleDutyOffer24Hour
+    : flow.MESSAGES.sampleDutyOffer8Hour;
   if (!template) return null;
 
   /* No blank-rate guard here, unlike getTermsRateFor: tierFigures substitutes
      TIER_FALLBACK for anything zero or unreadable, so these are always real
      figures. A throw would look like protection while never firing. */
-  const { day24 } = sampleDutyRates(rateBandFor(qualification, tiers), tierFigures(tiers));
+  const { day8, day24 } = sampleDutyRates(rateBandFor(qualification, tiers), tierFigures(tiers));
   return String(template)
+    .split('{{payout8h}}').join(String(day8))
     .split('{{payout24h}}').join(String(day24))
     .split('{{total24h}}').join(String(day24 * SAMPLE_MONTH_DAYS));
 }
@@ -1062,6 +1121,7 @@ function getBasicTierAgeNoticeFor(subject, tiers) {
   const f = tierFigures(tiers);
   return String(template)
     .split('{{ageThreshold}}').join(String(basicTierAgeThreshold(tiers)))
+    .split('{{payout8h}}').join(String(f.b8))
     .split('{{payout24h}}').join(String(f.b24));
 }
 
@@ -1109,31 +1169,33 @@ function getTermsRateFor(subject, tiers) {
   const template = isBasicQualified ? messages.termsRateBasic : messages.termsRateBasicAge;
   if (!template) return null;
   const basic = (tiers && tiers.basic) || {};
-  if (!basic.payout24h) {
+  if (!basic.payout8h || !basic.payout24h) {
     throw new Error('Basic caregiver rate is not configured; refusing to send a blank rate');
   }
   // What Basic is told, not the payout floor — same figures as every other
   // Basic quote (tierFigures).
   const f = tierFigures(tiers);
   return String(template)
+    .split('{{payout8h}}').join(String(f.b8))
     .split('{{payout24h}}').join(String(f.b24));
 }
 
-/** The pay line shown with the duty-hours message, per band: 24-hour only. */
+/** The two-line pay summary shown with the duty-hours question, per band. */
 function getDutyHourPaymentSummaryFor(qualification, tiers) {
   const flow = getActiveFlow();
+  const messages = flow.MESSAGES;
   const band = rateBandFor(qualification, tiers);
   const f = tierFigures(tiers);
   if (flow.language === 'ml') {
-    if (band === 'nurse') return `24 hour - ദിവസത്തിൽ ₹${f.n24}`;
+    if (band === 'nurse') return `8 hour - ദിവസത്തിൽ ₹${f.n8}\n24 hour - ദിവസത്തിൽ ₹${f.n24}`;
     return band === 'basic'
-      ? `24 hour - ദിവസത്തിൽ ₹${f.b24}`
-      : `24 hour - ദിവസത്തിൽ ₹${f.gFrom24} മുതൽ ₹${f.gTo24} വരെ`;
+      ? `8 hour - ദിവസത്തിൽ ₹${f.b8}\n24 hour - ദിവസത്തിൽ ₹${f.b24}`
+      : `8 hour - ദിവസത്തിൽ ₹${f.gFrom8} മുതൽ ₹${f.gTo8} വരെ\n24 hour - ദിവസത്തിൽ ₹${f.gFrom24} മുതൽ ₹${f.gTo24} വരെ`;
   }
-  if (band === 'nurse') return `24 hour - Rs ${f.n24} per day`;
+  if (band === 'nurse') return `8 hour - Rs ${f.n8} per day\n24 hour - Rs ${f.n24} per day`;
   return band === 'basic'
-    ? `24 hour - Rs ${f.b24} per day`
-    : `24 hour - Rs ${f.gFrom24} to Rs ${f.gTo24} per day`;
+    ? `8 hour - Rs ${f.b8} per day\n24 hour - Rs ${f.b24} per day`
+    : `8 hour - Rs ${f.gFrom8} to Rs ${f.gTo8} per day\n24 hour - Rs ${f.gFrom24} to Rs ${f.gTo24} per day`;
 }
 
 function getActiveFlow() {
