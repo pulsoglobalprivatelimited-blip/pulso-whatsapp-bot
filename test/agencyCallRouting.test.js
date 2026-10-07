@@ -28,7 +28,11 @@ const fakeStore = {
     total: 1,
   }),
   statsFor: async () => ({ total: 1, dueToday: 1 }),
-  recordOutcome: async (id, outcome, extra) => { storeCalls.push({ fn: 'recordOutcome', id, outcome, note: extra && extra.note }); },
+  recordOutcome: async (id, outcome, extra) => {
+    const call = { fn: 'recordOutcome', id, outcome, note: extra && extra.note };
+    if (extra && extra.followUpOn) call.followUpOn = extra.followUpOn;
+    storeCalls.push(call);
+  },
   releaseAgency: async () => {},
   skipAgency: async (id) => { storeCalls.push({ fn: 'skipAgency', id }); },
   addNote: async () => {},
@@ -130,6 +134,30 @@ test('a note at the note question is saved with Interested', async () => {
   callerState = { state: 'awaiting_note', inHand: '919000000001', pendingOutcome: 'interested' };
   assert.equal(await maybeHandleAgencyCall(ADMIN, textMessage('Needs 2 GDAs in Aluva, call Monday')), true);
   assert.equal(storeCalls[0].note, 'Needs 2 GDAs in Aluva, call Monday');
+});
+
+test('Later asks for a note after the date, and saves the date and the note together', async () => {
+  callerState = { state: 'awaiting_follow_up', inHand: '919000000001', pendingOutcome: 'later' };
+  assert.equal(await maybeHandleAgencyCall(ADMIN, textMessage('1 week')), true);
+  assert.equal(storeCalls.length, 0, 'nothing is written until the note arrives');
+  assert.equal(callerState.state, 'awaiting_note');
+  assert.match(callerState.pendingFollowUpOn, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(sent.at(-1).kind, 'buttons', 'the note question carries the Skip button');
+  assert.equal(sent.at(-1).options.phoneNumberId, SUPPORT_ID);
+
+  const date = callerState.pendingFollowUpOn;
+  assert.equal(await maybeHandleAgencyCall(ADMIN, textMessage('Owner busy, wants a nurse from November')), true);
+  assert.equal(storeCalls[0].fn, 'recordOutcome');
+  assert.equal(storeCalls[0].outcome, 'later');
+  assert.equal(storeCalls[0].note, 'Owner busy, wants a nurse from November');
+  assert.equal(storeCalls[0].followUpOn, date);
+  assert.equal(callerState.pendingFollowUpOn, null);
+});
+
+test('"skip" after Later keeps the date and saves no note', async () => {
+  callerState = { state: 'awaiting_note', inHand: '919000000001', pendingOutcome: 'later', pendingFollowUpOn: '2026-10-14' };
+  assert.equal(await maybeHandleAgencyCall(ADMIN, buttonMessage(flow.BUTTON_IDS.skipNote)), true);
+  assert.deepEqual(storeCalls[0], { fn: 'recordOutcome', id: '919000000001', outcome: 'later', note: '', followUpOn: '2026-10-14' });
 });
 
 test('"skip" with an agency in hand still skips it', async () => {

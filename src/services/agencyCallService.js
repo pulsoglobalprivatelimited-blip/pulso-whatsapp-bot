@@ -137,18 +137,28 @@ async function handleCallerMessage({ phone, text, buttonId, now = new Date(), op
       await sendText(phone, flow.MESSAGES.askFollowUp, options);
       return true;
     }
-    await store.recordOutcome(inHand, flow.OUTCOMES.later, { callerPhone: phone, followUpOn: date, now });
-    await store.setCaller(phone, { state: flow.STATES.idle, inHand: null, pendingOutcome: null });
-    await sendText(phone, `Saved. We call them again on ${date}.`, options);
-    await handOutNext(phone, { now, options });
+    // Founder, 7 Oct 2026: "Later" needs a note as much as "Interested" does —
+    // the date alone does not say what to pick up on the next call. The date
+    // is held on the caller until the note (or skip) arrives.
+    await store.setCaller(phone, {
+      state: flow.STATES.awaitingNote,
+      inHand,
+      pendingOutcome: flow.OUTCOMES.later,
+      pendingFollowUpOn: date,
+    });
+    await sendButtons(phone, `Calling again on ${date}. ${flow.MESSAGES.askNote}`, flow.noteButtons(), options);
     return true;
   }
 
   if (state === flow.STATES.awaitingNote && inHand) {
     const note = command.kind === 'skip' || command.kind === 'skipNote' ? '' : String(text || '').trim();
-    await store.recordOutcome(inHand, flow.OUTCOMES.interested, { callerPhone: phone, note, now });
-    await store.setCaller(phone, { state: flow.STATES.idle, inHand: null, pendingOutcome: null });
-    await sendText(phone, flow.MESSAGES.savedNext, options);
+    // Interested asks for the note straight away; Later asks for it after the
+    // date, so the outcome and the date both come from the caller record.
+    const outcome = (caller && caller.pendingOutcome) || flow.OUTCOMES.interested;
+    const followUpOn = (caller && caller.pendingFollowUpOn) || undefined;
+    await store.recordOutcome(inHand, outcome, { callerPhone: phone, note, followUpOn, now });
+    await store.setCaller(phone, { state: flow.STATES.idle, inHand: null, pendingOutcome: null, pendingFollowUpOn: null });
+    await sendText(phone, followUpOn ? `Saved. We call them again on ${followUpOn}.` : flow.MESSAGES.savedNext, options);
     await handOutNext(phone, { now, options });
     return true;
   }
