@@ -158,6 +158,7 @@ module.exports = {
   // Same project and the same Cloud Run hash, so this is derived from the sync
   // URL rather than needing its own setting. Override only if that changes.
   pulsoHubPartnerReviewUrl: process.env.PULSO_HUB_PARTNER_REVIEW_URL || '',
+  pulsoHubOnlineProvidersUrl: process.env.PULSO_HUB_ONLINE_PROVIDERS_URL || '',
   /* Admin booking bot (docs/admin_booking_bot_plan.md). On the support number
      only, these phones get the booking chat when they type "booking" or "book";
      everything else they send is handled as today. Pulso Hub still checks each

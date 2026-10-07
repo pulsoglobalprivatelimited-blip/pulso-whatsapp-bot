@@ -1327,6 +1327,18 @@ app.get('/admin/whatsapp-media/:mediaId', async (req, res) => {
   }
 });
 
+/* Phones of the caregivers and nurses switched on in the Pulso app right now,
+   for the desk's "Active providers (online now)" number. */
+app.get('/admin/online-providers', async (_req, res) => {
+  try {
+    const { getOnlineProviderPhones } = require('./services/onlineProvidersService');
+    return res.json({ ok: true, ...(await getOnlineProviderPhones()) });
+  } catch (error) {
+    console.error('[ONLINE_PROVIDERS_ERROR]', error.message);
+    return res.status(error.statusCode || 502).json({ ok: false, error: 'Could not reach the Pulso app' });
+  }
+});
+
 app.get('/admin/providers', async (req, res) => {
   try {
     const requestedRegion = normalizeRegion(req.query.region);

@@ -66,10 +66,14 @@ const completedTotalCount = document.getElementById('completed-total-count');
 const completedMaleCount = document.getElementById('completed-male-count');
 const completedFemaleCount = document.getElementById('completed-female-count');
 const completedBasicCount = document.getElementById('completed-basic-count');
+const onlineCount = document.getElementById('online-count');
+// Phones switched on in the Pulso app right now; null until (or if) the app answers.
+let onlinePhones = null;
 const completedTotalMetric = document.getElementById('completed-total-metric');
 const completedMaleMetric = document.getElementById('completed-male-metric');
 const completedFemaleMetric = document.getElementById('completed-female-metric');
 const completedBasicMetric = document.getElementById('completed-basic-metric');
+const onlineMetric = document.getElementById('online-metric');
 const completedCount = document.getElementById('completed-count');
 const completedYesterdayCount = document.getElementById('completed-yesterday-count');
 const completedTodayMetric = document.getElementById('completed-today-metric');
@@ -227,6 +231,10 @@ completedFemaleMetric.addEventListener('click', () => {
 completedBasicMetric.addEventListener('click', () => {
   applyCompletedMetricFilter('all', 'basic');
 });
+onlineMetric.addEventListener('click', () => {
+  if (!onlinePhones) return;
+  applyCompletedMetricFilter('all', 'online');
+});
 newConversationsMetric.addEventListener('click', () => {
   applyStartedMetricFilter('today');
 });
@@ -343,7 +351,7 @@ async function loadCurrentAdmin() {
 
 async function loadProviders() {
   const providerUrl = dashboardRegion ? `/admin/providers?region=${encodeURIComponent(dashboardRegion)}` : '/admin/providers';
-  const data = await fetchJson(providerUrl);
+  const [data] = await Promise.all([fetchJson(providerUrl), loadOnlinePhones()]);
   providers = data.providers || [];
   hasLoadedOnce = true;
   updateDashboardMetrics();
@@ -696,6 +704,7 @@ function matchesCompletedSex(provider) {
   // 'basic' rides on the same switch as male/female: one group at a time,
   // reset by every other filter exactly like the sex chips.
   if (currentCompletedSex === 'basic') return isCompletedBasic(provider);
+  if (currentCompletedSex === 'online') return isCompletedOnline(provider);
   return isCompletedWithSex(provider, currentCompletedSex);
 }
 
@@ -1007,6 +1016,22 @@ function isCompletedBasic(provider) {
       String((provider && provider.qualification) || '').toLowerCase() === 'basic_caregiver');
 }
 
+/* "Active providers (online now)" (founder, 7 Oct 2026): joined, and switched
+   on to take duties in the Pulso app at this moment. */
+function isCompletedOnline(provider) {
+  return Boolean(onlinePhones) && getDashboardStatus(provider) === 'completed' &&
+    onlinePhones.has(String((provider && provider.phone) || '').replace(/\D/g, ''));
+}
+
+async function loadOnlinePhones() {
+  try {
+    const data = await fetchJson('/admin/online-providers');
+    onlinePhones = new Set((data.phones || []).map((p) => String(p).replace(/\D/g, '')));
+  } catch (_) {
+    onlinePhones = null;
+  }
+}
+
 function isCompletedWithSex(provider, sex) {
   return getDashboardStatus(provider) === 'completed' && normalizeSex(provider && provider.sex) === sex;
 }
@@ -1072,6 +1097,7 @@ function updateDashboardMetrics() {
   completedMaleCount.textContent = metricProviders.filter((item) => isCompletedWithSex(item, 'male')).length;
   completedFemaleCount.textContent = metricProviders.filter((item) => isCompletedWithSex(item, 'female')).length;
   completedBasicCount.textContent = metricProviders.filter(isCompletedBasic).length;
+  onlineCount.textContent = onlinePhones ? metricProviders.filter(isCompletedOnline).length : '–';
   completedCount.textContent = metricProviders.filter((item) => isCompletedToday(item)).length;
   completedYesterdayCount.textContent = metricProviders.filter((item) => isCompletedYesterday(item)).length;
   newConversationsCount.textContent = metricProviders.filter((item) => isSameLocalDate(item.createdAt)).length;
