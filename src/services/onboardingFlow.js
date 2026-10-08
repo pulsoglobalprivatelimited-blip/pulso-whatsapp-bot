@@ -4062,7 +4062,7 @@ async function sendCertificateApprovalFollowup(phone, provider, reviewer) {
     {
       name: 'terms_rate_message',
       send: async () => {
-        const line = getTermsRateFor({ qualification: approvedQualification, age: provider.age, careTier }, await getProviderTiers());
+        const line = getTermsRateFor({ qualification: approvedQualification, age: provider.age, careTier: provider.careTier }, await getProviderTiers());
         if (!line) return false;
         await sendAndLog(phone, 'text', line, reviewer);
         return true;
