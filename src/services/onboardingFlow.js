@@ -2865,9 +2865,10 @@ const DETAILS_EDIT_ROW_IDS = {
   district: BUTTON_IDS.DETAILS_EDIT_DISTRICT,
   qualification: BUTTON_IDS.DETAILS_EDIT_QUALIFICATION
 };
-// Qualifications reviewed by a call, with nothing to upload when she changes
-// to one at the check (founder's plan, 8 Oct 2026).
-const DETAILS_NO_UPLOAD_QUALIFICATIONS = ['no_certificate', 'nursing_student'];
+// Nothing to upload when she changes to it at the check: the same rule as the
+// first time (handleExpectedDutiesConfirmation). A nursing student is asked
+// for her marks card, as when she first picks it (decided 9 Oct 2026).
+const DETAILS_NO_UPLOAD_QUALIFICATIONS = ['no_certificate'];
 const DETAILS_CHECK_REMINDER_MS = Math.max(0, Number(config.detailsCheckReminderHours) || 2) * 60 * 60 * 1000;
 const DETAILS_CHECK_TIMEOUT_MS = Math.max(0, Number(config.detailsCheckTimeoutHours) || 24) * 60 * 60 * 1000;
 

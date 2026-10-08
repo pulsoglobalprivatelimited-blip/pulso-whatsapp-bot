@@ -344,6 +344,34 @@ test('qualification to No certificate asks for nothing, gives the Basic notice, 
   assert.equal(lastToHer(phone).body, FLOWS.kerala_malayalam.MESSAGES.verificationPendingNoCertificate);
 });
 
+test('qualification to Nursing student asks for the marks card, then back to the check', async () => {
+  const phone = await atCheck();
+  await say(phone, tap(BUTTON_IDS.DETAILS_CHANGE));
+  await say(phone, row(BUTTON_IDS.DETAILS_EDIT_QUALIFICATION));
+  sent.length = 0;
+  await say(phone, row(BUTTON_IDS.QUALIFICATION_NURSING_STUDENT));
+  let p = records.get(phone);
+  assert.equal(p.qualification, 'nursing_student');
+  assert.equal(p.status, STATUS.AWAITING_CERTIFICATE);
+  assert.equal(p.detailsEditing, 'qualification');
+  const request = await flow.runWithFlow('kerala_malayalam', async () => bot.buildCertificateRequestMessage({ qualification: 'nursing_student' }));
+  assert.equal(lastToHer(phone).body, request, 'the same request as the first time');
+  assert.match(request, /marks card/);
+  assert.ok(toHer(phone).some((m) => /Basic നിരക്കിലാണ്/.test(m.body || '')), 'the Basic notice, as today');
+  assert.deepEqual(p.documents.certificateAttachments, []);
+
+  await say(phone, { id: 'img-marks', ...image('media-marks') });
+  await say(phone, tap(BUTTON_IDS.CERTIFICATE_CONTINUE));
+  p = records.get(phone);
+  assert.equal(p.status, STATUS.AWAITING_DETAILS_CONFIRMATION);
+  assert.match(lastToHer(phone).body, /യോഗ്യത: നഴ്സിംഗ് വിദ്യാർത്ഥി/);
+
+  sent.length = 0;
+  await say(phone, tap(BUTTON_IDS.DETAILS_CORRECT));
+  assert.ok(sent.some((m) => m.to === SECOND), 'a call review, to the second reviewer too');
+  assert.equal(lastToHer(phone).body, FLOWS.kerala_malayalam.MESSAGES.verificationPendingNursingStudent);
+});
+
 test('a typed "no" while changing the qualification is not a refusal', async () => {
   const phone = await atCheck();
   await say(phone, tap(BUTTON_IDS.DETAILS_CHANGE));

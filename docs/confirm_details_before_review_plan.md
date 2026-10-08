@@ -48,7 +48,8 @@ The same rules as the first time apply to the new answer:
 | **Male or female** | Nothing else. |
 | **District** | Nothing else. |
 | **Qualification** to another certificate (e.g. GDA → GNM) | She is asked for **that** certificate ("Please send your GNM certificate"), because the one she sent was for the old choice. Her earlier files are kept on her record. Then back to the check. |
-| **Qualification** to No certificate or Nursing student | No certificate needed; the Basic rate notice as today; back to the check. |
+| **Qualification** to Nursing student | She is asked for her marks card, exactly as when she first picks Nursing student; the Basic rate notice as today. Then back to the check. |
+| **Qualification** to No certificate | No certificate needed; the Basic rate notice as today; back to the check. |
 
 ### The reviewer sees it was checked
 
