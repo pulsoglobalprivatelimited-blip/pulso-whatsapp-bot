@@ -30,7 +30,7 @@ function posInt(v, fallback) {
 // Above this age Pulso offers the Basic rate whatever the certificate says.
 // In the same document as the rates because it is the same kind of decision and
 // gets changed the same way — by the founder, without a deploy.
-const BASIC_TIER_AGE_THRESHOLD = 45;
+const BASIC_TIER_AGE_THRESHOLD = 50;
 
 function normalize(doc) {
   const tiers = doc && doc.tiers && typeof doc.tiers === 'object' ? doc.tiers : {};

@@ -379,7 +379,7 @@ const MESSAGES = {
     // For someone whose certificate IS good — a nurse or a GDA — but who is
     // above the age at which Pulso offers the Basic rate. She must not read
     // that she has no certificate, because she has one and she just sent it.
-    'നിങ്ങളുടെ സർട്ടിഫിക്കറ്റ് പരിശോധിച്ചു അംഗീകരിച്ചു.\n\n45 വയസ്സിന് മുകളിലുള്ള caregivers-ന് Pulso duty നൽകുന്നത് Basic നിരക്കിലാണ്.\n\nഡ്യൂട്ടി വേതനം:\n8 മണിക്കൂർ – ദിവസം ₹{{payout8h}}\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
+    'നിങ്ങളുടെ സർട്ടിഫിക്കറ്റ് പരിശോധിച്ചു അംഗീകരിച്ചു.\n\n{{ageThreshold}} വയസ്സിന് മുകളിലുള്ള caregivers-ന് Pulso duty നൽകുന്നത് Basic നിരക്കിലാണ്.\n\nഡ്യൂട്ടി വേതനം:\n8 മണിക്കൂർ – ദിവസം ₹{{payout8h}}\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
   certificateRejected:
     'ക്ഷമിക്കണം, താങ്കൾ അയച്ച certificate verify ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി വ്യക്തമായ certificate വീണ്ടും upload ചെയ്യുക.',
   /* Sent when a reviewer takes an approval back. The person already has
@@ -646,7 +646,7 @@ const KARNATAKA_MESSAGES = {
   basicTierAgeNotice:
     'Thank you. For caregivers above {{ageThreshold}}, Pulso offers duties at the Basic rate.\n\nDuty pay: 8 hours ₹{{payout8h}}/day, 24 hours ₹{{payout24h}}/day.',
   termsRateBasicAge:
-    'Your certificate has been checked and approved.\n\nFor caregivers above 45, Pulso offers duties at the Basic rate.\n\nDuty pay: 8 hours ₹{{payout8h}}/day, 24 hours ₹{{payout24h}}/day.',
+    'Your certificate has been checked and approved.\n\nFor caregivers above {{ageThreshold}}, Pulso offers duties at the Basic rate.\n\nDuty pay: 8 hours ₹{{payout8h}}/day, 24 hours ₹{{payout24h}}/day.',
   certificateRejected:
     'Sorry, we could not verify your certificate. Please upload a clear certificate again.',
   approvalUndone:
@@ -963,7 +963,7 @@ function isBasicQualification(qualification) {
   return BASIC_QUALIFICATIONS.includes(String(qualification || '').toLowerCase());
 }
 
-const BASIC_TIER_AGE_DEFAULT = 45;
+const BASIC_TIER_AGE_DEFAULT = 50;
 const RATE_BANDS = ['basic', 'gda', 'nurse'];
 
 /* A record can say what she is and what she is paid separately: a 52-year-old
@@ -1243,6 +1243,7 @@ function getTermsRateFor(subject, tiers) {
   // Basic quote (tierFigures).
   const f = tierFigures(tiers);
   return String(template)
+    .split('{{ageThreshold}}').join(String(basicTierAgeThreshold(tiers)))
     .split('{{payout8h}}').join(String(f.b8))
     .split('{{payout24h}}').join(String(f.b24));
 }

@@ -1847,7 +1847,7 @@ const REVIEW_ACTION_BUTTON_IDS = [
    already over it shows the field whatever qualification is picked. */
 function landsOnBasicRate(provider, qualification) {
   if (String(qualification || '').toLowerCase() === 'basic_caregiver') return true;
-  const threshold = Number(provider && provider.basicTierAgeThreshold) || 45;
+  const threshold = Number(provider && provider.basicTierAgeThreshold) || 50;
   return Number(provider && provider.age) > threshold;
 }
 

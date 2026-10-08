@@ -266,6 +266,11 @@ test('a qualified caregiver on the Basic rate is never told she has no certifica
 
     // Everyone else gets no rate line at all.
     assert.equal(flow.getTermsRateFor({ qualification: 'gnm', age: 30 }, T), null);
+
+    // The age she reads is the configured one, not a number typed into the copy.
+    const at50 = flow.getTermsRateFor({ qualification: 'gda', age: 55 }, { ...LIVE, basicTierAgeThreshold: 50 });
+    assert.match(at50, /above 50/);
+    assert.doesNotMatch(at50, /45|\{\{/);
   });
 });
 
