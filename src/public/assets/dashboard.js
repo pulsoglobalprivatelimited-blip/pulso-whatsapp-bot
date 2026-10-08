@@ -1851,6 +1851,14 @@ function landsOnBasicRate(provider, qualification) {
   return Number(provider && provider.age) > threshold;
 }
 
+function basicRateQuestion(provider) {
+  const threshold = Number(provider && provider.basicTierAgeThreshold) || 50;
+  const age = Number(provider && provider.age);
+  return age > threshold
+    ? `Age ${age}, over ${threshold}: Basic rate. Tick why:`
+    : 'Basic rate. Tick why:';
+}
+
 function syncBasicReasonField() {
   const field = document.getElementById('basic-reason-field');
   if (!field) return;
@@ -1858,6 +1866,9 @@ function syncBasicReasonField() {
   const qualification = (document.getElementById('review-qualification-input') || {}).value || '';
   const needed = landsOnBasicRate(provider, qualification);
   field.hidden = !needed;
+  // Say what put her on the Basic rate, so the box does not look like an error.
+  const legend = document.getElementById('basic-reason-legend');
+  if (legend) legend.textContent = basicRateQuestion(provider);
   if (!needed) {
     providerAll('input[name="basicTierReason"]').forEach((box) => { box.checked = false; });
   }
@@ -1943,7 +1954,7 @@ async function submitReview(action) {
   }
 
   if (approving && landsOnBasicRate(record, qualification) && basicTierReasons.length === 0) {
-    sayReviewResult('Say why this approval is on the Basic rate before approving.', 'error');
+    sayReviewResult(`${basicRateQuestion(record)} Then approve.`, 'error');
     return;
   }
 

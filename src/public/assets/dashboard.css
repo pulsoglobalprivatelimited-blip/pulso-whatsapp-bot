@@ -893,6 +893,36 @@ dd {
   background: #fff;
 }
 
+/* The form's input rule above is for text boxes; a checkbox given its width
+   and padding drops onto its own line above the label. */
+.review-form .basic-reason {
+  margin: 14px 0 0;
+  padding: 10px 16px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+}
+
+.review-form .basic-reason legend {
+  max-width: 100%;
+  white-space: normal;
+  padding: 0 6px;
+}
+
+.review-form .basic-reason label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.review-form .basic-reason input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  flex: none;
+}
+
 .review-form textarea {
   min-height: 110px;
   resize: vertical;
