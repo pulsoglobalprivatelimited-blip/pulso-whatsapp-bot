@@ -4,6 +4,7 @@ const {
   listProviderSummaries,
   listProviderTermsReminderCandidates,
   listPendingVerificationNotificationProviders,
+  listProvidersByStatus,
   listPendingAppActivationProviders,
   listReviewerWorkflowProviders,
   saveProvider
@@ -180,6 +181,7 @@ module.exports = {
   listProviderSummaries,
   listProviderTermsReminderCandidates,
   listPendingVerificationNotificationProviders,
+  listProvidersByStatus,
   listPendingAppActivationProviders,
   listReviewerWorkflowProviders,
   getProvider

@@ -149,6 +149,12 @@ module.exports = {
     process.env.TERMS_FIRST_REMINDER_DELAY_HOURS || process.env.TERMS_REMINDER_DELAY_HOURS || 1
   ),
   termsSecondReminderDelayHours: Number(process.env.TERMS_SECOND_REMINDER_DELAY_HOURS || 24),
+  // The details check after the district (docs/confirm_details_before_review_plan.md):
+  // one reminder after 2 hours, review anyway after 24.
+  detailsCheckSweepEnabled: process.env.DETAILS_CHECK_SWEEP_ENABLED !== 'false',
+  detailsCheckSweepIntervalMinutes: Number(process.env.DETAILS_CHECK_SWEEP_INTERVAL_MINUTES || 15),
+  detailsCheckReminderHours: Number(process.env.DETAILS_CHECK_REMINDER_HOURS || 2),
+  detailsCheckTimeoutHours: Number(process.env.DETAILS_CHECK_TIMEOUT_HOURS || 24),
   termsReminderCheckIntervalMinutes: Number(process.env.TERMS_REMINDER_CHECK_INTERVAL_MINUTES || 30),
   termsReminderResumeKeyword: process.env.TERMS_REMINDER_RESUME_KEYWORD || 'continue',
   termsReminderTemplateName: process.env.TERMS_REMINDER_TEMPLATE_NAME || '',

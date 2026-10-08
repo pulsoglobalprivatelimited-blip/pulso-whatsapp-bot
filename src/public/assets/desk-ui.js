@@ -51,6 +51,7 @@
     /* provider onboarding status */
     certificate_verification_pending: 'Certificate to review',
     awaiting_certificate: 'Waiting for certificate',
+    awaiting_details_confirmation: 'Checking her details',
     awaiting_terms_acceptance: 'Waiting for terms',
     completed: 'Done',
     pending_verification: 'Certificate to review',

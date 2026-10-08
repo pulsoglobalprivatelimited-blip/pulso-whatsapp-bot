@@ -405,8 +405,43 @@ function classifyDocument(message) {
   return 'certificate';
 }
 
+// The details check after the district (8 Oct 2026). Taps are read by id;
+// typed words only when `typed` is true, because while she is answering a
+// re-asked question her words are that answer, not a command.
+const DETAILS_EDIT_BY_ID = {
+  [BUTTON_IDS.DETAILS_EDIT_NAME]: 'name',
+  [BUTTON_IDS.DETAILS_EDIT_AGE]: 'age',
+  [BUTTON_IDS.DETAILS_EDIT_SEX]: 'sex',
+  [BUTTON_IDS.DETAILS_EDIT_DISTRICT]: 'district',
+  [BUTTON_IDS.DETAILS_EDIT_QUALIFICATION]: 'qualification'
+};
+const DETAILS_EDIT_BY_WORD = {
+  'പേര്': 'name', name: 'name',
+  'വയസ്': 'age', age: 'age',
+  'സ്ത്രീ / പുരുഷൻ': 'sex', 'male or female': 'sex', sex: 'sex',
+  'ജില്ല': 'district', district: 'district',
+  'യോഗ്യത': 'qualification', qualification: 'qualification'
+};
+
+function parseDetailsCheckAction(message, { typed = true } = {}) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.DETAILS_CORRECT) return { action: 'correct' };
+  if (replyId === BUTTON_IDS.DETAILS_CHANGE) return { action: 'change' };
+  if (replyId && DETAILS_EDIT_BY_ID[replyId]) return { action: 'edit', field: DETAILS_EDIT_BY_ID[replyId] };
+  if (!typed) return null;
+
+  const normalized = normalizeText(getMessageText(message));
+  if (['ശരിയാണ്', 'ശരി', 'correct', 'ok', 'okay', 'yes', 'sheri', 'shari', 'sariyanu'].includes(normalized)) {
+    return { action: 'correct' };
+  }
+  if (['മാറ്റണം', 'change', 'edit', 'mattanam'].includes(normalized)) return { action: 'change' };
+  if (DETAILS_EDIT_BY_WORD[normalized]) return { action: 'edit', field: DETAILS_EDIT_BY_WORD[normalized] };
+  return null;
+}
+
 module.exports = {
   normalizeText,
+  parseDetailsCheckAction,
   getMessageText,
   getInteractiveReplyId,
   parseRegion,

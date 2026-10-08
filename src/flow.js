@@ -38,6 +38,9 @@ const STATUS = {
   AWAITING_PULSO_AGENT: 'awaiting_pulso_agent',
   AWAITING_SEX: 'awaiting_sex',
   AWAITING_DISTRICT: 'awaiting_district',
+  // After the district, before review: she sees her answers together and taps
+  // Correct or Change (docs/confirm_details_before_review_plan.md, 8 Oct 2026).
+  AWAITING_DETAILS_CONFIRMATION: 'awaiting_details_confirmation',
   VERIFICATION_PENDING: 'certificate_verification_pending',
   ADDITIONAL_DOCUMENT_REQUESTED: 'additional_document_requested',
   AWAITING_TERMS_ACCEPTANCE: 'awaiting_terms_acceptance',
@@ -78,6 +81,14 @@ const BUTTON_IDS = {
   CONNECT_PULSO_AGENT: 'connect_pulso_agent',
   SEX_MALE: 'sex_male',
   SEX_FEMALE: 'sex_female',
+  // The check after the district: two buttons, then a five-row list.
+  DETAILS_CORRECT: 'details_correct',
+  DETAILS_CHANGE: 'details_change',
+  DETAILS_EDIT_NAME: 'details_edit_name',
+  DETAILS_EDIT_AGE: 'details_edit_age',
+  DETAILS_EDIT_SEX: 'details_edit_sex',
+  DETAILS_EDIT_DISTRICT: 'details_edit_district',
+  DETAILS_EDIT_QUALIFICATION: 'details_edit_qualification',
   TERMS_ACCEPT: 'terms_accept',
   TERMS_DECLINE: 'terms_decline',
   PULSO_APP_INSTALL_YES: 'pulso_app_install_yes',
@@ -308,6 +319,25 @@ const MESSAGES = {
     'ദയവായി താഴെയുള്ള list-ിൽ നിന്ന് താങ്കളുടെ ജില്ല തിരഞ്ഞെടുക്കുക.',
   districtListQuestion:
     'താഴെയുള്ള list-ിൽ നിന്ന് താങ്കളുടെ ജില്ല തിരഞ്ഞെടുക്കുക.',
+  // The check after the district (8 Oct 2026). Labels double as the rows of
+  // the Change list, so each must fit a list row title (24).
+  detailsCheckTitle:
+    '*താങ്കൾ നൽകിയ വിവരങ്ങൾ ഒന്ന് പരിശോധിക്കുക:*',
+  detailsCheckLabels: {
+    name: 'പേര്',
+    age: 'വയസ്',
+    sex: 'സ്ത്രീ / പുരുഷൻ',
+    district: 'ജില്ല',
+    qualification: 'യോഗ്യത'
+  },
+  detailsSexValues: { Female: 'സ്ത്രീ', Male: 'പുരുഷൻ' },
+  detailsChangeQuestion:
+    'ഏത് വിവരമാണ് മാറ്റേണ്ടത്? താഴെയുള്ള list-ിൽ നിന്ന് തിരഞ്ഞെടുക്കുക.',
+  detailsCheckReminder:
+    "താങ്കളുടെ വിവരങ്ങൾ പരിശോധിച്ച് 'ശരിയാണ്' അമർത്തുക.",
+  // A qualification changed at the check to one paid at the Basic rate.
+  detailsQualificationBasicNotice:
+    'ഈ qualification-ന് Pulso duty നൽകുന്നത് Basic നിരക്കിലാണ്.\n\nഡ്യൂട്ടി വേതനം:\n8 മണിക്കൂർ – ദിവസം ₹{{payout8h}}\n24 മണിക്കൂർ – ദിവസം ₹{{payout24h}}',
   verificationPending:
     'നന്ദി. താങ്കളുടെ certificate verification-നായി അയച്ചിരിക്കുന്നു. പരിശോധിച്ച ശേഷം ഉടൻ അറിയിക്കും.',
   // For the person with no certificate: nothing was "sent for verification".
@@ -579,6 +609,19 @@ const KARNATAKA_MESSAGES = {
     'Please select your district from the list below. If your district is not shown, open the next list.',
   districtRetry: 'Please select your district from the list below.',
   districtListQuestion: 'Please select your district from the list below.',
+  detailsCheckTitle: '*Please check your details:*',
+  detailsCheckLabels: {
+    name: 'Name',
+    age: 'Age',
+    sex: 'Male or female',
+    district: 'District',
+    qualification: 'Qualification'
+  },
+  detailsSexValues: { Female: 'Female', Male: 'Male' },
+  detailsChangeQuestion: 'Which detail do you want to change? Please choose from the list below.',
+  detailsCheckReminder: 'Please check your details and tap Correct.',
+  detailsQualificationBasicNotice:
+    'With this qualification, Pulso offers duties at the Basic rate.\n\nDuty pay: 8 hours ₹{{payout8h}}/day, 24 hours ₹{{payout24h}}/day.',
   verificationPending:
     'Thank you. Your certificate has been sent for verification. We will inform you once it is reviewed.',
   verificationPendingNoCertificate:
@@ -740,6 +783,10 @@ const UI_TEXT = {
   agencyNoTitle: 'ഇല്ല',
   addDutyNowTitle: 'ഉണ്ട്',
   addDutyLaterTitle: 'പിന്നീട്',
+  detailsCorrectTitle: 'ശരിയാണ്',
+  detailsChangeTitle: 'മാറ്റണം',
+  detailsChangeButtonText: 'തിരഞ്ഞെടുക്കുക',
+  detailsChangeSectionTitle: 'വിവരങ്ങൾ',
   districtPageSize: 7
 };
 
@@ -776,6 +823,10 @@ const KARNATAKA_UI_TEXT = {
   agencyNoTitle: 'No',
   addDutyNowTitle: 'Yes',
   addDutyLaterTitle: 'Later',
+  detailsCorrectTitle: 'Correct',
+  detailsChangeTitle: 'Change',
+  detailsChangeButtonText: 'Select',
+  detailsChangeSectionTitle: 'Your details',
   districtPageSize: 8
 };
 
@@ -1125,6 +1176,22 @@ function getBasicTierAgeNoticeFor(subject, tiers) {
     .split('{{payout24h}}').join(String(f.b24));
 }
 
+/**
+ * A qualification changed at the details check to one paid at the Basic rate
+ * (No certificate, Nursing student). The first time round she read the Basic
+ * figures in the working model; a change at the check gets them in one line.
+ */
+function getBasicQualificationNoticeFor(subject, tiers) {
+  const who = subjectOf(subject);
+  if (rateBandFor({ qualification: who.qualification }, tiers) !== 'basic') return null;
+  const template = getActiveFlow().MESSAGES.detailsQualificationBasicNotice;
+  if (!template) return null;
+  const f = tierFigures(tiers);
+  return String(template)
+    .split('{{payout8h}}').join(String(f.b8))
+    .split('{{payout24h}}').join(String(f.b24));
+}
+
 /** The working model for the flow in play, at the rate this qualification earns. */
 function getWorkingModelFor(qualification, tiers) {
   const flow = getActiveFlow();
@@ -1271,6 +1338,7 @@ module.exports = {
   getCertificateApprovedFor,
   getTermsRateFor,
   getBasicTierAgeNoticeFor,
+  getBasicQualificationNoticeFor,
   getDutyHourPaymentSummaryFor,
   getSampleDutyOfferFor,
   getFlowConfig,

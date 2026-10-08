@@ -16,7 +16,8 @@ const {
   adminUploadCertificateFiles,
   runTermsReminderSweep,
   startTermsReminderScheduler,
-  startDutyDaysMilestoneScheduler
+  startDutyDaysMilestoneScheduler,
+  startDetailsCheckScheduler
 } = require('./services/onboardingFlow');
 const { getProviderTiers } = require('./services/providerTiersConfig');
 const { processProviderSupportMessage } = require('./services/providerSupportFlow');
@@ -1587,6 +1588,7 @@ initializeStorage()
   .then(() => {
     startTermsReminderScheduler();
     startDutyDaysMilestoneScheduler();
+    startDetailsCheckScheduler();
     startCertificateReviewCatchUpScheduler();
     startPulsoAppActivationSweepScheduler();
     // The first pass runs behind the listener so a slow hub never delays boot.

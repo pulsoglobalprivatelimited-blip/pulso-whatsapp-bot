@@ -138,6 +138,25 @@ function basicInviteLine(provider) {
   return provider && provider.basicInviteAt ? BASIC_INVITE_LINE : null;
 }
 
+// Whether she checked her own details before this reached review
+// (docs/confirm_details_before_review_plan.md). Name, district and
+// qualification changes show the field only; age and sex show from → to.
+const DETAILS_CHANGE_SHOWS_VALUES = ['age', 'sex'];
+
+function detailsCheckLine(provider) {
+  if (!provider) return null;
+  if (provider.detailsNotChecked) return 'Details not checked by her';
+  if (!provider.detailsConfirmedAt) return null;
+  const changes = Array.isArray(provider.detailsChanged) ? provider.detailsChanged.filter((c) => c && c.field) : [];
+  if (!changes.length) return 'Details checked by her ✓';
+  const parts = changes.map((change) => {
+    if (!DETAILS_CHANGE_SHOWS_VALUES.includes(change.field)) return change.field;
+    const show = (value) => (value === null || value === undefined || value === '' ? '-' : String(value));
+    return `${change.field} ${show(change.from)} → ${show(change.to)}`;
+  });
+  return `Details checked by her ✓ · changed: ${parts.join(', ')}`;
+}
+
 function isNursingStudent(provider) {
   return String((provider && provider.qualification) || '').toLowerCase() === 'nursing_student';
 }
@@ -976,6 +995,7 @@ async function notifyCertificateUploaded(provider, attachments) {
       ? 'No certificate — she asks to join as a Basic caregiver. Please call and interview her, then approve or reject.'
       : 'New certificate uploaded for review.',
     basicInviteLine(provider),
+    detailsCheckLine(provider),
     ...formatProviderSummary(provider),
     'Tap below to approve or reject.'
   ]);
@@ -1219,6 +1239,7 @@ async function notifyNoCertificateApplication(provider, recipients, options = {}
     const body = joinLines([
       callReviewHeadline(provider),
       basicInviteLine(provider),
+      detailsCheckLine(provider),
       ...formatProviderSummary(provider),
       `Call her: ${buildCallLink(provider.phone)}`,
       'Tap below to approve (Basic) or reject.'
@@ -1846,6 +1867,7 @@ module.exports = {
   isNoCertificateProvider,
   isAboveCallReviewAge,
   basicInviteLine,
+  detailsCheckLine,
   buildBasicAgeTemplateComponents,
   getNoCertificateReviewerPhone,
   reviewerDisplayName,

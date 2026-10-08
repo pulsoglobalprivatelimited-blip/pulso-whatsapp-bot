@@ -185,6 +185,19 @@ async function listPendingAppActivationProviders() {
   }));
 }
 
+// Whole records (history included: the reminder checks her 24-hour window).
+async function listProvidersByStatus(status) {
+  const snapshot = await getFirestore()
+    .collection('providers')
+    .where('status', '==', status)
+    .get();
+
+  return snapshot.docs.map((doc) => ({
+    phone: doc.id,
+    ...doc.data()
+  }));
+}
+
 async function listPendingVerificationNotificationProviders() {
   const snapshot = await getFirestore()
     .collection('providers')
@@ -203,7 +216,11 @@ async function listPendingVerificationNotificationProviders() {
       'completedAt',
       'documents',
       'verification',
-      'updatedAt'
+      'updatedAt',
+      // The "details checked by her" line on a resent alert.
+      'detailsConfirmedAt',
+      'detailsChanged',
+      'detailsNotChecked'
     )
     .get();
 
@@ -271,6 +288,7 @@ module.exports = {
   listProviderSummaries,
   listProviderTermsReminderCandidates,
   listPendingVerificationNotificationProviders,
+  listProvidersByStatus,
   listPendingAppActivationProviders,
   PENDING_APP_ACTIVATION_STATUSES,
   listReviewerWorkflowProviders,

@@ -15,6 +15,7 @@ const {
   getFlowIdFor,
   getWorkingModelFor,
   getBasicTierAgeNoticeFor,
+  getBasicQualificationNoticeFor,
   getDutyHourPaymentSummaryFor,
   getSampleDutyOfferFor,
   getCertificateApprovedFor,
@@ -33,7 +34,8 @@ const {
   listProviders,
   listProviderTermsReminderCandidates,
   listPendingVerificationNotificationProviders,
-  listReviewerWorkflowProviders
+  listReviewerWorkflowProviders,
+  listProvidersByStatus
 } = require('./providerService');
 const {
   getRejectReasonDetails,
@@ -91,6 +93,7 @@ const {
   parsePulsoAppHelpReason,
   parseTermsReminderResume,
   parseCertificateCollectionAction,
+  parseDetailsCheckAction,
   classifyDocument
 } = require('./messageParser');
 const { archiveIncomingMedia, uploadBufferToFirebaseStorage } = require('./mediaStorage');
@@ -273,6 +276,7 @@ function getStepForStatus(status) {
     [STATUS.AWAITING_AGE]: 10,
     [STATUS.AWAITING_SEX]: 11,
     [STATUS.AWAITING_DISTRICT]: 12,
+    [STATUS.AWAITING_DETAILS_CONFIRMATION]: 13,
     [STATUS.VERIFICATION_PENDING]: 13,
     [STATUS.ADDITIONAL_DOCUMENT_REQUESTED]: 13,
     [STATUS.AWAITING_TERMS_ACCEPTANCE]: 14,
@@ -1977,6 +1981,13 @@ async function sendPromptForCurrentStatus(phone, provider) {
     case STATUS.AWAITING_DISTRICT:
       await sendDistrictList(phone);
       return;
+    case STATUS.AWAITING_DETAILS_CONFIRMATION:
+      if (provider.detailsEditing) {
+        await sendDetailsEditQuestion(phone, provider.detailsEditing);
+      } else {
+        await sendDetailsCheck(phone, provider, { restamp: false });
+      }
+      return;
     case STATUS.VERIFICATION_PENDING:
       await sendAndLog(phone, 'text', verificationPendingMessageFor(provider));
       return;
@@ -2004,6 +2015,18 @@ async function sendPromptForCurrentStatus(phone, provider) {
 
 async function handleQualification(phone, message) {
   const qualification = parseQualification(message);
+  const editing = await detailsEditFor(phone, 'qualification');
+  if (editing) {
+    // A typed "no" here is not a refusal to go on: she is changing an answer.
+    if (!qualification || isQualificationDeclined(message)) {
+      await sendAndLog(phone, 'text', MESSAGES.qualificationRetry);
+      await sendQualificationList(phone);
+      return;
+    }
+    await applyQualificationEdit(phone, editing, qualification);
+    return;
+  }
+
   if (isQualificationDeclined(message)) {
     await updateProvider(phone, {
       status: STATUS.NEEDS_HUMAN_REVIEW,
@@ -2265,30 +2288,21 @@ async function finalizeCertificateCollection(phone) {
   clearPendingCertificateRetry(phone);
   const provider = await getProvider(phone);
 
+  // The certificate for a qualification she changed at the details check:
+  // back to the check, not on to the name.
+  if (provider && provider.detailsEditing === 'qualification') {
+    await sendDetailsCheck(phone, null, { patch: {} });
+    return;
+  }
+
   if (hasCompletedProfile(provider)) {
-    await updateStatus(phone, STATUS.VERIFICATION_PENDING, 13, {
-      verification: {
-        status: 'pending',
-        notes: '',
-        reviewedAt: null,
-        reviewedBy: null,
-        notificationSentAt: null
-      }
-    });
-    const refreshedProvider = await getProvider(phone);
-    const attachments = refreshedProvider && refreshedProvider.documents
-      ? refreshedProvider.documents.certificateAttachments || []
-      : [];
-    const notificationResult = await notifyCertificateUploaded(refreshedProvider, attachments);
-    const notificationPatch = buildVerificationNotificationPatch(notificationResult);
-    if (notificationPatch) {
-      await updateProvider(phone, {
-        verification: notificationPatch
-      });
+    // Certificate sent again. Checked once already: straight to review, as
+    // before. Never checked (from before the check existed): the check first.
+    if (provider.detailsConfirmedAt) {
+      await sendForReview(phone);
+      return;
     }
-    await recordReviewAlertSend(phone, notificationPatch);
-    await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
-    await sendAndLog(phone, 'text', MESSAGES.verificationPending);
+    await sendDetailsCheck(phone, null, { first: true });
     return;
   }
 
@@ -2388,30 +2402,8 @@ async function adminUploadCertificateFiles(phone, files, uploadedBy = 'admin') {
     return refreshedProvider;
   }
 
-  await updateStatus(phone, STATUS.VERIFICATION_PENDING, 13, {
-    verification: {
-      status: 'pending',
-      notes: '',
-      reviewedAt: null,
-      reviewedBy: null,
-      notificationSentAt: null
-    }
-  });
-  const verificationProvider = await getProvider(phone);
-  const notificationResult = await notifyCertificateUploaded(
-    verificationProvider,
-    verificationProvider && verificationProvider.documents
-      ? verificationProvider.documents.certificateAttachments || []
-      : []
-  );
-  const notificationPatch = buildVerificationNotificationPatch(notificationResult);
-  if (notificationPatch) {
-    await updateProvider(phone, {
-      verification: notificationPatch
-    });
-  }
-  await recordReviewAlertSend(phone, notificationPatch);
-  await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
+  // Ops uploaded it for her: the review starts, and nothing is said to her.
+  await sendForReview(phone, { silent: true });
   return getProvider(phone);
 }
 
@@ -2578,6 +2570,13 @@ async function handleName(phone, message) {
     return;
   }
 
+  const editing = await detailsEditFor(phone, 'name');
+  if (editing) {
+    await applyDetailsEdit(phone, editing, 'name', editing.fullName, name, { fullName: name });
+    await sendDetailsCheck(phone);
+    return;
+  }
+
   /* Asked at step 3 now. Anyone who was already past that point when this
      shipped has no age on file, and is asked here exactly as before. */
   const known = await getProvider(phone);
@@ -2592,6 +2591,23 @@ async function handleName(phone, message) {
 }
 
 async function handleAge(phone, message) {
+  // At the details check the age is re-asked as a plain question: "ok" there
+  // is not the old "stop here" button, so the correction actions are skipped.
+  const editing = await detailsEditFor(phone, 'age');
+  if (editing) {
+    const editedAge = parseAge(message);
+    if (!editedAge) {
+      await sendAndLog(phone, 'text', MESSAGES.ageRetry);
+      return;
+    }
+    await applyDetailsEdit(phone, editing, 'age', editing.age, editedAge, { age: editedAge });
+    // Over the Basic-rate age now and not before: the notice she would have
+    // read the first time. Over 50 is a call review, decided at review time.
+    await sendRateNoticesForEdit(phone, editing, { ...editing, age: editedAge });
+    await sendDetailsCheck(phone);
+    return;
+  }
+
   const ageAction = parseAgeCorrectionAction(message);
   if (ageAction === 'retry') {
     await updateStatus(phone, STATUS.AWAITING_AGE, 10, { age: null });
@@ -2774,6 +2790,13 @@ async function handleSex(phone, message) {
     return;
   }
 
+  const editing = await detailsEditFor(phone, 'sex');
+  if (editing) {
+    await applyDetailsEdit(phone, editing, 'sex', editing.sex, sex, { sex });
+    await sendDetailsCheck(phone);
+    return;
+  }
+
   await updateStatus(phone, STATUS.AWAITING_DISTRICT, 12, { sex, districtListPage: 1 });
   await sendDistrictList(phone);
 }
@@ -2802,29 +2825,16 @@ async function handleDistrict(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.VERIFICATION_PENDING, 13, {
-    district,
-    districtListPage: 1,
-    verification: {
-      status: 'pending',
-      notes: '',
-      reviewedAt: null,
-      reviewedBy: null,
-      notificationSentAt: null
-    }
-  });
-  const updatedProvider = await getProvider(phone);
-  const attachments = updatedProvider && updatedProvider.documents ? updatedProvider.documents.certificateAttachments || [] : [];
-  const notificationResult = await notifyCertificateUploaded(updatedProvider, attachments);
-  const notificationPatch = buildVerificationNotificationPatch(notificationResult);
-  if (notificationPatch) {
-    await updateProvider(phone, {
-      verification: notificationPatch
-    });
+  const editing = await detailsEditFor(phone, 'district');
+  if (editing) {
+    await applyDetailsEdit(phone, editing, 'district', editing.district, district, { district, districtListPage: 1 });
+    await sendDetailsCheck(phone);
+    return;
   }
-  await recordReviewAlertSend(phone, notificationPatch);
-  await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
-  await sendAndLog(phone, 'text', verificationPendingMessageFor(updatedProvider));
+
+  // Nothing goes to review yet: she sees her answers together first, and
+  // Correct sends it (sendForReview). Until 8 Oct 2026 this sent it here.
+  await sendDetailsCheck(phone, null, { first: true, patch: { district, districtListPage: 1 } });
 }
 
 /** "Your certificate has been sent for verification" is untrue for someone who
@@ -2840,6 +2850,461 @@ function verificationPendingMessageFor(provider) {
   return qualification === 'no_certificate' && MESSAGES.verificationPendingNoCertificate
     ? MESSAGES.verificationPendingNoCertificate
     : MESSAGES.verificationPending;
+}
+
+// ---- The details check (docs/confirm_details_before_review_plan.md) --------
+// After the district she sees her name, age, sex, district and qualification
+// together and taps Correct or Change, before anything goes to review. A
+// typo, a wrong age or a wrong district used to reach the reviewer as it was.
+
+const DETAILS_FIELDS = ['name', 'age', 'sex', 'district', 'qualification'];
+const DETAILS_EDIT_ROW_IDS = {
+  name: BUTTON_IDS.DETAILS_EDIT_NAME,
+  age: BUTTON_IDS.DETAILS_EDIT_AGE,
+  sex: BUTTON_IDS.DETAILS_EDIT_SEX,
+  district: BUTTON_IDS.DETAILS_EDIT_DISTRICT,
+  qualification: BUTTON_IDS.DETAILS_EDIT_QUALIFICATION
+};
+// Qualifications reviewed by a call, with nothing to upload when she changes
+// to one at the check (founder's plan, 8 Oct 2026).
+const DETAILS_NO_UPLOAD_QUALIFICATIONS = ['no_certificate', 'nursing_student'];
+const DETAILS_CHECK_REMINDER_MS = Math.max(0, Number(config.detailsCheckReminderHours) || 2) * 60 * 60 * 1000;
+const DETAILS_CHECK_TIMEOUT_MS = Math.max(0, Number(config.detailsCheckTimeoutHours) || 24) * 60 * 60 * 1000;
+
+let detailsCheckInterval = null;
+let detailsCheckSweepRunning = false;
+const reviewSendsInFlight = new Set();
+
+/** The label the chat's own qualification list shows for this value. */
+function qualificationLabelFor(value) {
+  const qualification = String(value || '').trim().toLowerCase();
+  if (!qualification) return '-';
+  const row = QUALIFICATIONS.find((item) => item && item.id === `qualification_${qualification}`);
+  if (row) return row.title;
+  return qualification === 'basic_caregiver' ? 'Basic caregiver' : qualification.replace(/_/g, ' ');
+}
+
+function buildDetailsCheckBody(provider, prefix = null) {
+  const p = provider || {};
+  const labels = MESSAGES.detailsCheckLabels || {};
+  const sexValues = MESSAGES.detailsSexValues || {};
+  const lines = [
+    MESSAGES.detailsCheckTitle,
+    '',
+    `${labels.name}: ${p.fullName || '-'}`,
+    `${labels.age}: ${p.age || '-'}`,
+    `${labels.sex}: ${(p.sex && sexValues[p.sex]) || p.sex || '-'}`,
+    `${labels.district}: ${p.district || '-'}`,
+    `${labels.qualification}: ${qualificationLabelFor(p.qualification)}`
+  ];
+  return prefix ? `${prefix}\n\n${lines.join('\n')}` : lines.join('\n');
+}
+
+function buildDetailsCheckButtons() {
+  return [
+    { id: BUTTON_IDS.DETAILS_CORRECT, title: UI_TEXT.detailsCorrectTitle },
+    { id: BUTTON_IDS.DETAILS_CHANGE, title: UI_TEXT.detailsChangeTitle }
+  ];
+}
+
+function buildDetailsChangeList() {
+  const labels = MESSAGES.detailsCheckLabels || {};
+  return {
+    body: MESSAGES.detailsChangeQuestion,
+    buttonText: UI_TEXT.detailsChangeButtonText,
+    sections: [
+      {
+        title: UI_TEXT.detailsChangeSectionTitle,
+        rows: DETAILS_FIELDS.map((field) => ({ id: DETAILS_EDIT_ROW_IDS[field], title: labels[field] }))
+      }
+    ]
+  };
+}
+
+/**
+ * Shows the check. By default it also puts her at the check: status, no field
+ * being edited, and the time it was shown (the reminder and the 24-hour rule
+ * count from it). `first` starts a new check — no changes yet, not confirmed.
+ * `restamp: false` only resends it (the reminder, a stray message).
+ */
+async function sendDetailsCheck(phone, provider = null, options = {}) {
+  const { first = false, patch = null, prefix = null, restamp = true } = options;
+  if (restamp) {
+    const nowIso = new Date().toISOString();
+    const statePatch = { ...(patch || {}), detailsEditing: null, detailsCheckShownAt: nowIso };
+    if (first) {
+      Object.assign(statePatch, {
+        detailsChanged: [],
+        detailsConfirmedAt: null,
+        detailsNotChecked: false,
+        detailsReminderSentAt: null,
+        detailsCheckFirstShownAt: nowIso
+      });
+    }
+    await updateStatus(phone, STATUS.AWAITING_DETAILS_CONFIRMATION, 13, statePatch);
+    if (first) {
+      await appendHistory(phone, { type: 'system', event: 'details_check_sent' });
+    }
+  }
+  const current = restamp || !provider ? await getProvider(phone) : provider;
+  await sendAndLog(phone, 'buttons', {
+    body: buildDetailsCheckBody(current, prefix),
+    buttons: buildDetailsCheckButtons()
+  });
+}
+
+async function sendDetailsEditQuestion(phone, field) {
+  switch (field) {
+    case 'name':
+      await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
+      return;
+    case 'age':
+      await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
+      return;
+    case 'sex':
+      await sendSexButtons(phone);
+      return;
+    case 'district':
+      await sendDistrictList(phone);
+      return;
+    case 'qualification':
+      await sendQualificationList(phone);
+      return;
+    default:
+      await sendDetailsCheck(phone);
+  }
+}
+
+/** The record, when she is at the check and changing this field; else null. */
+async function detailsEditFor(phone, field) {
+  const provider = await getProvider(phone);
+  return provider && provider.status === STATUS.AWAITING_DETAILS_CONFIRMATION && provider.detailsEditing === field
+    ? provider
+    : null;
+}
+
+function sameDetail(a, b) {
+  const norm = (value) => (value === null || value === undefined ? '' : String(value).trim());
+  return norm(a) === norm(b);
+}
+
+/**
+ * Changes since the check was first shown, one entry per field. A second
+ * change to the same field keeps the original `from`; changing it back to
+ * what it was removes the entry.
+ */
+function recordDetailsChange(changes, field, from, to) {
+  const list = Array.isArray(changes) ? changes.map((item) => ({ ...item })) : [];
+  const index = list.findIndex((item) => item && item.field === field);
+  if (index >= 0) {
+    const original = list[index].from;
+    if (sameDetail(original, to)) {
+      list.splice(index, 1);
+    } else {
+      list[index] = { field, from: original, to: to === undefined ? null : to };
+    }
+    return list;
+  }
+  if (!sameDetail(from, to)) {
+    list.push({ field, from: from === undefined ? null : from, to: to === undefined ? null : to });
+  }
+  return list;
+}
+
+async function applyDetailsEdit(phone, provider, field, from, to, patch = {}) {
+  await updateProvider(phone, {
+    detailsEditing: null,
+    ...patch,
+    detailsChanged: recordDetailsChange(provider && provider.detailsChanged, field, from, to)
+  });
+  await appendHistory(phone, {
+    type: 'system',
+    event: 'details_edited',
+    field,
+    from: from === undefined ? null : from,
+    to: to === undefined ? null : to
+  });
+}
+
+/* The same rate news the chat gave the first time, said once: the Basic rate
+   for a qualification paid at it, or the over-45 notice for an age above the
+   threshold. Only when the change brings it on — she has read it already
+   otherwise. */
+async function sendRateNoticesForEdit(phone, before, after) {
+  const tiers = await getProviderTiers();
+  const qualificationNotice = getBasicQualificationNoticeFor(after, tiers);
+  if (qualificationNotice && !getBasicQualificationNoticeFor(before, tiers)) {
+    await sendAndLog(phone, 'text', qualificationNotice);
+    return;
+  }
+  const ageNotice = getBasicTierAgeNoticeFor(after, tiers);
+  if (ageNotice && !getBasicTierAgeNoticeFor(before, tiers)) {
+    await sendAndLog(phone, 'text', ageNotice);
+  }
+}
+
+async function applyQualificationEdit(phone, editing, qualification) {
+  const previous = editing.qualification || null;
+  if (sameDetail(previous, qualification)) {
+    await sendDetailsCheck(phone);
+    return;
+  }
+
+  // The paper she sent was for the old choice. It stays on her record, out of
+  // the set the reviewer is shown for this one.
+  const documents = editing.documents || {};
+  const oldFiles = Array.isArray(documents.certificateAttachments) ? documents.certificateAttachments : [];
+  const nowIso = new Date().toISOString();
+  const patch = { qualification };
+  if (oldFiles.length) {
+    patch.documents = {
+      certificateAttachments: [],
+      certificateReceived: false,
+      previousCertificateAttachments: [
+        ...(Array.isArray(documents.previousCertificateAttachments) ? documents.previousCertificateAttachments : []),
+        ...oldFiles.map((file) => ({ ...file, supersededAt: nowIso, supersededQualification: previous }))
+      ]
+    };
+  }
+
+  const needsCertificate = !DETAILS_NO_UPLOAD_QUALIFICATIONS.includes(qualification);
+  if (needsCertificate) {
+    // Still editing until the new paper is in; finalizeCertificateCollection
+    // brings her back to the check.
+    Object.assign(patch, { status: STATUS.AWAITING_CERTIFICATE, currentStep: 8, detailsEditing: 'qualification' });
+  }
+
+  await applyDetailsEdit(phone, editing, 'qualification', previous, qualification, patch);
+  await sendRateNoticesForEdit(phone, editing, { ...editing, qualification });
+
+  if (needsCertificate) {
+    clearPendingCertificatePrompt(phone);
+    clearPendingCertificateRetry(phone);
+    await sendAndLog(phone, 'text', buildCertificateRequestMessage({ ...editing, qualification }));
+    return;
+  }
+
+  await sendDetailsCheck(phone);
+}
+
+async function routeDetailsEdit(phone, field, message) {
+  switch (field) {
+    case 'name':
+      await handleName(phone, message);
+      return;
+    case 'age':
+      await handleAge(phone, message);
+      return;
+    case 'sex':
+      await handleSex(phone, message);
+      return;
+    case 'district':
+      await handleDistrict(phone, message);
+      return;
+    case 'qualification':
+      await handleQualification(phone, message);
+      return;
+    default:
+      await sendDetailsCheck(phone);
+  }
+}
+
+async function handleDetailsConfirmation(phone, message) {
+  const provider = await getProvider(phone);
+  const editingField = provider && provider.detailsEditing;
+  // While a field is being re-asked, her words are that answer; only a tap on
+  // the check's own buttons or list is read as Correct / Change / a field.
+  const action = parseDetailsCheckAction(message, { typed: !editingField });
+
+  if (!action) {
+    if (editingField) {
+      await routeDetailsEdit(phone, editingField, message);
+      return;
+    }
+    await sendDetailsCheck(phone, provider, { restamp: false });
+    return;
+  }
+
+  if (action.action === 'correct') {
+    await confirmDetails(phone);
+    return;
+  }
+
+  if (action.action === 'change') {
+    if (editingField) {
+      await updateProvider(phone, { detailsEditing: null });
+    }
+    await sendAndLog(phone, 'list', buildDetailsChangeList());
+    return;
+  }
+
+  await updateProvider(phone, {
+    detailsEditing: action.field,
+    ...(action.field === 'district' ? { districtListPage: 1 } : {})
+  });
+  await appendHistory(phone, { type: 'system', event: 'details_edit_started', field: action.field });
+  await sendDetailsEditQuestion(phone, action.field);
+}
+
+/** Correct: to review, once, however many times it is tapped. */
+async function confirmDetails(phone) {
+  const provider = await getProvider(phone);
+  if (!provider || provider.status !== STATUS.AWAITING_DETAILS_CONFIRMATION) {
+    return false;
+  }
+  const changes = Array.isArray(provider.detailsChanged) ? provider.detailsChanged : [];
+  return sendForReview(phone, {
+    expectStatus: STATUS.AWAITING_DETAILS_CONFIRMATION,
+    patch: { detailsConfirmedAt: new Date().toISOString(), detailsNotChecked: false, detailsEditing: null },
+    historyEvent: { event: 'details_confirmed', changes }
+  });
+}
+
+/**
+ * Puts her in the review queue and alerts the reviewers: what handleDistrict
+ * did on the district answer until 8 Oct 2026. Used by Correct, by the
+ * 24-hour rule, by a certificate sent again, and by ops uploading for her.
+ *   expectStatus  only if she is still in this status (a second tap is a no-op)
+ *   patch         saved with the status change
+ *   historyEvent  one more system entry, before the queue entry
+ *   silent        nothing is sent to her
+ */
+async function sendForReview(phone, options = {}) {
+  if (reviewSendsInFlight.has(phone)) {
+    return false;
+  }
+  reviewSendsInFlight.add(phone);
+  try {
+    if (options.expectStatus) {
+      const current = await getProvider(phone);
+      if (!current || current.status !== options.expectStatus) {
+        return false;
+      }
+    }
+
+    await updateStatus(phone, STATUS.VERIFICATION_PENDING, 13, {
+      ...(options.patch || {}),
+      verification: {
+        status: 'pending',
+        notes: '',
+        reviewedAt: null,
+        reviewedBy: null,
+        notificationSentAt: null
+      }
+    });
+    if (options.historyEvent) {
+      await appendHistory(phone, { type: 'system', ...options.historyEvent });
+    }
+    const updatedProvider = await getProvider(phone);
+    const attachments = updatedProvider && updatedProvider.documents
+      ? updatedProvider.documents.certificateAttachments || []
+      : [];
+    const notificationResult = await notifyCertificateUploaded(updatedProvider, attachments);
+    const notificationPatch = buildVerificationNotificationPatch(notificationResult);
+    if (notificationPatch) {
+      await updateProvider(phone, {
+        verification: notificationPatch
+      });
+    }
+    await recordReviewAlertSend(phone, notificationPatch);
+    await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
+    if (!options.silent) {
+      await sendAndLog(phone, 'text', verificationPendingMessageFor(updatedProvider));
+    }
+    return true;
+  } finally {
+    reviewSendsInFlight.delete(phone);
+  }
+}
+
+function detailsCheckShownMs(provider) {
+  const at = provider && (provider.detailsCheckShownAt || provider.detailsCheckFirstShownAt || provider.updatedAt);
+  const ms = at ? Date.parse(at) : NaN;
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/**
+ * She never taps. One reminder 2 hours after the check was shown (inside her
+ * 24-hour window — her district answer opened it); after 24 hours the
+ * certificate goes to review anyway, marked "Details not checked by her", and
+ * nothing is sent to her (the window has closed). `now` and `providers` are
+ * injectable for tests.
+ */
+async function runDetailsCheckSweep(options = {}) {
+  if (detailsCheckSweepRunning && !options.providers) {
+    return { skipped: 'already_running' };
+  }
+  detailsCheckSweepRunning = true;
+  const now = Number.isFinite(options.now) ? options.now : Date.now();
+  const result = { scanned: 0, reminded: 0, sentForReview: 0, skippedOutsideWindow: 0, errors: 0 };
+  try {
+    const providers = options.providers || (await listProvidersByStatus(STATUS.AWAITING_DETAILS_CONFIRMATION));
+    for (const candidate of providers) {
+      if (!candidate || !candidate.phone || candidate.status !== STATUS.AWAITING_DETAILS_CONFIRMATION) continue;
+      result.scanned += 1;
+      const shownMs = detailsCheckShownMs(candidate);
+      if (shownMs === null) continue;
+      const waited = now - shownMs;
+      try {
+        if (waited >= DETAILS_CHECK_TIMEOUT_MS) {
+          const sent = await runWithProviderFlow(candidate, () =>
+            sendForReview(candidate.phone, {
+              expectStatus: STATUS.AWAITING_DETAILS_CONFIRMATION,
+              silent: true,
+              patch: { detailsNotChecked: true, detailsConfirmedAt: null, detailsEditing: null },
+              historyEvent: {
+                event: 'details_check_timeout',
+                changes: Array.isArray(candidate.detailsChanged) ? candidate.detailsChanged : []
+              }
+            })
+          );
+          if (sent) result.sentForReview += 1;
+          continue;
+        }
+
+        if (waited >= DETAILS_CHECK_REMINDER_MS && !candidate.detailsReminderSentAt) {
+          if (!isWithinWhatsappReplyWindow(candidate, now)) {
+            result.skippedOutsideWindow += 1;
+            continue;
+          }
+          await runWithProviderFlow(candidate, async () => {
+            // Marked first, so a failed send is not retried every sweep: one reminder.
+            await updateProvider(candidate.phone, {
+              detailsReminderSentAt: new Date(now).toISOString(),
+              detailsEditing: null
+            });
+            await sendDetailsCheck(candidate.phone, null, { restamp: false, prefix: MESSAGES.detailsCheckReminder });
+            await appendHistory(candidate.phone, { type: 'system', event: 'details_check_reminder_sent' });
+          });
+          result.reminded += 1;
+        }
+      } catch (error) {
+        result.errors += 1;
+        console.error('[DETAILS_CHECK_SWEEP_ERROR]', candidate.phone, error && error.message);
+      }
+    }
+    console.log('[DETAILS_CHECK_SWEEP]', JSON.stringify(result));
+    return result;
+  } finally {
+    detailsCheckSweepRunning = false;
+  }
+}
+
+function startDetailsCheckScheduler() {
+  if (!config.detailsCheckSweepEnabled) {
+    return null;
+  }
+  if (detailsCheckInterval) {
+    return detailsCheckInterval;
+  }
+  const intervalMs = Math.max(1, Number(config.detailsCheckSweepIntervalMinutes) || 15) * 60 * 1000;
+  detailsCheckInterval = setInterval(() => {
+    runDetailsCheckSweep().catch((error) => {
+      console.error('[DETAILS_CHECK_SCHEDULER_ERROR]', error);
+    });
+  }, intervalMs);
+  if (typeof detailsCheckInterval.unref === 'function') detailsCheckInterval.unref();
+  return detailsCheckInterval;
 }
 
 async function handleTerms(phone, message) {
@@ -4030,6 +4495,9 @@ async function processIncomingMessage(phone, message) {
     case STATUS.AWAITING_DISTRICT:
       await handleDistrict(phone, message);
       return;
+    case STATUS.AWAITING_DETAILS_CONFIRMATION:
+      await handleDetailsConfirmation(phone, message);
+      return;
     case STATUS.VERIFICATION_PENDING:
       await sendAndLog(phone, 'text', MESSAGES.verificationStillPending);
       return;
@@ -4392,5 +4860,16 @@ module.exports = {
   runDutyDaysMilestoneSweep,
   startDutyDaysMilestoneScheduler,
   startFlow,
-  adminUploadCertificateFiles
+  adminUploadCertificateFiles,
+  // The details check (docs/confirm_details_before_review_plan.md).
+  sendForReview,
+  finalizeCertificateCollection,
+  buildDetailsCheckBody,
+  buildDetailsCheckButtons,
+  buildDetailsChangeList,
+  recordDetailsChange,
+  runDetailsCheckSweep,
+  startDetailsCheckScheduler,
+  DETAILS_CHECK_REMINDER_MS,
+  DETAILS_CHECK_TIMEOUT_MS
 };
