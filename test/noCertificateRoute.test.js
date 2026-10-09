@@ -107,8 +107,9 @@ test('no_certificate and basic_caregiver are the Basic band; other_caregiving is
 test('the working model quotes Basic flat, GDA as a range, in both languages', async () => {
   await flow.runWithFlow('kerala_malayalam', async () => {
     const basic = flow.getWorkingModelFor('no_certificate', LIVE);
-    assert.match(basic, /8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹650 ലഭിക്കും/);
-    assert.match(basic, /24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 ലഭിക്കും/);
+    // 24 hours first, then 8 — founder's order, 9 Oct 2026.
+    assert.match(basic, /7\. 24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 ലഭിക്കും/);
+    assert.match(basic, /8\. 8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹650 ലഭിക്കും/);
     // ₹600 is Basic's own 24-hour rate *and* GDA's 8-hour rate after the
     // 28 Sep 2026 reprice, so the bands no longer separate by figure alone.
     // What still separates them is shape: Basic is quoted flat, GDA as a
@@ -128,10 +129,9 @@ test('the working model quotes Basic flat, GDA as a range, in both languages', a
   });
   await flow.runWithFlow('kerala_english', async () => {
     const basic = flow.getWorkingModelFor('basic_caregiver', LIVE);
-    assert.match(basic, /For 8-hour duty, you will receive Rs 650 per day/);
-    assert.match(basic, /For 24-hour duty, you will receive Rs 750 per day/);
-    assert.match(flow.getWorkingModelFor('hca', LIVE), /Rs 800 to Rs 900 per day[\s\S]*Rs 900 to Rs 1200 per day/);
-    assert.match(flow.getWorkingModelFor('bsc_nursing', LIVE), /Rs 1200 per day[\s\S]*Rs 1400 per day/);
+    assert.match(basic, /For 24-hour duty, you will receive Rs 750 per day[\s\S]*For 8-hour duty, you will receive Rs 650 per day/);
+    assert.match(flow.getWorkingModelFor('hca', LIVE), /Rs 900 to Rs 1200 per day[\s\S]*Rs 800 to Rs 900 per day/);
+    assert.match(flow.getWorkingModelFor('bsc_nursing', LIVE), /Rs 1400 per day[\s\S]*Rs 1200 per day/);
   });
 });
 
@@ -140,11 +140,11 @@ test('the figures come from the tier settings, with the live matrix as fallback'
     // Basic is told ₹650/₹750 (founder, 3 Oct 2026) whatever the payout floor
     // says; the told figures are overridable on their own.
     const floorMoved = flow.getWorkingModelFor('no_certificate', { basic: { payout8h: 550, payout24h: 650 } });
-    assert.match(floorMoved, /Rs 650 per day[\s\S]*Rs 750 per day/);
+    assert.match(floorMoved, /Rs 750 per day[\s\S]*Rs 650 per day/);
     const repriced = flow.getWorkingModelFor('no_certificate', { basic: { payout8h: 500, payout24h: 600, shown8h: 700, shown24h: 800 } });
-    assert.match(repriced, /Rs 700 per day[\s\S]*Rs 800 per day/);
+    assert.match(repriced, /Rs 800 per day[\s\S]*Rs 700 per day/);
     const fallback = flow.getWorkingModelFor('gda', null);
-    assert.match(fallback, /Rs 800 to Rs 900 per day[\s\S]*Rs 900 to Rs 1200 per day/);
+    assert.match(fallback, /Rs 900 to Rs 1200 per day[\s\S]*Rs 800 to Rs 900 per day/);
     // Each shown figure is overridable on its own, like every other rate.
     const wider = flow.getWorkingModelFor('gda', { gda: { shownTo24h: 1500 } });
     assert.match(wider, /Rs 900 to Rs 1500 per day/);
@@ -157,13 +157,13 @@ test('the duty-hours summary follows the same bands', async () => {
   const ML_TAIL = '\n\nPulso-യിൽ കൂടുതൽ ദിവസങ്ങൾ duty ചെയ്യുകയും നല്ല rating നേടുകയും ചെയ്താൽ, പിന്നീട് വേതനം കൂടാൻ അവസരമുണ്ട്.';
   const EN_TAIL = '\n\nWith more days of duty and good ratings on Pulso, you may be offered higher pay later.';
   await flow.runWithFlow('kerala_malayalam', async () => {
-    assert.equal(flow.getDutyHourPaymentSummaryFor('no_certificate', LIVE), '8 hour - ദിവസത്തിൽ ₹650\n24 hour - ദിവസത്തിൽ ₹750' + ML_TAIL);
-    assert.equal(flow.getDutyHourPaymentSummaryFor('gda', LIVE), '8 hour - ദിവസത്തിൽ ₹800 മുതൽ ₹900 വരെ\n24 hour - ദിവസത്തിൽ ₹900 മുതൽ ₹1200 വരെ' + ML_TAIL);
-    assert.equal(flow.getDutyHourPaymentSummaryFor('gnm', LIVE), '8 hour - ദിവസത്തിൽ ₹1200\n24 hour - ദിവസത്തിൽ ₹1400' + ML_TAIL);
+    assert.equal(flow.getDutyHourPaymentSummaryFor('no_certificate', LIVE), '24 hour - ദിവസത്തിൽ ₹750\n8 hour - ദിവസത്തിൽ ₹650' + ML_TAIL);
+    assert.equal(flow.getDutyHourPaymentSummaryFor('gda', LIVE), '24 hour - ദിവസത്തിൽ ₹900 മുതൽ ₹1200 വരെ\n8 hour - ദിവസത്തിൽ ₹800 മുതൽ ₹900 വരെ' + ML_TAIL);
+    assert.equal(flow.getDutyHourPaymentSummaryFor('gnm', LIVE), '24 hour - ദിവസത്തിൽ ₹1400\n8 hour - ദിവസത്തിൽ ₹1200' + ML_TAIL);
   });
   await flow.runWithFlow('kerala_english', async () => {
-    assert.equal(flow.getDutyHourPaymentSummaryFor('basic_caregiver', LIVE), '8 hour - Rs 650 per day\n24 hour - Rs 750 per day' + EN_TAIL);
-    assert.equal(flow.getDutyHourPaymentSummaryFor('anm', LIVE), '8 hour - Rs 800 to Rs 900 per day\n24 hour - Rs 900 to Rs 1200 per day' + EN_TAIL);
+    assert.equal(flow.getDutyHourPaymentSummaryFor('basic_caregiver', LIVE), '24 hour - Rs 750 per day\n8 hour - Rs 650 per day' + EN_TAIL);
+    assert.equal(flow.getDutyHourPaymentSummaryFor('anm', LIVE), '24 hour - Rs 900 to Rs 1200 per day\n8 hour - Rs 800 to Rs 900 per day' + EN_TAIL);
   });
 });
 
@@ -177,7 +177,7 @@ test('the growth line sits beside the money in the working model too, for every 
     }
   });
   await flow.runWithFlow('kerala_english', async () => {
-    assert.match(flow.getWorkingModelFor('hca', LIVE), /per day\. With more days of duty and good ratings on Pulso/);
+    assert.match(flow.getWorkingModelFor('hca', LIVE), /8-hour duty[^\n]*per day\. With more days of duty and good ratings on Pulso/);
   });
 });
 
@@ -307,16 +307,16 @@ test('a GDA range whose ends meet is said as one figure, never "₹750 മുത
   const FLAT = { ...LIVE, gda: { payout24h: 750, payout8h: 650, shownFrom24h: 750, shownTo24h: 750, shownFrom8h: 650, shownTo8h: 650 } };
   await flow.runWithFlow('kerala_malayalam', async () => {
     const wm = flow.getWorkingModelFor('gda', FLAT);
-    assert.match(wm, /7\. 8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹650 ലഭിക്കും/);
-    assert.match(wm, /8\. 24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 ലഭിക്കും\./);
+    assert.match(wm, /7\. 24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 ലഭിക്കും/);
+    assert.match(wm, /8\. 8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹650 ലഭിക്കും\./);
     assert.doesNotMatch(wm, /മുതൽ ₹750 വരെ|മുതൽ ₹650 വരെ/);
     const block = flow.getDutyHourPaymentSummaryFor('gda', FLAT);
-    assert.match(block, /^8 hour - ദിവസത്തിൽ ₹650\n24 hour - ദിവസത്തിൽ ₹750\n/);
+    assert.match(block, /^24 hour - ദിവസത്തിൽ ₹750\n8 hour - ദിവസത്തിൽ ₹650\n/);
     // Setting them apart again brings the range back without a deploy.
     assert.match(flow.getDutyHourPaymentSummaryFor('gda', LIVE), /₹800 മുതൽ ₹900 വരെ/);
   });
   await flow.runWithFlow('kerala_english', async () => {
-    assert.match(flow.getWorkingModelFor('hca', FLAT), /Rs 650 per day[\s\S]*Rs 750 per day\. With more days/);
-    assert.match(flow.getDutyHourPaymentSummaryFor('anm', FLAT), /^8 hour - Rs 650 per day\n24 hour - Rs 750 per day\n/);
+    assert.match(flow.getWorkingModelFor('hca', FLAT), /Rs 750 per day[\s\S]*Rs 650 per day\. With more days/);
+    assert.match(flow.getDutyHourPaymentSummaryFor('anm', FLAT), /^24 hour - Rs 750 per day\n8 hour - Rs 650 per day\n/);
   });
 });

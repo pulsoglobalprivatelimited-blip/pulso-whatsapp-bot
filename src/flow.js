@@ -1111,38 +1111,38 @@ function enRange(from, to) {
 }
 
 function workingModelRateLines(band, language, f) {
+  /* 24 hours first, then 8 — founder's order, 9 Oct 2026. The two lines land
+     on the founder's numbered points 7 and 8 in that order, and the growth
+     sentence rides on the second of them so it still reads after both
+     figures. */
   if (language === 'ml') {
     if (band === 'nurse') {
       return [
-        `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.n8} ലഭിക്കും`,
-        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.n24} ലഭിക്കും. ${earningsGrowthLine('ml')}`
+        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.n24} ലഭിക്കും`,
+        `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.n8} ലഭിക്കും. ${earningsGrowthLine('ml')}`
       ];
     }
     if (band === 'basic') {
       return [
-        `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b8} ലഭിക്കും`,
-        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b24} ലഭിക്കും. ${earningsGrowthLine('ml')}`
+        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b24} ലഭിക്കും`,
+        `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b8} ലഭിക്കും. ${earningsGrowthLine('ml')}`
       ];
     }
-    /* A range whose two ends are the same figure is one figure. The founder
-       dropped the GDA range on 9 Oct 2026 ("no range needed") by setting the
-       top equal to the bottom in config; the words follow, so nobody ever
-       reads "₹750 മുതൽ ₹750 വരെ". Setting them apart again brings the range
-       back without a deploy. */
+    /* A range whose two ends are the same figure is one figure (mlRange). */
     return [
-      `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.gFrom8, f.gTo8)} ലഭിക്കും`,
-      `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.gFrom24, f.gTo24)} ലഭിക്കും. ${earningsGrowthLine('ml')}`
+      `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.gFrom24, f.gTo24)} ലഭിക്കും`,
+      `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.gFrom8, f.gTo8)} ലഭിക്കും. ${earningsGrowthLine('ml')}`
     ];
   }
   if (band === 'nurse') {
-    return [`For 8-hour duty, you will receive Rs ${f.n8} per day`, `For 24-hour duty, you will receive Rs ${f.n24} per day. ${earningsGrowthLine('en')}`];
+    return [`For 24-hour duty, you will receive Rs ${f.n24} per day`, `For 8-hour duty, you will receive Rs ${f.n8} per day. ${earningsGrowthLine('en')}`];
   }
   if (band === 'basic') {
-    return [`For 8-hour duty, you will receive Rs ${f.b8} per day`, `For 24-hour duty, you will receive Rs ${f.b24} per day. ${earningsGrowthLine('en')}`];
+    return [`For 24-hour duty, you will receive Rs ${f.b24} per day`, `For 8-hour duty, you will receive Rs ${f.b8} per day. ${earningsGrowthLine('en')}`];
   }
   return [
-    `For 8-hour duty, you will receive ${enRange(f.gFrom8, f.gTo8)} per day`,
-    `For 24-hour duty, you will receive ${enRange(f.gFrom24, f.gTo24)} per day. ${earningsGrowthLine('en')}`
+    `For 24-hour duty, you will receive ${enRange(f.gFrom24, f.gTo24)} per day`,
+    `For 8-hour duty, you will receive ${enRange(f.gFrom8, f.gTo8)} per day. ${earningsGrowthLine('en')}`
   ];
 }
 
@@ -1286,16 +1286,17 @@ function getDutyHourPaymentSummaryFor(qualification, tiers) {
   const band = rateBandFor(qualification, tiers);
   const f = tierFigures(tiers);
   const tail = `\n\n${earningsGrowthLine(flow.language)}`;
+  // 24 hours first, then 8 — founder's order, 9 Oct 2026.
   if (flow.language === 'ml') {
-    if (band === 'nurse') return `8 hour - ദിവസത്തിൽ ₹${f.n8}\n24 hour - ദിവസത്തിൽ ₹${f.n24}${tail}`;
+    if (band === 'nurse') return `24 hour - ദിവസത്തിൽ ₹${f.n24}\n8 hour - ദിവസത്തിൽ ₹${f.n8}${tail}`;
     return band === 'basic'
-      ? `8 hour - ദിവസത്തിൽ ₹${f.b8}\n24 hour - ദിവസത്തിൽ ₹${f.b24}${tail}`
-      : `8 hour - ദിവസത്തിൽ ${mlRange(f.gFrom8, f.gTo8)}\n24 hour - ദിവസത്തിൽ ${mlRange(f.gFrom24, f.gTo24)}${tail}`;
+      ? `24 hour - ദിവസത്തിൽ ₹${f.b24}\n8 hour - ദിവസത്തിൽ ₹${f.b8}${tail}`
+      : `24 hour - ദിവസത്തിൽ ${mlRange(f.gFrom24, f.gTo24)}\n8 hour - ദിവസത്തിൽ ${mlRange(f.gFrom8, f.gTo8)}${tail}`;
   }
-  if (band === 'nurse') return `8 hour - Rs ${f.n8} per day\n24 hour - Rs ${f.n24} per day${tail}`;
+  if (band === 'nurse') return `24 hour - Rs ${f.n24} per day\n8 hour - Rs ${f.n8} per day${tail}`;
   return band === 'basic'
-    ? `8 hour - Rs ${f.b8} per day\n24 hour - Rs ${f.b24} per day${tail}`
-    : `8 hour - ${enRange(f.gFrom8, f.gTo8)} per day\n24 hour - ${enRange(f.gFrom24, f.gTo24)} per day${tail}`;
+    ? `24 hour - Rs ${f.b24} per day\n8 hour - Rs ${f.b8} per day${tail}`
+    : `24 hour - ${enRange(f.gFrom24, f.gTo24)} per day\n8 hour - ${enRange(f.gFrom8, f.gTo8)} per day${tail}`;
 }
 
 function getActiveFlow() {
