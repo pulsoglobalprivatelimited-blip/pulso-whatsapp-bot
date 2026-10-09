@@ -20,7 +20,8 @@ test('Bengaluru English: the agency pays directly, the rate is on the offer, no 
   assert.match(wm, /The agency fixes the rate for each duty\. The rate is on every offer\. You get the full amount/);
   assert.match(wm, /The agency pays you directly, by cash or UPI\. Fix the payment day with the agency before you start/);
   assert.match(wm, /4-digit PIN/);
-  assert.match(wm, /Check in every day from the app with a selfie/);
+  assert.match(wm, /Check in every day from the app with a selfie$/m);
+  assert.doesNotMatch(wm, /uniform/i);
   assert.doesNotMatch(wm, /credited daily/);
   assert.doesNotMatch(wm, /office team will call you/);
   // the range lines stay, because the band substitution keys on them
@@ -28,10 +29,11 @@ test('Bengaluru English: the agency pays directly, the rate is on the offer, no 
   assert.match(wm, /For 24-hour duty, you will receive Rs 750 to Rs 1000 per day/);
 });
 
-test('Bengaluru English terms: kit paid upfront, nothing deducted, agency pays on the agreed day', () => {
+test('Bengaluru English terms: no uniform kit, nothing deducted, agency pays on the agreed day', () => {
   const t = KA_EN.MESSAGES.termsIntro;
-  assert.match(t, /Pay Rs 1999 by UPI to Pulso before the first duty/);
-  assert.doesNotMatch(t, /deduct/i);
+  assert.doesNotMatch(t, /uniform|Rs 1999|deduct/i);
+  assert.match(t, /^Before joining Pulso[\s\S]*\n1\. Please note:/);
+  assert.match(t, /\n2\. We will share available duty offers/);
   assert.match(t, /the agency pays you for the days you work, directly, by cash or UPI, on the day you and the agency agree/);
   assert.match(t, /Pulso does not collect or hold your pay/);
   assert.doesNotMatch(t, /Payment for completed work will be given daily/);
@@ -59,8 +61,8 @@ test('Bengaluru Malayalam: the same four texts carry the agency model; the rest 
   assert.match(wm, /4-digit PIN/);
   assert.doesNotMatch(wm, /Payment daily നിങ്ങളുടെ account/);
   assert.match(wm, /8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹600 മുതൽ ₹900 വരെ ലഭിക്കും/);
-  assert.match(KA_ML.MESSAGES.termsIntro, /UPI വഴി Pulso-യ്ക്ക് അടയ്ക്കുക/);
-  assert.doesNotMatch(KA_ML.MESSAGES.termsIntro, /₹500 വീതവും/);
+  assert.doesNotMatch(KA_ML.MESSAGES.termsIntro, /യൂണിഫോം|₹1999|₹500 വീതവും/);
+  assert.doesNotMatch(wm, /uniform/i);
   for (const key of ['sampleDutyOffer24Hour', 'sampleDutyOffer8Hour']) {
     const s = KA_ML.MESSAGES[key];
     assert.match(s, /^Booked by: Sahaya Home Care/);
@@ -76,6 +78,7 @@ test('Kerala, both languages, reads exactly what it read before', () => {
   assert.match(KL_EN.MESSAGES.workingModel, /Payment will be credited daily to your account/);
   assert.match(KL_EN.MESSAGES.workingModel, /the office team will call you for verification/);
   assert.match(KL_EN.MESSAGES.termsIntro, /deduction from your first 4 days of duty payment/);
+  assert.match(KL_EN.MESSAGES.termsIntro, /uniform kit worth Rs 1999/);
   assert.match(KL_EN.MESSAGES.sampleDutyOffer24Hour, /Location: Vennala, Ernakulam/);
   assert.match(KL_EN.MESSAGES.sampleDutyOffer24Hour, /Family verified/);
   assert.match(KL_ML.MESSAGES.workingModel, /Duty area കേരളത്തിൽ എവിടെയും ആയിരിക്കാം/);

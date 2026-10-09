@@ -783,7 +783,7 @@ const KERALA_ENGLISH_MESSAGES = {
    rate (never below the minimum on the card), and the agency pays the
    caregiver directly, cash or UPI, on a day the two of them fix. Pulso holds no
    money there, so "credited daily to your account" would be untrue, and the
-   uniform kit cannot be deducted from pay that never passes through Pulso. The
+   uniform kit is not part of the Bengaluru terms (founder, 10 Oct 2026). The
    two rate lines below are WORKING_MODEL_MARKERS and are rewritten per band at
    runtime, exactly as in the Kerala text; reword them only with that table.
    Plan: pulso_hub docs/bangalore_agency_bot_flow_plan.md. */
@@ -813,7 +813,7 @@ Working model:
 3. If you are not interested in a duty, you can reject or ignore it
 4. After you accept a duty, you get the agency's name and a Call button in the app. The agency can call you too
 5. On the start day, go to the patient's house. The agency gives you a 4-digit PIN. Type it in the app to start the duty
-6. Check in every day from the app with a selfie in uniform
+6. Check in every day from the app with a selfie
 7. You should start duty on time and provide care responsibly
 
 Emergency leave:
@@ -892,17 +892,9 @@ Support:
 
 const BENGALURU_TERMS_EN = `Before joining Pulso, please read all instructions carefully.
 
-1. Before your first duty, you need to collect a uniform kit worth Rs 1999.
-This kit includes one pair of uniform and one ID card. Pay Rs 1999 by UPI to Pulso before the first duty.
+1. Please note: you are not a permanent salaried employee of Pulso. Pulso shares duty offers from home-care agencies in Bengaluru. If you accept and complete a duty, the agency pays you for the days you work, directly, by cash or UPI, on the day you and the agency agree. Pulso does not collect or hold your pay. You will not receive salary or payment for days you do not work.
 
-After completing at least 90 days of duty with us, if you return the uniform to the office, the full Rs 1999 will be refunded.
-
-If you need one additional pair of uniform, you can buy it by paying Rs 1250.
-This extra uniform amount is not refundable.
-
-2. Please note: you are not a permanent salaried employee of Pulso. Pulso shares duty offers from home-care agencies in Bengaluru. If you accept and complete a duty, the agency pays you for the days you work, directly, by cash or UPI, on the day you and the agency agree. Pulso does not collect or hold your pay. You will not receive salary or payment for days you do not work.
-
-3. We will share available duty offers with you. Please read each duty offer carefully. You can accept or decline. But after accepting a duty, last-minute cancellation makes it difficult for the agency and for us to arrange another provider. Providers who cancel after accepting may be blocked from accepting future duty offers.`;
+2. We will share available duty offers with you. Please read each duty offer carefully. You can accept or decline. But after accepting a duty, last-minute cancellation makes it difficult for the agency and for us to arrange another provider. Providers who cancel after accepting may be blocked from accepting future duty offers.`;
 
 const KARNATAKA_MESSAGES = {
   ...ENGLISH_BASE_MESSAGES,
@@ -940,7 +932,7 @@ GDA (General Duty Assistant) staff-നും nurse-നും ഞങ്ങളോ�
 3. താല്പര്യമില്ലെങ്കിൽ reject ചെയ്യാം അല്ലെങ്കിൽ ignore ചെയ്യാം
 4. Duty accept ചെയ്താൽ agency-യുടെ പേരും Call button-ും app-ിൽ കാണാം. Agency-ക്കും നിങ്ങളെ വിളിക്കാം
 5. Duty തുടങ്ങുന്ന ദിവസം patient-ന്റെ വീട്ടിൽ പോകുക. Agency 4-digit PIN തരും. അത് app-ിൽ type ചെയ്ത് duty തുടങ്ങുക
-6. എല്ലാ ദിവസവും app-ിൽ uniform-ിൽ selfie എടുത്ത് check in ചെയ്യുക
+6. എല്ലാ ദിവസവും app-ിൽ selfie എടുത്ത് check in ചെയ്യുക
 7. സമയത്തിന് duty ആരംഭിച്ച് ഉത്തരവാദിത്വത്തോടെ care നൽകണം
 
 **Emergency leave:**
@@ -958,17 +950,9 @@ Pulso Elderlycare, Kalamassery, Kochi - 682021`;
 
 const BENGALURU_TERMS_ML = `ഞങ്ങളോടൊപ്പം ചേരുന്നതിന് മുമ്പ് താഴെ നൽകിയിരിക്കുന്ന എല്ലാ നിർദേശങ്ങളും ദയവായി വായിക്കുക.
 
-1. ആദ്യ ഡ്യൂട്ടിക്ക് മുമ്പ്, ₹1999 വിലയുള്ള യൂണിഫോം കിറ്റ് എടുക്കേണ്ടതാണ്.
-ഈ കിറ്റിൽ ഒരു ജോടി യൂണിഫോവും ഒരു ഐഡി കാർഡും ഉൾപ്പെടുന്നതാണ്. ₹1999 ആദ്യ ഡ്യൂട്ടിക്ക് മുമ്പ് UPI വഴി Pulso-യ്ക്ക് അടയ്ക്കുക.
+1. ദയവായി ശ്രദ്ധിക്കുക: നിങ്ങൾ ഞങ്ങളുടെ സ്ഥിരം ശമ്പള ജീവനക്കാരൻ അല്ല. Bengaluru-വിലെ home-care agency-കളുടെ ഡ്യൂട്ടി ഓഫറുകളാണ് Pulso നിങ്ങൾക്ക് നൽകുന്നത്. ഡ്യൂട്ടി സ്വീകരിച്ച് പൂർത്തിയാക്കിയാൽ, നിങ്ങൾ ജോലി ചെയ്ത ദിവസങ്ങളുടെ പേയ്മെന്റ് agency നേരിട്ട് നിങ്ങൾക്ക് നൽകും, cash അല്ലെങ്കിൽ UPI വഴി, നിങ്ങളും agency-യും തീരുമാനിക്കുന്ന ദിവസം. Pulso നിങ്ങളുടെ പേയ്മെന്റ് വാങ്ങുകയോ കൈവശം വയ്ക്കുകയോ ചെയ്യുന്നില്ല. ജോലി ചെയ്യാത്ത ദിവസങ്ങളിൽ ശമ്പളമോ മറ്റ് പേയ്മെന്റുകളോ ലഭിക്കില്ല. നിങ്ങളുടെ സഹകരണത്തിനും വിശ്വാസത്തിനും നന്ദി.
 
-ഞങ്ങളോടൊപ്പം കുറഞ്ഞത് 90 ദിവസം ഡ്യൂട്ടി പൂർത്തിയാക്കിയ ശേഷം, യൂണിഫോം ഓഫിസിൽ തിരികെ നൽകിയാൽ ₹1999 പൂർണ്ണമായി റിഫണ്ട് ലഭിക്കും.
-
-കൂടുതൽ ഒരു ജോടി യൂണിഫോം ആവശ്യമുണ്ടെങ്കിൽ, ₹1250 അടച്ച് വാങ്ങാവുന്നതാണ്.
-ഈ അധിക യൂണിഫോമിന്റെ തുക റിഫണ്ടബിൾ അല്ല.
-
-2. ദയവായി ശ്രദ്ധിക്കുക: നിങ്ങൾ ഞങ്ങളുടെ സ്ഥിരം ശമ്പള ജീവനക്കാരൻ അല്ല. Bengaluru-വിലെ home-care agency-കളുടെ ഡ്യൂട്ടി ഓഫറുകളാണ് Pulso നിങ്ങൾക്ക് നൽകുന്നത്. ഡ്യൂട്ടി സ്വീകരിച്ച് പൂർത്തിയാക്കിയാൽ, നിങ്ങൾ ജോലി ചെയ്ത ദിവസങ്ങളുടെ പേയ്മെന്റ് agency നേരിട്ട് നിങ്ങൾക്ക് നൽകും, cash അല്ലെങ്കിൽ UPI വഴി, നിങ്ങളും agency-യും തീരുമാനിക്കുന്ന ദിവസം. Pulso നിങ്ങളുടെ പേയ്മെന്റ് വാങ്ങുകയോ കൈവശം വയ്ക്കുകയോ ചെയ്യുന്നില്ല. ജോലി ചെയ്യാത്ത ദിവസങ്ങളിൽ ശമ്പളമോ മറ്റ് പേയ്മെന്റുകളോ ലഭിക്കില്ല. നിങ്ങളുടെ സഹകരണത്തിനും വിശ്വാസത്തിനും നന്ദി.
-
-3. അടുത്ത ലഭ്യമായ ഡ്യൂട്ടി ഞങ്ങൾ ഷെയർ ചെയ്യുന്നതായിരിക്കും. ഡ്യൂട്ടി ഓഫർ ദയവായി ശ്രദ്ധാപൂർവ്വം വായിക്കുക. നിങ്ങൾക്ക് Accept ചെയ്യുകയോ Decline ചെയ്യുകയോ ചെയ്യാം. എന്നാൽ Accept ചെയ്തതിന് ശേഷം Cancel ചെയ്യുന്നത്, agency-ക്കും ഞങ്ങൾക്കും ലാസ്റ്റ് മിനിറ്റിൽ മറ്റൊരാളെ കണ്ടെത്താൻ വളരെ ബുദ്ധിമുട്ടുണ്ടാക്കും. അതിനാൽ ഇങ്ങനെ Cancel ചെയ്യുന്നവർക്ക് ഭാവിയിലെ ഡ്യൂട്ടി ഓഫറുകൾ Accept ചെയ്യുന്നതിൽ നിന്ന് സ്ഥിരമായി Block ചെയ്യുന്നതായിരിക്കും.`;
+2. അടുത്ത ലഭ്യമായ ഡ്യൂട്ടി ഞങ്ങൾ ഷെയർ ചെയ്യുന്നതായിരിക്കും. ഡ്യൂട്ടി ഓഫർ ദയവായി ശ്രദ്ധാപൂർവ്വം വായിക്കുക. നിങ്ങൾക്ക് Accept ചെയ്യുകയോ Decline ചെയ്യുകയോ ചെയ്യാം. എന്നാൽ Accept ചെയ്തതിന് ശേഷം Cancel ചെയ്യുന്നത്, agency-ക്കും ഞങ്ങൾക്കും ലാസ്റ്റ് മിനിറ്റിൽ മറ്റൊരാളെ കണ്ടെത്താൻ വളരെ ബുദ്ധിമുട്ടുണ്ടാക്കും. അതിനാൽ ഇങ്ങനെ Cancel ചെയ്യുന്നവർക്ക് ഭാവിയിലെ ഡ്യൂട്ടി ഓഫറുകൾ Accept ചെയ്യുന്നതിൽ നിന്ന് സ്ഥിരമായി Block ചെയ്യുന്നതായിരിക്കും.`;
 
 /* The Malayalam sample offers keep the Kerala layout and swap in the
    Bengaluru facts: the place, who booked, and the Support block. swapExact
