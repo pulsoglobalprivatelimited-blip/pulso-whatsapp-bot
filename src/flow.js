@@ -470,7 +470,7 @@ const LANGUAGE_OPTIONS = [
   { id: BUTTON_IDS.LANGUAGE_ENGLISH, title: 'English' }
 ];
 
-const KARNATAKA_MESSAGES = {
+const ENGLISH_BASE_MESSAGES = {
   ...MESSAGES,
   regionQuestion: 'Welcome to Pulso.\n\nPlease select your region.',
   regionRetry: 'Please select Kerala or Karnataka to continue.',
@@ -760,41 +760,230 @@ function swapExact(source, from, to) {
 }
 
 const KERALA_ENGLISH_MESSAGES = {
-  ...KARNATAKA_MESSAGES,
+  ...ENGLISH_BASE_MESSAGES,
   workingModel: swapExact(
-    KARNATAKA_MESSAGES.workingModel,
+    ENGLISH_BASE_MESSAGES.workingModel,
     'Duty location can be anywhere in Karnataka',
     'Duty location can be anywhere in Kerala'
   ),
   sampleDutyOffer8Hour: swapExact(
-    KARNATAKA_MESSAGES.sampleDutyOffer8Hour,
+    ENGLISH_BASE_MESSAGES.sampleDutyOffer8Hour,
     'Location: Bengaluru',
     'Location: Thevakkal, Ernakulam'
   ),
   sampleDutyOffer24Hour: swapExact(
-    KARNATAKA_MESSAGES.sampleDutyOffer24Hour,
+    ENGLISH_BASE_MESSAGES.sampleDutyOffer24Hour,
     'Location: Bengaluru',
     'Location: Vennala, Ernakulam'
   )
 };
 
+/* ---- Bengaluru (Oct 2026): the agency working model ------------------------
+   In Bengaluru the duty comes from a home-care agency, the agency fixes the
+   rate (never below the minimum on the card), and the agency pays the
+   caregiver directly, cash or UPI, on a day the two of them fix. Pulso holds no
+   money there, so "credited daily to your account" would be untrue, and the
+   uniform kit cannot be deducted from pay that never passes through Pulso. The
+   two rate lines below are WORKING_MODEL_MARKERS and are rewritten per band at
+   runtime, exactly as in the Kerala text; reword them only with that table.
+   Plan: pulso_hub docs/bangalore_agency_bot_flow_plan.md. */
+const BENGALURU_WORKING_MODEL_EN = `Pulso Global Private Limited is a home care company. In Bengaluru we give caregivers and nurses to home-care agencies, for the agencies' patients.
+
+GDA staff, caregivers, and nurses can join Pulso. If you are interested, we will send duty offers to you through Pulso mobile app
+
+Duty details:
+
+1. Duty location can be anywhere in Bengaluru
+2. Duty timing may be 8 hours or 24 hours
+3. 8-hour duty timing will usually be from morning 8 am to evening 4pm
+4. Duty duration may be 1 week, 2 weeks, 1 month, or more depending on the case
+5. For 24-hour duty, stay and food will be given at the patient's home by the patient's family, through your agency
+6. For 8-hour duty, stay will not be provided
+7. For 8-hour duty, you will receive Rs 600 to Rs 900 per day
+8. For 24-hour duty, you will receive Rs 750 to Rs 1000 per day
+9. The agency fixes the rate for each duty. The rate is on every offer. You get the full amount
+10. The agency pays you directly, by cash or UPI. Fix the payment day with the agency before you start. Pulso does not collect or hold your pay
+11. You will receive payment only for the days you work
+12. There will be no housemaid work. Only patient care duties
+
+Working model:
+
+1. Duty offers from home-care agencies will be sent through Pulso App
+2. You can accept only the duties you are interested in
+3. If you are not interested in a duty, you can reject or ignore it
+4. After you accept a duty, you get the agency's name and a Call button in the app. The agency can call you too
+5. On the start day, go to the patient's house. The agency gives you a 4-digit PIN. Type it in the app to start the duty
+6. Check in every day from the app with a selfie in uniform
+7. You should start duty on time and provide care responsibly
+
+Emergency leave:
+
+If you need emergency leave, tell the agency and Pulso from the app. Pulso will try to arrange another staff member.
+
+Important:
+
+- Accepting or rejecting a duty offer is completely your choice
+- You only need to accept duties you are interested in
+- There is no registration fee to join Pulso
+
+Head Office Address:
+Pulso Elderlycare, cochin, kerala - 682036`;
+
+const BENGALURU_SAMPLE_24H_EN = `Booked by: Sahaya Home Care (home-care agency)
+
+Patient: Elderly female, 71 years
+Condition: Supportive care
+
+Care Level: Assisted care with walker support
+
+Duty: 24-hour care
+
+Duration: 1 month
+
+Location: Jayanagar, Bengaluru
+
+Care Needed:
+- Washroom support
+- Bed making
+- Assistance while feeding
+- Helping with medicines
+- Assistance in lifting and walking using walker
+- Assistance during physiotherapy exercises
+
+Earnings:
+Rs {{payout24h}} per day, fixed by the agency
+Rs {{total24h}} for 30 days
+The agency pays you directly
+
+Safety and Support:
+- Agency verified by Pulso
+- Call the agency from the app
+- Pulso support available during duty`;
+
+const BENGALURU_SAMPLE_8H_EN = `Booked by: Sahaya Home Care (home-care agency)
+
+Patient: Female, 65 years
+
+Condition: Post-surgery recovery
+
+Care Type: Home supportive care
+
+Duty: 8 hours
+
+Duration: Continuous
+
+Location: Jayanagar, Bengaluru
+
+Care Needed:
+- Walking / mobility support
+- Assistance with daily activities
+- Washroom support if needed
+- Helping with medicines
+- General supervision and comfort care
+
+Earnings:
+Rs {{payout8h}} per day, fixed by the agency
+The agency pays you directly
+
+Support:
+- Agency verified by Pulso
+- Call the agency from the app
+- Pulso support available during duty`;
+
+const BENGALURU_TERMS_EN = `Before joining Pulso, please read all instructions carefully.
+
+1. Before your first duty, you need to collect a uniform kit worth Rs 1999.
+This kit includes one pair of uniform and one ID card. Pay Rs 1999 by UPI to Pulso before the first duty.
+
+After completing at least 90 days of duty with us, if you return the uniform to the office, the full Rs 1999 will be refunded.
+
+If you need one additional pair of uniform, you can buy it by paying Rs 1250.
+This extra uniform amount is not refundable.
+
+2. Please note: you are not a permanent salaried employee of Pulso. Pulso shares duty offers from home-care agencies in Bengaluru. If you accept and complete a duty, the agency pays you for the days you work, directly, by cash or UPI, on the day you and the agency agree. Pulso does not collect or hold your pay. You will not receive salary or payment for days you do not work.
+
+3. We will share available duty offers with you. Please read each duty offer carefully. You can accept or decline. But after accepting a duty, last-minute cancellation makes it difficult for the agency and for us to arrange another provider. Providers who cancel after accepting may be blocked from accepting future duty offers.`;
+
+const KARNATAKA_MESSAGES = {
+  ...ENGLISH_BASE_MESSAGES,
+  workingModel: BENGALURU_WORKING_MODEL_EN,
+  sampleDutyOffer24Hour: BENGALURU_SAMPLE_24H_EN,
+  sampleDutyOffer8Hour: BENGALURU_SAMPLE_8H_EN,
+  termsIntro: BENGALURU_TERMS_EN
+};
+
+/* The same four texts in Malayalam. Drafts in the founder's style (Oct 2026);
+   the founder's own words replace them line for line. */
+const BENGALURU_WORKING_MODEL_ML = `**Pulso Global Private Limited** ഒരു homecare കമ്പനിയാണ്. Bengaluru-വിൽ ഞങ്ങൾ home-care agency-കൾക്ക് അവരുടെ patient-മാർക്കായി caregiver-മാരെയും nurse-മാരെയും നൽകുന്നു.
+
+GDA (General Duty Assistant) staff-നും nurse-നും ഞങ്ങളോടൊപ്പം join ചെയ്യാൻ കഴിയും. നിങ്ങൾ interested ആണെങ്കിൽ ഞങ്ങൾ നിങ്ങൾക്ക് Pulso App വഴി duty offers അയച്ചു തരും.
+
+**Duty details:**
+
+1. Duty area Bengaluru-വിൽ എവിടെയും ആയിരിക്കാം
+2. Duty timing 8 hours, 24 hours എന്നീ രീതികളിലായിരിക്കും
+3. 8 hours duty സമയം രാവിലെ 8 മണി മുതൽ വൈകുന്നേരം 4 മണിവരെ ആയിരിക്കും
+4. Duty duration 1 week, 2 week, 1 month എന്നിങ്ങനെ വ്യത്യാസപ്പെടാം
+5. 24 hours duty-ക്ക് patient-ന്റെ വീട്ടിൽ stay-യും food-ും ലഭിക്കും (patient-ന്റെ family, നിങ്ങളുടെ agency വഴി)
+6. 8 hour duty-ക്ക് stay ഉണ്ടായിരിക്കില്ല
+7. 8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹600 മുതൽ ₹900 വരെ ലഭിക്കും
+8. 24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 മുതൽ ₹1000 വരെ ലഭിക്കും
+9. ഓരോ duty-യുടെയും rate agency ആണ് നിശ്ചയിക്കുന്നത്. Rate എല്ലാ offer-ിലും കാണാം. മുഴുവൻ തുകയും നിങ്ങൾക്കാണ്
+10. Agency നേരിട്ട് നിങ്ങൾക്ക് payment നൽകും, cash അല്ലെങ്കിൽ UPI. Duty തുടങ്ങും മുമ്പ് payment ദിവസം agency-യുമായി ഉറപ്പിക്കുക. Pulso നിങ്ങളുടെ payment വാങ്ങുകയോ കൈവശം വയ്ക്കുകയോ ചെയ്യുന്നില്ല
+11. നിങ്ങൾ work ചെയ്യുന്ന ദിവസങ്ങളിൽ മാത്രമായിരിക്കും payment ലഭിക്കുക
+12. House maid ജോലി ഉണ്ടായിരിക്കില്ല. Patient care duties മാത്രം ആയിരിക്കും
+
+**Working model:**
+
+1. Home-care agency-കളുടെ duty offers Pulso App വഴി ലഭിക്കും
+2. നിങ്ങൾക്ക് താല്പര്യമുള്ള duty-കൾ മാത്രം accept ചെയ്യാം
+3. താല്പര്യമില്ലെങ്കിൽ reject ചെയ്യാം അല്ലെങ്കിൽ ignore ചെയ്യാം
+4. Duty accept ചെയ്താൽ agency-യുടെ പേരും Call button-ും app-ിൽ കാണാം. Agency-ക്കും നിങ്ങളെ വിളിക്കാം
+5. Duty തുടങ്ങുന്ന ദിവസം patient-ന്റെ വീട്ടിൽ പോകുക. Agency 4-digit PIN തരും. അത് app-ിൽ type ചെയ്ത് duty തുടങ്ങുക
+6. എല്ലാ ദിവസവും app-ിൽ uniform-ിൽ selfie എടുത്ത് check in ചെയ്യുക
+7. സമയത്തിന് duty ആരംഭിച്ച് ഉത്തരവാദിത്വത്തോടെ care നൽകണം
+
+**Emergency leave:**
+
+Emergency leave ആവശ്യമായി വന്നാൽ agency-യെയും Pulso-യെയും app വഴി അറിയിക്കുക. വേറെ staff-നെ ഞങ്ങൾ arrange ചെയ്യാൻ ശ്രമിക്കും.
+
+**ശ്രദ്ധിക്കുക:**
+
+- Duty offer accept ചെയ്യണോ വേണ്ടയോ എന്നത് മുഴുവൻ നിങ്ങളുടെ ഇഷ്ടമാണ്
+- ഇഷ്ടമുള്ള duty-കൾ മാത്രം സ്വീകരിച്ചാൽ മതി
+- ഇതിനായി പ്രത്യേക registration fee ഒന്നും നൽകേണ്ടതില്ല
+
+**Office Address:**
+Pulso Elderlycare, Kalamassery, Kochi - 682021`;
+
+const BENGALURU_TERMS_ML = `ഞങ്ങളോടൊപ്പം ചേരുന്നതിന് മുമ്പ് താഴെ നൽകിയിരിക്കുന്ന എല്ലാ നിർദേശങ്ങളും ദയവായി വായിക്കുക.
+
+1. ആദ്യ ഡ്യൂട്ടിക്ക് മുമ്പ്, ₹1999 വിലയുള്ള യൂണിഫോം കിറ്റ് എടുക്കേണ്ടതാണ്.
+ഈ കിറ്റിൽ ഒരു ജോടി യൂണിഫോവും ഒരു ഐഡി കാർഡും ഉൾപ്പെടുന്നതാണ്. ₹1999 ആദ്യ ഡ്യൂട്ടിക്ക് മുമ്പ് UPI വഴി Pulso-യ്ക്ക് അടയ്ക്കുക.
+
+ഞങ്ങളോടൊപ്പം കുറഞ്ഞത് 90 ദിവസം ഡ്യൂട്ടി പൂർത്തിയാക്കിയ ശേഷം, യൂണിഫോം ഓഫിസിൽ തിരികെ നൽകിയാൽ ₹1999 പൂർണ്ണമായി റിഫണ്ട് ലഭിക്കും.
+
+കൂടുതൽ ഒരു ജോടി യൂണിഫോം ആവശ്യമുണ്ടെങ്കിൽ, ₹1250 അടച്ച് വാങ്ങാവുന്നതാണ്.
+ഈ അധിക യൂണിഫോമിന്റെ തുക റിഫണ്ടബിൾ അല്ല.
+
+2. ദയവായി ശ്രദ്ധിക്കുക: നിങ്ങൾ ഞങ്ങളുടെ സ്ഥിരം ശമ്പള ജീവനക്കാരൻ അല്ല. Bengaluru-വിലെ home-care agency-കളുടെ ഡ്യൂട്ടി ഓഫറുകളാണ് Pulso നിങ്ങൾക്ക് നൽകുന്നത്. ഡ്യൂട്ടി സ്വീകരിച്ച് പൂർത്തിയാക്കിയാൽ, നിങ്ങൾ ജോലി ചെയ്ത ദിവസങ്ങളുടെ പേയ്മെന്റ് agency നേരിട്ട് നിങ്ങൾക്ക് നൽകും, cash അല്ലെങ്കിൽ UPI വഴി, നിങ്ങളും agency-യും തീരുമാനിക്കുന്ന ദിവസം. Pulso നിങ്ങളുടെ പേയ്മെന്റ് വാങ്ങുകയോ കൈവശം വയ്ക്കുകയോ ചെയ്യുന്നില്ല. ജോലി ചെയ്യാത്ത ദിവസങ്ങളിൽ ശമ്പളമോ മറ്റ് പേയ്മെന്റുകളോ ലഭിക്കില്ല. നിങ്ങളുടെ സഹകരണത്തിനും വിശ്വാസത്തിനും നന്ദി.
+
+3. അടുത്ത ലഭ്യമായ ഡ്യൂട്ടി ഞങ്ങൾ ഷെയർ ചെയ്യുന്നതായിരിക്കും. ഡ്യൂട്ടി ഓഫർ ദയവായി ശ്രദ്ധാപൂർവ്വം വായിക്കുക. നിങ്ങൾക്ക് Accept ചെയ്യുകയോ Decline ചെയ്യുകയോ ചെയ്യാം. എന്നാൽ Accept ചെയ്തതിന് ശേഷം Cancel ചെയ്യുന്നത്, agency-ക്കും ഞങ്ങൾക്കും ലാസ്റ്റ് മിനിറ്റിൽ മറ്റൊരാളെ കണ്ടെത്താൻ വളരെ ബുദ്ധിമുട്ടുണ്ടാക്കും. അതിനാൽ ഇങ്ങനെ Cancel ചെയ്യുന്നവർക്ക് ഭാവിയിലെ ഡ്യൂട്ടി ഓഫറുകൾ Accept ചെയ്യുന്നതിൽ നിന്ന് സ്ഥിരമായി Block ചെയ്യുന്നതായിരിക്കും.`;
+
+/* The Malayalam sample offers keep the Kerala layout and swap in the
+   Bengaluru facts: the place, who booked, and the Support block. swapExact
+   throws at load if the Kerala source is reworded under these markers. */
+function bengaluruMlSample(source, placeFrom) {
+  let t = swapExact(source, placeFrom, 'Jayanagar, Bengaluru');
+  t = swapExact(t, '✔ Family verified\n✔ Payment guaranteed', '✔ Agency verified by Pulso\n✔ Agency pays you directly (cash / UPI)');
+  return `Booked by: Sahaya Home Care (home-care agency)\n\n${t}`;
+}
 const KARNATAKA_MALAYALAM_MESSAGES = {
   ...MESSAGES,
-  workingModel: swapExact(
-    MESSAGES.workingModel,
-    'Duty area കേരളത്തിൽ എവിടെയും ആയിരിക്കാം',
-    'Duty area കർണാടകയിൽ എവിടെയും ആയിരിക്കാം'
-  ),
-  sampleDutyOffer8Hour: swapExact(
-    MESSAGES.sampleDutyOffer8Hour,
-    'Thevakkal, Ernakulam',
-    'Bengaluru'
-  ),
-  sampleDutyOffer24Hour: swapExact(
-    MESSAGES.sampleDutyOffer24Hour,
-    'Vennala (nearby)',
-    'Bengaluru'
-  )
+  workingModel: BENGALURU_WORKING_MODEL_ML,
+  termsIntro: BENGALURU_TERMS_ML,
+  sampleDutyOffer8Hour: bengaluruMlSample(MESSAGES.sampleDutyOffer8Hour, 'Thevakkal, Ernakulam'),
+  sampleDutyOffer24Hour: bengaluruMlSample(MESSAGES.sampleDutyOffer24Hour, 'Vennala (nearby)')
 };
 
 const FLOWS = {
