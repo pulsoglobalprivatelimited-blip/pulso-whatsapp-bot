@@ -121,14 +121,14 @@ test('only "later" asks for a date, and only "interested" asks what they need', 
 
 test('the outcome list has all six, within WhatsApp limits, and each row parses to its outcome', () => {
   const rows = f.outcomeRows();
-  assert.deepEqual(rows.map((r) => r.title), ['Interested', 'Later', 'No answer', 'Agency not interested', 'Pulso not interested', 'Wrong number']);
+  assert.deepEqual(rows.map((r) => r.title), ['Interested', 'Not sure', 'Later', 'No answer', 'Agency not interested', 'Pulso not interested', 'Wrong number']);
   assert.ok(rows.length <= 10);
   for (const r of rows) {
     assert.ok(r.title.length <= 24, r.title);
     assert.ok(r.description.length <= 72, r.description);
   }
   const outcomes = rows.map((r) => f.parseCommand({ buttonId: r.id }).outcome);
-  assert.deepEqual(outcomes, ['interested', 'later', 'no answer', 'agency not interested', 'pulso not interested', 'wrong number']);
+  assert.deepEqual(outcomes, ['interested', 'not sure', 'later', 'no answer', 'agency not interested', 'pulso not interested', 'wrong number']);
 });
 
 test('stats add up and name what is next', () => {
@@ -167,4 +167,14 @@ test('call again: three buttons within WhatsApp limits, each read as a date', ()
   assert.equal(f.followUpTextFor('agency_call_interested'), '');
   // A button tap goes ahead of an open booking draft, like the outcome buttons.
   for (const b of buttons) assert.equal(f.takesPriority({ buttonId: b.id }), true);
+});
+
+test('Not sure: asks for a note, is final, and is counted', () => {
+  assert.equal(f.parseCommand({ text: 'not sure' }).outcome, 'not sure');
+  assert.equal(f.asksNote(f.OUTCOMES.notSure), true);
+  assert.equal(f.asksFollowUp(f.OUTCOMES.notSure), false);
+  assert.equal(f.recordFor(f.OUTCOMES.notSure).status, 'done');
+  const text = f.statsMessage({ total: 10, notSure: 2, interested: 1 });
+  assert.match(text, /Not sure: 2/);
+  assert.match(text, /Called 3 of 10/);
 });

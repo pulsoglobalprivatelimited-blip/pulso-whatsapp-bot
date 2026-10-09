@@ -26,6 +26,7 @@
  */
 const OUTCOMES = Object.freeze({
   interested: 'interested',
+  notSure: 'not sure',
   later: 'later',
   noAnswer: 'no answer',
   agencyNotInterested: 'agency not interested',
@@ -36,6 +37,7 @@ const OUTCOMES = Object.freeze({
 
 const BUTTON_IDS = Object.freeze({
   interested: 'agency_call_interested',
+  notSure: 'agency_call_not_sure',
   later: 'agency_call_later',
   noAnswer: 'agency_call_no_answer',
   agencyNotInterested: 'agency_call_agency_no',
@@ -79,6 +81,7 @@ function lower(value) {
 function parseCommand(input = {}) {
   const buttonId = clean(input.buttonId);
   if (buttonId === BUTTON_IDS.interested) return { kind: 'outcome', outcome: OUTCOMES.interested };
+  if (buttonId === BUTTON_IDS.notSure) return { kind: 'outcome', outcome: OUTCOMES.notSure };
   if (buttonId === BUTTON_IDS.later) return { kind: 'outcome', outcome: OUTCOMES.later };
   if (buttonId === BUTTON_IDS.noAnswer) return { kind: 'outcome', outcome: OUTCOMES.noAnswer };
   if (buttonId === BUTTON_IDS.agencyNotInterested) return { kind: 'outcome', outcome: OUTCOMES.agencyNotInterested };
@@ -96,6 +99,7 @@ function parseCommand(input = {}) {
   if (['help', 'commands'].includes(text)) return { kind: 'help' };
 
   if (['interested', 'yes', 'y'].includes(text)) return { kind: 'outcome', outcome: OUTCOMES.interested };
+  if (['not sure', 'notsure', 'maybe'].includes(text)) return { kind: 'outcome', outcome: OUTCOMES.notSure };
   if (['later', 'callback', 'call back'].includes(text)) return { kind: 'outcome', outcome: OUTCOMES.later };
   if (['no answer', 'noanswer', 'na', 'not picked', 'no response'].includes(text)) {
     return { kind: 'outcome', outcome: OUTCOMES.noAnswer };
@@ -232,6 +236,7 @@ function followUpTextFor(buttonId) {
 function outcomeRows() {
   return [
     { id: BUTTON_IDS.interested, title: 'Interested', description: 'They want to work with Pulso' },
+    { id: BUTTON_IDS.notSure, title: 'Not sure', description: 'Not good, not bad' },
     { id: BUTTON_IDS.later, title: 'Later', description: 'Call again on a date' },
     { id: BUTTON_IDS.noAnswer, title: 'No answer', description: 'Did not pick up' },
     { id: BUTTON_IDS.agencyNotInterested, title: 'Agency not interested', description: 'They do not want to work with Pulso' },
@@ -257,12 +262,13 @@ function statsMessage(counts = {}) {
   const n = (k) => Number(counts[k] || 0);
   // Records from before 9 Oct said only "not interested": counted as the agency's.
   const agencyNo = n('agencyNotInterested') + n('notInterested');
-  const done = n('interested') + n('later') + n('noAnswer') + agencyNo + n('pulsoNotInterested') + n('wrongNumber');
+  const done = n('interested') + n('notSure') + n('later') + n('noAnswer') + agencyNo + n('pulsoNotInterested') + n('wrongNumber');
   const total = n('total');
   const lines = [
     `*Called ${done} of ${total}*`,
     '',
     `Interested: ${n('interested')}`,
+    `Not sure: ${n('notSure')}`,
     `Later: ${n('later')}`,
     `No answer: ${n('noAnswer')}`,
     `Agency not interested: ${agencyNo}`,
@@ -333,6 +339,7 @@ function asksFollowUp(outcome) {
 function asksNote(outcome) {
   return (
     outcome === OUTCOMES.interested ||
+    outcome === OUTCOMES.notSure ||
     outcome === OUTCOMES.agencyNotInterested ||
     outcome === OUTCOMES.pulsoNotInterested
   );
