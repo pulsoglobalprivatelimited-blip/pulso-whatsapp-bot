@@ -1084,34 +1084,51 @@ const WORKING_MODEL_MARKERS = {
   ]
 };
 
+/**
+ * Said right under the pay figures, to every band.
+ *
+ * Founder's ask, 9 Oct 2026: a caregiver reading ₹750 a day should also read
+ * that it is a starting point — more days worked and good ratings can lift it.
+ * It sits beside the money in both places the money is shown, because that is
+ * the moment she is deciding whether ₹750 is worth it.
+ */
+const EARNINGS_GROWTH_LINE = {
+  ml: 'Pulso-യിൽ കൂടുതൽ ദിവസങ്ങൾ duty ചെയ്യുകയും നല്ല rating നേടുകയും ചെയ്താൽ, പിന്നീട് വേതനം കൂടാൻ അവസരമുണ്ട്.',
+  en: 'With more days of duty and good ratings on Pulso, you may be offered higher pay later.'
+};
+
+function earningsGrowthLine(language) {
+  return language === 'ml' ? EARNINGS_GROWTH_LINE.ml : EARNINGS_GROWTH_LINE.en;
+}
+
 function workingModelRateLines(band, language, f) {
   if (language === 'ml') {
     if (band === 'nurse') {
       return [
         `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.n8} ലഭിക്കും`,
-        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.n24} ലഭിക്കും`
+        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.n24} ലഭിക്കും. ${earningsGrowthLine('ml')}`
       ];
     }
     if (band === 'basic') {
       return [
         `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b8} ലഭിക്കും`,
-        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b24} ലഭിക്കും`
+        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b24} ലഭിക്കും. ${earningsGrowthLine('ml')}`
       ];
     }
     return [
       `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.gFrom8} മുതൽ ₹${f.gTo8} വരെ ലഭിക്കും`,
-      `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.gFrom24} മുതൽ ₹${f.gTo24} വരെ ലഭിക്കും`
+      `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.gFrom24} മുതൽ ₹${f.gTo24} വരെ ലഭിക്കും. ${earningsGrowthLine('ml')}`
     ];
   }
   if (band === 'nurse') {
-    return [`For 8-hour duty, you will receive Rs ${f.n8} per day`, `For 24-hour duty, you will receive Rs ${f.n24} per day`];
+    return [`For 8-hour duty, you will receive Rs ${f.n8} per day`, `For 24-hour duty, you will receive Rs ${f.n24} per day. ${earningsGrowthLine('en')}`];
   }
   if (band === 'basic') {
-    return [`For 8-hour duty, you will receive Rs ${f.b8} per day`, `For 24-hour duty, you will receive Rs ${f.b24} per day`];
+    return [`For 8-hour duty, you will receive Rs ${f.b8} per day`, `For 24-hour duty, you will receive Rs ${f.b24} per day. ${earningsGrowthLine('en')}`];
   }
   return [
     `For 8-hour duty, you will receive Rs ${f.gFrom8} to Rs ${f.gTo8} per day`,
-    `For 24-hour duty, you will receive Rs ${f.gFrom24} to Rs ${f.gTo24} per day`
+    `For 24-hour duty, you will receive Rs ${f.gFrom24} to Rs ${f.gTo24} per day. ${earningsGrowthLine('en')}`
   ];
 }
 
@@ -1254,16 +1271,17 @@ function getDutyHourPaymentSummaryFor(qualification, tiers) {
   const messages = flow.MESSAGES;
   const band = rateBandFor(qualification, tiers);
   const f = tierFigures(tiers);
+  const tail = `\n\n${earningsGrowthLine(flow.language)}`;
   if (flow.language === 'ml') {
-    if (band === 'nurse') return `8 hour - ദിവസത്തിൽ ₹${f.n8}\n24 hour - ദിവസത്തിൽ ₹${f.n24}`;
+    if (band === 'nurse') return `8 hour - ദിവസത്തിൽ ₹${f.n8}\n24 hour - ദിവസത്തിൽ ₹${f.n24}${tail}`;
     return band === 'basic'
-      ? `8 hour - ദിവസത്തിൽ ₹${f.b8}\n24 hour - ദിവസത്തിൽ ₹${f.b24}`
-      : `8 hour - ദിവസത്തിൽ ₹${f.gFrom8} മുതൽ ₹${f.gTo8} വരെ\n24 hour - ദിവസത്തിൽ ₹${f.gFrom24} മുതൽ ₹${f.gTo24} വരെ`;
+      ? `8 hour - ദിവസത്തിൽ ₹${f.b8}\n24 hour - ദിവസത്തിൽ ₹${f.b24}${tail}`
+      : `8 hour - ദിവസത്തിൽ ₹${f.gFrom8} മുതൽ ₹${f.gTo8} വരെ\n24 hour - ദിവസത്തിൽ ₹${f.gFrom24} മുതൽ ₹${f.gTo24} വരെ${tail}`;
   }
-  if (band === 'nurse') return `8 hour - Rs ${f.n8} per day\n24 hour - Rs ${f.n24} per day`;
+  if (band === 'nurse') return `8 hour - Rs ${f.n8} per day\n24 hour - Rs ${f.n24} per day${tail}`;
   return band === 'basic'
-    ? `8 hour - Rs ${f.b8} per day\n24 hour - Rs ${f.b24} per day`
-    : `8 hour - Rs ${f.gFrom8} to Rs ${f.gTo8} per day\n24 hour - Rs ${f.gFrom24} to Rs ${f.gTo24} per day`;
+    ? `8 hour - Rs ${f.b8} per day\n24 hour - Rs ${f.b24} per day${tail}`
+    : `8 hour - Rs ${f.gFrom8} to Rs ${f.gTo8} per day\n24 hour - Rs ${f.gFrom24} to Rs ${f.gTo24} per day${tail}`;
 }
 
 function getActiveFlow() {

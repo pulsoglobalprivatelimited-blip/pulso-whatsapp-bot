@@ -152,14 +152,32 @@ test('the figures come from the tier settings, with the live matrix as fallback'
 });
 
 test('the duty-hours summary follows the same bands', async () => {
+  // Every band's block ends with the same growth line (9 Oct 2026): the figure
+  // is a starting point, more days and good ratings can lift it.
+  const ML_TAIL = '\n\nPulso-യിൽ കൂടുതൽ ദിവസങ്ങൾ duty ചെയ്യുകയും നല്ല rating നേടുകയും ചെയ്താൽ, പിന്നീട് വേതനം കൂടാൻ അവസരമുണ്ട്.';
+  const EN_TAIL = '\n\nWith more days of duty and good ratings on Pulso, you may be offered higher pay later.';
   await flow.runWithFlow('kerala_malayalam', async () => {
-    assert.equal(flow.getDutyHourPaymentSummaryFor('no_certificate', LIVE), '8 hour - ദിവസത്തിൽ ₹650\n24 hour - ദിവസത്തിൽ ₹750');
-    assert.equal(flow.getDutyHourPaymentSummaryFor('gda', LIVE), '8 hour - ദിവസത്തിൽ ₹800 മുതൽ ₹900 വരെ\n24 hour - ദിവസത്തിൽ ₹900 മുതൽ ₹1200 വരെ');
-    assert.equal(flow.getDutyHourPaymentSummaryFor('gnm', LIVE), '8 hour - ദിവസത്തിൽ ₹1200\n24 hour - ദിവസത്തിൽ ₹1400');
+    assert.equal(flow.getDutyHourPaymentSummaryFor('no_certificate', LIVE), '8 hour - ദിവസത്തിൽ ₹650\n24 hour - ദിവസത്തിൽ ₹750' + ML_TAIL);
+    assert.equal(flow.getDutyHourPaymentSummaryFor('gda', LIVE), '8 hour - ദിവസത്തിൽ ₹800 മുതൽ ₹900 വരെ\n24 hour - ദിവസത്തിൽ ₹900 മുതൽ ₹1200 വരെ' + ML_TAIL);
+    assert.equal(flow.getDutyHourPaymentSummaryFor('gnm', LIVE), '8 hour - ദിവസത്തിൽ ₹1200\n24 hour - ദിവസത്തിൽ ₹1400' + ML_TAIL);
   });
   await flow.runWithFlow('kerala_english', async () => {
-    assert.equal(flow.getDutyHourPaymentSummaryFor('basic_caregiver', LIVE), '8 hour - Rs 650 per day\n24 hour - Rs 750 per day');
-    assert.equal(flow.getDutyHourPaymentSummaryFor('anm', LIVE), '8 hour - Rs 800 to Rs 900 per day\n24 hour - Rs 900 to Rs 1200 per day');
+    assert.equal(flow.getDutyHourPaymentSummaryFor('basic_caregiver', LIVE), '8 hour - Rs 650 per day\n24 hour - Rs 750 per day' + EN_TAIL);
+    assert.equal(flow.getDutyHourPaymentSummaryFor('anm', LIVE), '8 hour - Rs 800 to Rs 900 per day\n24 hour - Rs 900 to Rs 1200 per day' + EN_TAIL);
+  });
+});
+
+test('the growth line sits beside the money in the working model too, for every band', async () => {
+  await flow.runWithFlow('kerala_malayalam', async () => {
+    for (const q of ['no_certificate', 'gda', 'gnm']) {
+      const text = flow.getWorkingModelFor(q, LIVE);
+      const line8 = text.split('\n').find((l) => l.startsWith('8. '));
+      assert.match(line8, /വേതനം കൂടാൻ അവസരമുണ്ട്/, `${q}: on line 8, next to the 24-hour figure`);
+      assert.match(text, /\n9\. Payment daily/, `${q}: the founder's numbering after it is untouched`);
+    }
+  });
+  await flow.runWithFlow('kerala_english', async () => {
+    assert.match(flow.getWorkingModelFor('hca', LIVE), /per day\. With more days of duty and good ratings on Pulso/);
   });
 });
 
