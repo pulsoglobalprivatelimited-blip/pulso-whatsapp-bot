@@ -234,6 +234,8 @@ async function statsFor({ now = new Date() } = {}) {
     later: count(flow.OUTCOMES.later),
     noAnswer: all.filter((a) => a.outcome === flow.OUTCOMES.noAnswer && a.status !== 'retired').length,
     notInterested: count(flow.OUTCOMES.notInterested),
+    agencyNotInterested: count(flow.OUTCOMES.agencyNotInterested),
+    pulsoNotInterested: count(flow.OUTCOMES.pulsoNotInterested),
     wrongNumber: count(flow.OUTCOMES.wrongNumber),
     retired: all.filter((a) => a.status === 'retired').length,
     dueToday: all.filter((a) => a.followUpOn && a.followUpOn <= today && a.status !== 'done').length,

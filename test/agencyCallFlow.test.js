@@ -25,7 +25,8 @@ test('the typed commands work in any case, with the short forms he will actually
   assert.equal(f.parseCommand({ text: 'stop' }).kind, 'stop');
   assert.equal(f.parseCommand({ text: 'skip' }).kind, 'skip');
   assert.equal(f.parseCommand({ text: 'help' }).kind, 'help');
-  assert.equal(f.parseCommand({ text: 'no' }).outcome, 'not interested');
+  assert.equal(f.parseCommand({ text: 'no' }).outcome, 'agency not interested');
+  assert.equal(f.parseCommand({ text: 'pulso no' }).outcome, 'pulso not interested');
   assert.equal(f.parseCommand({ text: 'wrong' }).outcome, 'wrong number');
   assert.deepEqual(f.parseCommand({ text: 'note owner was driving' }), { kind: 'note', note: 'owner was driving' });
 });
@@ -76,7 +77,7 @@ test('no answer comes back in two days, and retires on the third try', () => {
 });
 
 test('interested and not interested are final; the number is never handed out again', () => {
-  for (const outcome of [f.OUTCOMES.interested, f.OUTCOMES.notInterested, f.OUTCOMES.wrongNumber]) {
+  for (const outcome of [f.OUTCOMES.interested, f.OUTCOMES.notInterested, f.OUTCOMES.agencyNotInterested, f.OUTCOMES.pulsoNotInterested, f.OUTCOMES.wrongNumber]) {
     const got = f.recordFor(outcome, { attempts: 0 });
     assert.equal(got.status, 'done', outcome);
     assert.equal(got.followUpOn, null, outcome);
@@ -113,6 +114,21 @@ test('only "later" asks for a date, and only "interested" asks what they need', 
   assert.equal(f.asksFollowUp(f.OUTCOMES.noAnswer), false);
   assert.equal(f.asksNote(f.OUTCOMES.interested), true);
   assert.equal(f.asksNote(f.OUTCOMES.notInterested), false);
+  assert.equal(f.asksNote(f.OUTCOMES.agencyNotInterested), true);
+  assert.equal(f.asksNote(f.OUTCOMES.pulsoNotInterested), true);
+  assert.equal(f.asksNote(f.OUTCOMES.wrongNumber), false);
+});
+
+test('the outcome list has all six, within WhatsApp limits, and each row parses to its outcome', () => {
+  const rows = f.outcomeRows();
+  assert.deepEqual(rows.map((r) => r.title), ['Interested', 'Later', 'No answer', 'Agency not interested', 'Pulso not interested', 'Wrong number']);
+  assert.ok(rows.length <= 10);
+  for (const r of rows) {
+    assert.ok(r.title.length <= 24, r.title);
+    assert.ok(r.description.length <= 72, r.description);
+  }
+  const outcomes = rows.map((r) => f.parseCommand({ buttonId: r.id }).outcome);
+  assert.deepEqual(outcomes, ['interested', 'later', 'no answer', 'agency not interested', 'pulso not interested', 'wrong number']);
 });
 
 test('stats add up and name what is next', () => {
@@ -122,6 +138,8 @@ test('stats add up and name what is next', () => {
   });
   assert.match(text, /Called 24 of 100/);
   assert.match(text, /Interested: 6/);
+  assert.match(text, /Agency not interested: 5/);
+  assert.match(text, /Pulso not interested: 0/);
   assert.match(text, /2 follow-ups due today/);
   assert.match(text, /Next up: Thrissur/);
 });
@@ -130,4 +148,11 @@ test('the help text names every command the parser accepts', () => {
   for (const word of ['call', 'skip', 'stats', 'stop', 'note']) {
     assert.ok(f.MESSAGES.help.includes(word), word);
   }
+});
+
+test('stats: old "not interested" records count as the agency\'s, Pulso\'s are separate', () => {
+  const text = f.statsMessage({ total: 50, notInterested: 2, agencyNotInterested: 3, pulsoNotInterested: 4 });
+  assert.match(text, /Called 9 of 50/);
+  assert.match(text, /Agency not interested: 5/);
+  assert.match(text, /Pulso not interested: 4/);
 });

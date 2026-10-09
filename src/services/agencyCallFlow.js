@@ -19,11 +19,17 @@
  * embarrass nobody.
  */
 
-/** What a call can end as. The first three are buttons; WhatsApp allows 3. */
+/**
+ * What a call can end as, all six in one list (founder, 9 Oct 2026: "agency
+ * not interested" and "Pulso not interested" are separate answers). The plain
+ * 'not interested' is kept only so records written before then still count.
+ */
 const OUTCOMES = Object.freeze({
   interested: 'interested',
   later: 'later',
   noAnswer: 'no answer',
+  agencyNotInterested: 'agency not interested',
+  pulsoNotInterested: 'pulso not interested',
   notInterested: 'not interested',
   wrongNumber: 'wrong number',
 });
@@ -32,6 +38,9 @@ const BUTTON_IDS = Object.freeze({
   interested: 'agency_call_interested',
   later: 'agency_call_later',
   noAnswer: 'agency_call_no_answer',
+  agencyNotInterested: 'agency_call_agency_no',
+  pulsoNotInterested: 'agency_call_pulso_no',
+  wrongNumber: 'agency_call_wrong',
   skipNote: 'agency_call_skip_note',
 });
 
@@ -69,6 +78,9 @@ function parseCommand(input = {}) {
   if (buttonId === BUTTON_IDS.interested) return { kind: 'outcome', outcome: OUTCOMES.interested };
   if (buttonId === BUTTON_IDS.later) return { kind: 'outcome', outcome: OUTCOMES.later };
   if (buttonId === BUTTON_IDS.noAnswer) return { kind: 'outcome', outcome: OUTCOMES.noAnswer };
+  if (buttonId === BUTTON_IDS.agencyNotInterested) return { kind: 'outcome', outcome: OUTCOMES.agencyNotInterested };
+  if (buttonId === BUTTON_IDS.pulsoNotInterested) return { kind: 'outcome', outcome: OUTCOMES.pulsoNotInterested };
+  if (buttonId === BUTTON_IDS.wrongNumber) return { kind: 'outcome', outcome: OUTCOMES.wrongNumber };
   if (buttonId === BUTTON_IDS.skipNote) return { kind: 'skipNote' };
 
   const text = lower(input.text);
@@ -85,7 +97,12 @@ function parseCommand(input = {}) {
   if (['no answer', 'noanswer', 'na', 'not picked', 'no response'].includes(text)) {
     return { kind: 'outcome', outcome: OUTCOMES.noAnswer };
   }
-  if (['no', 'not interested', 'n'].includes(text)) return { kind: 'outcome', outcome: OUTCOMES.notInterested };
+  if (['no', 'not interested', 'n', 'agency no', 'agency not interested'].includes(text)) {
+    return { kind: 'outcome', outcome: OUTCOMES.agencyNotInterested };
+  }
+  if (['pulso no', 'pulso not interested', 'we no'].includes(text)) {
+    return { kind: 'outcome', outcome: OUTCOMES.pulsoNotInterested };
+  }
   if (['wrong', 'wrong number', 'wrong no'].includes(text)) return { kind: 'outcome', outcome: OUTCOMES.wrongNumber };
 
   if (text.startsWith('note ')) return { kind: 'note', note: clean(input.text).slice(5).trim() };
@@ -184,6 +201,18 @@ function outcomeButtons() {
   ];
 }
 
+/** All six outcomes as one WhatsApp list (rows: title ≤24, description ≤72). */
+function outcomeRows() {
+  return [
+    { id: BUTTON_IDS.interested, title: 'Interested', description: 'They want to work with Pulso' },
+    { id: BUTTON_IDS.later, title: 'Later', description: 'Call again on a date' },
+    { id: BUTTON_IDS.noAnswer, title: 'No answer', description: 'Did not pick up' },
+    { id: BUTTON_IDS.agencyNotInterested, title: 'Agency not interested', description: 'They do not want to work with Pulso' },
+    { id: BUTTON_IDS.pulsoNotInterested, title: 'Pulso not interested', description: 'We do not want to work with them' },
+    { id: BUTTON_IDS.wrongNumber, title: 'Wrong number', description: 'Not a home care agency' },
+  ];
+}
+
 /** The contact card, so he taps to dial instead of copying a number. */
 function agencyContactCard(agency) {
   if (!agency) return null;
@@ -199,7 +228,9 @@ function agencyContactCard(agency) {
 
 function statsMessage(counts = {}) {
   const n = (k) => Number(counts[k] || 0);
-  const done = n('interested') + n('later') + n('noAnswer') + n('notInterested') + n('wrongNumber');
+  // Records from before 9 Oct said only "not interested": counted as the agency's.
+  const agencyNo = n('agencyNotInterested') + n('notInterested');
+  const done = n('interested') + n('later') + n('noAnswer') + agencyNo + n('pulsoNotInterested') + n('wrongNumber');
   const total = n('total');
   const lines = [
     `*Called ${done} of ${total}*`,
@@ -207,7 +238,8 @@ function statsMessage(counts = {}) {
     `Interested: ${n('interested')}`,
     `Later: ${n('later')}`,
     `No answer: ${n('noAnswer')}`,
-    `Not interested: ${n('notInterested')}`,
+    `Agency not interested: ${agencyNo}`,
+    `Pulso not interested: ${n('pulsoNotInterested')}`,
     `Wrong number: ${n('wrongNumber')}`,
   ];
   if (n('dueToday') > 0) lines.push('', `${n('dueToday')} follow-ups due today`);
@@ -223,8 +255,9 @@ const HELP_TEXT = [
   'stats — how far I have got',
   'stop — finish for now',
   '',
-  'After a call, tap a button or type:',
-  'no — not interested',
+  'After a call, pick from the list or type:',
+  'no — agency not interested',
+  'pulso no — Pulso not interested',
   'wrong — wrong number',
   'note <anything> — add a note',
 ].join('\n');
@@ -269,8 +302,13 @@ function asksFollowUp(outcome) {
   return outcome === OUTCOMES.later;
 }
 
+/** Interested asks what they need; both "not interested" answers ask why. */
 function asksNote(outcome) {
-  return outcome === OUTCOMES.interested;
+  return (
+    outcome === OUTCOMES.interested ||
+    outcome === OUTCOMES.agencyNotInterested ||
+    outcome === OUTCOMES.pulsoNotInterested
+  );
 }
 
 /**
@@ -302,6 +340,7 @@ module.exports = {
   toDayKey,
   agencyMessage,
   outcomeButtons,
+  outcomeRows,
   noteButtons,
   agencyContactCard,
   statsMessage,

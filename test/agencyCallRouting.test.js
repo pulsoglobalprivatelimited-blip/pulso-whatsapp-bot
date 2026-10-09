@@ -42,6 +42,7 @@ const record = (kind) => async (to, _body, options) => { sent.push({ kind, to, o
 const fakeMeta = {
   sendText: record('text'),
   sendButtons: async (to, _body, _buttons, options) => { sent.push({ kind: 'buttons', to, options }); },
+  sendList: async (to, _body, _buttonText, _sections, options) => { sent.push({ kind: 'list', to, options }); },
   sendContacts: record('contacts'),
 };
 
@@ -73,7 +74,7 @@ const buttonMessage = (id) => ({ type: 'interactive', interactive: { button_repl
 
 test('every reply to "call" leaves from the support number', async () => {
   assert.equal(await maybeHandleAgencyCall(ADMIN, textMessage('call')), true);
-  assert.deepEqual(sent.map((s) => s.kind), ['text', 'contacts', 'buttons']);
+  assert.deepEqual(sent.map((s) => s.kind), ['text', 'contacts', 'list']);
   for (const s of sent) {
     assert.equal(s.to, ADMIN);
     assert.deepEqual(s.options, { phoneNumberId: SUPPORT_ID }, `${s.kind} must not fall back to onboarding`);
@@ -89,6 +90,14 @@ test('our outcome buttons go ahead of an open booking draft', async () => {
   callerState = { state: 'awaiting_outcome', inHand: '919000000001' };
   const handled = await maybeHandleAgencyCall(ADMIN, buttonMessage(flow.BUTTON_IDS.noAnswer), { priorityOnly: true });
   assert.equal(handled, true);
+});
+
+test('a tap on the outcome list (Pulso not interested) goes ahead of a booking draft and asks why', async () => {
+  callerState = { state: 'awaiting_outcome', inHand: '919000000001' };
+  const listTap = { type: 'interactive', interactive: { list_reply: { id: flow.BUTTON_IDS.pulsoNotInterested, title: 'Pulso not interested' } } };
+  assert.equal(await maybeHandleAgencyCall(ADMIN, listTap, { priorityOnly: true }), true);
+  // Asked for the reason (the note question with its Skip button), nothing saved yet.
+  assert.deepEqual(sent.map((s) => s.kind), ['buttons']);
 });
 
 test('the follow-up date we asked for goes ahead of an open booking draft', async () => {

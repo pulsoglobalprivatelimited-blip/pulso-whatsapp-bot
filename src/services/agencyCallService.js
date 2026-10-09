@@ -12,7 +12,7 @@
 const flow = require('./agencyCallFlow');
 const store = require('./agencyCallStore');
 const config = require('../config');
-const { sendText, sendButtons, sendContacts } = require('./metaClient');
+const { sendText, sendButtons, sendList, sendContacts } = require('./metaClient');
 
 /**
  * Send the next agency, or say there is none.
@@ -43,7 +43,7 @@ async function handOutNext(callerPhone, { now = new Date(), options } = {}) {
       console.error('[AGENCY_CALL_CARD_FAILED]', agency.id, error && error.message);
     }
   }
-  await sendButtons(callerPhone, 'How did the call go?', flow.outcomeButtons(), options);
+  await sendList(callerPhone, 'How did the call go?', 'Choose outcome', [{ title: 'Outcome', rows: flow.outcomeRows() }], options);
   await store.setCaller(callerPhone, { state: flow.STATES.awaitingOutcome, inHand: agency.id });
   return { sent: true, agencyId: agency.id };
 }
@@ -203,7 +203,9 @@ function readMessage(message) {
     (message && message.interactive && message.interactive.list_reply && message.interactive.list_reply.title) ||
     '';
   const buttonId =
-    (message && message.interactive && message.interactive.button_reply && message.interactive.button_reply.id) || '';
+    (message && message.interactive && message.interactive.button_reply && message.interactive.button_reply.id) ||
+    (message && message.interactive && message.interactive.list_reply && message.interactive.list_reply.id) ||
+    '';
   return { text, buttonId };
 }
 
