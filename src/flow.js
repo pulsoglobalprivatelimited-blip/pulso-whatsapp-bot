@@ -218,6 +218,10 @@ const MESSAGES = {
     'ദയവായി താഴെയുള്ള list-ിൽ നിന്ന് ഒരു option തിരഞ്ഞെടുക്കുക. സർട്ടിഫിക്കറ്റ് ഇല്ലെങ്കിൽ "സർട്ടിഫിക്കറ്റ് ഇല്ല" എന്ന option തിരഞ്ഞെടുക്കുക.',
   qualificationRetry:
     'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും qualification തിരഞ്ഞെടുക്കുക: GDA / GNM / ANM / HCA / BSc Nursing / Other with experience in caregiving / സർട്ടിഫിക്കറ്റ് ഇല്ല.',
+  // Founder, 9 Oct 2026 (option B, verbatim): added under the GDA/nurse line
+  // for No certificate applicants only; everyone else reads the intro as before.
+  workingModelNoCertificateLine:
+    'Caregiving / Nursing certificate ഇല്ലാത്തവർക്കും, പ്രായമായവരെ പരിചരിച്ച മുൻപരിചയം ഉണ്ടെങ്കിൽ Basic Caregiver ആയി ഞങ്ങളോടൊപ്പം join ചെയ്യാം. ഒരു ചെറിയ ഫോൺ സംഭാഷണത്തിന് ശേഷം തീരുമാനം അറിയിക്കും. നിങ്ങൾ interested ആണെങ്കിൽ ഞങ്ങൾ നിങ്ങൾക്ക് Pulso App വഴി duty offers അയച്ചു തരും.',
   workingModel:
     `**Pulso Global Private Limited** ഒരു homecare കമ്പനിയാണ്. പ്രായമായർക്കും കിടപ്പ് രോഗികൾക്കും അവരുടെ വീടുകളിൽ പരിചരണം നൽകുന്നതാണ് ഞങ്ങളുടെ സർവീസ്.\n\nGDA (General Duty Assistant) staff-നും nurse-നും ഞങ്ങളോടൊപ്പം join ചെയ്യാൻ കഴിയും. നിങ്ങൾ interested ആണെങ്കിൽ ഞങ്ങൾ നിങ്ങൾക്ക് Pulso App വഴി duty offers അയച്ചു തരും.\n\n**Duty details:**\n\n1. Duty area കേരളത്തിൽ എവിടെയും ആയിരിക്കാം\n2. Duty timing 8 hours, 24 hours എന്നീ രീതികളിലായിരിക്കും\n3. 8 hours duty സമയം രാവിലെ 8 മണി മുതൽ വൈകുന്നേരം 4 മണിവരെ ആയിരിക്കും\n4. Duty duration 1 week, 2 week, 1 month എന്നിങ്ങനെ വ്യത്യാസപ്പെടാം\n5. 24 hours duty-ക്ക് patient-ന്റെ വീട്ടിൽ stay-യും food-ും ലഭിക്കും\n6. 8 hour duty-ക്ക് stay ഉണ്ടായിരിക്കില്ല\n7. 8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹600 മുതൽ ₹900 വരെ ലഭിക്കും\n8. 24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 മുതൽ ₹1000 വരെ ലഭിക്കും\n9. Payment daily നിങ്ങളുടെ account-ിൽ credit ആവുന്നതാണ്\n10. നിങ്ങൾ work ചെയ്യുന്ന ദിവസങ്ങളിൽ മാത്രമായിരിക്കും payment ലഭിക്കുക\n11. House maid ജോലി ഉണ്ടായിരിക്കില്ല. Patient care duties മാത്രം ആയിരിക്കും\n\n**Working model:**\n\n1. Pulso App വഴി duty offers ലഭിക്കും\n2. നിങ്ങൾക്ക് താല്പര്യമുള്ള duty-കൾ മാത്രം accept ചെയ്യാം\n3. താല്പര്യമില്ലെങ്കിൽ reject ചെയ്യാം അല്ലെങ്കിൽ ignore ചെയ്യാം\n4. Duty accept ചെയ്തതിന് ശേഷം office verification call ഉണ്ടാകും\n5. എല്ലാ instructions-ും duty details-ും office staff clear ആയി അറിയിക്കും\n6. പിന്നീട് നിങ്ങൾ നേരിട്ട് duty location-ലേക്ക് പോകണം\n7. സമയത്തിന് duty ആരംഭിച്ച് ഉത്തരവാദിത്വത്തോടെ care നൽകണം\n\n**Emergency leave:**\n\nEmergency leave ആവശ്യമായി വന്നാൽ വേറെ staff-നെ ഞങ്ങൾ arrange ചെയ്ത് തരുന്നതായിരിക്കും.\n\n**ശ്രദ്ധിക്കുക:**\n\n- Duty offer accept ചെയ്യണോ വേണ്ടയോ എന്നത് മുഴുവൻ നിങ്ങളുടെ ഇഷ്ടമാണ്\n- ഇഷ്ടമുള്ള duty-കൾ മാത്രം സ്വീകരിച്ചാൽ മതി\n- ഇതിനായി പ്രത്യേക registration fee ഒന്നും നൽകേണ്ടതില്ല\n\n**Office Address:**\nPulso Elderlycare, Kalamassery, Kochi - 682021`,
   interestQuestion:
@@ -534,6 +538,8 @@ const KARNATAKA_MESSAGES = {
     'Please select one option from the list below. If you do not have a certificate, select "No certificate".',
   qualificationRetry:
     'Please select one option: GDA / GNM / ANM / HCA / BSc Nursing / Other caregiving experience / No certificate.',
+  workingModelNoCertificateLine:
+    'People without a caregiving or nursing certificate can also join us as Basic Caregivers if they have experience caring for the elderly. We will decide after a short phone call. If you are interested, we will send you duty offers through the Pulso App.',
   workingModel:
     `Pulso Global Private Limited is a home care company. We provide care services for elderly people and bedridden patients at their homes.\n\nGDA staff, caregivers, and nurses can join Pulso. If you are interested, we will send duty offers to you through Pulso mobile app\n\nDuty details:\n\n1. Duty location can be anywhere in Karnataka\n2. Duty timing may be 8 hours or 24 hours\n3. 8-hour duty timing will usually be from morning 8 am to evening 4pm\n4. Duty duration may be 1 week, 2 weeks, 1 month, or more depending on the case\n5. For 24-hour duty, stay and food will be provided at the patient's home\n6. For 8-hour duty, stay will not be provided\n7. For 8-hour duty, you will receive Rs 600 to Rs 900 per day\n8. For 24-hour duty, you will receive Rs 750 to Rs 1000 per day\n9. Payment will be credited daily to your account\n10. You will receive payment only for the days you work\n11. There will be no housemaid work. Only patient care duties\n\nWorking model:\n\n1. Duty offers will be sent through Pulso App\n2. You can accept only the duties you are interested in\n3. If you are not interested in a duty, you can reject or ignore it\n4. After you accept a duty, the office team will call you for verification and confirmation\n5. The office team will clearly explain all duty details and instructions\n6. After confirmation, you should go directly to the duty location\n7. You should start duty on time and provide care responsibly\n\nEmergency leave:\n\nIf you need emergency leave, Pulso will try to arrange another staff member.\n\nImportant:\n\n- Accepting or rejecting a duty offer is completely your choice\n- You only need to accept duties you are interested in\n- There is no registration fee to join Pulso\n\nHead Office Address:\nPulso Elderlycare, cochin, kerala - 682036`,
   interestQuestion: 'Did you understand the working model? Are you interested to continue?',
@@ -1229,7 +1235,22 @@ function getWorkingModelFor(qualification, tiers) {
   const band = rateBandFor(qualification, tiers);
   const markers = WORKING_MODEL_MARKERS[flow.language] || WORKING_MODEL_MARKERS.en;
   const lines = workingModelRateLines(band, flow.language, tierFigures(tiers));
-  return markers.reduce((text, marker, i) => swapExact(text, marker, lines[i]), String(flow.MESSAGES.workingModel));
+  const text = markers.reduce((t, marker, i) => swapExact(t, marker, lines[i]), String(flow.MESSAGES.workingModel));
+  return withNoCertificateLine(text, qualification, flow.MESSAGES);
+}
+
+/* The original "GDA staff and nurses can join" paragraph stays; a No
+   certificate applicant also reads that she can join as a Basic Caregiver
+   (founder, 9 Oct 2026), as its own paragraph right under it. */
+function withNoCertificateLine(text, subject, messages) {
+  const qualification = String(subjectOf(subject).qualification || '').toLowerCase();
+  const line = messages && messages.workingModelNoCertificateLine;
+  if (qualification !== 'no_certificate' || !line) return text;
+  const at = ['\n\n**Duty details:**', '\n\nDuty details:']
+    .map((marker) => text.indexOf(marker))
+    .find((index) => index >= 0);
+  if (at === undefined) return text;
+  return `${text.slice(0, at)}\n\n${line}${text.slice(at)}`;
 }
 
 /**
