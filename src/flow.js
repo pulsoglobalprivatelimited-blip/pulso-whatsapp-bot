@@ -1101,6 +1101,15 @@ function earningsGrowthLine(language) {
   return language === 'ml' ? EARNINGS_GROWTH_LINE.ml : EARNINGS_GROWTH_LINE.en;
 }
 
+/** "₹650 മുതൽ ₹900 വരെ", or just "₹650" when the two ends meet. */
+function mlRange(from, to) {
+  return from === to ? `₹${from}` : `₹${from} മുതൽ ₹${to} വരെ`;
+}
+
+function enRange(from, to) {
+  return from === to ? `Rs ${from}` : `Rs ${from} to Rs ${to}`;
+}
+
 function workingModelRateLines(band, language, f) {
   if (language === 'ml') {
     if (band === 'nurse') {
@@ -1115,9 +1124,14 @@ function workingModelRateLines(band, language, f) {
         `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b24} ലഭിക്കും. ${earningsGrowthLine('ml')}`
       ];
     }
+    /* A range whose two ends are the same figure is one figure. The founder
+       dropped the GDA range on 9 Oct 2026 ("no range needed") by setting the
+       top equal to the bottom in config; the words follow, so nobody ever
+       reads "₹750 മുതൽ ₹750 വരെ". Setting them apart again brings the range
+       back without a deploy. */
     return [
-      `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.gFrom8} മുതൽ ₹${f.gTo8} വരെ ലഭിക്കും`,
-      `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.gFrom24} മുതൽ ₹${f.gTo24} വരെ ലഭിക്കും. ${earningsGrowthLine('ml')}`
+      `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.gFrom8, f.gTo8)} ലഭിക്കും`,
+      `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.gFrom24, f.gTo24)} ലഭിക്കും. ${earningsGrowthLine('ml')}`
     ];
   }
   if (band === 'nurse') {
@@ -1127,8 +1141,8 @@ function workingModelRateLines(band, language, f) {
     return [`For 8-hour duty, you will receive Rs ${f.b8} per day`, `For 24-hour duty, you will receive Rs ${f.b24} per day. ${earningsGrowthLine('en')}`];
   }
   return [
-    `For 8-hour duty, you will receive Rs ${f.gFrom8} to Rs ${f.gTo8} per day`,
-    `For 24-hour duty, you will receive Rs ${f.gFrom24} to Rs ${f.gTo24} per day. ${earningsGrowthLine('en')}`
+    `For 8-hour duty, you will receive ${enRange(f.gFrom8, f.gTo8)} per day`,
+    `For 24-hour duty, you will receive ${enRange(f.gFrom24, f.gTo24)} per day. ${earningsGrowthLine('en')}`
   ];
 }
 
@@ -1276,12 +1290,12 @@ function getDutyHourPaymentSummaryFor(qualification, tiers) {
     if (band === 'nurse') return `8 hour - ദിവസത്തിൽ ₹${f.n8}\n24 hour - ദിവസത്തിൽ ₹${f.n24}${tail}`;
     return band === 'basic'
       ? `8 hour - ദിവസത്തിൽ ₹${f.b8}\n24 hour - ദിവസത്തിൽ ₹${f.b24}${tail}`
-      : `8 hour - ദിവസത്തിൽ ₹${f.gFrom8} മുതൽ ₹${f.gTo8} വരെ\n24 hour - ദിവസത്തിൽ ₹${f.gFrom24} മുതൽ ₹${f.gTo24} വരെ${tail}`;
+      : `8 hour - ദിവസത്തിൽ ${mlRange(f.gFrom8, f.gTo8)}\n24 hour - ദിവസത്തിൽ ${mlRange(f.gFrom24, f.gTo24)}${tail}`;
   }
   if (band === 'nurse') return `8 hour - Rs ${f.n8} per day\n24 hour - Rs ${f.n24} per day${tail}`;
   return band === 'basic'
     ? `8 hour - Rs ${f.b8} per day\n24 hour - Rs ${f.b24} per day${tail}`
-    : `8 hour - Rs ${f.gFrom8} to Rs ${f.gTo8} per day\n24 hour - Rs ${f.gFrom24} to Rs ${f.gTo24} per day${tail}`;
+    : `8 hour - ${enRange(f.gFrom8, f.gTo8)} per day\n24 hour - ${enRange(f.gFrom24, f.gTo24)} per day${tail}`;
 }
 
 function getActiveFlow() {

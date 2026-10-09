@@ -300,3 +300,23 @@ test('no_certificate is the Basic tier; the fallback GDA pay matches live', () =
   assert.equal(tierForQualification('other_caregiving'), 'gda');
   assert.equal(DEFAULTS.gda.payout24h, 700);
 });
+
+test('a GDA range whose ends meet is said as one figure, never "₹750 മുതൽ ₹750 വരെ"', async () => {
+  // The founder dropped the GDA range on 9 Oct 2026 by setting top = bottom
+  // in config. The words must follow, in both places the money is shown.
+  const FLAT = { ...LIVE, gda: { payout24h: 750, payout8h: 650, shownFrom24h: 750, shownTo24h: 750, shownFrom8h: 650, shownTo8h: 650 } };
+  await flow.runWithFlow('kerala_malayalam', async () => {
+    const wm = flow.getWorkingModelFor('gda', FLAT);
+    assert.match(wm, /7\. 8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹650 ലഭിക്കും/);
+    assert.match(wm, /8\. 24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 ലഭിക്കും\./);
+    assert.doesNotMatch(wm, /മുതൽ ₹750 വരെ|മുതൽ ₹650 വരെ/);
+    const block = flow.getDutyHourPaymentSummaryFor('gda', FLAT);
+    assert.match(block, /^8 hour - ദിവസത്തിൽ ₹650\n24 hour - ദിവസത്തിൽ ₹750\n/);
+    // Setting them apart again brings the range back without a deploy.
+    assert.match(flow.getDutyHourPaymentSummaryFor('gda', LIVE), /₹800 മുതൽ ₹900 വരെ/);
+  });
+  await flow.runWithFlow('kerala_english', async () => {
+    assert.match(flow.getWorkingModelFor('hca', FLAT), /Rs 650 per day[\s\S]*Rs 750 per day\. With more days/);
+    assert.match(flow.getDutyHourPaymentSummaryFor('anm', FLAT), /^8 hour - Rs 650 per day\n24 hour - Rs 750 per day\n/);
+  });
+});
