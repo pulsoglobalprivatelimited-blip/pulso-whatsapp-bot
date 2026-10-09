@@ -156,3 +156,15 @@ test('stats: old "not interested" records count as the agency\'s, Pulso\'s are s
   assert.match(text, /Agency not interested: 5/);
   assert.match(text, /Pulso not interested: 4/);
 });
+
+test('call again: three buttons within WhatsApp limits, each read as a date', () => {
+  const buttons = f.followUpButtons();
+  assert.deepEqual(buttons.map((b) => b.title), ['Tomorrow', 'In 3 days', 'In 1 week']);
+  for (const b of buttons) assert.ok(b.title.length <= 20, b.title);
+  const now = new Date('2026-10-09T05:30:00Z');
+  const dates = buttons.map((b) => f.parseFollowUpDate(f.followUpTextFor(b.id), now));
+  assert.deepEqual(dates, [f.toDayKey(new Date('2026-10-10T05:30:00Z')), f.toDayKey(new Date('2026-10-12T05:30:00Z')), f.toDayKey(new Date('2026-10-16T05:30:00Z'))]);
+  assert.equal(f.followUpTextFor('agency_call_interested'), '');
+  // A button tap goes ahead of an open booking draft, like the outcome buttons.
+  for (const b of buttons) assert.equal(f.takesPriority({ buttonId: b.id }), true);
+});

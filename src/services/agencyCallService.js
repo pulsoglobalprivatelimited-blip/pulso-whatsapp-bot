@@ -116,7 +116,7 @@ async function handleCallerMessage({ phone, text, buttonId, now = new Date(), op
     // the outcome is held on the caller and written when that answer arrives.
     if (flow.asksFollowUp(command.outcome)) {
       await store.setCaller(phone, { state: flow.STATES.awaitingFollowUp, inHand, pendingOutcome: command.outcome });
-      await sendText(phone, flow.MESSAGES.askFollowUp, options);
+      await sendButtons(phone, flow.MESSAGES.askFollowUp, flow.followUpButtons(), options);
       return true;
     }
     if (flow.asksNote(command.outcome)) {
@@ -134,7 +134,7 @@ async function handleCallerMessage({ phone, text, buttonId, now = new Date(), op
   if (state === flow.STATES.awaitingFollowUp && inHand) {
     const date = flow.parseFollowUpDate(text, now);
     if (!date) {
-      await sendText(phone, flow.MESSAGES.askFollowUp, options);
+      await sendButtons(phone, flow.MESSAGES.askFollowUp, flow.followUpButtons(), options);
       return true;
     }
     // Founder, 7 Oct 2026: "Later" needs a note as much as "Interested" does —
@@ -198,9 +198,13 @@ function senderOptions() {
 }
 
 function readMessage(message) {
+  const tappedId =
+    (message && message.interactive && message.interactive.button_reply && message.interactive.button_reply.id) || '';
   const text =
     (message && message.type === 'text' && message.text && message.text.body) ||
     (message && message.interactive && message.interactive.list_reply && message.interactive.list_reply.title) ||
+    // A "call again" button reads as the words it stands for.
+    flow.followUpTextFor(tappedId) ||
     '';
   const buttonId =
     (message && message.interactive && message.interactive.button_reply && message.interactive.button_reply.id) ||

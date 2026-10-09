@@ -42,6 +42,9 @@ const BUTTON_IDS = Object.freeze({
   pulsoNotInterested: 'agency_call_pulso_no',
   wrongNumber: 'agency_call_wrong',
   skipNote: 'agency_call_skip_note',
+  followUpTomorrow: 'agency_call_fu_1d',
+  followUp3Days: 'agency_call_fu_3d',
+  followUp1Week: 'agency_call_fu_7d',
 });
 
 /** Where the conversation is. Held on his caller record, not guessed. */
@@ -201,6 +204,30 @@ function outcomeButtons() {
   ];
 }
 
+/**
+ * "When should we call again?" as buttons (founder, 9 Oct 2026). A tap reads
+ * as the words it stands for, so the date comes from parseFollowUpDate like a
+ * typed answer.
+ */
+const FOLLOW_UP_TEXT = Object.freeze({
+  [BUTTON_IDS.followUpTomorrow]: 'tomorrow',
+  [BUTTON_IDS.followUp3Days]: '3 days',
+  [BUTTON_IDS.followUp1Week]: '1 week',
+});
+
+function followUpButtons() {
+  return [
+    { id: BUTTON_IDS.followUpTomorrow, title: 'Tomorrow' },
+    { id: BUTTON_IDS.followUp3Days, title: 'In 3 days' },
+    { id: BUTTON_IDS.followUp1Week, title: 'In 1 week' },
+  ];
+}
+
+/** The words a follow-up button stands for, or '' for any other id. */
+function followUpTextFor(buttonId) {
+  return FOLLOW_UP_TEXT[clean(buttonId)] || '';
+}
+
 /** All six outcomes as one WhatsApp list (rows: title ≤24, description ≤72). */
 function outcomeRows() {
   return [
@@ -268,7 +295,7 @@ const MESSAGES = Object.freeze({
   allDone: 'That is everyone on the list. Nothing left to call.',
   noneDue: 'Nothing due right now. The follow-ups come back on their date.',
   askNote: 'Note anything relevant they said — or send *skip*.',
-  askFollowUp: 'When should we call again? Try *1 week*, *monday*, or *12/10*.',
+  askFollowUp: 'When should we call again? Tap one, or type a date like *monday* or *12/10*.',
   savedNext: 'Saved.',
   notUnderstood: 'I did not catch that. Type *help* to see the commands.',
   nothingInHand: 'No agency in hand. Type *call* to get the next one.',
@@ -341,6 +368,8 @@ module.exports = {
   agencyMessage,
   outcomeButtons,
   outcomeRows,
+  followUpButtons,
+  followUpTextFor,
   noteButtons,
   agencyContactCard,
   statsMessage,

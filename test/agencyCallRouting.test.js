@@ -100,6 +100,18 @@ test('a tap on the outcome list (Pulso not interested) goes ahead of a booking d
   assert.deepEqual(sent.map((s) => s.kind), ['buttons']);
 });
 
+test('Later asks for the date with three buttons, and a tap saves the date', async () => {
+  callerState = { state: 'awaiting_outcome', inHand: '919000000001' };
+  const laterTap = { type: 'interactive', interactive: { list_reply: { id: flow.BUTTON_IDS.later, title: 'Later' } } };
+  assert.equal(await maybeHandleAgencyCall(ADMIN, laterTap), true);
+  assert.deepEqual(sent.map((s) => s.kind), ['buttons']);
+  sent.length = 0;
+  callerState = { state: 'awaiting_follow_up', inHand: '919000000001', pendingOutcome: 'later' };
+  assert.equal(await maybeHandleAgencyCall(ADMIN, buttonMessage(flow.BUTTON_IDS.followUp1Week), { priorityOnly: true }), true);
+  // The date was accepted: next comes the note question (buttons), not the date question again.
+  assert.equal(sent.length, 1);
+});
+
 test('the follow-up date we asked for goes ahead of an open booking draft', async () => {
   callerState = { state: 'awaiting_follow_up', inHand: '919000000001', pendingOutcome: 'later' };
   assert.equal(await maybeHandleAgencyCall(ADMIN, textMessage('tomorrow'), { priorityOnly: true }), true);
