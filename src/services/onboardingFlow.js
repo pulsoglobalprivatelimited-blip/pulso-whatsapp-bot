@@ -4458,6 +4458,15 @@ async function processIncomingMessage(phone, message) {
 
   await recordInbound(phone, message);
 
+  // Job-board code ("JOB APNA KANNUR"): keep the first one, never block the chat.
+  try {
+    const { jobBoardSourceUpdate } = require('./jobBoardSource');
+    const sourceUpdate = jobBoardSourceUpdate(provider, getMessageText(message));
+    if (sourceUpdate) await updateProvider(phone, sourceUpdate);
+  } catch (error) {
+    console.error('[JOB_BOARD_SOURCE_ERROR]', error.message);
+  }
+
   if (provider.status === STATUS.AWAITING_REGION_SELECTION) {
     await handleRegionSelection(phone, message);
     return;
