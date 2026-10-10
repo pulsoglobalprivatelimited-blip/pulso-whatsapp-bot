@@ -1408,7 +1408,16 @@ function getWorkingModelFor(qualification, tiers) {
   const band = rateBandFor(qualification, tiers);
   const markers = WORKING_MODEL_MARKERS[flow.language] || WORKING_MODEL_MARKERS.en;
   const lines = workingModelRateLines(band, flow.language, tierFigures(tiers));
-  const text = markers.reduce((t, marker, i) => swapExact(t, marker, lines[i]), String(flow.MESSAGES.workingModel));
+  /* Two passes, through placeholders. A one-pass swap broke the day the card
+     was set to the very figures the markers carry (GDA 24h 750–1000, 10 Oct
+     2026): the first line swapped in matched the second marker word for word,
+     so the second swap replaced both, and a GDA read two 8-hour lines and no
+     24-hour line. */
+  const parked = markers.reduce(
+    (t, marker, i) => swapExact(t, marker, `\u0000RATE_LINE_${i}\u0000`),
+    String(flow.MESSAGES.workingModel)
+  );
+  const text = parked.replace(/\u0000RATE_LINE_(\d)\u0000/g, (_, i) => lines[Number(i)]);
   return withNoCertificateLine(text, qualification, flow.MESSAGES);
 }
 
