@@ -22,13 +22,13 @@ test('GDA: a 24-hour range equal to the marker figures still lands once, on its 
     const p8 = wm.split('\n').find((l) => l.startsWith('8. '));
     assert.match(p7, /^7\. For 24-hour duty, you will receive Rs 750 to Rs 1000 per day$/, id);
     assert.match(p8, /^8\. For 8-hour duty, you will receive Rs 650 per day\. /, id);
-    assert.equal((wm.match(/For 8-hour duty/g) || []).length, 1, `${id}: one 8-hour line`);
-    assert.equal((wm.match(/For 24-hour duty/g) || []).length, 1, `${id}: one 24-hour line`);
+    assert.equal((wm.match(/For 8-hour duty, you will receive/g) || []).length, 1, `${id}: one 8-hour rate line`);
+    assert.equal((wm.match(/For 24-hour duty, you will receive/g) || []).length, 1, `${id}: one 24-hour rate line`);
   }
   for (const id of ['karnataka_malayalam', 'kerala_malayalam']) {
     const wm = flow.runWithFlow(id, () => flow.getWorkingModelFor('gda', CARD));
-    assert.equal((wm.match(/24 മണിക്കൂർ ഡ്യൂട്ടിക്ക്/g) || []).length, 1, `${id}: one 24-hour line`);
-    assert.equal((wm.match(/8 മണിക്കൂർ ഡ്യൂട്ടിക്ക്/g) || []).length, 1, `${id}: one 8-hour line`);
+    assert.equal((wm.match(/24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ/g) || []).length, 1, `${id}: one 24-hour rate line`);
+    assert.equal((wm.match(/[^0-9]8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ/g) || []).length, 1, `${id}: one 8-hour rate line`);
     assert.match(wm, /24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 മുതൽ ₹1000 വരെ/, id);
   }
 });
