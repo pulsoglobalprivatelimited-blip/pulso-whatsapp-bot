@@ -2056,7 +2056,12 @@ async function handleQualification(phone, message) {
 
      It also moves the over-50 refusal here, instead of after she has uploaded a
      certificate and answered eight questions. */
-  await updateStatus(phone, STATUS.AWAITING_AGE, 3, { qualification });
+  /* A qualification answer comes before the interest question, so an
+     interestConfirmed left from an earlier chat is stale. +91 80753 53989 said
+     yes on 27 Sep, refused the duties, wrote again on 10 Oct, and the old mark
+     sent her from age straight to sex: no working model, duties, certificate or
+     name, then "Your certificate has been sent for verification". */
+  await updateStatus(phone, STATUS.AWAITING_AGE, 3, { qualification, interestConfirmed: false });
   await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
 }
 
@@ -2196,7 +2201,8 @@ async function handleExpectedDutiesConfirmation(phone, message) {
     await updateProvider(phone, {
       status: STATUS.NOT_INTERESTED_RESTARTABLE,
       currentStep: 6,
-      expectedDutiesAccepted: false
+      expectedDutiesAccepted: false,
+      interestConfirmed: false
     });
     await sendAndLog(phone, 'text', MESSAGES.expectedDutiesDeclined);
     return;
