@@ -68,6 +68,8 @@ const {
 const { isPreOnboardedPhone } = require('./preOnboardedService');
 const {
   getMessageText,
+  getInteractiveReplyId,
+  normalizeText,
   parseRegion,
   parseLanguage,
   parseQualification,
@@ -2563,7 +2565,45 @@ async function handleAdditionalDocument(phone, message) {
   await sendAndLog(phone, 'text', MESSAGES.verificationPending);
 }
 
+/* The joining steps where "താൽപര്यമില്ല" means stop. The two questions that
+   carry that button themselves (interest, expected duties) keep their own
+   replies; everywhere else a tap on it from an earlier message, or typing it,
+   used to be read as an answer — at the name question it became her name. */
+const STOP_ON_NOT_INTERESTED_STATUSES = new Set([
+  STATUS.AWAITING_QUALIFICATION,
+  STATUS.AWAITING_DUTY_HOUR_PREFERENCE,
+  STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE,
+  STATUS.AWAITING_CERTIFICATE,
+  STATUS.AWAITING_NAME,
+  STATUS.AWAITING_AGE,
+  STATUS.AWAITING_SEX,
+  STATUS.AWAITING_DISTRICT,
+  STATUS.AWAITING_DETAILS_CONFIRMATION
+]);
+
+function saysNotInterested(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.INTEREST_NO || replyId === BUTTON_IDS.EXPECTED_DUTIES_NO) return true;
+  if (replyId) return false;
+  const typed = normalizeText(getMessageText(message)).replace(/[.!]+$/, '').trim();
+  return typed === 'താൽപര്യമില്ല' || typed === 'not interested';
+}
+
+async function stopIfNotInterested(phone, provider, message) {
+  if (!provider || !STOP_ON_NOT_INTERESTED_STATUSES.has(provider.status)) return false;
+  if (!saysNotInterested(message)) return false;
+  await updateProvider(phone, { status: STATUS.NOT_INTERESTED_RESTARTABLE, notInterestedAt: new Date().toISOString(), notInterestedAtStatus: provider.status });
+  await appendHistory(phone, { type: 'system', event: 'not_interested_stop', atStatus: provider.status });
+  await sendAndLog(phone, 'text', MESSAGES.notInterested);
+  return true;
+}
+
 async function handleName(phone, message) {
+  // Only a typed name is a name: a tap on any button is asked again.
+  if (getInteractiveReplyId(message)) {
+    await sendAndLog(phone, 'text', MESSAGES.nameTypeOnly);
+    return;
+  }
   const name = getMessageText(message).trim();
   if (!name) {
     await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
@@ -4446,6 +4486,12 @@ async function processIncomingMessage(phone, message) {
 
   if (provider.status === STATUS.NOT_INTERESTED_RESTARTABLE) {
     await startFlow(phone);
+    return;
+  }
+
+  // "താൽപര്യമില്ല" ends the chat wherever she is in joining (founder,
+  // 10 Oct 2026) — tapped on any earlier message, or typed.
+  if (await stopIfNotInterested(phone, provider, message)) {
     return;
   }
 

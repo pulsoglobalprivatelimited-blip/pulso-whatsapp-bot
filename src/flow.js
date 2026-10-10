@@ -294,6 +294,8 @@ const MESSAGES = {
     'Certificate ലഭിച്ചു. കൂടുതൽ image/PDF ഉണ്ടെങ്കിൽ ഇനി അയക്കാം. തുടരണോ?',
   certificateUploadLimitReached:
     'പരമാവധി 4 certificate files ലഭിച്ചു. ഇനി അടുത്ത step-ലേക്ക് പോകുന്നു.',
+  // A tap on an old button at the name question is not a name (10 Oct 2026).
+  nameTypeOnly: 'ദയവായി താങ്കളുടെ പൂർണ്ണ പേര് type ചെയ്യുക.',
   nameQuestion:
     'താങ്കളുടെ പൂർണ്ണ പേര് അയയ്ക്കുക.',
   ageQuestion:
@@ -595,6 +597,7 @@ const ENGLISH_BASE_MESSAGES = {
     'Certificate received. If you have more certificate pages or documents, you can send them now. Do you want to send more files or continue?',
   certificateUploadLimitReached:
     'Maximum 4 certificate files received. Moving to the next step.',
+  nameTypeOnly: 'Please type your full name.',
   nameQuestion: 'Please send your full name.',
   ageQuestion: 'What is your age?',
   basicInviteDeclined: "Okay, thank you. We won't message you about this again.",
