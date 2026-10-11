@@ -17,6 +17,14 @@ function buildProviderSyncPayload(provider) {
     sex: provider.sex || '',
     district: provider.district || '',
     dutyHourPreference: provider.dutyHourPreference || '',
+    // The profile for agencies and families (11 Oct 2026): a height range, a
+    // weight, the consent tap, the full-length photo with its review, and the
+    // answer to the "still available?" wake-up.
+    heightRange: provider.heightRange || '',
+    weightKg: provider.weightKg ?? null,
+    profileConsent: provider.profileConsent || null,
+    profilePhoto: provider.profilePhoto || null,
+    reactivation: provider.reactivation || null,
     status: provider.status || '',
     termsAccepted: provider.termsAccepted === true,
     // The Duty Card question after onboarding: true / false / null (not asked yet).

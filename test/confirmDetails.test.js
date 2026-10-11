@@ -134,7 +134,7 @@ test('the district answer shows the check, and nothing goes to review', async ()
   assert.equal(check.kind, 'buttons');
   assert.equal(
     check.body,
-    '*താങ്കൾ നൽകിയ വിവരങ്ങൾ ഒന്ന് പരിശോധിക്കുക:*\n\nപേര്: Sindhu Sajeev\nവയസ്: 34\nസ്ത്രീ / പുരുഷൻ: സ്ത്രീ\nജില്ല: Ernakulam\nയോഗ്യത: GDA'
+    '*താങ്കൾ നൽകിയ വിവരങ്ങൾ ഒന്ന് പരിശോധിക്കുക:*\n\nപേര്: Sindhu Sajeev\nവയസ്: 34\nസ്ത്രീ / പുരുഷൻ: സ്ത്രീ\nജില്ല: Ernakulam\nയോഗ്യത: GDA\nഉയരം: -\nഭാരം: -'
   );
   assert.deepEqual(check.buttons.map((b) => b.title), ['ശരിയാണ്', 'മാറ്റണം']);
   assert.ok(events(phone).includes('details_check_sent'));
@@ -190,12 +190,12 @@ test('typed ശരിയാണ് counts as Correct; anything else shows the che
 
 // ---- Change -------------------------------------------------------------------
 
-test('Change shows the five fields as a list', async () => {
+test('Change shows the seven fields as a list', async () => {
   const phone = await atCheck();
   await say(phone, tap(BUTTON_IDS.DETAILS_CHANGE));
   const list = lastToHer(phone);
   assert.equal(list.kind, 'list');
-  assert.deepEqual(list.sections[0].rows.map((r) => r.title), ['പേര്', 'വയസ്', 'സ്ത്രീ / പുരുഷൻ', 'ജില്ല', 'യോഗ്യത']);
+  assert.deepEqual(list.sections[0].rows.map((r) => r.title), ['പേര്', 'വയസ്', 'സ്ത്രീ / പുരുഷൻ', 'ജില്ല', 'യോഗ്യത', 'ഉയരം', 'ഭാരം']);
   assert.equal(records.get(phone).status, STATUS.AWAITING_DETAILS_CONFIRMATION);
 });
 
@@ -399,11 +399,11 @@ test('English chat: the same check in English', async () => {
   const check = lastToHer(phone);
   assert.equal(
     check.body,
-    '*Please check your details:*\n\nName: Sindhu Sajeev\nAge: 34\nMale or female: Male\nDistrict: Ernakulam\nQualification: No certificate'
+    '*Please check your details:*\n\nName: Sindhu Sajeev\nAge: 34\nMale or female: Male\nDistrict: Ernakulam\nQualification: No certificate\nHeight: -\nWeight: -'
   );
   assert.deepEqual(check.buttons.map((b) => b.title), ['Correct', 'Change']);
   await say(phone, tap(BUTTON_IDS.DETAILS_CHANGE));
-  assert.deepEqual(lastToHer(phone).sections[0].rows.map((r) => r.title), ['Name', 'Age', 'Male or female', 'District', 'Qualification']);
+  assert.deepEqual(lastToHer(phone).sections[0].rows.map((r) => r.title), ['Name', 'Age', 'Male or female', 'District', 'Qualification', 'Height', 'Weight']);
   await say(phone, row(BUTTON_IDS.DETAILS_EDIT_AGE));
   assert.equal(lastToHer(phone).body, FLOWS.kerala_english.MESSAGES.ageQuestion);
   await say(phone, text('36'));
@@ -424,7 +424,7 @@ test('every flow fits WhatsApp: button ≤20, row ≤24, ≤10 rows, list button
       assert.ok(utf16(list.buttonText) <= 20, `${id} list button: ${list.buttonText}`);
       assert.ok(utf16(list.sections[0].title) <= 24, `${id} section: ${list.sections[0].title}`);
       const rows = list.sections[0].rows;
-      assert.equal(rows.length, 5);
+      assert.equal(rows.length, 7);
       assert.ok(rows.length <= 10);
       for (const r of rows) {
         assert.ok(r.title && utf16(r.title) <= 24, `${id} row: ${r.title}`);

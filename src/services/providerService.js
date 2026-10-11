@@ -39,6 +39,12 @@ async function createProvider(phone) {
     sex: null,
     district: null,
     districtListPage: 1,
+    // The profile for agencies and families (11 Oct 2026).
+    heightRange: null,
+    weightKg: null,
+    profileConsent: null,
+    profilePhoto: null,
+    reactivation: null,
     termsAccepted: false,
     completedAt: null,
     pulsoAppRequired: false,

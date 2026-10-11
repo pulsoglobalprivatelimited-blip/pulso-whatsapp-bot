@@ -14,6 +14,10 @@ const STEPS = {
   9: 'awaiting_name',
   10: 'awaiting_age',
   11: 'awaiting_sex',
+  11.2: 'awaiting_height',
+  11.4: 'awaiting_weight',
+  11.6: 'awaiting_profile_consent',
+  11.8: 'awaiting_profile_photo',
   12: 'awaiting_district',
   13: 'certificate_verification_pending',
   14: 'awaiting_terms_acceptance',
@@ -37,6 +41,12 @@ const STATUS = {
   NOT_INTERESTED_RESTARTABLE: 'not_interested_restartable',
   AWAITING_PULSO_AGENT: 'awaiting_pulso_agent',
   AWAITING_SEX: 'awaiting_sex',
+  // The profile for agencies and families (11 Oct 2026): height as a tapped
+  // range, weight in kg, one consent tap, then the full-length photo.
+  AWAITING_HEIGHT: 'awaiting_height',
+  AWAITING_WEIGHT: 'awaiting_weight',
+  AWAITING_PROFILE_CONSENT: 'awaiting_profile_consent',
+  AWAITING_PROFILE_PHOTO: 'awaiting_profile_photo',
   AWAITING_DISTRICT: 'awaiting_district',
   // After the district, before review: she sees her answers together and taps
   // Correct or Change (docs/confirm_details_before_review_plan.md, 8 Oct 2026).
@@ -81,6 +91,19 @@ const BUTTON_IDS = {
   CONNECT_PULSO_AGENT: 'connect_pulso_agent',
   SEX_MALE: 'sex_male',
   SEX_FEMALE: 'sex_female',
+  // Height is tapped, never typed: "5 3"? "5.3"? cm? was the confusion.
+  HEIGHT_LT_5_0: 'h_lt_5_0',
+  HEIGHT_5_0_5_2: 'h_5_0_5_2',
+  HEIGHT_5_3_5_5: 'h_5_3_5_5',
+  HEIGHT_5_6_5_8: 'h_5_6_5_8',
+  HEIGHT_5_9_5_11: 'h_5_9_5_11',
+  HEIGHT_6_0_PLUS: 'h_6_0_plus',
+  HEIGHT_SKIP: 'height_skip',
+  WEIGHT_SKIP: 'weight_skip',
+  PROFILE_CONSENT_AGREE: 'profile_consent_agree',
+  PROFILE_PHOTO_LATER: 'profile_photo_later',
+  STILL_AVAILABLE_YES: 'still_available_yes',
+  STILL_AVAILABLE_NOT_NOW: 'still_available_not_now',
   // The check after the district: two buttons, then a five-row list.
   DETAILS_CORRECT: 'details_correct',
   DETAILS_CHANGE: 'details_change',
@@ -89,6 +112,8 @@ const BUTTON_IDS = {
   DETAILS_EDIT_SEX: 'details_edit_sex',
   DETAILS_EDIT_DISTRICT: 'details_edit_district',
   DETAILS_EDIT_QUALIFICATION: 'details_edit_qualification',
+  DETAILS_EDIT_HEIGHT: 'details_edit_height',
+  DETAILS_EDIT_WEIGHT: 'details_edit_weight',
   TERMS_ACCEPT: 'terms_accept',
   TERMS_DECLINE: 'terms_decline',
   PULSO_APP_INSTALL_YES: 'pulso_app_install_yes',
@@ -321,6 +346,27 @@ const MESSAGES = {
     'ദയവായി Male അല്ലെങ്കിൽ Female തിരഞ്ഞെടുക്കുക.',
   districtQuestion:
     'താഴെയുള്ള ആദ്യ list-ിൽ നിന്ന് താങ്കളുടെ ജില്ല തിരഞ്ഞെടുക്കുക. ജില്ല കാണുന്നില്ലെങ്കിൽ അടുത്ത list തുറക്കുക.',
+  heightQuestion: 'നിങ്ങളുടെ ഉയരം താഴെയുള്ള list-ൽ നിന്ന് തിരഞ്ഞെടുക്കുക.',
+  heightRetry: 'ഉയരം താഴെയുള്ള list-ൽ നിന്ന് തിരഞ്ഞെടുക്കുക.',
+  weightQuestion: 'നിങ്ങളുടെ ഭാരം എത്ര കിലോ ആണ്? (ഉദാ: 58)',
+  weightRetry: 'ഭാരം കിലോയിൽ ഒരു സംഖ്യയായി അയയ്ക്കുക (ഉദാ: 58).',
+  profileConsentText:
+    'നിങ്ങളെ Pulso വഴി book ചെയ്യുന്ന care agency-ക്കും family-ക്കും നിങ്ങളുടെ full photo, പേര്, യോഗ്യത, വയസ്, ഉയരം, ഭാരം എന്നിവ കാണാം.\n\nസമ്മതമാണെങ്കിൽ താഴെയുള്ള button അമർത്തുക.',
+  profileConsentRetry: 'തുടരാൻ "സമ്മതിക്കുന്നു" button അമർത്തുക.',
+  profilePhotoRequest:
+    'ഇനി നിങ്ങളുടെ ഒരു full photo അയയ്ക്കുക: നിന്നുകൊണ്ട്, തല മുതൽ കാൽ വരെ കാണുന്ന, നല്ല വെളിച്ചത്തിലുള്ള ഫോട്ടോ. മറ്റൊരാളെക്കൊണ്ട് എടുപ്പിക്കുക.\n\nഈ ഫോട്ടോ നിങ്ങളെ book ചെയ്യുന്ന agency-ക്കും family-ക്കും കാണാം.',
+  profilePhotoRetry: 'ദയവായി നിങ്ങളുടെ full photo (തല മുതൽ കാൽ വരെ) ഒരു ഫോട്ടോ ആയി അയയ്ക്കുക. Document, screenshot എന്നിവ സ്വീകരിക്കില്ല.',
+  profilePhotoReceived: 'ഫോട്ടോ കിട്ടി 👍',
+  profilePhotoLater: 'ശരി. Pulso App-ൽ My profile-ൽ നിന്ന് പിന്നീട് ഫോട്ടോ ചേർക്കാം.',
+  profilePhotoAccepted: 'നിങ്ങളുടെ ഫോട്ടോ സ്വീകരിച്ചു 👍 ഇനി agency-ക്കും family-ക്കും നിങ്ങളുടെ profile കാണാം.',
+  profilePhotoRetakeRequest:
+    'ദയവായി ഒരു പുതിയ full photo (തല മുതൽ കാൽ വരെ) അയയ്ക്കുക.\n\nReviewer note: {{note}}',
+  stillAvailableYes:
+    'നല്ലത് 👍 ചില വിവരങ്ങൾ കൂടി ചോദിക്കാം. അതിനു ശേഷം നിങ്ങൾക്ക് duty offers വീണ്ടും ലഭിച്ചു തുടങ്ങും.',
+  stillAvailableYesDone:
+    'നന്ദി. Pulso App-ൽ "Available" switch on ആയി വെക്കുക. Duty offers വീണ്ടും ലഭിക്കും.',
+  stillAvailableNotNow:
+    'ശരി. തയ്യാറാകുമ്പോൾ Pulso App തുറന്ന് "Available" switch on ചെയ്യുക.',
   districtRetry:
     'ദയവായി താഴെയുള്ള list-ിൽ നിന്ന് താങ്കളുടെ ജില്ല തിരഞ്ഞെടുക്കുക.',
   districtListQuestion:
@@ -334,7 +380,9 @@ const MESSAGES = {
     age: 'വയസ്',
     sex: 'സ്ത്രീ / പുരുഷൻ',
     district: 'ജില്ല',
-    qualification: 'യോഗ്യത'
+    qualification: 'യോഗ്യത',
+    height: 'ഉയരം',
+    weight: 'ഭാരം'
   },
   detailsSexValues: { Female: 'സ്ത്രീ', Male: 'പുരുഷൻ' },
   detailsChangeQuestion:
@@ -614,12 +662,31 @@ const ENGLISH_BASE_MESSAGES = {
     'Okay. This application has been closed. If you need help later, you can message us again.',
   sexQuestion: 'Please select your sex.',
   sexRetry: 'Please select Male or Female.',
+  heightQuestion: 'Choose your height from the list below.',
+  heightRetry: 'Please choose your height from the list below.',
+  weightQuestion: 'What is your weight in kg? (e.g. 58)',
+  weightRetry: 'Please send your weight in kg as a number (e.g. 58).',
+  profileConsentText:
+    'I agree that my full-length photo, name, qualification, age, height and weight will be shown to care agencies and families who book me through Pulso.\n\nTap the button below to agree and continue.',
+  profileConsentRetry: 'Please tap "I agree" to continue.',
+  profilePhotoRequest:
+    'Now send one full-length photo of yourself: standing, head to toe, good light. Ask someone to take it.\n\nAgencies and families who book you will see this photo.',
+  profilePhotoRetry: 'Please send a full-length photo of yourself (head to toe) as a photo. Documents and screenshots are not accepted.',
+  profilePhotoReceived: 'Photo received 👍',
+  profilePhotoLater: 'Okay. You can add your photo later from My profile in the Pulso app.',
+  profilePhotoAccepted: 'Your photo has been accepted 👍 Agencies and families can now see your profile.',
+  profilePhotoRetakeRequest: 'Please send a new full-length photo (head to toe).\n\nReviewer note: {{note}}',
+  stillAvailableYes: 'Great 👍 A few more details, and then duty offers will reach you again.',
+  stillAvailableYesDone: 'Thank you. Keep "Available" switched on in the Pulso app. Duty offers will reach you again.',
+  stillAvailableNotNow: 'No problem. When you are ready, open the Pulso app and switch on "Available".',
   districtQuestion:
     'Please select your district from the list below. If your district is not shown, open the next list.',
   districtRetry: 'Please select your district from the list below.',
   districtListQuestion: 'Please select your district from the list below.',
   detailsCheckTitle: '*Please check your details:*',
   detailsCheckLabels: {
+    height: 'Height',
+    weight: 'Weight',
     name: 'Name',
     age: 'Age',
     sex: 'Male or female',
@@ -792,6 +859,11 @@ const UI_TEXT = {
   agencyNoTitle: 'ഇല്ല',
   addDutyNowTitle: 'ഉണ്ട്',
   addDutyLaterTitle: 'പിന്നീട്',
+  heightButtonText: 'ഉയരം തിരഞ്ഞെടുക്കുക',
+  heightSectionTitle: 'ഉയരം',
+  skipTitle: 'ഒഴിവാക്കുക',
+  profileConsentAgreeTitle: 'സമ്മതിക്കുന്നു',
+  profilePhotoLaterTitle: 'പിന്നീട്',
   detailsCorrectTitle: 'ശരിയാണ്',
   detailsChangeTitle: 'മാറ്റണം',
   detailsChangeButtonText: 'തിരഞ്ഞെടുക്കുക',
@@ -832,6 +904,11 @@ const KARNATAKA_UI_TEXT = {
   agencyNoTitle: 'No',
   addDutyNowTitle: 'Yes',
   addDutyLaterTitle: 'Later',
+  heightButtonText: 'Choose height',
+  heightSectionTitle: 'Your height',
+  skipTitle: 'Skip',
+  profileConsentAgreeTitle: 'I agree',
+  profilePhotoLaterTitle: 'Send later',
   detailsCorrectTitle: 'Correct',
   detailsChangeTitle: 'Change',
   detailsChangeButtonText: 'Select',
@@ -1557,10 +1634,29 @@ const ACTIVE_QUALIFICATIONS = createArrayProxy('QUALIFICATIONS');
 const ACTIVE_DISTRICTS = createArrayProxy('DISTRICTS');
 const ACTIVE_UI_TEXT = createObjectProxy('UI_TEXT');
 
+/* The six height ranges, the same keys and words the Pulso server and app
+   use (functions/lib/caregiver_profile.js). Titles stay under WhatsApp's
+   24-character row limit. */
+const HEIGHT_OPTIONS = [
+  { id: BUTTON_IDS.HEIGHT_LT_5_0, title: 'Below 5 ft' },
+  { id: BUTTON_IDS.HEIGHT_5_0_5_2, title: '5 ft 0 in – 5 ft 2 in' },
+  { id: BUTTON_IDS.HEIGHT_5_3_5_5, title: '5 ft 3 in – 5 ft 5 in' },
+  { id: BUTTON_IDS.HEIGHT_5_6_5_8, title: '5 ft 6 in – 5 ft 8 in' },
+  { id: BUTTON_IDS.HEIGHT_5_9_5_11, title: '5 ft 9 in – 5 ft 11 in' },
+  { id: BUTTON_IDS.HEIGHT_6_0_PLUS, title: '6 ft and above' }
+];
+
+function heightLabelFor(key) {
+  const row = HEIGHT_OPTIONS.find((item) => item.id === String(key || '').trim().toLowerCase());
+  return row ? row.title : '';
+}
+
 module.exports = {
   STEPS,
   STATUS,
   BUTTON_IDS,
+  HEIGHT_OPTIONS,
+  heightLabelFor,
   REGION_OPTIONS,
   LANGUAGE_OPTIONS,
   QUALIFICATIONS: ACTIVE_QUALIFICATIONS,

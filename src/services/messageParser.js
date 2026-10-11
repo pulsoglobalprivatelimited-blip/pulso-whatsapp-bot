@@ -230,6 +230,65 @@ function parseSex(message) {
   return null;
 }
 
+/* Height: a tapped row, or 'skip'; a typed figure is not read — that was the
+   confusion the list removes. */
+function parseHeightRange(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.HEIGHT_SKIP) return 'skip';
+  const keys = [
+    BUTTON_IDS.HEIGHT_LT_5_0, BUTTON_IDS.HEIGHT_5_0_5_2, BUTTON_IDS.HEIGHT_5_3_5_5,
+    BUTTON_IDS.HEIGHT_5_6_5_8, BUTTON_IDS.HEIGHT_5_9_5_11, BUTTON_IDS.HEIGHT_6_0_PLUS
+  ];
+  if (keys.includes(replyId)) return replyId;
+  const normalized = normalizeText(getMessageText(message));
+  if (['skip', 'ഒഴിവാക്കുക', 'later'].includes(normalized)) return 'skip';
+  return null;
+}
+
+/* Weight in kg: a whole number between 35 and 150, "58", "58 kg", "58.5". */
+function parseWeightKg(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.WEIGHT_SKIP) return 'skip';
+  const normalized = normalizeText(getMessageText(message));
+  if (['skip', 'ഒഴിവാക്കുക', 'later'].includes(normalized)) return 'skip';
+  const match = normalized.match(/(\d{2,3})(?:[.,]\d+)?/);
+  if (!match) return null;
+  const kg = Number(match[1]);
+  if (kg < 35 || kg > 150) return null;
+  return kg;
+}
+
+function parseProfileConsent(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.PROFILE_CONSENT_AGREE) return true;
+  const normalized = normalizeText(getMessageText(message));
+  return ['i agree', 'agree', 'yes', 'ok', 'okay', 'സമ്മതം', 'സമ്മതിക്കുന്നു', 'sammatham'].includes(normalized) ? true : null;
+}
+
+function parseProfilePhotoAction(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.PROFILE_PHOTO_LATER) return 'later';
+  if (message && message.type === 'image') return 'photo';
+  if (message && ['document', 'video', 'sticker'].includes(message.type)) return 'not_a_photo';
+  const normalized = normalizeText(getMessageText(message));
+  if (['later', 'skip', 'പിന്നീട്', 'pinneed'].includes(normalized)) return 'later';
+  return null;
+}
+
+/* The wake-up: a template quick reply comes back as type 'button' with the
+   payload it was sent with; an in-window tap as an interactive reply. */
+function parseStillAvailable(message) {
+  const replyId =
+    getInteractiveReplyId(message) ||
+    (message && message.type === 'button' && message.button ? message.button.payload : null);
+  if (replyId === BUTTON_IDS.STILL_AVAILABLE_YES) return 'yes';
+  if (replyId === BUTTON_IDS.STILL_AVAILABLE_NOT_NOW) return 'not_now';
+  const normalized = normalizeText(getMessageText(message));
+  if (['yes', 'yes, i am available', 'available', 'ഉണ്ട്', 'undu', 'ok', 'okay'].includes(normalized)) return 'yes';
+  if (['not now', 'no', 'later', 'ഇല്ല', 'illa'].includes(normalized)) return 'not_now';
+  return null;
+}
+
 function parseTermsAcceptance(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId === BUTTON_IDS.CONNECT_PULSO_AGENT) return 'connect_agent';
@@ -413,14 +472,18 @@ const DETAILS_EDIT_BY_ID = {
   [BUTTON_IDS.DETAILS_EDIT_AGE]: 'age',
   [BUTTON_IDS.DETAILS_EDIT_SEX]: 'sex',
   [BUTTON_IDS.DETAILS_EDIT_DISTRICT]: 'district',
-  [BUTTON_IDS.DETAILS_EDIT_QUALIFICATION]: 'qualification'
+  [BUTTON_IDS.DETAILS_EDIT_QUALIFICATION]: 'qualification',
+  [BUTTON_IDS.DETAILS_EDIT_HEIGHT]: 'height',
+  [BUTTON_IDS.DETAILS_EDIT_WEIGHT]: 'weight'
 };
 const DETAILS_EDIT_BY_WORD = {
   'പേര്': 'name', name: 'name',
   'വയസ്': 'age', age: 'age',
   'സ്ത്രീ / പുരുഷൻ': 'sex', 'male or female': 'sex', sex: 'sex',
   'ജില്ല': 'district', district: 'district',
-  'യോഗ്യത': 'qualification', qualification: 'qualification'
+  'യോഗ്യത': 'qualification', qualification: 'qualification',
+  'ഉയരം': 'height', height: 'height',
+  'ഭാരം': 'weight', weight: 'weight'
 };
 
 function parseDetailsCheckAction(message, { typed = true } = {}) {
@@ -441,6 +504,11 @@ function parseDetailsCheckAction(message, { typed = true } = {}) {
 
 module.exports = {
   normalizeText,
+  parseHeightRange,
+  parseWeightKg,
+  parseProfileConsent,
+  parseProfilePhotoAction,
+  parseStillAvailable,
   parseDetailsCheckAction,
   getMessageText,
   getInteractiveReplyId,

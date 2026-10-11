@@ -42,8 +42,63 @@ const REVIEW_ACTIONS = {
   BASIC_REASON_AGE: 'review_basic_reason_age_',
   BASIC_REASON_NO_COURSE: 'review_basic_reason_no_course_',
   BASIC_REASON_BOTH: 'review_basic_reason_both_',
-  CANCEL: 'review_cancel_'
+  CANCEL: 'review_cancel_',
+  // The full-length photo (11 Oct 2026): accept it, or ask for a new one with
+  // a note to the caregiver.
+  PHOTO_ACCEPT: 'review_photo_accept_',
+  PHOTO_RETAKE: 'review_photo_retake_'
 };
+
+const PROFILE_PHOTO_REVIEW_TEMPLATE = process.env.PROFILE_PHOTO_REVIEW_TEMPLATE || 'caregiver_photo_review';
+
+/** Course words for the reviewer's photo alert: the exact course, never a tier. */
+function photoReviewCourseLabel(qualification) {
+  const q = String(qualification || '').trim().toLowerCase();
+  const labels = {
+    gda: 'GDA', gnm: 'GNM', anm: 'ANM', hca: 'HCA', bsc_nursing: 'BSc Nursing',
+    other_caregiving: 'Other caregiving course', basic_caregiver: 'Basic caregiver',
+    no_certificate: 'No certificate', nursing_student: 'Nursing student'
+  };
+  return labels[q] || 'Caregiver';
+}
+
+/**
+ * The full-length photo goes to every certificate reviewer as its own
+ * template: image header, three body lines, two quick replies whose payloads
+ * carry the caregiver's phone. Outside the 24-hour window only a template
+ * delivers, and the reviewer is usually outside it.
+ */
+async function notifyProfilePhotoReview(provider) {
+  const photo = provider && provider.profilePhoto;
+  const link = photo && photo.cloudStorageUrl;
+  const providerPhone = normalizePhone(provider && provider.phone);
+  if (!link || !providerPhone) {
+    return { ok: false, reason: 'photo_without_url', results: [] };
+  }
+  const body = [
+    formatReviewTemplateValue(provider.fullName || 'Caregiver'),
+    formatReviewTemplateValue(photoReviewCourseLabel(provider.qualification)),
+    formatReviewTemplateValue(provider.district || '-')
+  ];
+  const components = [
+    { type: 'header', parameters: [{ type: 'image', image: { link } }] },
+    { type: 'body', parameters: body.map((text) => ({ type: 'text', text })) },
+    { type: 'button', sub_type: 'quick_reply', index: '0', parameters: [{ type: 'payload', payload: `${REVIEW_ACTIONS.PHOTO_ACCEPT}${providerPhone}` }] },
+    { type: 'button', sub_type: 'quick_reply', index: '1', parameters: [{ type: 'payload', payload: `${REVIEW_ACTIONS.PHOTO_RETAKE}${providerPhone}` }] }
+  ];
+  const results = [];
+  for (const to of getReviewerPhones()) {
+    try {
+      const result = await sendTemplate(to, PROFILE_PHOTO_REVIEW_TEMPLATE, 'en', components);
+      results.push({ to, ok: true, result });
+      console.log('[OPS_PHOTO_REVIEW_SENT]', JSON.stringify({ to, providerPhone }));
+    } catch (error) {
+      results.push({ to, ok: false, error: error.message });
+      console.error('[OPS_PHOTO_REVIEW_ERROR]', JSON.stringify({ to, providerPhone, message: error.message, response: error.response ? error.response.data : null }));
+    }
+  }
+  return { ok: results.some((r) => r.ok), results };
+}
 
 /* Why an approval is on the Basic rate. Three buttons rather than a list,
    because WhatsApp allows three and "Both" covers the only combination there
@@ -1728,6 +1783,13 @@ function parseReviewerAction(message) {
     };
   }
 
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.PHOTO_ACCEPT)) {
+    return { action: 'photo_accept', phone: interactiveReplyId.slice(REVIEW_ACTIONS.PHOTO_ACCEPT.length) };
+  }
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.PHOTO_RETAKE)) {
+    return { action: 'photo_retake', phone: interactiveReplyId.slice(REVIEW_ACTIONS.PHOTO_RETAKE.length) };
+  }
+
   if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.APPROVE)) {
     return {
       action: 'approve',
@@ -1890,6 +1952,8 @@ module.exports = {
   notifyCertificateReviewed,
   notifyOnboardingCompleted,
   parseReviewerAction,
+  notifyProfilePhotoReview,
+  photoReviewCourseLabel,
   promptAdditionalDocumentNoteEntry,
   promptRejectNoteEntry,
   requestAdditionalDocumentConfirmation,

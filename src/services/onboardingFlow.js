@@ -22,7 +22,9 @@ const {
   getTermsRateFor,
   UI_TEXT,
   getFlowConfig,
-  runWithProviderFlow
+  runWithProviderFlow,
+  HEIGHT_OPTIONS,
+  heightLabelFor
 } = require('../flow');
 const { sendText, sendButtons, sendList, sendTemplate, sendVideoById } = require('./metaClient');
 const { getHubAppActivation } = require('./hubAppActivationService');
@@ -53,6 +55,7 @@ const {
   notifyAdditionalDocumentRequested,
   notifyAdditionalDocumentUploaded,
   parseReviewerAction,
+  notifyProfilePhotoReview,
   notifyCertificateUploaded,
   notifyCertificateReviewed,
   notifyOnboardingCompleted,
@@ -96,6 +99,11 @@ const {
   parseTermsReminderResume,
   parseCertificateCollectionAction,
   parseDetailsCheckAction,
+  parseHeightRange,
+  parseWeightKg,
+  parseProfileConsent,
+  parseProfilePhotoAction,
+  parseStillAvailable,
   classifyDocument
 } = require('./messageParser');
 const { archiveIncomingMedia, uploadBufferToFirebaseStorage } = require('./mediaStorage');
@@ -277,6 +285,10 @@ function getStepForStatus(status) {
     [STATUS.AWAITING_NAME]: 9,
     [STATUS.AWAITING_AGE]: 10,
     [STATUS.AWAITING_SEX]: 11,
+    [STATUS.AWAITING_HEIGHT]: 11.2,
+    [STATUS.AWAITING_WEIGHT]: 11.4,
+    [STATUS.AWAITING_PROFILE_CONSENT]: 11.6,
+    [STATUS.AWAITING_PROFILE_PHOTO]: 11.8,
     [STATUS.AWAITING_DISTRICT]: 12,
     [STATUS.AWAITING_DETAILS_CONFIRMATION]: 13,
     [STATUS.VERIFICATION_PENDING]: 13,
@@ -554,6 +566,299 @@ async function sendSexButtons(phone) {
       { id: BUTTON_IDS.SEX_FEMALE, title: 'Female' }
     ]
   });
+}
+
+// ---- The profile for agencies and families (11 Oct 2026) -----------------
+// Four short steps after the sex: height (a tapped range), weight (kg), the
+// consent tap, the full-length photo. Each has a way past it except the
+// consent, which is part of joining.
+
+async function sendHeightList(phone) {
+  await sendAndLog(phone, 'list', {
+    body: MESSAGES.heightQuestion,
+    buttonText: UI_TEXT.heightButtonText,
+    sections: [
+      {
+        title: UI_TEXT.heightSectionTitle,
+        rows: [...HEIGHT_OPTIONS, { id: BUTTON_IDS.HEIGHT_SKIP, title: UI_TEXT.skipTitle }]
+      }
+    ]
+  });
+}
+
+async function sendWeightQuestion(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.weightQuestion,
+    buttons: [{ id: BUTTON_IDS.WEIGHT_SKIP, title: UI_TEXT.skipTitle }]
+  });
+}
+
+async function sendProfileConsent(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.profileConsentText,
+    buttons: [{ id: BUTTON_IDS.PROFILE_CONSENT_AGREE, title: UI_TEXT.profileConsentAgreeTitle }]
+  });
+}
+
+async function sendProfilePhotoRequest(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.profilePhotoRequest,
+    buttons: [{ id: BUTTON_IDS.PROFILE_PHOTO_LATER, title: UI_TEXT.profilePhotoLaterTitle }]
+  });
+}
+
+/* Where she goes after the photo step: the district if we have none, else
+   straight to the details check (a wake-up walk already knows her district). */
+async function continueAfterProfilePhoto(phone) {
+  const provider = await getProvider(phone);
+  if (provider && provider.district) {
+    await sendDetailsCheck(phone, null, { first: true, patch: {} });
+    return;
+  }
+  await updateStatus(phone, STATUS.AWAITING_DISTRICT, 12, { districtListPage: 1 });
+  await sendDistrictList(phone);
+}
+
+async function handleHeight(phone, message) {
+  const picked = parseHeightRange(message);
+  if (!picked) {
+    await sendAndLog(phone, 'text', MESSAGES.heightRetry);
+    await sendHeightList(phone);
+    return;
+  }
+  const heightRange = picked === 'skip' ? null : picked;
+  const editing = await detailsEditFor(phone, 'height');
+  if (editing) {
+    await applyDetailsEdit(phone, editing, 'height', editing.heightRange, heightRange, { heightRange });
+    await sendDetailsCheck(phone);
+    return;
+  }
+  await updateStatus(phone, STATUS.AWAITING_WEIGHT, 11.4, { heightRange });
+  await sendWeightQuestion(phone);
+}
+
+async function handleWeight(phone, message) {
+  const picked = parseWeightKg(message);
+  if (!picked) {
+    await sendAndLog(phone, 'text', MESSAGES.weightRetry);
+    await sendWeightQuestion(phone);
+    return;
+  }
+  const weightKg = picked === 'skip' ? null : picked;
+  const editing = await detailsEditFor(phone, 'weight');
+  if (editing) {
+    await applyDetailsEdit(phone, editing, 'weight', editing.weightKg, weightKg, { weightKg });
+    await sendDetailsCheck(phone);
+    return;
+  }
+  const provider = await getProvider(phone);
+  if (provider && provider.profileConsent && provider.profileConsent.acceptedAt) {
+    // Consent already given (a second walk): straight to the photo, or past it.
+    await updateProvider(phone, { weightKg });
+    await continueAfterConsent(phone);
+    return;
+  }
+  await updateStatus(phone, STATUS.AWAITING_PROFILE_CONSENT, 11.6, { weightKg });
+  await sendProfileConsent(phone);
+}
+
+async function continueAfterConsent(phone) {
+  const provider = await getProvider(phone);
+  const photo = provider && provider.profilePhoto;
+  if (photo && ['pending', 'accepted'].includes(photo.status)) {
+    await continueAfterProfilePhoto(phone);
+    return;
+  }
+  await updateStatus(phone, STATUS.AWAITING_PROFILE_PHOTO, 11.8, {});
+  await sendProfilePhotoRequest(phone);
+}
+
+async function handleProfileConsent(phone, message) {
+  if (!parseProfileConsent(message)) {
+    await sendAndLog(phone, 'text', MESSAGES.profileConsentRetry);
+    await sendProfileConsent(phone);
+    return;
+  }
+  await updateProvider(phone, {
+    profileConsent: { version: 'profile_sharing_v1', acceptedAt: new Date().toISOString(), source: 'whatsapp' }
+  });
+  await appendHistory(phone, { type: 'system', event: 'profile_consent_given' });
+  await continueAfterConsent(phone);
+}
+
+/* A photo that reaches the archive is 'pending' for the reviewer; the record
+   keeps the archive link (signed until 2035), which the server shows once
+   the reviewer accepts. `retake` is a new photo after the reviewer asked for
+   one; it is re-alerted at once because the review has already happened. */
+async function handleProfilePhoto(phone, message, { retake = false } = {}) {
+  const action = parseProfilePhotoAction(message);
+  if (action === 'later' && !retake) {
+    await appendHistory(phone, { type: 'system', event: 'profile_photo_deferred' });
+    await sendAndLog(phone, 'text', MESSAGES.profilePhotoLater);
+    await continueAfterProfilePhoto(phone);
+    return;
+  }
+  if (action !== 'photo') {
+    await sendAndLog(phone, 'text', MESSAGES.profilePhotoRetry);
+    if (!retake) await sendProfilePhotoRequest(phone);
+    return;
+  }
+  const attachment = await archiveIncomingMedia(phone, message, 'profile_photo');
+  if (!attachment) {
+    await sendAndLog(phone, 'text', MESSAGES.profilePhotoRetry);
+    return;
+  }
+  await updateProvider(phone, {
+    profilePhoto: {
+      status: 'pending',
+      source: 'whatsapp',
+      mediaId: attachment.id || null,
+      fileName: attachment.fileName || null,
+      cloudObjectPath: attachment.cloudObjectPath || null,
+      cloudStorageUrl: attachment.cloudStorageUrl || null,
+      submittedAt: new Date().toISOString(),
+      reviewedAt: null,
+      reviewedBy: null,
+      note: ''
+    }
+  });
+  await appendHistory(phone, { type: 'system', event: retake ? 'profile_photo_resent' : 'profile_photo_received' });
+  await sendAndLog(phone, 'text', MESSAGES.profilePhotoReceived);
+  if (retake) {
+    const refreshed = await getProvider(phone);
+    await notifyProfilePhotoReview(refreshed);
+    await syncProviderToPulsoHub(refreshed);
+    return;
+  }
+  await continueAfterProfilePhoto(phone);
+}
+
+/* A full-length photo uploaded in the Pulso app. The server stores the file
+   and tells the bot, which keeps the review in one place: the same reviewer,
+   the same two buttons. The link is the server's own, signed for a week. */
+async function handleProfilePhotoFromApp({ phone, uid, photoUrl, fullName, qualification, district } = {}) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (!digits || !photoUrl) throw new Error('phone and photoUrl are required');
+  const existing = await getOrCreateProvider(digits);
+  await updateProvider(digits, {
+    fullName: existing.fullName || fullName || null,
+    qualification: existing.qualification || qualification || null,
+    district: existing.district || district || null,
+    appUid: existing.appUid || uid || '',
+    profilePhoto: {
+      status: 'pending',
+      source: 'app',
+      mediaId: null,
+      fileName: 'profile_full.jpg',
+      cloudObjectPath: null,
+      cloudStorageUrl: String(photoUrl),
+      submittedAt: new Date().toISOString(),
+      reviewedAt: null,
+      reviewedBy: null,
+      note: ''
+    }
+  });
+  await appendHistory(digits, { type: 'system', event: 'profile_photo_received', source: 'app' });
+  const provider = await getProvider(digits);
+  const alert = await notifyProfilePhotoReview(provider);
+  await appendHistory(digits, { type: 'system', event: 'profile_photo_review_sent', ok: alert.ok, source: 'app' });
+  return { ok: alert.ok, alerted: alert.results.filter((r) => r.ok).length };
+}
+
+// ---- The wake-up for caregivers who never took a duty (11 Oct 2026) ------
+// One template, two buttons. "Yes" walks her through what the old app form
+// never asked — the course and certificate, height, weight, the consent and
+// the photo — and sends it for review. "Not now" pauses her on the server.
+
+const REACTIVATION_STAGE = 'awaiting_still_available';
+const STILL_AVAILABLE_TEMPLATE = process.env.STILL_AVAILABLE_TEMPLATE || 'caregiver_still_available';
+
+async function runStillAvailableForInactiveProviders(targets = [], { dryRun = false, limit = 0 } = {}) {
+  let rows = Array.isArray(targets) ? targets.filter((t) => t && t.phone) : [];
+  if (limit > 0) rows = rows.slice(0, limit);
+  if (dryRun) {
+    return { eligible: rows.length, dryRun: true, phones: rows.map((r) => r.phone) };
+  }
+  const results = [];
+  for (const row of rows) {
+    const phone = String(row.phone).replace(/\D/g, '');
+    try {
+      const existing = await getOrCreateProvider(phone);
+      // A caregiver from the old app form has no bot record of her own: the
+      // hub's mirror is copied in so the walk asks only what is missing.
+      const patch = {
+        status: STATUS.COMPLETED,
+        currentStep: 15,
+        termsAccepted: true,
+        completedAt: existing.completedAt || row.completedAt || new Date().toISOString(),
+        source: existing.source === 'meta_ads_whatsapp' && row.source ? row.source : existing.source,
+        fullName: existing.fullName || row.fullName || null,
+        age: existing.age || row.age || null,
+        sex: existing.sex || row.sex || null,
+        district: existing.district || row.district || null,
+        qualification: existing.qualification || row.qualification || null,
+        appUid: existing.appUid || row.uid || '',
+        reactivation: { askedAt: new Date().toISOString(), answer: '', answeredAt: null, source: 'wake_up_oct2026' },
+        pulsoAppPromptStage: REACTIVATION_STAGE,
+        mobileAppCampaignStage: REACTIVATION_STAGE
+      };
+      await updateProvider(phone, patch);
+      const provider = await getProvider(phone);
+      await runWithProviderFlow(provider, async () => {
+        const firstName = String(provider.fullName || '').trim().split(/\s+/)[0] || 'Caregiver';
+        await sendAndLog(phone, 'template', {
+          name: STILL_AVAILABLE_TEMPLATE,
+          languageCode: 'en',
+          components: [
+            { type: 'body', parameters: [{ type: 'text', text: firstName.slice(0, 60) }] },
+            { type: 'button', sub_type: 'quick_reply', index: '0', parameters: [{ type: 'payload', payload: BUTTON_IDS.STILL_AVAILABLE_YES }] },
+            { type: 'button', sub_type: 'quick_reply', index: '1', parameters: [{ type: 'payload', payload: BUTTON_IDS.STILL_AVAILABLE_NOT_NOW }] }
+          ]
+        }, 'bot');
+        await appendHistory(phone, { type: 'system', event: 'still_available_sent', source: 'wake_up_oct2026' });
+      });
+      results.push({ phone, sent: true });
+    } catch (error) {
+      results.push({ phone, sent: false, error: error.message || 'send_failed' });
+      console.error('[STILL_AVAILABLE_ERROR]', phone, error.message, error.response ? JSON.stringify(error.response.data) : '');
+    }
+  }
+  return { eligible: rows.length, sent: results.filter((r) => r.sent).length, failed: results.filter((r) => !r.sent).length, results };
+}
+
+async function handleStillAvailable(phone, message) {
+  const answer = parseStillAvailable(message);
+  const provider = await getProvider(phone);
+  if (!answer) {
+    // Anything else while the question is open: ask again with the buttons.
+    await sendAndLog(phone, 'buttons', {
+      body: MESSAGES.stillAvailableNotNow.split('.')[0] ? 'Are you still available for duties?' : 'Are you still available for duties?',
+      buttons: [
+        { id: BUTTON_IDS.STILL_AVAILABLE_YES, title: 'Yes, available' },
+        { id: BUTTON_IDS.STILL_AVAILABLE_NOT_NOW, title: 'Not now' }
+      ]
+    });
+    return;
+  }
+  const reactivation = { ...((provider && provider.reactivation) || {}), answer, answeredAt: new Date().toISOString() };
+  if (answer === 'not_now') {
+    await updateProvider(phone, { reactivation, pulsoAppPromptStage: null, mobileAppCampaignStage: null });
+    await appendHistory(phone, { type: 'system', event: 'still_available_not_now' });
+    await sendAndLog(phone, 'text', MESSAGES.stillAvailableNotNow);
+    await syncProviderToPulsoHub(await getProvider(phone));
+    return;
+  }
+  await updateProvider(phone, { reactivation, pulsoAppPromptStage: null, mobileAppCampaignStage: null, reactivationFlow: true });
+  await appendHistory(phone, { type: 'system', event: 'still_available_yes' });
+  await sendAndLog(phone, 'text', MESSAGES.stillAvailableYes);
+  await syncProviderToPulsoHub(await getProvider(phone));
+  if (!provider.qualification) {
+    await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2, {});
+    await sendQualificationList(phone);
+    return;
+  }
+  await updateStatus(phone, STATUS.AWAITING_HEIGHT, 11.2, {});
+  await sendHeightList(phone);
 }
 
 async function sendDutyHourPreferenceButtons(phone) {
@@ -1980,6 +2285,18 @@ async function sendPromptForCurrentStatus(phone, provider) {
     case STATUS.AWAITING_SEX:
       await sendSexButtons(phone);
       return;
+    case STATUS.AWAITING_HEIGHT:
+      await sendHeightList(phone);
+      return;
+    case STATUS.AWAITING_WEIGHT:
+      await sendWeightQuestion(phone);
+      return;
+    case STATUS.AWAITING_PROFILE_CONSENT:
+      await sendProfileConsent(phone);
+      return;
+    case STATUS.AWAITING_PROFILE_PHOTO:
+      await sendProfilePhotoRequest(phone);
+      return;
     case STATUS.AWAITING_DISTRICT:
       await sendDistrictList(phone);
       return;
@@ -2061,6 +2378,20 @@ async function handleQualification(phone, message) {
      yes on 27 Sep, refused the duties, wrote again on 10 Oct, and the old mark
      sent her from age straight to sex: no working model, duties, certificate or
      name, then "Your certificate has been sent for verification". */
+  const walking = await getProvider(phone);
+  if (walking && walking.reactivationFlow === true) {
+    // The wake-up walk (11 Oct 2026): she joined through the old app form
+    // and already works the model; only the paper and the profile are missing.
+    if (qualification === 'no_certificate') {
+      await updateStatus(phone, STATUS.AWAITING_HEIGHT, 11.2, { qualification });
+      await sendHeightList(phone);
+      return;
+    }
+    await updateStatus(phone, STATUS.AWAITING_CERTIFICATE, 8, { qualification });
+    await sendAndLog(phone, 'text', buildCertificateRequestMessage({ ...walking, qualification }));
+    return;
+  }
+
   await updateStatus(phone, STATUS.AWAITING_AGE, 3, { qualification, interestConfirmed: false });
   await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
 }
@@ -2300,6 +2631,14 @@ async function finalizeCertificateCollection(phone) {
   // back to the check, not on to the name.
   if (provider && provider.detailsEditing === 'qualification') {
     await sendDetailsCheck(phone, null, { patch: {} });
+    return;
+  }
+
+  if (provider && provider.reactivationFlow === true) {
+    // The wake-up walk: her name, age, sex and district are known from the
+    // old app form, so the certificate is followed by the profile steps.
+    await updateStatus(phone, STATUS.AWAITING_HEIGHT, 11.2, {});
+    await sendHeightList(phone);
     return;
   }
 
@@ -2843,8 +3182,8 @@ async function handleSex(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_DISTRICT, 12, { sex, districtListPage: 1 });
-  await sendDistrictList(phone);
+  await updateStatus(phone, STATUS.AWAITING_HEIGHT, 11.2, { sex });
+  await sendHeightList(phone);
 }
 
 async function handleDistrict(phone, message) {
@@ -2903,11 +3242,13 @@ function verificationPendingMessageFor(provider) {
 // together and taps Correct or Change, before anything goes to review. A
 // typo, a wrong age or a wrong district used to reach the reviewer as it was.
 
-const DETAILS_FIELDS = ['name', 'age', 'sex', 'district', 'qualification'];
+const DETAILS_FIELDS = ['name', 'age', 'sex', 'district', 'qualification', 'height', 'weight'];
 const DETAILS_EDIT_ROW_IDS = {
   name: BUTTON_IDS.DETAILS_EDIT_NAME,
   age: BUTTON_IDS.DETAILS_EDIT_AGE,
   sex: BUTTON_IDS.DETAILS_EDIT_SEX,
+  height: BUTTON_IDS.DETAILS_EDIT_HEIGHT,
+  weight: BUTTON_IDS.DETAILS_EDIT_WEIGHT,
   district: BUTTON_IDS.DETAILS_EDIT_DISTRICT,
   qualification: BUTTON_IDS.DETAILS_EDIT_QUALIFICATION
 };
@@ -2942,7 +3283,9 @@ function buildDetailsCheckBody(provider, prefix = null) {
     `${labels.age}: ${p.age || '-'}`,
     `${labels.sex}: ${(p.sex && sexValues[p.sex]) || p.sex || '-'}`,
     `${labels.district}: ${p.district || '-'}`,
-    `${labels.qualification}: ${qualificationLabelFor(p.qualification)}`
+    `${labels.qualification}: ${qualificationLabelFor(p.qualification)}`,
+    `${labels.height || 'Height'}: ${heightLabelFor(p.heightRange) || '-'}`,
+    `${labels.weight || 'Weight'}: ${p.weightKg ? `${p.weightKg} kg` : '-'}`
   ];
   return prefix ? `${prefix}\n\n${lines.join('\n')}` : lines.join('\n');
 }
@@ -3016,6 +3359,12 @@ async function sendDetailsEditQuestion(phone, field) {
       return;
     case 'qualification':
       await sendQualificationList(phone);
+      return;
+    case 'height':
+      await sendHeightList(phone);
+      return;
+    case 'weight':
+      await sendWeightQuestion(phone);
       return;
     default:
       await sendDetailsCheck(phone);
@@ -3151,6 +3500,12 @@ async function routeDetailsEdit(phone, field, message) {
     case 'qualification':
       await handleQualification(phone, message);
       return;
+    case 'height':
+      await handleHeight(phone, message);
+      return;
+    case 'weight':
+      await handleWeight(phone, message);
+      return;
     default:
       await sendDetailsCheck(phone);
   }
@@ -3254,6 +3609,12 @@ async function sendForReview(phone, options = {}) {
       });
     }
     await recordReviewAlertSend(phone, notificationPatch);
+    if (updatedProvider && updatedProvider.profilePhoto && updatedProvider.profilePhoto.status === 'pending') {
+      // The full-length photo rides with the certificate: its own alert, so
+      // the reviewer accepts it or asks for another in the same sitting.
+      const photoAlert = await notifyProfilePhotoReview(updatedProvider);
+      await appendHistory(phone, { type: 'system', event: 'profile_photo_review_sent', ok: photoAlert.ok });
+    }
     await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
     if (!options.silent) {
       await sendAndLog(phone, 'text', verificationPendingMessageFor(updatedProvider));
@@ -3611,6 +3972,10 @@ async function sendPulsoAppPendingOptions(phone) {
 async function handleCompleted(phone, message) {
   const provider = await getProvider(phone);
   const mobileAppStage = provider && (provider.mobileAppCampaignStage || provider.pulsoAppPromptStage);
+  if (mobileAppStage === REACTIVATION_STAGE) {
+    await handleStillAvailable(phone, message);
+    return;
+  }
   if (mobileAppStage === MOBILE_APP_STAGE_AGENCY_QUESTION) {
     await handleAgencyQuestion(phone, message);
     return;
@@ -4015,7 +4380,66 @@ async function handleReviewerMessage(phone, message) {
   }
   const providerPhone = reviewAction && reviewAction.phone ? reviewAction.phone : null;
 
+  if (reviewAction && (reviewAction.action === 'photo_accept' || reviewAction.action === 'photo_retake')) {
+    const target = await getProvider(providerPhone);
+    if (!target || !target.profilePhoto) {
+      await sendText(phone, `No photo is waiting for review for ${providerPhone}.`);
+      return;
+    }
+    if (reviewAction.action === 'photo_accept') {
+      await updateProvider(providerPhone, {
+        profilePhoto: { ...target.profilePhoto, status: 'accepted', reviewedAt: new Date().toISOString(), reviewedBy: phone, note: '' }
+      });
+      await appendHistory(providerPhone, { type: 'system', event: 'profile_photo_accepted', reviewedBy: phone });
+      const accepted = await getProvider(providerPhone);
+      await syncProviderToPulsoHub(accepted);
+      await runWithProviderFlow(accepted, async () => {
+        await sendAndLog(providerPhone, 'text', MESSAGES.profilePhotoAccepted, phone);
+      });
+      await sendText(phone, `Photo accepted for ${accepted.fullName || providerPhone}.`);
+      return;
+    }
+    await updateProvider(
+      providerPhone,
+      buildReviewerWorkflowPatch(target.verification && target.verification.reviewerWorkflow, {
+        stage: 'awaiting_photo_note',
+        reviewerPhone: phone
+      })
+    );
+    await sendText(phone, `Type a short note for ${target.fullName || providerPhone} (e.g. "Stand straight, full body, in daylight"). It goes to the caregiver with the request for a new photo.`);
+    return;
+  }
+
   if (reviewAction && reviewAction.action === 'note_text') {
+    const photoNoteProviders = await listReviewerWorkflowProviders(phone);
+    const photoNoteProvider = photoNoteProviders.find(
+      (candidate) =>
+        candidate &&
+        candidate.verification &&
+        candidate.verification.reviewerWorkflow &&
+        candidate.verification.reviewerWorkflow.reviewerPhone === phone &&
+        candidate.verification.reviewerWorkflow.stage === 'awaiting_photo_note'
+    );
+    if (photoNoteProvider) {
+      const note = (reviewAction.note || '').trim();
+      if (!note) {
+        await sendText(phone, 'Please send a non-empty note.');
+        return;
+      }
+      await updateProvider(photoNoteProvider.phone, {
+        profilePhoto: { ...(photoNoteProvider.profilePhoto || {}), status: 'retake', reviewedAt: new Date().toISOString(), reviewedBy: phone, note },
+        ...buildReviewerWorkflowPatch(photoNoteProvider.verification.reviewerWorkflow, null)
+      });
+      await appendHistory(photoNoteProvider.phone, { type: 'system', event: 'profile_photo_retake_requested', reviewedBy: phone, note });
+      const asked = await getProvider(photoNoteProvider.phone);
+      await syncProviderToPulsoHub(asked);
+      await runWithProviderFlow(asked, async () => {
+        await sendAndLog(photoNoteProvider.phone, 'text', MESSAGES.profilePhotoRetakeRequest.replace('{{note}}', note), phone);
+      });
+      await sendText(phone, `Asked ${asked.fullName || photoNoteProvider.phone} for a new photo.`);
+      return;
+    }
+
     const candidates = await listReviewerWorkflowProviders(phone);
     const pendingProvider = candidates.find(
       (candidate) =>
@@ -4510,6 +4934,13 @@ async function processIncomingMessage(phone, message) {
     return;
   }
 
+  // The reviewer asked for a new full-length photo: the next photo she sends
+  // is that photo, wherever she is in the chat.
+  if (message && message.type === 'image' && provider.profilePhoto && provider.profilePhoto.status === 'retake') {
+    await handleProfilePhoto(phone, message, { retake: true });
+    return;
+  }
+
   if (provider.status === STATUS.AWAITING_PULSO_AGENT) {
     if (canRequestAgentHelp(provider)) {
       await handleAgentHelpRequest(phone);
@@ -4553,6 +4984,18 @@ async function processIncomingMessage(phone, message) {
       return;
     case STATUS.AWAITING_SEX:
       await handleSex(phone, message);
+      return;
+    case STATUS.AWAITING_HEIGHT:
+      await handleHeight(phone, message);
+      return;
+    case STATUS.AWAITING_WEIGHT:
+      await handleWeight(phone, message);
+      return;
+    case STATUS.AWAITING_PROFILE_CONSENT:
+      await handleProfileConsent(phone, message);
+      return;
+    case STATUS.AWAITING_PROFILE_PHOTO:
+      await handleProfilePhoto(phone, message);
       return;
     case STATUS.AWAITING_DISTRICT:
       await handleDistrict(phone, message);
@@ -4890,6 +5333,8 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
 }
 
 module.exports = {
+  runStillAvailableForInactiveProviders,
+  handleProfilePhotoFromApp,
   markNeedsCall,
   rejectCallReviewApplicant,
   // Exported for the certificate-wording test.
