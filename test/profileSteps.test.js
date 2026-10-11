@@ -10,6 +10,7 @@ const path = require('path');
 
 const OWNER = '919446600809';
 process.env.WHATSAPP_DRY_RUN = 'true';
+process.env.PROFILE_PHOTO_STEP_ENABLED = 'true';
 process.env.OWNER_NOTIFICATION_PHONE = OWNER;
 process.env.AGENT_HELP_WHATSAPP_NUMBER = OWNER;
 process.env.PUBLIC_BASE_URL = 'https://whatsapp.pulso.co.in';

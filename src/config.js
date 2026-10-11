@@ -105,6 +105,10 @@ module.exports = {
   // Duty broadcast to Basic caregivers (4 Oct 2026). Answers go to this ONE
   // number and nowhere else. Off until Meta approves the templates.
   dutyBroadcastEnabled: process.env.DUTY_BROADCAST_ENABLED === 'true',
+  // The full-length photo step in onboarding (11 Oct 2026). Off for now at the
+  // founder's word: consent, height and weight are still asked; the photo comes
+  // from the app. A reviewer's "new photo" request still works either way.
+  profilePhotoStepEnabled: process.env.PROFILE_PHOTO_STEP_ENABLED === 'true',
   dutyInterestPhone: process.env.DUTY_INTEREST_PHONE || '918714105333',
   dutyOfferTemplateName: process.env.DUTY_OFFER_TEMPLATE_NAME || 'basic_duty_offer',
   dutyInterestTemplateName: process.env.DUTY_INTEREST_TEMPLATE_NAME || 'duty_interest_ops',

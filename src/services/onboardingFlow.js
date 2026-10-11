@@ -665,7 +665,7 @@ async function handleWeight(phone, message) {
 async function continueAfterConsent(phone) {
   const provider = await getProvider(phone);
   const photo = provider && provider.profilePhoto;
-  if (photo && ['pending', 'accepted'].includes(photo.status)) {
+  if (!config.profilePhotoStepEnabled || (photo && ['pending', 'accepted'].includes(photo.status))) {
     await continueAfterProfilePhoto(phone);
     return;
   }
@@ -2329,6 +2329,10 @@ async function sendPromptForCurrentStatus(phone, provider) {
       await sendProfileConsent(phone);
       return;
     case STATUS.AWAITING_PROFILE_PHOTO:
+      if (!config.profilePhotoStepEnabled) {
+        await continueAfterProfilePhoto(phone);
+        return;
+      }
       await sendProfilePhotoRequest(phone);
       return;
     case STATUS.AWAITING_DISTRICT:
@@ -5034,6 +5038,11 @@ async function processIncomingMessage(phone, message) {
       await handleProfileConsent(phone, message);
       return;
     case STATUS.AWAITING_PROFILE_PHOTO:
+      if (!config.profilePhotoStepEnabled) {
+        // Switched off while she was parked here: whatever she sent, move on.
+        await continueAfterProfilePhoto(phone);
+        return;
+      }
       await handleProfilePhoto(phone, message);
       return;
     case STATUS.AWAITING_DISTRICT:
