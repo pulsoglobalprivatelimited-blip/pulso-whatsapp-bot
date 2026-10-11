@@ -852,6 +852,18 @@ async function handleStillAvailable(phone, message) {
   await appendHistory(phone, { type: 'system', event: 'still_available_yes' });
   await sendAndLog(phone, 'text', MESSAGES.stillAvailableYes);
   await syncProviderToPulsoHub(await getProvider(phone));
+  await continueReactivationWalk(phone);
+}
+
+/* The next missing answer on the wake-up walk: age (the old app form never
+   asked it), then the course, then the profile steps. */
+async function continueReactivationWalk(phone) {
+  const provider = await getProvider(phone);
+  if (!provider.age) {
+    await updateStatus(phone, STATUS.AWAITING_AGE, 10, {});
+    await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
+    return;
+  }
   if (!provider.qualification) {
     await updateStatus(phone, STATUS.AWAITING_QUALIFICATION, 2, {});
     await sendQualificationList(phone);
@@ -3026,6 +3038,11 @@ async function handleAge(phone, message) {
      carry on to sex as before; everyone else is at the new early position and
      goes on to the rates. */
   const asked = await getProvider(phone);
+  if (asked && asked.reactivationFlow === true) {
+    await updateProvider(phone, { age });
+    await continueReactivationWalk(phone);
+    return;
+  }
   if (asked && asked.interestConfirmed) {
     await updateStatus(phone, STATUS.AWAITING_SEX, 11, { age });
     await sendSexButtons(phone);

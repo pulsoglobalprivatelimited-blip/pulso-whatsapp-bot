@@ -293,7 +293,7 @@ test('the wake-up: one template with two buttons; Not now pauses, Yes walks the 
   sent.length = 0;
   const result = await bot.runStillAvailableForInactiveProviders([
     { phone: '919000008801', fullName: 'Adarsh.pt', sex: 'Male', age: 26, district: 'Kozhikode', qualification: '', uid: 'u1', completedAt: '2026-05-02T00:00:00Z', source: 'app_activation' },
-    { phone: '919000008802', fullName: 'Rinsha M', sex: 'Female', age: 23, district: 'Malappuram', qualification: '', uid: 'u2' }
+    { phone: '919000008802', fullName: 'Rinsha M', sex: 'Female', age: null, district: 'Malappuram', qualification: '', uid: 'u2' }
   ]);
   assert.equal(result.sent, 2);
   const t = sent.find((m) => m.to === '919000008801' && m.kind === 'template');
@@ -321,6 +321,10 @@ test('the wake-up: one template with two buttons; Not now pauses, Yes walks the 
   let p2 = records.get('919000008802');
   assert.equal(p2.reactivation.answer, 'yes');
   assert.equal(p2.reactivationFlow, true);
+  assert.equal(p2.status, STATUS.AWAITING_AGE, 'the old app form never asked her age');
+  await say('919000008802', text('23'));
+  p2 = records.get('919000008802');
+  assert.equal(p2.age, 23);
   assert.equal(p2.status, STATUS.AWAITING_QUALIFICATION);
   assert.equal(lastToHer('919000008802').kind, 'list');
   await say('919000008802', row(BUTTON_IDS.QUALIFICATION_GDA));
