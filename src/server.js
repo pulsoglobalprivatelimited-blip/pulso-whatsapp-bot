@@ -710,6 +710,20 @@ app.post('/internal/duty-broadcast', async (req, res) => {
   }
 });
 
+/* A full-length profile photo uploaded in the Pulso app (11 Oct 2026). The
+   server stores the file and hands the review to the bot, where the
+   certificate reviewer already works. Signed with the same shared secret. */
+app.post('/internal/photo-review', async (req, res) => {
+  if (!hasPulsoServerSecret(req)) return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const { handleProfilePhotoFromApp } = require('./services/onboardingFlow');
+    const result = await handleProfilePhotoFromApp(req.body || {});
+    return res.json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
 app.get('/internal/duty-broadcast/:id', async (req, res) => {
   if (!hasPulsoServerSecret(req)) return res.status(401).json({ error: 'unauthorized' });
   try {
