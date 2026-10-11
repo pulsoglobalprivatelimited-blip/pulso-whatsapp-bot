@@ -56,10 +56,19 @@ function collectAlertMessages(attempts) {
 }
 
 // An attempt that threw on the way out never gets a status webhook, so its
-// failure has to be read straight from the send result.
+// failure has to be read straight from the send result. But a refused
+// new-style template is not a failed alert when the old buttons went out behind
+// it: the reviewer can still act, and WhatsApp's receipts will say whether they
+// arrived. Counting it raised "could not reach a reviewer" for every
+// certificate whose file had no archive copy (11 Oct 2026: all 16 flagged
+// records checked had in fact been reviewed).
 function hasSendFailure(attempts) {
-  return (Array.isArray(attempts) ? attempts : []).some(
-    (attempt) => attempt && ACTIONABLE_ALERT_TYPES.includes(attempt.type) && attempt.ok === false
+  const actionable = (Array.isArray(attempts) ? attempts : []).filter(
+    (attempt) => attempt && ACTIONABLE_ALERT_TYPES.includes(attempt.type)
+  );
+  return (
+    actionable.some((attempt) => attempt.ok === false) &&
+    !actionable.some((attempt) => attempt.ok === true)
   );
 }
 

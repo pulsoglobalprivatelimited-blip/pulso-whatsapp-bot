@@ -106,6 +106,37 @@ test('a send that never produced a message is a failure straight away', () => {
   assert.equal(state.delivered, false);
 });
 
+test('11 Oct: new template refused but the old buttons sent is not a failure', () => {
+  // M.Ayesha: the photo had no archive copy, so the new template could not go;
+  // the old three messages did, and the reviewer read them and acted.
+  const state = buildReviewAlertState({
+    sent: true,
+    recipients: ['919446600809'],
+    attempts: [
+      { to: '919446600809', type: 'review_template_v2', ok: false, reason: 'attachment_without_archive_url' },
+      { to: '919446600809', type: 'review_template', ok: true, messages: [{ id: 'template' }] },
+      { to: '919446600809', type: 'review_buttons', ok: true, messages: [{ id: 'buttons' }] },
+      { to: '919446600809', type: 'review_media', ok: true, messages: [{ id: 'media' }] }
+    ]
+  });
+  assert.equal(state.failed, false);
+  assert.equal(state.undeliverable, false);
+  assert.equal(state.delivered, false);
+});
+
+test('new template refused and the old buttons refused too is still a failure', () => {
+  const state = buildReviewAlertState({
+    sent: true,
+    recipients: ['919446600809'],
+    attempts: [
+      { to: '919446600809', type: 'review_template_v2', ok: false, reason: 'attachment_without_archive_url' },
+      { to: '919446600809', type: 'review_template', ok: true, messages: [{ id: 'template' }] },
+      { to: '919446600809', type: 'review_buttons', ok: false }
+    ]
+  });
+  assert.equal(state.failed, true);
+});
+
 test('the new template landing on its own is the alert getting through', () => {
   const state = buildReviewAlertState({
     sent: true,

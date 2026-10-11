@@ -4,7 +4,7 @@ const {
   buildReviewAlertState,
   trackReviewAlertMessages
 } = require('./reviewAlertDelivery');
-const { reportCertificateReviewAlertFailure } = require('./pulsoHubSyncService');
+const { reportCertificateReviewAlertFailure, syncProviderToPulsoHub } = require('./pulsoHubSyncService');
 
 // One place that decides what happens when the reviewer's alert does not land.
 // The bot cannot raise the notification in the Pulso app itself — recipients,
@@ -75,12 +75,39 @@ async function escalateReviewAlertFailure(providerPhone) {
 // ordinary caregiver messages and fall straight through.
 async function handleReviewAlertStatus(status) {
   const outcome = await applyReviewAlertStatus(status);
-  if (!outcome || !outcome.becameFailed) {
+  if (!outcome) {
     return outcome;
   }
 
-  await escalateReviewAlertFailure(outcome.providerPhone);
+  if (outcome.becameFailed) {
+    await escalateReviewAlertFailure(outcome.providerPhone);
+    return outcome;
+  }
+
+  // The hub keeps its own copy of the alert state. Once it has been told
+  // "failed", a later receipt saying the reviewer did get it has to reach the
+  // hub too, or the Pulso app goes on showing the caregiver as stuck.
+  if (outcome.becameDelivered && wasReportedToHub(outcome.provider)) {
+    await clearReviewAlertFailureOnHub(outcome.providerPhone);
+  }
   return outcome;
+}
+
+function wasReportedToHub(provider) {
+  const previous =
+    provider && provider.verification ? provider.verification.reviewAlert || null : null;
+  return Boolean(previous && (previous.failed === true || previous.alertedAt));
+}
+
+async function clearReviewAlertFailureOnHub(providerPhone) {
+  const provider = await getProvider(providerPhone);
+  if (!provider) {
+    return null;
+  }
+  return syncProviderToPulsoHub(provider).catch((error) => {
+    console.error('[OPS_REVIEW_ALERT_CLEAR_ERROR]', providerPhone, error.message);
+    return { ok: false, error: error.message };
+  });
 }
 
 module.exports = {
