@@ -302,7 +302,12 @@ test('the wake-up: one template with two buttons; Not now pauses, Yes walks the 
   assert.equal(t.components[1].parameters[0].payload, BUTTON_IDS.STILL_AVAILABLE_YES);
   assert.equal(t.components[2].parameters[0].payload, BUTTON_IDS.STILL_AVAILABLE_NOT_NOW);
   const p1 = records.get('919000008801');
+  assert.equal(p1.region, 'kerala');
+  assert.equal(p1.flowId, 'kerala_malayalam');
   assert.equal(p1.status, STATUS.COMPLETED);
+  // Run again: nobody asked in the last week is asked twice.
+  const again = await bot.runStillAvailableForInactiveProviders([{ phone: '919000008801', fullName: 'Adarsh.pt' }]);
+  assert.deepEqual({ sent: again.sent, skipped: again.skipped, failed: again.failed }, { sent: 0, skipped: 1, failed: 0 });
   assert.equal(p1.pulsoAppPromptStage, 'awaiting_still_available');
   assert.equal(p1.reactivation.answer, '');
   const dry = await bot.runStillAvailableForInactiveProviders([{ phone: '919000008803' }], { dryRun: true });

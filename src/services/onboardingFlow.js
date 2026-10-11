@@ -784,9 +784,25 @@ async function runStillAvailableForInactiveProviders(targets = [], { dryRun = fa
     const phone = String(row.phone).replace(/\D/g, '');
     try {
       const existing = await getOrCreateProvider(phone);
+      // Asked once in the last week and not yet answered: not again. A re-run
+      // after a partial send must only reach those it missed.
+      const asked = existing && existing.reactivation && existing.reactivation.askedAt;
+      const askedMs = asked ? Date.parse(existing.reactivation.askedAt) : 0;
+      if (askedMs && !existing.reactivation.answer && Date.now() - askedMs < 7 * 24 * 60 * 60 * 1000 && hasHistoryEvent(existing, (e) => e && e.type === 'system' && e.event === 'still_available_sent')) {
+        results.push({ phone, sent: false, skipped: 'already_asked' });
+        continue;
+      }
       // A caregiver from the old app form has no bot record of her own: the
-      // hub's mirror is copied in so the walk asks only what is missing.
+      // hub's mirror is copied in so the walk asks only what is missing. She
+      // needs a region and a flow before the bot will talk to her at all.
+      const region = existing.region || (String(row.region || '').toLowerCase() === 'karnataka' ? 'karnataka' : 'kerala');
+      const flowId = existing.flowId || DEFAULT_FLOW_ID_BY_REGION[region] || 'kerala_malayalam';
       const patch = {
+        region,
+        flowId,
+        flowAssignedAt: existing.flowAssignedAt || new Date().toISOString(),
+        flowAssignmentSource: existing.flowAssignmentSource || 'wake_up_oct2026',
+        language: existing.language || (flowId.endsWith('_malayalam') ? 'ml' : 'en'),
         status: STATUS.COMPLETED,
         currentStep: 15,
         termsAccepted: true,
@@ -823,7 +839,13 @@ async function runStillAvailableForInactiveProviders(targets = [], { dryRun = fa
       console.error('[STILL_AVAILABLE_ERROR]', phone, error.message, error.response ? JSON.stringify(error.response.data) : '');
     }
   }
-  return { eligible: rows.length, sent: results.filter((r) => r.sent).length, failed: results.filter((r) => !r.sent).length, results };
+  return {
+    eligible: rows.length,
+    sent: results.filter((r) => r.sent).length,
+    skipped: results.filter((r) => r.skipped).length,
+    failed: results.filter((r) => !r.sent && !r.skipped).length,
+    results
+  };
 }
 
 async function handleStillAvailable(phone, message) {
