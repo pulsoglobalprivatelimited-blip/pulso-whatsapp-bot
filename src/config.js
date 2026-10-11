@@ -109,6 +109,10 @@ module.exports = {
   // founder's word: consent, height and weight are still asked; the photo comes
   // from the app. A reviewer's "new photo" request still works either way.
   profilePhotoStepEnabled: process.env.PROFILE_PHOTO_STEP_ENABLED === 'true',
+  // The consent tap in onboarding, likewise off for now (founder, 11 Oct 2026).
+  // The app asks for it on her first login instead. Without the consent the
+  // photo step is never shown either, whatever its own flag says.
+  profileConsentStepEnabled: process.env.PROFILE_CONSENT_STEP_ENABLED === 'true',
   dutyInterestPhone: process.env.DUTY_INTEREST_PHONE || '918714105333',
   dutyOfferTemplateName: process.env.DUTY_OFFER_TEMPLATE_NAME || 'basic_duty_offer',
   dutyInterestTemplateName: process.env.DUTY_INTEREST_TEMPLATE_NAME || 'duty_interest_ops',

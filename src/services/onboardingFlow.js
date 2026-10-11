@@ -652,6 +652,12 @@ async function handleWeight(phone, message) {
     return;
   }
   const provider = await getProvider(phone);
+  if (!config.profileConsentStepEnabled) {
+    // The consent is the app's to ask for now; no consent, no photo step.
+    await updateProvider(phone, { weightKg });
+    await continueAfterProfilePhoto(phone);
+    return;
+  }
   if (provider && provider.profileConsent && provider.profileConsent.acceptedAt) {
     // Consent already given (a second walk): straight to the photo, or past it.
     await updateProvider(phone, { weightKg });
@@ -2326,6 +2332,10 @@ async function sendPromptForCurrentStatus(phone, provider) {
       await sendWeightQuestion(phone);
       return;
     case STATUS.AWAITING_PROFILE_CONSENT:
+      if (!config.profileConsentStepEnabled) {
+        await continueAfterProfilePhoto(phone);
+        return;
+      }
       await sendProfileConsent(phone);
       return;
     case STATUS.AWAITING_PROFILE_PHOTO:
@@ -5035,6 +5045,11 @@ async function processIncomingMessage(phone, message) {
       await handleWeight(phone, message);
       return;
     case STATUS.AWAITING_PROFILE_CONSENT:
+      if (!config.profileConsentStepEnabled) {
+        // Switched off while she was parked here: whatever she sent, move on.
+        await continueAfterProfilePhoto(phone);
+        return;
+      }
       await handleProfileConsent(phone, message);
       return;
     case STATUS.AWAITING_PROFILE_PHOTO:

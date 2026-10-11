@@ -9,6 +9,7 @@ const path = require('path');
 const OWNER = '919446600809';
 process.env.WHATSAPP_DRY_RUN = 'true';
 delete process.env.PROFILE_PHOTO_STEP_ENABLED;
+delete process.env.PROFILE_CONSENT_STEP_ENABLED;
 process.env.OWNER_NOTIFICATION_PHONE = OWNER;
 process.env.AGENT_HELP_WHATSAPP_NUMBER = OWNER;
 process.env.PUBLIC_BASE_URL = 'https://whatsapp.pulso.co.in';
@@ -74,23 +75,31 @@ function seed(status, extra = {}) {
   return phone;
 }
 
-test('the flag is off unless PROFILE_PHOTO_STEP_ENABLED=true', () => {
+test('both flags are off unless set to true', () => {
   assert.equal(config.profilePhotoStepEnabled, false);
+  assert.equal(config.profileConsentStepEnabled, false);
 });
 
-test('off: consent goes straight to the district; height and weight are still asked', async () => {
+test('off: after the weight the chat goes straight to the district; no consent, no photo', async () => {
   const phone = seed(STATUS.AWAITING_HEIGHT);
   await say(phone, row(BUTTON_IDS.HEIGHT_5_3_5_5));
   assert.equal(records.get(phone).status, STATUS.AWAITING_WEIGHT);
   await say(phone, text('58'));
-  assert.equal(records.get(phone).status, STATUS.AWAITING_PROFILE_CONSENT);
-  await say(phone, tap(BUTTON_IDS.PROFILE_CONSENT_AGREE));
   const p = records.get(phone);
-  assert.ok(p.profileConsent.acceptedAt);
-  assert.equal(p.status, STATUS.AWAITING_DISTRICT, 'no photo step');
+  assert.equal(p.weightKg, 58);
+  assert.equal(p.status, STATUS.AWAITING_DISTRICT, 'no consent step, no photo step');
+  assert.equal(p.profileConsent, null);
   assert.equal(p.profilePhoto, null);
   assert.equal(lastToHer(phone).kind, 'list');
-  assert.ok(!toHer(phone).some((m) => m.body === flow.FLOWS.kerala_malayalam.MESSAGES.profilePhotoRequest), 'the photo was never asked for');
+  const M = flow.FLOWS.kerala_malayalam.MESSAGES;
+  assert.ok(!toHer(phone).some((m) => m.body === M.profileConsentText || m.body === M.profilePhotoRequest), 'neither was asked for');
+});
+
+test('off: someone parked at the consent step is moved on by her next message', async () => {
+  const phone = seed(STATUS.AWAITING_PROFILE_CONSENT, { heightRange: 'h_5_3_5_5', weightKg: 58 });
+  await say(phone, text('hello'));
+  assert.equal(records.get(phone).status, STATUS.AWAITING_DISTRICT);
+  assert.equal(records.get(phone).profileConsent, null);
 });
 
 test('off: someone parked at the photo step is moved on by her next message', async () => {
