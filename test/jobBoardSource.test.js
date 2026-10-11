@@ -5,6 +5,7 @@ const { parseJobBoardCode, jobBoardSourceUpdate } = require('../src/services/job
 test('reads site and district from the code', () => {
   assert.deepStrictEqual(parseJobBoardCode('JOB APNA KANNUR'), { site: 'apna', district: 'Kannur', code: 'JOB APNA KANNUR' });
   assert.deepStrictEqual(parseJobBoardCode('  job wi ekm  hello'), { site: 'workindia', district: 'Ernakulam', code: 'JOB WI EKM' });
+  assert.deepStrictEqual(parseJobBoardCode('JOB EV KTYM'), { site: 'evanios', district: 'Kottayam', code: 'JOB EV KTYM' });
   assert.deepStrictEqual(parseJobBoardCode('JOB INDEED'), { site: 'indeed', district: null, code: 'JOB INDEED' });
   assert.deepStrictEqual(parseJobBoardCode('JOB LI XYZ'), { site: 'linkedin', district: null, code: 'JOB LI' });
 });

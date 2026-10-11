@@ -5,7 +5,7 @@
 // district. Founder approved the pay and the posts on 10 Oct 2026.
 // See senior/pulso_hub/docs/job_board_posts.md in the hub repo.
 
-const SITES = { APNA: 'apna', WI: 'workindia', WORKINDIA: 'workindia', INDEED: 'indeed', LI: 'linkedin', LINKEDIN: 'linkedin', WEB: 'website', IG: 'instagram', YT: 'youtube', CH: 'whatsapp_channel' };
+const SITES = { APNA: 'apna', EV: 'evanios', EVANIOS: 'evanios', WI: 'workindia', WORKINDIA: 'workindia', INDEED: 'indeed', LI: 'linkedin', LINKEDIN: 'linkedin', WEB: 'website', IG: 'instagram', YT: 'youtube', CH: 'whatsapp_channel' };
 const DISTRICTS = {
   KANNUR: 'Kannur', EKM: 'Ernakulam', ERNAKULAM: 'Ernakulam', KOCHI: 'Ernakulam', KOLLAM: 'Kollam',
   KTYM: 'Kottayam', KOTTAYAM: 'Kottayam', TCR: 'Thrissur', THRISSUR: 'Thrissur', TVM: 'Thiruvananthapuram',
