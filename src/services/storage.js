@@ -102,6 +102,7 @@ async function listProviderSummaries() {
       'sex',
       'district',
       'dutyHourPreference',
+      'cookingOptIn',
       'expectedDutiesAccepted',
       'interestConfirmed',
       'agentHelpRequested',

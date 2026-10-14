@@ -384,7 +384,9 @@
     els.status.textContent = `${provider.phone || ''} · ${Chat.formatStatus(status) || 'lead'}`;
 
     const region = provider.region ? `${provider.region[0].toUpperCase()}${provider.region.slice(1)}` : null;
-    const stepText = [region, provider.currentStep ? `Step ${provider.currentStep}` : null].filter(Boolean).join(' · ');
+    // Supporting care: shown once she has answered the cooking question.
+    const cooking = provider.cookingOptIn === true ? 'Cooking: Yes' : provider.cookingOptIn === false ? 'Cooking: No' : null;
+    const stepText = [region, provider.currentStep ? `Step ${provider.currentStep}` : null, cooking].filter(Boolean).join(' · ');
     els.step.textContent = stepText;
     els.step.style.display = stepText ? '' : 'none';
     renderAppStatus(provider);

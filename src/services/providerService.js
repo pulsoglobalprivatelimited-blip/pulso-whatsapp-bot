@@ -31,6 +31,9 @@ async function createProvider(phone) {
     qualification: null,
     interestConfirmed: false,
     dutyHourPreference: null,
+    // Supporting care: true / false once asked; null = never asked.
+    cookingOptIn: null,
+    cookingOptInAt: null,
     expectedDutiesAccepted: null,
     agentHelpRequested: false,
     agentHelpRequestedAt: null,

@@ -18,6 +18,9 @@ const {
   getBasicQualificationNoticeFor,
   getDutyHourPaymentSummaryFor,
   getSampleDutyOfferFor,
+  isCookingQuestionFor,
+  hasCookingOptIn,
+  getCookingQuestionFor,
   getCertificateApprovedFor,
   getTermsRateFor,
   UI_TEXT,
@@ -80,6 +83,7 @@ const {
   isInterested,
   isNotInterested,
   parseDutyHourPreference,
+  parseCookingPreference,
   parseSampleDutyOfferPreference,
   parseExpectedDutiesResponse,
   parseAge,
@@ -309,6 +313,7 @@ function getStepForStatus(status) {
     [STATUS.AWAITING_QUALIFICATION]: 2,
     [STATUS.AWAITING_INTEREST]: 4,
     [STATUS.AWAITING_DUTY_HOUR_PREFERENCE]: 5,
+    [STATUS.AWAITING_COOKING_PREFERENCE]: 5.5,
     [STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE]: 6,
     [STATUS.AWAITING_EXPECTED_DUTIES_CONFIRMATION]: 7,
     [STATUS.AWAITING_CERTIFICATE]: 8,
@@ -943,6 +948,19 @@ async function sendDutyHourPreferenceButtons(phone) {
   await sendAndLog(phone, 'text', getDutyHourPaymentSummaryFor(provider, await getProviderTiers()));
 }
 
+/* Supporting care (15 Oct 2026). The question carries her pay with cooking,
+   from the tier card, so it is built from her record each time it is sent. */
+async function sendCookingPreferenceButtons(phone) {
+  const provider = await getProvider(phone);
+  await sendAndLog(phone, 'buttons', {
+    body: getCookingQuestionFor(provider, await getProviderTiers()),
+    buttons: [
+      { id: BUTTON_IDS.COOKING_YES, title: UI_TEXT.cookingYesTitle },
+      { id: BUTTON_IDS.COOKING_NO, title: UI_TEXT.cookingNoTitle }
+    ]
+  });
+}
+
 async function sendSampleDutyOfferPrompt(phone) {
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.sampleDutyOfferQuestion,
@@ -1010,9 +1028,19 @@ async function moveToExpectedDuties(phone, dutyHourPreference) {
   await sendExpectedDutiesFlow(phone);
 }
 
+/* "Feeding support" closes the second part, so a caregiver who said yes to
+   cooking reads it there, among the duties she is agreeing to. */
+async function expectedDutiesIntroTwoFor(phone) {
+  const provider = await getProvider(phone);
+  if (!hasCookingOptIn(provider, await getProviderTiers()) || !MESSAGES.expectedDutiesCookingLine) {
+    return MESSAGES.expectedDutiesIntroTwo;
+  }
+  return `${MESSAGES.expectedDutiesIntroTwo}\n${MESSAGES.expectedDutiesCookingLine}`;
+}
+
 async function sendExpectedDutiesFlow(phone) {
   await sendAndLog(phone, 'text', MESSAGES.expectedDutiesIntroOne);
-  await sendAndLog(phone, 'text', MESSAGES.expectedDutiesIntroTwo);
+  await sendAndLog(phone, 'text', await expectedDutiesIntroTwoFor(phone));
   await sendAndLog(phone, 'text', MESSAGES.expectedDutiesIntroThree);
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.expectedDutiesQuestion,
@@ -2330,6 +2358,9 @@ async function sendPromptForCurrentStatus(phone, provider) {
     case STATUS.AWAITING_DUTY_HOUR_PREFERENCE:
       await sendDutyHourPreferenceButtons(phone);
       return;
+    case STATUS.AWAITING_COOKING_PREFERENCE:
+      await sendCookingPreferenceButtons(phone);
+      return;
     case STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE:
       await sendSampleDutyOfferPrompt(phone);
       return;
@@ -2473,7 +2504,14 @@ async function handleQualification(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_AGE, 3, { qualification, interestConfirmed: false });
+  /* A cooking answer from an earlier walk belongs to that walk: she is asked
+     again after the duty hours, or not at all if she is now a nurse. */
+  await updateStatus(phone, STATUS.AWAITING_AGE, 3, {
+    qualification,
+    interestConfirmed: false,
+    cookingOptIn: null,
+    cookingOptInAt: null
+  });
   await sendAndLog(phone, 'text', MESSAGES.ageQuestion);
 }
 
@@ -2528,14 +2566,39 @@ async function handleDutyHourPreference(phone, message) {
   }
 
   await notify8HourNoStayOrFood(phone, dutyHourPreference);
+  const sampleDutyState = {
+    stage: dutyHourPreference === 'both' ? 'both_prompt' : 'initial_prompt',
+    initialChoice: dutyHourPreference,
+    alternateChoice: getOtherDutyPreference(dutyHourPreference)
+  };
+
+  /* Supporting care: Basic and GDA are asked about cooking before the sample,
+     so the sample and the duties list can say what she agreed to. The nurse
+     tier goes straight on, as before. */
+  const provider = await getProvider(phone);
+  if (isCookingQuestionFor(provider, await getProviderTiers())) {
+    await updateStatus(phone, STATUS.AWAITING_COOKING_PREFERENCE, 5.5, { dutyHourPreference, sampleDutyState });
+    await sendCookingPreferenceButtons(phone);
+    return;
+  }
+
+  await updateStatus(phone, STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE, 6, { dutyHourPreference, sampleDutyState });
+  await sendSampleDutyOfferPrompt(phone);
+}
+
+async function handleCookingPreference(phone, message) {
+  const cookingOptIn = parseCookingPreference(message);
+  if (cookingOptIn === null) {
+    await sendAndLog(phone, 'text', MESSAGES.cookingRetry);
+    await sendCookingPreferenceButtons(phone);
+    return;
+  }
+
   await updateStatus(phone, STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE, 6, {
-    dutyHourPreference,
-    sampleDutyState: {
-      stage: dutyHourPreference === 'both' ? 'both_prompt' : 'initial_prompt',
-      initialChoice: dutyHourPreference,
-      alternateChoice: getOtherDutyPreference(dutyHourPreference)
-    }
+    cookingOptIn,
+    cookingOptInAt: new Date().toISOString()
   });
+  await sendAndLog(phone, 'text', cookingOptIn ? MESSAGES.cookingYesReply : MESSAGES.cookingNoReply);
   await sendSampleDutyOfferPrompt(phone);
 }
 
@@ -2998,6 +3061,7 @@ async function handleAdditionalDocument(phone, message) {
 const STOP_ON_NOT_INTERESTED_STATUSES = new Set([
   STATUS.AWAITING_QUALIFICATION,
   STATUS.AWAITING_DUTY_HOUR_PREFERENCE,
+  STATUS.AWAITING_COOKING_PREFERENCE,
   STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE,
   STATUS.AWAITING_CERTIFICATE,
   STATUS.AWAITING_NAME,
@@ -5098,6 +5162,9 @@ async function processIncomingMessage(phone, message) {
       return;
     case STATUS.AWAITING_DUTY_HOUR_PREFERENCE:
       await handleDutyHourPreference(phone, message);
+      return;
+    case STATUS.AWAITING_COOKING_PREFERENCE:
+      await handleCookingPreference(phone, message);
       return;
     case STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE:
       await handleSampleDutyOfferPreference(phone, message);

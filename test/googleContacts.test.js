@@ -245,3 +245,28 @@ test('a test identity is skipped before any credential or network is touched', a
   const result = await contacts.saveProviderContact({ ...provider, phone: '919000000133' });
   assert.deepEqual(result, { ok: false, skipped: true, reason: 'test_identity' });
 });
+
+// Supporting care (15 Oct 2026): a caregiver who said yes to cooking the
+// patient's food is tagged "Cook" right after the duty, so ops can pick her
+// from the phone list for a duty that needs it.
+test('a caregiver who opted in to cooking is tagged Cook after the duty', () => {
+  assert.equal(
+    contacts.buildContactName({ ...provider, fullName: 'Anju M Babu', dutyHourPreference: 'both', cookingOptIn: true }),
+    'P24&8 Cook Anju M Babu GDA Female Ernakulam'
+  );
+  assert.equal(
+    contacts.buildContactName({ ...provider, dutyHourPreference: '', cookingOptIn: true }),
+    'Cook Jisna varghese GDA Female Ernakulam'
+  );
+});
+
+test('no Cook tag when she said no or was never asked', () => {
+  assert.equal(contacts.buildContactName({ ...provider, cookingOptIn: false }), 'P8 Jisna varghese GDA Female Ernakulam');
+  assert.equal(contacts.buildContactName({ ...provider, cookingOptIn: null }), 'P8 Jisna varghese GDA Female Ernakulam');
+});
+
+test('the contact notes say Cooking: Yes / No once she has answered', () => {
+  assert.match(contacts.buildProviderContactBody({ ...provider, cookingOptIn: true }).biographies[0].value, /Cooking: Yes/);
+  assert.match(contacts.buildProviderContactBody({ ...provider, cookingOptIn: false }).biographies[0].value, /Cooking: No/);
+  assert.doesNotMatch(contacts.buildProviderContactBody(provider).biographies[0].value, /Cooking/);
+});

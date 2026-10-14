@@ -124,6 +124,9 @@ function sanitizeFullName(fullName) {
 
 // "P24&8 Anju M Babu GDA Female Ernakulam" - duty, name, qualification, sex,
 // district, in that order, because that is the order the existing contacts use.
+// A caregiver who said yes to cooking (Supporting care, 15 Oct 2026) carries
+// "Cook" right after the duty: "P24&8 Cook Anju M Babu GDA Female Ernakulam",
+// so ops can spot her in the phone list when a duty needs cooking.
 // Everything rides in the display name rather than only in structured fields:
 // the phone's contact list shows the name alone, and that list is where the ops
 // team actually picks somebody for a duty.
@@ -134,7 +137,8 @@ function buildContactName(provider) {
   const qualification = qualificationShort(provider && provider.qualification);
   const sex = String((provider && provider.sex) || '').trim();
   const district = String((provider && provider.district) || '').trim();
-  return [prefix, name || fallback, qualification, sex, district]
+  const cook = provider && provider.cookingOptIn === true ? 'Cook' : '';
+  return [prefix, cook, name || fallback, qualification, sex, district]
     .filter(Boolean)
     .join(' ')
     .trim();
@@ -149,7 +153,10 @@ function buildContactAddress(provider) {
 function buildContactNotes(provider) {
   const sex = String((provider && provider.sex) || '').trim();
   const duty = dutyLabel(provider && provider.dutyHourPreference);
-  const parts = [sex, duty ? `Duty: ${duty}` : ''].filter(Boolean);
+  const cooking = provider && typeof provider.cookingOptIn === 'boolean'
+    ? `Cooking: ${provider.cookingOptIn ? 'Yes' : 'No'}`
+    : '';
+  const parts = [sex, duty ? `Duty: ${duty}` : '', cooking].filter(Boolean);
   const { truncated } = sanitizeFullName(provider && provider.fullName);
   if (truncated) {
     parts.push(`Typed name: ${String(provider.fullName).replace(/\s+/g, ' ').trim()}`);

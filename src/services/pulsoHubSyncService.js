@@ -20,6 +20,11 @@ function buildProviderSyncPayload(provider) {
     sex: provider.sex || '',
     district: provider.district || '',
     dutyHourPreference: provider.dutyHourPreference || '',
+    // Supporting care (15 Oct 2026): true / false once she has answered the
+    // cooking question; left out when she was never asked (nurse tier, or
+    // joined before the question existed). The server maps it to
+    // users.cooking with source 'bot'.
+    ...(typeof provider.cookingOptIn === 'boolean' ? { cookingOptIn: provider.cookingOptIn } : {}),
     // The profile for agencies and families (11 Oct 2026): a height range, a
     // weight, the consent tap, the full-length photo with its review, and the
     // answer to the "still available?" wake-up.

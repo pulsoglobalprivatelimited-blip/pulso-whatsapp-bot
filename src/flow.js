@@ -8,6 +8,7 @@ const STEPS = {
   3: 'working_model_sent',
   4: 'awaiting_interest_confirmation',
   5: 'awaiting_duty_hour_preference',
+  5.5: 'awaiting_cooking_preference',
   6: 'awaiting_sample_duty_offer_preference',
   7: 'awaiting_expected_duties_confirmation',
   8: 'awaiting_certificate',
@@ -32,6 +33,10 @@ const STATUS = {
   AWAITING_QUALIFICATION: 'awaiting_qualification',
   AWAITING_INTEREST: 'awaiting_interest_confirmation',
   AWAITING_DUTY_HOUR_PREFERENCE: 'awaiting_duty_hour_preference',
+  // Supporting care (founder, 15 Oct 2026): right after the duty hours, a
+  // Basic or GDA caregiver is asked whether she will cook the patient's food
+  // for ₹500 more a day. Never asked of the nurse tier.
+  AWAITING_COOKING_PREFERENCE: 'awaiting_cooking_preference',
   AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE: 'awaiting_sample_duty_offer_preference',
   AWAITING_EXPECTED_DUTIES_CONFIRMATION: 'awaiting_expected_duties_confirmation',
   AWAITING_CERTIFICATE: 'awaiting_certificate',
@@ -80,6 +85,8 @@ const BUTTON_IDS = {
   DUTY_HOUR_8: 'duty_hour_8',
   DUTY_HOUR_24: 'duty_hour_24',
   DUTY_HOUR_BOTH: 'duty_hour_both',
+  COOKING_YES: 'cooking_yes',
+  COOKING_NO: 'cooking_no',
   SAMPLE_DUTY_YES: 'sample_duty_yes',
   SAMPLE_DUTY_NO: 'sample_duty_no',
   EXPECTED_DUTIES_YES: 'expected_duties_yes',
@@ -266,6 +273,21 @@ const MESSAGES = {
     'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും ഒരു duty hour preference തിരഞ്ഞെടുക്കുക: 8 hour / 24 hour / രണ്ടും.',
   dutyHourPreference8HourNotice:
     '8 hour duty തിരഞ്ഞെടുക്കുന്നവർ ശ്രദ്ധിക്കുക: stay ഉം food ഉം ലഭിക്കില്ല. Food ഉം stay ഉം 24 hour duty-ക്ക് മാത്രമാണ് ലഭിക്കുക.',
+  // Supporting care (15 Oct 2026). The founder's sample, word for word; the
+  // figures are filled from the tier card by getCookingQuestionFor.
+  cookingQuestion:
+    `🍲 *പാചകം കൂടിയുള്ള ഡ്യൂട്ടി — ദിവസം ₹{{extra}} അധികം*\n\nരോഗിക്ക് ഭക്ഷണം പാചകം ചെയ്യാൻ താല്പര്യമുണ്ടോ?\n(രോഗിക്ക് മാത്രം. വീട്ടുകാർക്ക് പാചകം ചെയ്യേണ്ട.)\n\n24 മണിക്കൂർ: ₹{{base24h}} + ₹{{extra}} = *₹{{total24h}}/ദിവസം*\n8 മണിക്കൂർ: ₹{{base8h}} + ₹{{extra}} = *₹{{total8h}}/ദിവസം*`,
+  cookingRetry:
+    'ദയവായി താഴെയുള്ള buttons-ിൽ നിന്ന് ഒന്ന് തിരഞ്ഞെടുക്കുക: "അതെ, പാചകം ചെയ്യാം" അല്ലെങ്കിൽ "വേണ്ട".',
+  cookingYesReply:
+    'ശരി 👍 പാചകം കൂടിയുള്ള ഡ്യൂട്ടികളും (Supporting care) ഇനി താങ്കൾക്ക് കിട്ടും. Profile-ൽ എപ്പോൾ വേണമെങ്കിലും മാറ്റാം.',
+  cookingNoReply:
+    'ശരി 👍 പാചകം ഇല്ലാത്ത ഡ്യൂട്ടികൾ മാത്രം താങ്കൾക്ക് അയക്കും. Profile-ൽ എപ്പോൾ വേണമെങ്കിലും മാറ്റാം.',
+  // Added under "Feeding support" in the duties she confirms, when she said yes.
+  expectedDutiesCookingLine: "- Cooking (patient's food only)",
+  // Added at the foot of the sample duty offer, when she said yes.
+  sampleDutyCookingLine:
+    '🍲 Supporting care (പാചകം രോഗിക്ക് മാത്രം) ആണെങ്കിൽ: ദിവസം ₹{{extra}} അധികം.',
   sampleDutyOfferQuestion:
     'ഒരു sample duty offer എങ്ങനെയിരിക്കും എന്ന് കാണണോ?',
   sampleDutyOfferRetry:
@@ -610,6 +632,15 @@ const ENGLISH_BASE_MESSAGES = {
   dutyHourPreferenceRetry: 'Please select one duty hour preference: 8 hour / 24 hour / Both.',
   dutyHourPreference8HourNotice:
     'Please note: stay and food are not provided for 8-hour duty. Stay and food are available only for 24-hour duty.',
+  cookingQuestion:
+    `🍲 *Duties with cooking — ₹{{extra}} more a day*\n\nAre you willing to cook food for the patient?\n(For the patient only. You do not cook for the family.)\n\n24 hours: ₹{{base24h}} + ₹{{extra}} = *₹{{total24h}}/day*\n8 hours: ₹{{base8h}} + ₹{{extra}} = *₹{{total8h}}/day*`,
+  cookingRetry: 'Please tap one of the buttons below: "Yes, I can cook" or "No".',
+  cookingYesReply:
+    'Okay 👍 You will also get duties with cooking (Supporting care). You can change this in your profile any time.',
+  cookingNoReply:
+    'Okay 👍 We will send you duties without cooking only. You can change this in your profile any time.',
+  sampleDutyCookingLine:
+    '🍲 With Supporting care (cooking for the patient only): ₹{{extra}} more a day.',
   sampleDutyOfferQuestion: 'Would you like to see how a sample duty offer looks?',
   sampleDutyOfferRetry: 'Please select one option from below.',
   sampleDutyOtherOffer8HourQuestion: 'Do you want to see an 8-hour duty sample?',
@@ -852,6 +883,9 @@ const UI_TEXT = {
   interestYesTitle: 'താൽപര്യമുണ്ട്',
   interestNoTitle: 'താൽപര്യമില്ല',
   dutyBothTitle: 'രണ്ടും',
+  // WhatsApp allows 20 characters on a button; this one is exactly 20.
+  cookingYesTitle: '✅ അതെ, പാചകം ചെയ്യാം',
+  cookingNoTitle: '❌ വേണ്ട',
   sampleYesTitle: 'കാണാം',
   sampleNoTitle: 'വേണ്ട',
   expectedDutiesYesTitle: 'തയ്യാറാണ്',
@@ -901,6 +935,8 @@ const KARNATAKA_UI_TEXT = {
   interestYesTitle: 'Yes, interested',
   interestNoTitle: 'Not interested',
   dutyBothTitle: 'Both',
+  cookingYesTitle: '✅ Yes, I can cook',
+  cookingNoTitle: '❌ No',
   sampleYesTitle: 'Yes',
   sampleNoTitle: 'No',
   expectedDutiesYesTitle: 'Yes',
@@ -1460,10 +1496,76 @@ function getSampleDutyOfferFor(qualification, tiers, choice) {
      TIER_FALLBACK for anything zero or unreadable, so these are always real
      figures. A throw would look like protection while never firing. */
   const { day8, day24 } = sampleDutyRates(rateBandFor(qualification, tiers), tierFigures(tiers));
-  return String(template)
+  const sample = String(template)
     .split('{{payout8h}}').join(String(day8))
     .split('{{payout24h}}').join(String(day24))
     .split('{{total24h}}').join(String(day24 * SAMPLE_MONTH_DAYS));
+  /* She said yes to cooking a moment ago: the sample says what that adds. One
+     line, so the offer itself still reads the same as everyone else's. */
+  const line = flow.MESSAGES.sampleDutyCookingLine;
+  if (!line || !hasCookingOptIn(qualification, tiers)) return sample;
+  return `${sample}\n\n${String(line).split('{{extra}}').join(formatRupees(supportingCareExtraPerDay(tiers)))}`;
+}
+
+/**
+ * Supporting care (founder, 15 Oct 2026): senior care plus cooking the
+ * PATIENT's food only, for ₹500 more a day. Only the Basic and GDA tiers are
+ * asked, never the nurse tier — the same rule as the server's
+ * canTakeSupportingCare (tier in {basic, gda} and not a nurse). A nurse put on
+ * the Basic rate by her age is still a nurse and is not asked.
+ */
+const SUPPORTING_CARE_EXTRA_DEFAULT = 500;
+const COOKING_TIERS = ['basic', 'gda'];
+
+function supportingCareExtraPerDay(tiers) {
+  const n = Math.round(Number(tiers && tiers.supportingCareExtraPerDay));
+  return Number.isFinite(n) && n > 0 ? n : SUPPORTING_CARE_EXTRA_DEFAULT;
+}
+
+/* The nurse tier spelled out, not only the two the bot offers today: a
+   record the desk or the app wrote may carry the others. */
+const NURSE_TIER_QUALIFICATIONS = ['gnm', 'bsc_nursing', 'post_basic_bsc_nursing', 'msc_nursing'];
+
+function isCookingQuestionFor(subject, tiers) {
+  const who = subjectOf(subject);
+  const qualification = String(who.qualification || '').trim().toLowerCase();
+  if (!qualification || NURSE_TIER_QUALIFICATIONS.includes(qualification)) return false;
+  return COOKING_TIERS.includes(rateBandFor(who, tiers));
+}
+
+function hasCookingOptIn(subject, tiers) {
+  return subjectOf(subject).cookingOptIn === true && isCookingQuestionFor(subject, tiers);
+}
+
+/** "1,200" — Indian grouping, the way the founder's sample writes it. */
+function formatRupees(n) {
+  return Number(n).toLocaleString('en-IN');
+}
+
+/* The pay is the tier PAYOUT plus the extra (contract: caregiver pay = tier
+   payout + ₹500), not the "shown" range: it is what a Supporting care duty
+   actually pays her. GDA at the default card reads ₹700 + ₹500 = ₹1,200 and
+   ₹600 + ₹500 = ₹1,100, the founder's sample. */
+function cookingPayFor(subject, tiers) {
+  const t = tiers && typeof tiers === 'object' ? tiers : {};
+  const band = rateBandFor(subjectOf(subject), tiers) === 'basic' ? 'basic' : 'gda';
+  const pick = (key) => {
+    const n = Math.round(Number((t[band] || {})[key]));
+    return Number.isFinite(n) && n > 0 ? n : TIER_FALLBACK[band][key];
+  };
+  const extra = supportingCareExtraPerDay(tiers);
+  const base24h = pick('payout24h');
+  const base8h = pick('payout8h');
+  return { extra, base24h, base8h, total24h: base24h + extra, total8h: base8h + extra };
+}
+
+function getCookingQuestionFor(subject, tiers) {
+  const template = getActiveFlow().MESSAGES.cookingQuestion;
+  const pay = cookingPayFor(subject, tiers);
+  return Object.entries(pay).reduce(
+    (text, [key, value]) => text.split(`{{${key}}}`).join(formatRupees(value)),
+    String(template)
+  );
 }
 
 /**
@@ -1698,6 +1800,10 @@ module.exports = {
   getBasicQualificationNoticeFor,
   getDutyHourPaymentSummaryFor,
   getSampleDutyOfferFor,
+  isCookingQuestionFor,
+  hasCookingOptIn,
+  getCookingQuestionFor,
+  supportingCareExtraPerDay,
   getFlowConfig,
   getProviderFlowId,
   runWithFlow,

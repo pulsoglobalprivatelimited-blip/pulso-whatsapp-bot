@@ -171,6 +171,24 @@ function parseDutyHourPreference(message) {
   return null;
 }
 
+/* Supporting care: true (she will cook the patient's food), false, or null
+   for anything else, which is asked again. Typed answers are read only when
+   they are plainly one or the other. */
+function parseCookingPreference(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.COOKING_YES) return true;
+  if (replyId === BUTTON_IDS.COOKING_NO) return false;
+  if (replyId) return null;
+
+  const normalized = normalizeText(getMessageText(message))
+    .replace(/[✅❌]/g, '')
+    .replace(/[.!]+$/, '')
+    .trim();
+  if (['അതെ', 'അതെ, പാചകം ചെയ്യാം', 'പാചകം ചെയ്യാം', 'ചെയ്യാം', 'yes', 'yes, i can cook', 'ok', 'okay'].includes(normalized)) return true;
+  if (['വേണ്ട', 'ഇല്ല', 'no', 'no thanks'].includes(normalized)) return false;
+  return null;
+}
+
 function parseSampleDutyOfferPreference(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId === BUTTON_IDS.SAMPLE_DUTY_YES) return 'show';
@@ -532,6 +550,7 @@ module.exports = {
   isInterested,
   isNotInterested,
   parseDutyHourPreference,
+  parseCookingPreference,
   parseSampleDutyOfferPreference,
   parseExpectedDutiesResponse,
   parseAge,

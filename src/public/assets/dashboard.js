@@ -780,6 +780,14 @@ function formatQualificationReview(provider) {
   return formatQualification(approvedQualification);
 }
 
+/* Supporting care (15 Oct 2026): her answer to the cooking question. Absent
+   means she was never asked — a nurse, or someone who joined before it. */
+function formatCookingOptIn(value) {
+  if (value === true) return 'Yes';
+  if (value === false) return 'No';
+  return 'Not asked';
+}
+
 function formatExpectedDuties(value) {
   if (value === true) return 'Accepted';
   if (value === false) return 'Declined';
@@ -1669,6 +1677,7 @@ function renderDetailLoading(provider) {
     'detail-qualification',
     'detail-interest',
     'detail-duty-hour',
+    'detail-cooking',
     'detail-expected-duties',
     'detail-agent-help',
     'detail-app-status',
@@ -1742,6 +1751,7 @@ async function renderDetail(provider) {
   setCareTierRow(detailProvider);
   setText('detail-interest', detailProvider.interestConfirmed ? 'Yes' : 'No');
   setText('detail-duty-hour', formatDutyHourPreference(detailProvider.dutyHourPreference));
+  setText('detail-cooking', formatCookingOptIn(detailProvider.cookingOptIn));
   setText('detail-expected-duties', formatExpectedDuties(detailProvider.expectedDutiesAccepted));
   setText('detail-agent-help', formatAgentHelp(detailProvider.agentHelpRequested));
   setText('detail-app-status', formatAppStatus(detailProvider));
