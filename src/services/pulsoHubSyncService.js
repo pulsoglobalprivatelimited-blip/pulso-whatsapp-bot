@@ -8,6 +8,9 @@ function buildProviderSyncPayload(provider) {
 
   return {
     phone: provider.phone || '',
+    // The number she logs in to the Pulso app with (founder, 14 Oct 2026);
+    // her WhatsApp number unless she or the reviewer gave another.
+    appLoginPhone: provider.appLoginPhone || provider.phone || '',
     region: inferProviderRegion(provider) || '',
     language: provider.language || (flow && flow.language) || '',
     flowId: provider.flowId || '',

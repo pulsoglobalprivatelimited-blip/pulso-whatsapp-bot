@@ -96,6 +96,7 @@ async function listProviderSummaries() {
       'flowId',
       'qualification',
       'careTier',
+      'appLoginPhone',
       'fullName',
       'age',
       'sex',

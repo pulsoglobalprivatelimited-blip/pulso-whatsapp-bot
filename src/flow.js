@@ -19,6 +19,7 @@ const STEPS = {
   11.6: 'awaiting_profile_consent',
   11.8: 'awaiting_profile_photo',
   12: 'awaiting_district',
+  12.5: 'awaiting_login_phone',
   13: 'certificate_verification_pending',
   14: 'awaiting_terms_acceptance',
   15: 'completed'
@@ -48,6 +49,9 @@ const STATUS = {
   AWAITING_PROFILE_CONSENT: 'awaiting_profile_consent',
   AWAITING_PROFILE_PHOTO: 'awaiting_profile_photo',
   AWAITING_DISTRICT: 'awaiting_district',
+  // After the district (founder, 14 Oct 2026): the number she will log in to
+  // the Pulso app with — her WhatsApp number, or another she types.
+  AWAITING_LOGIN_PHONE: 'awaiting_login_phone',
   // After the district, before review: she sees her answers together and taps
   // Correct or Change (docs/confirm_details_before_review_plan.md, 8 Oct 2026).
   AWAITING_DETAILS_CONFIRMATION: 'awaiting_details_confirmation',
@@ -100,6 +104,8 @@ const BUTTON_IDS = {
   HEIGHT_6_0_PLUS: 'h_6_0_plus',
   HEIGHT_SKIP: 'height_skip',
   WEIGHT_SKIP: 'weight_skip',
+  LOGIN_PHONE_SAME: 'login_phone_same',
+  LOGIN_PHONE_OTHER: 'login_phone_other',
   PROFILE_CONSENT_AGREE: 'profile_consent_agree',
   PROFILE_PHOTO_LATER: 'profile_photo_later',
   STILL_AVAILABLE_YES: 'still_available_yes',
@@ -114,6 +120,7 @@ const BUTTON_IDS = {
   DETAILS_EDIT_QUALIFICATION: 'details_edit_qualification',
   DETAILS_EDIT_HEIGHT: 'details_edit_height',
   DETAILS_EDIT_WEIGHT: 'details_edit_weight',
+  DETAILS_EDIT_LOGIN_PHONE: 'details_edit_login_phone',
   TERMS_ACCEPT: 'terms_accept',
   TERMS_DECLINE: 'terms_decline',
   PULSO_APP_INSTALL_YES: 'pulso_app_install_yes',
@@ -382,8 +389,13 @@ const MESSAGES = {
     district: 'ജില്ല',
     qualification: 'യോഗ്യത',
     height: 'ഉയരം',
-    weight: 'ഭാരം'
+    weight: 'ഭാരം',
+    loginPhone: 'App login number'
   },
+  loginPhoneQuestion:
+    'Pulso app-ൽ login ചെയ്യാൻ ഏത് mobile number ആണ് ഉപയോഗിക്കുക?\nLogin ചെയ്യുമ്പോൾ OTP ഈ number-ലേക്ക് ആണ് വരുക.',
+  loginPhoneTypeAsk: 'ദയവായി 10 അക്ക mobile number type ചെയ്യുക.',
+  loginPhoneRetry: 'ദയവായി 10 അക്ക mobile number type ചെയ്യുക (ഉദാ: 9876543210).',
   detailsSexValues: { Female: 'സ്ത്രീ', Male: 'പുരുഷൻ' },
   detailsChangeQuestion:
     'ഏത് വിവരമാണ് മാറ്റേണ്ടത്? താഴെയുള്ള list-ിൽ നിന്ന് തിരഞ്ഞെടുക്കുക.',
@@ -687,6 +699,7 @@ const ENGLISH_BASE_MESSAGES = {
   detailsCheckLabels: {
     height: 'Height',
     weight: 'Weight',
+    loginPhone: 'App login number',
     name: 'Name',
     age: 'Age',
     sex: 'Male or female',
@@ -695,6 +708,10 @@ const ENGLISH_BASE_MESSAGES = {
   },
   detailsSexValues: { Female: 'Female', Male: 'Male' },
   detailsChangeQuestion: 'Which detail do you want to change? Please choose from the list below.',
+  loginPhoneQuestion:
+    'Which mobile number will you use to log in to the Pulso app?\nThe login OTP will come to this number.',
+  loginPhoneTypeAsk: 'Please type the 10-digit mobile number.',
+  loginPhoneRetry: 'Please type a 10-digit mobile number (e.g. 9876543210).',
   detailsCheckReminder: 'Please check your details and tap Correct.',
   detailsQualificationBasicNotice:
     'With this qualification, Pulso offers duties at the Basic rate.\n\nDuty pay: 8 hours ₹{{payout8h}}/day, 24 hours ₹{{payout24h}}/day.',
@@ -862,6 +879,8 @@ const UI_TEXT = {
   heightButtonText: 'ഉയരം തിരഞ്ഞെടുക്കുക',
   heightSectionTitle: 'ഉയരം',
   skipTitle: 'ഒഴിവാക്കുക',
+  loginPhoneSameTitle: 'ഈ WhatsApp number',
+  loginPhoneOtherTitle: 'വേറെ number',
   profileConsentAgreeTitle: 'സമ്മതിക്കുന്നു',
   profilePhotoLaterTitle: 'പിന്നീട്',
   detailsCorrectTitle: 'ശരിയാണ്',
@@ -907,6 +926,8 @@ const KARNATAKA_UI_TEXT = {
   heightButtonText: 'Choose height',
   heightSectionTitle: 'Your height',
   skipTitle: 'Skip',
+  loginPhoneSameTitle: 'This WhatsApp number',
+  loginPhoneOtherTitle: 'Another number',
   profileConsentAgreeTitle: 'I agree',
   profilePhotoLaterTitle: 'Send later',
   detailsCorrectTitle: 'Correct',

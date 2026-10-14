@@ -195,9 +195,11 @@ test('Skip on height, weight required, Send later on the photo: the chat goes on
 test('the details check shows height and weight, and Change can re-ask both', async () => {
   const phone = seed(STATUS.AWAITING_DISTRICT, { sex: 'Female', heightRange: 'h_5_3_5_5', weightKg: 58, districtListPage: 1 });
   await say(phone, row('district_ernakulam', 'എറണാകുളം'));
+  assert.equal(records.get(phone).status, STATUS.AWAITING_LOGIN_PHONE, 'the app login number comes next');
+  await say(phone, tap(BUTTON_IDS.LOGIN_PHONE_SAME));
   assert.equal(records.get(phone).status, STATUS.AWAITING_DETAILS_CONFIRMATION);
   assert.match(lastToHer(phone).body, /ഉയരം: 5 ft 3 in – 5 ft 5 in\n/);
-  assert.match(lastToHer(phone).body, /ഭാരം: 58 kg$/);
+  assert.match(lastToHer(phone).body, /ഭാരം: 58 kg\n/);
   await say(phone, tap(BUTTON_IDS.DETAILS_CHANGE));
   const rows = lastToHer(phone).sections[0].rows;
   assert.ok(rows.some((r) => r.id === BUTTON_IDS.DETAILS_EDIT_HEIGHT));
@@ -209,7 +211,7 @@ test('the details check shows height and weight, and Change can re-ask both', as
   assert.equal(p.weightKg, 62);
   assert.equal(p.status, STATUS.AWAITING_DETAILS_CONFIRMATION);
   assert.equal(p.detailsEditing, null);
-  assert.match(lastToHer(phone).body, /ഭാരം: 62 kg$/);
+  assert.match(lastToHer(phone).body, /ഭാരം: 62 kg\n/);
   await say(phone, tap(BUTTON_IDS.DETAILS_CHANGE));
   await say(phone, row(BUTTON_IDS.DETAILS_EDIT_HEIGHT));
   assert.equal(lastToHer(phone).kind, 'list');

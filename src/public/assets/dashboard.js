@@ -146,6 +146,7 @@ document.getElementById('refresh-button').addEventListener('click', loadProvider
 /* The three fields holding work that is not saved anywhere yet. */
 [
   ['review-qualification-input', 'qualification', 'change'],
+  ['review-login-phone-input', 'loginPhone', 'input'],
   ['notes-input', 'notes', 'input'],
   ['additional-note-input', 'additionalNote', 'input']
 ].forEach(([id, field, event]) => {
@@ -1787,6 +1788,7 @@ async function renderDetail(provider) {
     detailPhone,
     'qualification'
   );
+  setReviewField('review-login-phone-input', localMobile(detailProvider.appLoginPhone || detailProvider.phone), detailPhone, 'loginPhone');
   // The record decides this as much as the dropdown does: someone over the age
   // threshold lands on the Basic rate whatever certificate they hold.
   syncBasicReasonField();
@@ -1938,6 +1940,45 @@ function setReviewStatus(message, kind) {
   if (kind) target.classList.add(kind);
 }
 
+/* "+91 98765 43210" / "919876543210" → "9876543210"; anything else as typed. */
+function localMobile(value) {
+  let digits = String(value || '').replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
+  else if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+  return digits;
+}
+
+function validLoginMobile(value) {
+  return /^[6-9]\d{9}$/.test(localMobile(value));
+}
+
+async function saveLoginPhone() {
+  if (!selectedPhone) return;
+  const input = document.getElementById('review-login-phone-input');
+  const value = localMobile(input && input.value);
+  if (!validLoginMobile(value)) {
+    sayReviewResult('App login number must be a 10-digit mobile number.', 'error');
+    return;
+  }
+  try {
+    const saved = await fetchJson(`/admin/providers/${selectedPhone}/login-phone`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appLoginPhone: value })
+    });
+    clearUnsavedEdits();
+    const index = providers.findIndex((item) => item.phone === saved.phone);
+    if (index >= 0) providers[index] = saved;
+    renderDetail(saved);
+    sayReviewResult(`App login number saved: ${PulsoDesk.formatPhone(`91${value}`)}.`, 'success');
+  } catch (error) {
+    sayReviewResult(error.message || 'Could not save the login number.', 'error');
+  }
+}
+
+const saveLoginPhoneButton = document.getElementById('save-login-phone-button');
+if (saveLoginPhoneButton) saveLoginPhoneButton.addEventListener('click', saveLoginPhone);
+
 async function submitReview(action) {
   if (!selectedPhone || reviewInFlight) return;
 
@@ -1950,6 +1991,12 @@ async function submitReview(action) {
 
   if (approving && !qualification) {
     sayReviewResult('Select the qualification shown on the certificate before approving.', 'error');
+    return;
+  }
+
+  const appLoginPhone = localMobile((document.getElementById('review-login-phone-input') || {}).value);
+  if (approving && appLoginPhone && !validLoginMobile(appLoginPhone)) {
+    sayReviewResult('App login number must be a 10-digit mobile number.', 'error');
     return;
   }
 
@@ -1972,7 +2019,7 @@ async function submitReview(action) {
     const reviewed = await fetchJson(`/admin/providers/${selectedPhone}/${action}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes, qualification, basicTierReasons })
+      body: JSON.stringify({ notes, qualification, basicTierReasons, ...(approving && appLoginPhone ? { appLoginPhone } : {}) })
     });
 
     // Saved: what is on screen now came back from the server, so it is no

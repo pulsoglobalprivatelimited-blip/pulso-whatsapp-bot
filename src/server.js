@@ -1466,9 +1466,54 @@ app.get('/admin/providers/:phone', async (req, res) => {
   }
 });
 
+/* The App login number the desk sends: 10 digits (with or without +91), saved
+   as "91…". Missing means "leave it"; a wrong one is refused, never guessed. */
+function deskLoginPhone(value) {
+  if (value === undefined || value === null || String(value).trim() === '') return null;
+  const { parseIndianMobile } = require('./services/messageParser');
+  const parsed = parseIndianMobile({ type: 'text', text: { body: String(value) } });
+  if (!parsed) {
+    const error = new Error('App login number must be a 10-digit mobile number');
+    error.statusCode = 400;
+    throw error;
+  }
+  return parsed;
+}
+
+app.post('/admin/providers/:phone/login-phone', async (req, res) => {
+  try {
+    const appLoginPhone = deskLoginPhone(req.body && req.body.appLoginPhone);
+    if (!appLoginPhone) return res.status(400).json({ error: 'App login number is required' });
+    const { getProvider, updateProvider, appendHistory } = require('./services/providerService');
+    const before = await getProvider(req.params.phone);
+    if (!before) return res.status(404).json({ error: 'Provider not found' });
+    await updateProvider(req.params.phone, { appLoginPhone });
+    await appendHistory(req.params.phone, { type: 'system', event: 'app_login_phone_changed', from: before.appLoginPhone || before.phone, to: appLoginPhone, by: getAdminActor(req) });
+    const after = await getProvider(req.params.phone);
+    try {
+      const { syncProviderToPulsoHub } = require('./services/pulsoHubSyncService');
+      await syncProviderToPulsoHub(after);
+    } catch (syncError) {
+      console.error('[APP_LOGIN_PHONE_SYNC_ERROR]', syncError.message);
+    }
+    return res.json(after);
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({ error: error.message });
+  }
+});
+
 app.post('/admin/providers/:phone/approve-certificate', async (req, res) => {
   try {
     const actor = getAdminActor(req);
+    const appLoginPhone = deskLoginPhone(req.body && req.body.appLoginPhone);
+    if (appLoginPhone) {
+      const { getProvider, updateProvider, appendHistory } = require('./services/providerService');
+      const before = await getProvider(req.params.phone);
+      if (before && (before.appLoginPhone || before.phone) !== appLoginPhone) {
+        await updateProvider(req.params.phone, { appLoginPhone });
+        await appendHistory(req.params.phone, { type: 'system', event: 'app_login_phone_changed', from: before.appLoginPhone || before.phone, to: appLoginPhone, by: actor });
+      }
+    }
     const result = await approveCertificate(
       req.params.phone,
       actor,

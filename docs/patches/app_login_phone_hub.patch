@@ -1,0 +1,105 @@
+--- /tmp/claude-501/hub_live_index_orig.js	2026-10-14 11:09:17
++++ functions/index.js	2026-10-14 11:10:39
+@@ -567,6 +567,12 @@
+     termsAccepted,
+     completedAt,
+     onboardingCompleted,
++    // The number she logs in to the Pulso app with, when it is not her
++    // WhatsApp number (founder, 14 Oct 2026). Empty means the WhatsApp one.
++    appLoginPhone: (() => {
++      const login = normalizePhoneNumber(payload.appLoginPhone || '');
++      return login && login !== normalizedPhone ? login : '';
++    })(),
+     certificateReviewAlertFailed: payload.certificateReviewAlertFailed === true,
+     certificateReviewAlert: normalizeCertificateReviewAlert(payload.certificateReviewAlert),
+     // Profile for agencies and families (11 Oct 2026): height range, weight,
+@@ -646,6 +652,17 @@
+     const status = (doc.data()?.status || '').toString().trim().toLowerCase();
+     return !status || status === 'submitted';
+   });
++}
++
++/* App login number (founder, 14 Oct 2026). A caregiver may log in to the app
++   with a number other than her WhatsApp one. Her record stays keyed by the
++   WhatsApp number; botOnboardingLoginPhones/{loginPhone} points back to it. */
++async function whatsappPhoneForLoginPhone(phone) {
++  const login = normalizePhoneNumber(phone);
++  if (!login) return '';
++  const snap = await db.collection('botOnboardingLoginPhones').doc(login).get();
++  const target = snap.exists ? normalizePhoneNumber((snap.data() || {}).whatsappPhone || '') : '';
++  return target && target !== login ? target : '';
+ }
+ 
+ async function reconcileBotOnboardingForPhone(phone, options = {}) {
+@@ -657,6 +674,9 @@
+   const mirrorRef = db.collection('botOnboarding').doc(normalizedPhone);
+   const mirrorSnap = await mirrorRef.get();
+   if (!mirrorSnap.exists) {
++    // Signed in with her app login number: reconcile her WhatsApp record.
++    const whatsappPhone = options.viaLoginPhone ? '' : await whatsappPhoneForLoginPhone(normalizedPhone);
++    if (whatsappPhone) return reconcileBotOnboardingForPhone(whatsappPhone, { ...options, viaLoginPhone: true });
+     return { ok: false, matchStatus: 'missing_bot_record', normalizedPhone };
+   }
+ 
+@@ -684,6 +704,12 @@
+   await notifyOpsOfFailedCertificateReviewAlert({ mirror, mirrorRef, normalizedPhone });
+ 
+   const users = await findUsersByPhone(normalizedPhone);
++  const loginPhone = normalizePhoneNumber(mirror.appLoginPhone || '');
++  if (loginPhone && loginPhone !== normalizedPhone) {
++    for (const doc of await findUsersByPhone(loginPhone)) {
++      if (!users.some((u) => u.id === doc.id)) users.push(doc);
++    }
++  }
+   if (!users.length) {
+     await writeSyncIfChanged({ matchStatus: 'waiting_for_app_signup' });
+     return { ok: true, matchStatus: 'waiting_for_app_signup', normalizedPhone };
+@@ -6220,6 +6246,17 @@
+     }
+ 
+     await db.collection('botOnboarding').doc(mirror.normalizedPhone).set(mirror, { merge: true });
++    if (mirror.appLoginPhone) {
++      // A login number already pointing at someone else's record is left alone.
++      const aliasRef = db.collection('botOnboardingLoginPhones').doc(mirror.appLoginPhone);
++      const alias = await aliasRef.get();
++      const owner = alias.exists ? normalizePhoneNumber((alias.data() || {}).whatsappPhone || '') : '';
++      if (!owner || owner === mirror.normalizedPhone) {
++        await aliasRef.set({ whatsappPhone: mirror.normalizedPhone, updatedAt: ts() }, { merge: true });
++      } else {
++        console.warn('[app-login-phone] already linked to another record', mirror.appLoginPhone, owner);
++      }
++    }
+     const result = await reconcileBotOnboardingForPhone(mirror.normalizedPhone);
+     return res.json({
+       ok: true,
+@@ -35527,10 +35564,19 @@
+     throw new HttpsError('failed-precondition', 'This account is already set up');
+   }
+   const uid = req.auth.uid;
+-  const normalizedPhone = normalizePhoneNumber(req.auth.token?.phone_number || '');
++  let normalizedPhone = normalizePhoneNumber(req.auth.token?.phone_number || '');
+   if (!normalizedPhone) throw new HttpsError('failed-precondition', 'Sign in with a phone number to continue');
++  const signedInPhone = normalizedPhone;
+ 
+-  const mirrorSnap = await db.collection('botOnboarding').doc(normalizedPhone).get();
++  let mirrorSnap = await db.collection('botOnboarding').doc(normalizedPhone).get();
++  if (!mirrorSnap.exists) {
++    // Signed in with her app login number, not her WhatsApp one.
++    const whatsappPhone = await whatsappPhoneForLoginPhone(normalizedPhone);
++    if (whatsappPhone) {
++      normalizedPhone = whatsappPhone;
++      mirrorSnap = await db.collection('botOnboarding').doc(normalizedPhone).get();
++    }
++  }
+   if (!mirrorSnap.exists) return { ready: false, reason: 'no_record' };
+   const mirror = mirrorSnap.data() || {};
+   if (mirror.onboardingCompleted !== true) {
+@@ -35556,7 +35602,7 @@
+     role,
+     status: 'active',
+     profileComplete: true,
+-    phone: facStr(existing.phone, 20) || `+${normalizedPhone}`,
++    phone: facStr(existing.phone, 20) || `+${signedInPhone}`,
+     onboardingSource: 'app_bot',
+     botQualification: facStr(mirror.qualification, 60),
+     careTier: providerTiers.tierForQualifications(providerQualificationsLib.providerQualifications({ botQualification: mirror.qualification })),

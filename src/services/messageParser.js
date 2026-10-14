@@ -245,6 +245,16 @@ function parseHeightRange(message) {
   return null;
 }
 
+/* An Indian mobile number typed by hand: 10 digits starting 6-9, with or
+   without +91 / 91 / 0 and spaces. Returns the 12-digit "91…" form, or null. */
+function parseIndianMobile(message) {
+  if (getInteractiveReplyId(message)) return null;
+  let digits = String(getMessageText(message) || '').replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
+  else if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+  return /^[6-9]\d{9}$/.test(digits) ? `91${digits}` : null;
+}
+
 /* Weight in kg: a whole number between 35 and 150, "58", "58 kg", "58.5". */
 function parseWeightKg(message) {
   // Required since 14 Oct 2026: a Skip tap on an older message, or "skip"
@@ -474,7 +484,8 @@ const DETAILS_EDIT_BY_ID = {
   [BUTTON_IDS.DETAILS_EDIT_DISTRICT]: 'district',
   [BUTTON_IDS.DETAILS_EDIT_QUALIFICATION]: 'qualification',
   [BUTTON_IDS.DETAILS_EDIT_HEIGHT]: 'height',
-  [BUTTON_IDS.DETAILS_EDIT_WEIGHT]: 'weight'
+  [BUTTON_IDS.DETAILS_EDIT_WEIGHT]: 'weight',
+  [BUTTON_IDS.DETAILS_EDIT_LOGIN_PHONE]: 'loginPhone'
 };
 const DETAILS_EDIT_BY_WORD = {
   'പേര്': 'name', name: 'name',
@@ -483,7 +494,8 @@ const DETAILS_EDIT_BY_WORD = {
   'ജില്ല': 'district', district: 'district',
   'യോഗ്യത': 'qualification', qualification: 'qualification',
   'ഉയരം': 'height', height: 'height',
-  'ഭാരം': 'weight', weight: 'weight'
+  'ഭാരം': 'weight', weight: 'weight',
+  'app login number': 'loginPhone', 'login number': 'loginPhone'
 };
 
 function parseDetailsCheckAction(message, { typed = true } = {}) {
@@ -506,6 +518,7 @@ module.exports = {
   normalizeText,
   parseHeightRange,
   parseWeightKg,
+  parseIndianMobile,
   parseProfileConsent,
   parseProfilePhotoAction,
   parseStillAvailable,

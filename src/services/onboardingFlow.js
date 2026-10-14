@@ -101,6 +101,7 @@ const {
   parseDetailsCheckAction,
   parseHeightRange,
   parseWeightKg,
+  parseIndianMobile,
   parseProfileConsent,
   parseProfilePhotoAction,
   parseStillAvailable,
@@ -225,7 +226,36 @@ async function handleAgentHelpRequest(phone) {
   await notifyAgentHelpRequested(updatedProvider);
 }
 
+/* "Log in with the same number as WhatsApp" is wrong for a caregiver who
+   gave another app login number (founder, 14 Oct 2026). Every message that
+   says it names her number instead; nothing changes for everyone else. */
+const SAME_NUMBER_PHRASES = [
+  ['WhatsApp onboarding-ൽ ഉപയോഗിച്ച അതേ phone number', (n) => `${n} എന്ന phone number`],
+  ['the same phone number used for WhatsApp onboarding', (n) => `the phone number ${n}`],
+  ['the same number you used for onboarding', (n) => `the number ${n}`]
+];
+
+function displayPhone(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  const local = digits.length === 12 && digits.startsWith('91') ? digits.slice(2) : digits;
+  return local.length === 10 ? `+91 ${local.slice(0, 5)} ${local.slice(5)}` : `+${digits}`;
+}
+
+function withLoginNumber(text, provider) {
+  if (typeof text !== 'string' || !provider) return text;
+  const login = String(provider.appLoginPhone || '').replace(/\D/g, '');
+  const own = String(provider.phone || '').replace(/\D/g, '');
+  if (!login || login === own) return text;
+  return SAME_NUMBER_PHRASES.reduce((t, [from, to]) => t.split(from).join(to(displayPhone(login))), text);
+}
+
 async function sendAndLog(phone, kind, body, sender) {
+  const mentionsSameNumber = (t) => typeof t === 'string' && SAME_NUMBER_PHRASES.some(([from]) => t.includes(from));
+  if ((kind === 'text' && mentionsSameNumber(body)) || (kind === 'buttons' && body && mentionsSameNumber(body.body))) {
+    const who = await getProvider(phone);
+    if (kind === 'text') body = withLoginNumber(body, who);
+    else body = { ...body, body: withLoginNumber(body.body, who) };
+  }
   try {
     if (kind === 'buttons') {
       await sendButtons(phone, body.body, body.buttons);
@@ -290,6 +320,7 @@ function getStepForStatus(status) {
     [STATUS.AWAITING_PROFILE_CONSENT]: 11.6,
     [STATUS.AWAITING_PROFILE_PHOTO]: 11.8,
     [STATUS.AWAITING_DISTRICT]: 12,
+    [STATUS.AWAITING_LOGIN_PHONE]: 12.5,
     [STATUS.AWAITING_DETAILS_CONFIRMATION]: 13,
     [STATUS.VERIFICATION_PENDING]: 13,
     [STATUS.ADDITIONAL_DOCUMENT_REQUESTED]: 13,
@@ -2346,6 +2377,10 @@ async function sendPromptForCurrentStatus(phone, provider) {
     case STATUS.AWAITING_DISTRICT:
       await sendDistrictList(phone);
       return;
+    case STATUS.AWAITING_LOGIN_PHONE:
+      if (provider.loginPhoneTyping) await sendAndLog(phone, 'text', MESSAGES.loginPhoneTypeAsk);
+      else await sendLoginPhoneQuestion(phone);
+      return;
     case STATUS.AWAITING_DETAILS_CONFIRMATION:
       if (provider.detailsEditing) {
         await sendDetailsEditQuestion(phone, provider.detailsEditing);
@@ -2969,6 +3004,7 @@ const STOP_ON_NOT_INTERESTED_STATUSES = new Set([
   STATUS.AWAITING_AGE,
   STATUS.AWAITING_SEX,
   STATUS.AWAITING_DISTRICT,
+  STATUS.AWAITING_LOGIN_PHONE,
   STATUS.AWAITING_DETAILS_CONFIRMATION
 ]);
 
@@ -3268,9 +3304,51 @@ async function handleDistrict(phone, message) {
     return;
   }
 
+  // Next: which number she will log in to the app with (founder, 14 Oct
+  // 2026); the details check follows her answer.
+  await updateStatus(phone, STATUS.AWAITING_LOGIN_PHONE, 12.5, { district, districtListPage: 1, loginPhoneTyping: false });
+  await sendLoginPhoneQuestion(phone);
+}
+
+async function sendLoginPhoneQuestion(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.loginPhoneQuestion,
+    buttons: [
+      { id: BUTTON_IDS.LOGIN_PHONE_SAME, title: UI_TEXT.loginPhoneSameTitle },
+      { id: BUTTON_IDS.LOGIN_PHONE_OTHER, title: UI_TEXT.loginPhoneOtherTitle }
+    ]
+  });
+}
+
+/* Her WhatsApp number (one tap) or another she types. Nothing goes to review
+   from here: the details check comes next, Correct sends it, as before. */
+async function handleLoginPhone(phone, message) {
+  const provider = await getProvider(phone);
+  const replyId = getInteractiveReplyId(message);
+  const editing = await detailsEditFor(phone, 'loginPhone');
+  let chosen = null;
+  if (replyId === BUTTON_IDS.LOGIN_PHONE_SAME) {
+    chosen = String(phone).replace(/\D/g, '');
+  } else if (replyId === BUTTON_IDS.LOGIN_PHONE_OTHER) {
+    await updateProvider(phone, { loginPhoneTyping: true });
+    await sendAndLog(phone, 'text', MESSAGES.loginPhoneTypeAsk);
+    return;
+  } else {
+    chosen = parseIndianMobile(message);
+    if (!chosen) {
+      await sendAndLog(phone, 'text', MESSAGES.loginPhoneRetry);
+      if (!(provider && provider.loginPhoneTyping)) await sendLoginPhoneQuestion(phone);
+      return;
+    }
+  }
+  if (editing) {
+    await applyDetailsEdit(phone, editing, 'loginPhone', editing.appLoginPhone || phone, chosen, { appLoginPhone: chosen, loginPhoneTyping: false });
+    await sendDetailsCheck(phone);
+    return;
+  }
   // Nothing goes to review yet: she sees her answers together first, and
   // Correct sends it (sendForReview). Until 8 Oct 2026 this sent it here.
-  await sendDetailsCheck(phone, null, { first: true, patch: { district, districtListPage: 1 } });
+  await sendDetailsCheck(phone, null, { first: true, patch: { appLoginPhone: chosen, loginPhoneTyping: false } });
 }
 
 /** "Your certificate has been sent for verification" is untrue for someone who
@@ -3293,7 +3371,7 @@ function verificationPendingMessageFor(provider) {
 // together and taps Correct or Change, before anything goes to review. A
 // typo, a wrong age or a wrong district used to reach the reviewer as it was.
 
-const DETAILS_FIELDS = ['name', 'age', 'sex', 'district', 'qualification', 'height', 'weight'];
+const DETAILS_FIELDS = ['name', 'age', 'sex', 'district', 'qualification', 'height', 'weight', 'loginPhone'];
 const DETAILS_EDIT_ROW_IDS = {
   name: BUTTON_IDS.DETAILS_EDIT_NAME,
   age: BUTTON_IDS.DETAILS_EDIT_AGE,
@@ -3301,7 +3379,8 @@ const DETAILS_EDIT_ROW_IDS = {
   height: BUTTON_IDS.DETAILS_EDIT_HEIGHT,
   weight: BUTTON_IDS.DETAILS_EDIT_WEIGHT,
   district: BUTTON_IDS.DETAILS_EDIT_DISTRICT,
-  qualification: BUTTON_IDS.DETAILS_EDIT_QUALIFICATION
+  qualification: BUTTON_IDS.DETAILS_EDIT_QUALIFICATION,
+  loginPhone: BUTTON_IDS.DETAILS_EDIT_LOGIN_PHONE
 };
 // Nothing to upload when she changes to it at the check: the same rule as the
 // first time (handleExpectedDutiesConfirmation). A nursing student is asked
@@ -3336,7 +3415,8 @@ function buildDetailsCheckBody(provider, prefix = null) {
     `${labels.district}: ${p.district || '-'}`,
     `${labels.qualification}: ${qualificationLabelFor(p.qualification)}`,
     `${labels.height || 'Height'}: ${heightLabelFor(p.heightRange) || '-'}`,
-    `${labels.weight || 'Weight'}: ${p.weightKg ? `${p.weightKg} kg` : '-'}`
+    `${labels.weight || 'Weight'}: ${p.weightKg ? `${p.weightKg} kg` : '-'}`,
+    `${labels.loginPhone || 'App login number'}: ${displayPhone(p.appLoginPhone || p.phone)}`
   ];
   return prefix ? `${prefix}\n\n${lines.join('\n')}` : lines.join('\n');
 }
@@ -3416,6 +3496,10 @@ async function sendDetailsEditQuestion(phone, field) {
       return;
     case 'weight':
       await sendWeightQuestion(phone);
+      return;
+    case 'loginPhone':
+      await updateProvider(phone, { loginPhoneTyping: false });
+      await sendLoginPhoneQuestion(phone);
       return;
     default:
       await sendDetailsCheck(phone);
@@ -3556,6 +3640,9 @@ async function routeDetailsEdit(phone, field, message) {
       return;
     case 'weight':
       await handleWeight(phone, message);
+      return;
+    case 'loginPhone':
+      await handleLoginPhone(phone, message);
       return;
     default:
       await sendDetailsCheck(phone);
@@ -5061,6 +5148,9 @@ async function processIncomingMessage(phone, message) {
     case STATUS.AWAITING_DISTRICT:
       await handleDistrict(phone, message);
       return;
+    case STATUS.AWAITING_LOGIN_PHONE:
+      await handleLoginPhone(phone, message);
+      return;
     case STATUS.AWAITING_DETAILS_CONFIRMATION:
       await handleDetailsConfirmation(phone, message);
       return;
@@ -5433,6 +5523,7 @@ module.exports = {
   sendForReview,
   finalizeCertificateCollection,
   buildDetailsCheckBody,
+  withLoginNumber,
   buildDetailsCheckButtons,
   buildDetailsChangeList,
   recordDetailsChange,

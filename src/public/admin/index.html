@@ -307,6 +307,15 @@
                   <option value="other_caregiving">Other caregiving experience</option>
                   <option value="basic_caregiver">Basic caregiver (no course certificate)</option>
                 </select>
+                <!-- The number she logs in to the Pulso app with (founder, 14 Oct 2026):
+                     her own answer in the chat, or her WhatsApp number. Sent with Approve;
+                     Save changes it any time. -->
+                <label class="login-phone-field" for="review-login-phone-input">App login number
+                  <span class="login-phone-row">
+                    <input id="review-login-phone-input" type="tel" inputmode="numeric" maxlength="16" placeholder="10-digit mobile number" autocomplete="off">
+                    <button type="button" id="save-login-phone-button" class="button ghost">Save login number</button>
+                  </span>
+                </label>
                 <!-- Shown only when the approval lands on the Basic rate, which
                      is either the qualification above or an age over the
                      threshold. The rate follows from the reason, and the
@@ -493,7 +502,7 @@
   <script src="/admin/assets/back-stack.js?v=20261007d"></script>
   <script src="/admin/assets/desk-ui.js?v=20261008a"></script>
   <script src="/admin/assets/desk-shell.js?v=20261007b"></script>
-  <script src="/admin/assets/dashboard.js?v=20261009a"></script>
+  <script src="/admin/assets/dashboard.js?v=20261014a"></script>
   <script src="/admin/assets/partner-review.js?v=20260924a"></script>
   <script src="/admin/assets/booking-dashboard.js?v=20261007d"></script>
   <script src="/admin/assets/admin-sides.js?v=20261007c"></script>
