@@ -134,8 +134,7 @@ test('after the sex she taps a height range, types a weight, agrees once and sen
   p = records.get(phone);
   assert.equal(p.heightRange, 'h_5_3_5_5');
   assert.equal(p.status, STATUS.AWAITING_WEIGHT);
-  assert.equal(lastToHer(phone).kind, 'buttons');
-  assert.deepEqual(lastToHer(phone).buttons.map((b) => b.id), [BUTTON_IDS.WEIGHT_SKIP]);
+  assert.equal(lastToHer(phone).kind, 'text', 'weight is required: no Skip button');
 
   await say(phone, text('abc'));
   assert.equal(records.get(phone).status, STATUS.AWAITING_WEIGHT);
@@ -173,13 +172,18 @@ test('after the sex she taps a height range, types a weight, agrees once and sen
   assert.ok(events(phone).includes('profile_photo_received'));
 });
 
-test('Skip on height and weight, Send later on the photo: nothing stored, the chat goes on', async () => {
+test('Skip on height, weight required, Send later on the photo: the chat goes on', async () => {
   const phone = seed(STATUS.AWAITING_HEIGHT, { sex: 'Female' });
   await say(phone, row(BUTTON_IDS.HEIGHT_SKIP));
   assert.equal(records.get(phone).heightRange, null);
   assert.equal(records.get(phone).status, STATUS.AWAITING_WEIGHT);
+  // Weight is required (14 Oct 2026): an old Skip tap or "skip" typed is asked again.
   await say(phone, tap(BUTTON_IDS.WEIGHT_SKIP));
-  assert.equal(records.get(phone).weightKg, null);
+  assert.equal(records.get(phone).status, STATUS.AWAITING_WEIGHT);
+  await say(phone, text('skip'));
+  assert.equal(records.get(phone).status, STATUS.AWAITING_WEIGHT);
+  await say(phone, text('62'));
+  assert.equal(records.get(phone).weightKg, 62);
   assert.equal(records.get(phone).status, STATUS.AWAITING_PROFILE_CONSENT);
   await say(phone, tap(BUTTON_IDS.PROFILE_CONSENT_AGREE));
   await say(phone, tap(BUTTON_IDS.PROFILE_PHOTO_LATER));

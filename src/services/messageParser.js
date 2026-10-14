@@ -247,10 +247,10 @@ function parseHeightRange(message) {
 
 /* Weight in kg: a whole number between 35 and 150, "58", "58 kg", "58.5". */
 function parseWeightKg(message) {
-  const replyId = getInteractiveReplyId(message);
-  if (replyId === BUTTON_IDS.WEIGHT_SKIP) return 'skip';
+  // Required since 14 Oct 2026: a Skip tap on an older message, or "skip"
+  // typed, is not a weight and is asked again.
+  if (getInteractiveReplyId(message)) return null;
   const normalized = normalizeText(getMessageText(message));
-  if (['skip', 'ഒഴിവാക്കുക', 'later'].includes(normalized)) return 'skip';
   const match = normalized.match(/(\d{2,3})(?:[.,]\d+)?/);
   if (!match) return null;
   const kg = Number(match[1]);

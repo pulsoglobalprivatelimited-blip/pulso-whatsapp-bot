@@ -586,11 +586,9 @@ async function sendHeightList(phone) {
   });
 }
 
+// Weight is required (founder, 14 Oct 2026): a plain question, no Skip button.
 async function sendWeightQuestion(phone) {
-  await sendAndLog(phone, 'buttons', {
-    body: MESSAGES.weightQuestion,
-    buttons: [{ id: BUTTON_IDS.WEIGHT_SKIP, title: UI_TEXT.skipTitle }]
-  });
+  await sendAndLog(phone, 'text', MESSAGES.weightQuestion);
 }
 
 async function sendProfileConsent(phone) {
