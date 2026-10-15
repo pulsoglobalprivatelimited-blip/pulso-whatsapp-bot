@@ -1,0 +1,72 @@
+--- /tmp/claude-501/fbb_live_orig.js	2026-10-15 16:04:38
++++ lib/whatsapp_family_booking_bot.js
+@@ -1937,6 +1937,22 @@
+     return withEffects(flow.start(fresh, entry, cfg));
+   }
+ 
++  /* Agencies go to the supply bot (founder, 15 Oct 2026):
++     app_config/whatsapp_partner_bot.divertToSupply. A new agency (partner ad,
++     the website's "I run an agency", or "agency" in the menu) and one partway
++     through the partner chat start the supply chat instead. One that finished
++     it (partner_done) is left alone. Flip the setting off to undo. */
++  const divertingToSupply = partnerConfig.divertToSupply === true && supplyConfig.enabled === true;
++  const divertToSupply = (from = {}) => {
++    const fresh = { ...current, step: "", jobLocked: false, partnerLocked: false, divertedFromPartnerAt: new Date().toISOString() };
++    delete fresh.supply;
++    return withEffects(supplyFlow.start(
++      fresh,
++      { entry: "partner_divert", adId: from.adId || "", ctwaClid: from.ctwaClid || "" },
++      supplyConfig,
++    ));
++  };
++
+   if (supplyFlow.isSupplyStep(current.step)) {
+     return withEffects(
+       supplyFlow.handleTurn({
+@@ -1979,6 +1995,7 @@
+     // job-seeker tapping around in the chat — which is why typing or tapping
+     // "Home care agency" while locked still gets the recruitment link.
+     if (declared?.kind === "partner" && (declared.entry === "prefix" || declared.market === "bengaluru")) {
++      if (divertingToSupply) return divertToSupply(declared);
+       return withEffects(
+         partnerFlow.startPartnerFlow({ ...current, jobLocked: false }, declared, {
+           skipRegionLanguage: Boolean(current.language),
+@@ -2015,6 +2032,7 @@
+       return response(next, jobReferralMessage(next));
+     }
+     if (entry?.kind === "partner") {
++      if (divertingToSupply) return divertToSupply(entry);
+       return withEffects(
+         partnerFlow.startPartnerFlow(current, entry, {
+           skipRegionLanguage:
+@@ -2037,6 +2055,10 @@
+     return response(current, languagePrompt());
+   }
+ 
++  if (partnerFlow.isPartnerStep(current.step) && divertingToSupply && current.step !== partnerFlow.PARTNER_STEPS.done) {
++    return divertToSupply(current.partner || {});
++  }
++
+   if (partnerFlow.isPartnerStep(current.step)) {
+     if (
+       current.step === partnerFlow.PARTNER_STEPS.done &&
+@@ -2178,6 +2200,7 @@
+           aliases: ["home care agency", "agency", "ഏജൻസി", "एजेंसी", "bureau"],
+         },
+       ]);
++      if (choice === "agency" && divertingToSupply) return divertToSupply();
+       if (choice === "agency" && partnerConfig.enabled) {
+         return withEffects(
+           partnerFlow.startPartnerFlow(current, { entry: "menu" }, { skipRegionLanguage: true }),
+--- ../-Users-abdulrahoof-Downloads-src/d6dd1d94-7136-48fb-a809-684201535ef3/scratchpad/livewh/lib/whatsapp_partner_flow.js	2026-10-10 12:48:24
++++ /private/tmp/claude-501/-Users-abdulrahoof-Downloads-src/d6dd1d94-7136-48fb-a809-684201535ef3/scratchpad/whdeploy/functions/lib/whatsapp_partner_flow.js	2026-10-15 16:05:20
+@@ -260,6 +260,9 @@
+     }
+   }
+   if (typeof raw.enabled === "boolean") out.enabled = raw.enabled;
++  // Founder, 15 Oct 2026: every agency on this number goes to the supply bot
++  // instead of the partner pitch. Off unless set true in app_config.
++  out.divertToSupply = raw.divertToSupply === true;
+   if (typeof raw.showFigures === "boolean") out.showFigures = raw.showFigures;
+   if (Array.isArray(raw.adIds)) out.adIds = raw.adIds.map((v) => str(v, 40)).filter(Boolean);
+   if (Array.isArray(raw.notifyUids)) out.notifyUids = raw.notifyUids.map((v) => str(v, 128)).filter(Boolean);
