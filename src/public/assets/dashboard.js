@@ -1817,6 +1817,12 @@ async function renderDetail(provider) {
     const button = document.getElementById(id);
     if (button) button.classList.toggle('hidden', !visible);
   });
+  // No certificate / student / above 50 sent no certificate (15 Oct 2026).
+  const callReview = isCallReviewRecord(detailProvider);
+  const approveLabel = document.getElementById('approve-button');
+  const rejectLabel = document.getElementById('reject-button');
+  if (approveLabel && !approveLabel.dataset.idleLabel) approveLabel.textContent = callReview ? 'Approve' : 'Approve certificate';
+  if (rejectLabel && !rejectLabel.dataset.idleLabel) rejectLabel.textContent = callReview ? 'Reject' : 'Reject certificate';
 
   setReviewField('notes-input', verification.notes || '', detailPhone, 'notes');
   setReviewField(

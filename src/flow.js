@@ -599,6 +599,11 @@ const MESSAGES = {
     'ഞങ്ങളുടെ support team-നെ ഇതിനകം അറിയിച്ചിട്ടുണ്ട്. സഹായം ലഭിക്കാത്ത പക്ഷം 12 മണിക്കൂറിന് ശേഷം വീണ്ടും "കൂടുതൽ സഹായം" തിരഞ്ഞെടുക്കാവുന്നതാണ്.',
   verificationStillPending:
     'താങ്കളുടെ certificate ഇപ്പോൾ verification-ലാണ്. പരിശോധിച്ച ശേഷം ഉടൻ update അറിയിക്കും.',
+  // No certificate / student / above 50 (15 Oct 2026): they sent no
+  // certificate, so the waiting reply says a call is coming instead.
+  callReviewStillPending: 'നിങ്ങളുടെ വിവരങ്ങൾ പരിശോധിക്കുന്നു. ഉടൻ ഒരു phone call വരും.',
+  welcomeBack: 'വീണ്ടും സ്വാഗതം 👋 നിർത്തിയിടത്തു നിന്ന് തുടരാം.',
+  dutyHourChangedAtCooking: 'ശരി, duty hour "{{hours}}" ആക്കി മാറ്റി.',
   completed:
     'താങ്കളുടെ onboarding ഇതിനകം പൂർത്തിയായിട്ടുണ്ട്. കൂടുതൽ സഹായം ആവശ്യമെങ്കിൽ വീണ്ടും message ചെയ്യുക.'
 };
@@ -866,6 +871,9 @@ const ENGLISH_BASE_MESSAGES = {
     'Our support team has already been informed. If you do not get help, you can select "More help" again after 12 hours.',
   verificationStillPending:
     'Your certificate is currently under verification. We will update you after review.',
+  callReviewStillPending: 'We are checking your details. You will get a phone call soon.',
+  welcomeBack: 'Welcome back 👋 Let us continue from where you stopped.',
+  dutyHourChangedAtCooking: 'Okay, your duty hours are now "{{hours}}".',
   completed:
     'Your onboarding is already complete. If you need more help, please message again.'
 };

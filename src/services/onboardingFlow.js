@@ -1011,12 +1011,34 @@ async function sendFinalDutyChoiceButtons(phone) {
   });
 }
 
+/* Shown once per choice (15 Oct 2026): picking "Both" showed it at the
+   choice and again after the samples. It shows again only if her choice
+   changes to one with 8-hour duty in it. */
 async function notify8HourNoStayOrFood(phone, dutyHourPreference) {
   if (!['8_hour', 'both'].includes(dutyHourPreference)) {
     return;
   }
-
+  const provider = await getProvider(phone);
+  if (provider && provider.eightHourNoticeFor === dutyHourPreference) return;
   await sendAndLog(phone, 'text', MESSAGES.dutyHourPreference8HourNotice);
+  await updateProvider(phone, { eightHourNoticeFor: dutyHourPreference });
+}
+
+/* While her application waits for review. A call-review applicant (no
+   certificate, student, above 50) sent no certificate, so she is told a call
+   is coming, not that her certificate is being checked. Said once: a plain
+   "Ok" or "thanks" after it gets no reply (15 Oct 2026); anything else gets
+   it again. */
+const ACK_WORDS = /^\s*(o+k+|okay+|k+|ok\s*(sir|madam|mam|maam)|thanks?|thank\s*you|thankyou|tnx|thx|ശരി|ഓക്കെ|ഓക്കേ|ഓകെ|hm+|m+)\s*[.!🙏👍👌😊]*\s*$/iu;
+const ACK_EMOJI = /^\s*[🙏👍👌😊🙂❤️]+\s*$/u;
+
+async function sendStillPendingReply(phone, provider, message) {
+  const typed = String(getMessageText(message) || '').trim();
+  const isAck = Boolean(typed) && !getInteractiveReplyId(message) && (ACK_WORDS.test(typed) || ACK_EMOJI.test(typed));
+  if (provider && provider.pendingReplySentAt && isAck) return;
+  const text = isNoCertificateProvider(provider) ? MESSAGES.callReviewStillPending : MESSAGES.verificationStillPending;
+  await sendAndLog(phone, 'text', text);
+  await updateProvider(phone, { pendingReplySentAt: new Date().toISOString() });
 }
 
 async function moveToExpectedDuties(phone, dutyHourPreference) {
@@ -2553,7 +2575,7 @@ async function handleInterest(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_DUTY_HOUR_PREFERENCE, 5, { interestConfirmed: true });
+  await updateStatus(phone, STATUS.AWAITING_DUTY_HOUR_PREFERENCE, 5, { interestConfirmed: true, eightHourNoticeFor: null });
   await sendDutyHourPreferenceButtons(phone);
 }
 
@@ -2588,6 +2610,28 @@ async function handleDutyHourPreference(phone, message) {
 
 async function handleCookingPreference(phone, message) {
   const cookingOptIn = parseCookingPreference(message);
+  // An old duty-hour button tapped here (15 Oct 2026: +91 99478 89890 picked
+  // Both, then tapped 24 hour on the earlier message): she is changing her
+  // duty hours. Take it, say so, and ask the cooking question again.
+  const replyId = getInteractiveReplyId(message);
+  const hoursTapped = [BUTTON_IDS.DUTY_HOUR_8, BUTTON_IDS.DUTY_HOUR_24, BUTTON_IDS.DUTY_HOUR_BOTH].includes(replyId)
+    ? parseDutyHourPreference(message)
+    : null;
+  if (cookingOptIn === null && hoursTapped) {
+    const label = hoursTapped === 'both' ? UI_TEXT.dutyBothTitle : hoursTapped === '8_hour' ? '8 hour' : '24 hour';
+    await updateProvider(phone, {
+      dutyHourPreference: hoursTapped,
+      sampleDutyState: {
+        stage: hoursTapped === 'both' ? 'both_prompt' : 'initial_prompt',
+        initialChoice: hoursTapped,
+        alternateChoice: getOtherDutyPreference(hoursTapped)
+      }
+    });
+    await sendAndLog(phone, 'text', MESSAGES.dutyHourChangedAtCooking.replace('{{hours}}', label));
+    await notify8HourNoStayOrFood(phone, hoursTapped);
+    await sendCookingPreferenceButtons(phone);
+    return;
+  }
   if (cookingOptIn === null) {
     await sendAndLog(phone, 'text', MESSAGES.cookingRetry);
     await sendCookingPreferenceButtons(phone);
@@ -3012,7 +3056,7 @@ async function handleAdditionalDocument(phone, message) {
       status: STATUS.VERIFICATION_PENDING,
       currentStep: 13
     });
-    await sendAndLog(phone, 'text', MESSAGES.verificationStillPending);
+    await sendStillPendingReply(phone, provider, message);
     return;
   }
 
@@ -3087,6 +3131,33 @@ async function stopIfNotInterested(phone, provider, message) {
   await appendHistory(phone, { type: 'system', event: 'not_interested_stop', atStatus: provider.status });
   await sendAndLog(phone, 'text', MESSAGES.notInterested);
   return true;
+}
+
+const WELCOME_BACK_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+const WELCOME_BACK_STATUSES = new Set([
+  STATUS.AWAITING_QUALIFICATION,
+  STATUS.AWAITING_INTEREST,
+  STATUS.AWAITING_DUTY_HOUR_PREFERENCE,
+  STATUS.AWAITING_COOKING_PREFERENCE,
+  STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE,
+  STATUS.AWAITING_EXPECTED_DUTIES_CONFIRMATION,
+  STATUS.AWAITING_CERTIFICATE,
+  STATUS.AWAITING_NAME,
+  STATUS.AWAITING_AGE,
+  STATUS.AWAITING_SEX,
+  STATUS.AWAITING_HEIGHT,
+  STATUS.AWAITING_WEIGHT,
+  STATUS.AWAITING_DISTRICT,
+  STATUS.AWAITING_LOGIN_PHONE,
+  STATUS.AWAITING_DETAILS_CONFIRMATION
+]);
+
+/** `provider` is read before this message was logged, so lastInboundAt is
+    her previous message. */
+function isWelcomeBack(provider, now = Date.now()) {
+  if (!provider || !WELCOME_BACK_STATUSES.has(provider.status)) return false;
+  const last = Date.parse(provider.lastInboundAt || '');
+  return Number.isFinite(last) && now - last >= WELCOME_BACK_AFTER_MS;
 }
 
 async function handleName(phone, message) {
@@ -3818,6 +3889,8 @@ async function sendForReview(phone, options = {}) {
       await appendHistory(phone, { type: 'system', event: 'profile_photo_review_sent', ok: photoAlert.ok });
     }
     await appendHistory(phone, { type: 'system', event: 'verification_queue_created' });
+    // A fresh review: the next "Ok" may get the waiting reply once more.
+    await updateProvider(phone, { pendingReplySentAt: null });
     if (!options.silent) {
       await sendAndLog(phone, 'text', verificationPendingMessageFor(updatedProvider));
     }
@@ -5136,6 +5209,12 @@ async function processIncomingMessage(phone, message) {
     return;
   }
 
+  // Back after a week or more, partway through joining (15 Oct 2026): one
+  // line of welcome before the step she stopped at.
+  if (isWelcomeBack(provider)) {
+    await sendAndLog(phone, 'text', MESSAGES.welcomeBack);
+  }
+
   // The reviewer asked for a new full-length photo: the next photo she sends
   // is that photo, wherever she is in the chat.
   if (message && message.type === 'image' && provider.profilePhoto && provider.profilePhoto.status === 'retake') {
@@ -5222,7 +5301,7 @@ async function processIncomingMessage(phone, message) {
       await handleDetailsConfirmation(phone, message);
       return;
     case STATUS.VERIFICATION_PENDING:
-      await sendAndLog(phone, 'text', MESSAGES.verificationStillPending);
+      await sendStillPendingReply(phone, provider, message);
       return;
     case STATUS.ADDITIONAL_DOCUMENT_REQUESTED:
       await handleAdditionalDocument(phone, message);
@@ -5591,6 +5670,8 @@ module.exports = {
   finalizeCertificateCollection,
   buildDetailsCheckBody,
   withLoginNumber,
+  isWelcomeBack,
+  sendStillPendingReply,
   buildDetailsCheckButtons,
   buildDetailsChangeList,
   recordDetailsChange,
