@@ -1011,17 +1011,14 @@ async function sendFinalDutyChoiceButtons(phone) {
   });
 }
 
-/* Shown once per choice (15 Oct 2026): picking "Both" showed it at the
-   choice and again after the samples. It shows again only if her choice
-   changes to one with 8-hour duty in it. */
+// Sent at the choice and again with the final choice, on purpose: the
+// founder wants it repeated (15 Oct 2026, the "once" change was undone).
 async function notify8HourNoStayOrFood(phone, dutyHourPreference) {
   if (!['8_hour', 'both'].includes(dutyHourPreference)) {
     return;
   }
-  const provider = await getProvider(phone);
-  if (provider && provider.eightHourNoticeFor === dutyHourPreference) return;
+
   await sendAndLog(phone, 'text', MESSAGES.dutyHourPreference8HourNotice);
-  await updateProvider(phone, { eightHourNoticeFor: dutyHourPreference });
 }
 
 /* While her application waits for review. A call-review applicant (no
@@ -2575,7 +2572,7 @@ async function handleInterest(phone, message) {
     return;
   }
 
-  await updateStatus(phone, STATUS.AWAITING_DUTY_HOUR_PREFERENCE, 5, { interestConfirmed: true, eightHourNoticeFor: null });
+  await updateStatus(phone, STATUS.AWAITING_DUTY_HOUR_PREFERENCE, 5, { interestConfirmed: true });
   await sendDutyHourPreferenceButtons(phone);
 }
 

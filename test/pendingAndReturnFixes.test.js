@@ -128,7 +128,7 @@ test('waiting for review: a certificate applicant still hears her certificate is
   assert.equal(toHer(phone)[0].body, M.verificationStillPending);
 });
 
-test('Both: the 8-hour note is sent once, not again after the samples', async () => {
+test('Both: the 8-hour note is sent at the choice and again after the samples', async () => {
   const phone = seed(STATUS.AWAITING_DUTY_HOUR_PREFERENCE, { qualification: 'gnm', age: 30 });
   await say(phone, tapB(BUTTON_IDS.DUTY_HOUR_BOTH));
   let notes = toHer(phone).filter((m) => m.body === M.dutyHourPreference8HourNotice).length;
@@ -143,12 +143,12 @@ test('Both: the 8-hour note is sent once, not again after the samples', async ()
   }
   assert.equal(records.get(phone).status, STATUS.AWAITING_EXPECTED_DUTIES_CONFIRMATION);
   notes = toHer(phone).filter((m) => m.body === M.dutyHourPreference8HourNotice).length;
-  assert.equal(notes, 1, 'not repeated');
+  assert.equal(notes, 2, 'repeated with the final choice, as the founder wants');
 });
 
 test('cooking question: an old duty-hour tap changes her hours and asks cooking again', async () => {
   const phone = seed(STATUS.AWAITING_COOKING_PREFERENCE, {
-    dutyHourPreference: 'both', eightHourNoticeFor: 'both',
+    dutyHourPreference: 'both',
     sampleDutyState: { stage: 'both_prompt', initialChoice: 'both', alternateChoice: null }
   });
   await say(phone, tapB(BUTTON_IDS.DUTY_HOUR_24));
