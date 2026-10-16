@@ -146,17 +146,23 @@ test('Both: the 8-hour note is sent at the choice and again after the samples', 
   assert.equal(notes, 2, 'repeated with the final choice, as the founder wants');
 });
 
-test('cooking question: an old duty-hour tap changes her hours and asks cooking again', async () => {
+test('cooking question: an old duty-hour tap asks before changing; Yes changes it and asks cooking again', async () => {
   const phone = seed(STATUS.AWAITING_COOKING_PREFERENCE, {
     dutyHourPreference: 'both',
     sampleDutyState: { stage: 'both_prompt', initialChoice: 'both', alternateChoice: null }
   });
   await say(phone, tapB(BUTTON_IDS.DUTY_HOUR_24));
+  assert.equal(records.get(phone).dutyHourPreference, 'both', 'nothing changes before she says yes');
+  const ask = toHer(phone)[0];
+  assert.equal(ask.body, 'Duty hour "24 hour" ആക്കി മാറ്റണോ?');
+  assert.deepEqual(ask.buttons.map((b) => b.title), ['അതെ, മാറ്റുക', 'വേണ്ട']);
+  await say(phone, tapB(BUTTON_IDS.PREF_CHANGE_YES));
   const p = records.get(phone);
   assert.equal(p.dutyHourPreference, '24_hour');
+  assert.equal(p.sampleDutyState.initialChoice, '24_hour');
   assert.equal(p.status, STATUS.AWAITING_COOKING_PREFERENCE);
-  assert.equal(toHer(phone)[0].body, 'ശരി, duty hour "24 hour" ആക്കി മാറ്റി.');
-  assert.deepEqual(toHer(phone)[1].buttons.map((b) => b.id), [BUTTON_IDS.COOKING_YES, BUTTON_IDS.COOKING_NO]);
+  assert.equal(toHer(phone)[1].body, 'ശരി 👍 മാറ്റി.');
+  assert.deepEqual(toHer(phone)[2].buttons.map((b) => b.id), [BUTTON_IDS.COOKING_YES, BUTTON_IDS.COOKING_NO]);
 });
 
 test('back after a week partway through: one welcome line, then the step; not after two days', async () => {

@@ -87,6 +87,9 @@ const BUTTON_IDS = {
   DUTY_HOUR_BOTH: 'duty_hour_both',
   COOKING_YES: 'cooking_yes',
   COOKING_NO: 'cooking_no',
+  // A late tap on an older preference button asks first (16 Oct 2026).
+  PREF_CHANGE_YES: 'pref_change_yes',
+  PREF_CHANGE_NO: 'pref_change_no',
   SAMPLE_DUTY_YES: 'sample_duty_yes',
   SAMPLE_DUTY_NO: 'sample_duty_no',
   EXPECTED_DUTIES_YES: 'expected_duties_yes',
@@ -390,6 +393,7 @@ const MESSAGES = {
   profilePhotoAccepted: 'നിങ്ങളുടെ ഫോട്ടോ സ്വീകരിച്ചു 👍 ഇനി agency-ക്കും family-ക്കും നിങ്ങളുടെ profile കാണാം.',
   profilePhotoRetakeRequest:
     'ദയവായി ഒരു പുതിയ full photo (തല മുതൽ കാൽ വരെ) അയയ്ക്കുക.\n\nReviewer note: {{note}}',
+  profilePhotoSampleCaption: 'ഇതുപോലെ ഒരു full photo അയയ്ക്കുക: നിന്നുകൊണ്ട്, തല മുതൽ കാൽ വരെ, നല്ല വെളിച്ചത്തിൽ.',
   stillAvailableYes:
     'നല്ലത് 👍 ചില വിവരങ്ങൾ കൂടി ചോദിക്കാം. അതിനു ശേഷം നിങ്ങൾക്ക് duty offers വീണ്ടും ലഭിച്ചു തുടങ്ങും.',
   stillAvailableYesDone:
@@ -601,6 +605,15 @@ const MESSAGES = {
     'താങ്കളുടെ certificate ഇപ്പോൾ verification-ലാണ്. പരിശോധിച്ച ശേഷം ഉടൻ update അറിയിക്കും.',
   // No certificate / student / above 50 (15 Oct 2026): they sent no
   // certificate, so the waiting reply says a call is coming instead.
+  // Late taps on older preference buttons (founder, 16 Oct 2026): asked first.
+  prefChangeCookingYes: 'പാചകം കൂടിയുള്ള ഡ്യൂട്ടി വേണമെന്ന് മാറ്റണോ?',
+  prefChangeCookingNo: 'പാചകം ഇല്ലാത്ത ഡ്യൂട്ടി മാത്രം എന്ന് മാറ്റണോ?',
+  prefChangeDutyHours: 'Duty hour "{{hours}}" ആക്കി മാറ്റണോ?',
+  prefChangeLoginPhone: 'App login number ഈ WhatsApp number ആക്കി മാറ്റണോ?',
+  prefChangeAgencyYes: 'ഇപ്പോൾ ഒരു Home Care Agency വഴി duty ചെയ്യുന്നുണ്ട് എന്ന് മാറ്റണോ?',
+  prefChangeAgencyNo: 'ഇപ്പോൾ ഒരു agency വഴിയും duty ചെയ്യുന്നില്ല എന്ന് മാറ്റണോ?',
+  prefChangeDone: 'ശരി 👍 മാറ്റി.',
+  prefChangeKept: 'ശരി, മാറ്റിയില്ല.',
   callReviewStillPending: 'നിങ്ങളുടെ വിവരങ്ങൾ പരിശോധിക്കുന്നു. ഉടൻ ഒരു phone call വരും.',
   welcomeBack: 'വീണ്ടും സ്വാഗതം 👋 നിർത്തിയിടത്തു നിന്ന് തുടരാം.',
   dutyHourChangedAtCooking: 'ശരി, duty hour "{{hours}}" ആക്കി മാറ്റി.',
@@ -724,6 +737,7 @@ const ENGLISH_BASE_MESSAGES = {
   profilePhotoLater: 'Okay. You can add your photo later from My profile in the Pulso app.',
   profilePhotoAccepted: 'Your photo has been accepted 👍 Agencies and families can now see your profile.',
   profilePhotoRetakeRequest: 'Please send a new full-length photo (head to toe).\n\nReviewer note: {{note}}',
+  profilePhotoSampleCaption: 'Send a full photo like this: standing, head to toe, in good light.',
   stillAvailableYes: 'Great 👍 A few more details, and then duty offers will reach you again.',
   stillAvailableYesDone: 'Thank you. Keep "Available" switched on in the Pulso app. Duty offers will reach you again.',
   stillAvailableNotNow: 'No problem. When you are ready, open the Pulso app and switch on "Available".',
@@ -871,6 +885,14 @@ const ENGLISH_BASE_MESSAGES = {
     'Our support team has already been informed. If you do not get help, you can select "More help" again after 12 hours.',
   verificationStillPending:
     'Your certificate is currently under verification. We will update you after review.',
+  prefChangeCookingYes: 'Change to: duties with cooking?',
+  prefChangeCookingNo: 'Change to: duties without cooking only?',
+  prefChangeDutyHours: 'Change your duty hours to "{{hours}}"?',
+  prefChangeLoginPhone: 'Change your app login number to this WhatsApp number?',
+  prefChangeAgencyYes: 'Change to: you work through a home care agency now?',
+  prefChangeAgencyNo: 'Change to: you do not work through any agency now?',
+  prefChangeDone: 'Okay 👍 Changed.',
+  prefChangeKept: 'Okay, not changed.',
   callReviewStillPending: 'We are checking your details. You will get a phone call soon.',
   welcomeBack: 'Welcome back 👋 Let us continue from where you stopped.',
   dutyHourChangedAtCooking: 'Okay, your duty hours are now "{{hours}}".',
@@ -891,6 +913,8 @@ const UI_TEXT = {
   interestYesTitle: 'താൽപര്യമുണ്ട്',
   interestNoTitle: 'താൽപര്യമില്ല',
   dutyBothTitle: 'രണ്ടും',
+  prefChangeYesTitle: 'അതെ, മാറ്റുക',
+  prefChangeNoTitle: 'വേണ്ട',
   // WhatsApp allows 20 characters on a button; this one is exactly 20.
   cookingYesTitle: '✅ അതെ, പാചകം ചെയ്യാം',
   cookingNoTitle: '❌ വേണ്ട',
@@ -943,6 +967,8 @@ const KARNATAKA_UI_TEXT = {
   interestYesTitle: 'Yes, interested',
   interestNoTitle: 'Not interested',
   dutyBothTitle: 'Both',
+  prefChangeYesTitle: 'Yes, change',
+  prefChangeNoTitle: 'No',
   cookingYesTitle: '✅ Yes, I can cook',
   cookingNoTitle: '❌ No',
   sampleYesTitle: 'Yes',

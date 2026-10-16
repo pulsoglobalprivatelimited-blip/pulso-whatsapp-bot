@@ -262,7 +262,8 @@ test('New photo + note: the reviewer types a note, she gets it, and her next pho
   sent.length = 0;
   await say(OWNER, templateTap(`review_photo_retake_${phone}`));
   assert.equal(records.get(phone).verification.reviewerWorkflow.stage, 'awaiting_photo_note');
-  assert.match(lastToHer(OWNER).body, /Type a short note for Adarsh P/);
+  assert.match(lastToHer(OWNER).body, /New photo for Adarsh P: type a short note/);
+  assert.deepEqual(lastToHer(OWNER).buttons.map((b) => b.title), ['Use our sample', 'Note only']);
 
   await say(OWNER, text('Stand straight, full body, in daylight'));
   const p = records.get(phone);

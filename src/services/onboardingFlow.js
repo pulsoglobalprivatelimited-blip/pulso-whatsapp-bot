@@ -29,7 +29,7 @@ const {
   HEIGHT_OPTIONS,
   heightLabelFor
 } = require('../flow');
-const { sendText, sendButtons, sendList, sendTemplate, sendVideoById } = require('./metaClient');
+const { sendText, sendButtons, sendList, sendTemplate, sendVideoById, sendImageByUrl } = require('./metaClient');
 const { getHubAppActivation } = require('./hubAppActivationService');
 const {
   getOrCreateProvider,
@@ -58,6 +58,7 @@ const {
   notifyAdditionalDocumentRequested,
   notifyAdditionalDocumentUploaded,
   parseReviewerAction,
+  REVIEW_ACTIONS,
   notifyProfilePhotoReview,
   notifyCertificateUploaded,
   notifyCertificateReviewed,
@@ -269,6 +270,8 @@ async function sendAndLog(phone, kind, body, sender) {
       await sendTemplate(phone, body.name, body.languageCode, body.components);
     } else if (kind === 'video') {
       await sendVideoById(phone, body.mediaId, body.caption);
+    } else if (kind === 'image_url') {
+      await sendImageByUrl(phone, body.link, body.caption);
     } else {
       await sendText(phone, body);
     }
@@ -2607,28 +2610,8 @@ async function handleDutyHourPreference(phone, message) {
 
 async function handleCookingPreference(phone, message) {
   const cookingOptIn = parseCookingPreference(message);
-  // An old duty-hour button tapped here (15 Oct 2026: +91 99478 89890 picked
-  // Both, then tapped 24 hour on the earlier message): she is changing her
-  // duty hours. Take it, say so, and ask the cooking question again.
-  const replyId = getInteractiveReplyId(message);
-  const hoursTapped = [BUTTON_IDS.DUTY_HOUR_8, BUTTON_IDS.DUTY_HOUR_24, BUTTON_IDS.DUTY_HOUR_BOTH].includes(replyId)
-    ? parseDutyHourPreference(message)
-    : null;
-  if (cookingOptIn === null && hoursTapped) {
-    const label = hoursTapped === 'both' ? UI_TEXT.dutyBothTitle : hoursTapped === '8_hour' ? '8 hour' : '24 hour';
-    await updateProvider(phone, {
-      dutyHourPreference: hoursTapped,
-      sampleDutyState: {
-        stage: hoursTapped === 'both' ? 'both_prompt' : 'initial_prompt',
-        initialChoice: hoursTapped,
-        alternateChoice: getOtherDutyPreference(hoursTapped)
-      }
-    });
-    await sendAndLog(phone, 'text', MESSAGES.dutyHourChangedAtCooking.replace('{{hours}}', label));
-    await notify8HourNoStayOrFood(phone, hoursTapped);
-    await sendCookingPreferenceButtons(phone);
-    return;
-  }
+  // An old duty-hour button tapped here is a late tap: handleLateTap (above
+  // the status switch) asks "change to …?" before anything changes.
   if (cookingOptIn === null) {
     await sendAndLog(phone, 'text', MESSAGES.cookingRetry);
     await sendCookingPreferenceButtons(phone);
@@ -3128,6 +3111,142 @@ async function stopIfNotInterested(phone, provider, message) {
   await appendHistory(phone, { type: 'system', event: 'not_interested_stop', atStatus: provider.status });
   await sendAndLog(phone, 'text', MESSAGES.notInterested);
   return true;
+}
+
+/* Late taps (founder, 16 Oct 2026). Sandra James chose no cooking, then
+   tapped "yes, cooking" on that older message after sending her details; the
+   bot ignored it. A preference button tapped away from its own question now
+   asks before changing it; a step button re-shows her current question. */
+function lateTapPreference(replyId) {
+  switch (replyId) {
+    case BUTTON_IDS.COOKING_YES: return { field: 'cooking', value: true };
+    case BUTTON_IDS.COOKING_NO: return { field: 'cooking', value: false };
+    case BUTTON_IDS.DUTY_HOUR_8: return { field: 'dutyHours', value: '8_hour' };
+    case BUTTON_IDS.DUTY_HOUR_24: return { field: 'dutyHours', value: '24_hour' };
+    case BUTTON_IDS.DUTY_HOUR_BOTH: return { field: 'dutyHours', value: 'both' };
+    case BUTTON_IDS.LOGIN_PHONE_SAME: return { field: 'loginPhone', value: 'whatsapp' };
+    case BUTTON_IDS.AGENCY_YES: return { field: 'agency', value: true };
+    case BUTTON_IDS.AGENCY_NO: return { field: 'agency', value: false };
+    default: return null;
+  }
+}
+
+const LATE_STEP_BUTTONS = {
+  [BUTTON_IDS.INTEREST_YES]: [STATUS.AWAITING_INTEREST],
+  [BUTTON_IDS.SAMPLE_DUTY_YES]: [STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE],
+  [BUTTON_IDS.SAMPLE_DUTY_NO]: [STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE],
+  [BUTTON_IDS.EXPECTED_DUTIES_YES]: [STATUS.AWAITING_EXPECTED_DUTIES_CONFIRMATION],
+  [BUTTON_IDS.DETAILS_CORRECT]: [STATUS.AWAITING_DETAILS_CONFIRMATION],
+  [BUTTON_IDS.DETAILS_CHANGE]: [STATUS.AWAITING_DETAILS_CONFIRMATION],
+  [BUTTON_IDS.TERMS_ACCEPT]: [STATUS.AWAITING_TERMS_ACCEPTANCE]
+};
+
+/** Whether this button belongs to the question she is on right now. */
+function ownsPreferenceButton(provider, pref) {
+  const status = provider && provider.status;
+  const editing = provider && provider.detailsEditing;
+  if (pref.field === 'cooking') return status === STATUS.AWAITING_COOKING_PREFERENCE;
+  if (pref.field === 'dutyHours') {
+    return status === STATUS.AWAITING_DUTY_HOUR_PREFERENCE || status === STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE;
+  }
+  if (pref.field === 'loginPhone') {
+    return status === STATUS.AWAITING_LOGIN_PHONE || (status === STATUS.AWAITING_DETAILS_CONFIRMATION && editing === 'loginPhone');
+  }
+  if (pref.field === 'agency') {
+    const stage = provider && (provider.mobileAppCampaignStage || provider.pulsoAppPromptStage);
+    return stage === MOBILE_APP_STAGE_AGENCY_QUESTION;
+  }
+  return false;
+}
+
+function currentPreferenceValue(provider, pref) {
+  if (pref.field === 'cooking') return provider.cookingOptIn === true ? true : provider.cookingOptIn === false ? false : null;
+  if (pref.field === 'dutyHours') return provider.dutyHourPreference || null;
+  if (pref.field === 'loginPhone') return (provider.appLoginPhone || provider.phone) === provider.phone ? 'whatsapp' : 'other';
+  if (pref.field === 'agency') return provider.worksWithAgency === true ? true : provider.worksWithAgency === false ? false : null;
+  return null;
+}
+
+function dutyHoursLabel(value) {
+  return value === 'both' ? UI_TEXT.dutyBothTitle : value === '8_hour' ? '8 hour' : '24 hour';
+}
+
+function preferenceQuestion(pref) {
+  if (pref.field === 'cooking') return pref.value ? MESSAGES.prefChangeCookingYes : MESSAGES.prefChangeCookingNo;
+  if (pref.field === 'dutyHours') return MESSAGES.prefChangeDutyHours.replace('{{hours}}', dutyHoursLabel(pref.value));
+  if (pref.field === 'loginPhone') return MESSAGES.prefChangeLoginPhone;
+  return pref.value ? MESSAGES.prefChangeAgencyYes : MESSAGES.prefChangeAgencyNo;
+}
+
+async function applyPreferenceChange(phone, provider, pref) {
+  const now = new Date().toISOString();
+  const patch = { pendingPreferenceChange: null };
+  if (pref.field === 'cooking') Object.assign(patch, { cookingOptIn: pref.value, cookingOptInAt: now });
+  if (pref.field === 'dutyHours') {
+    patch.dutyHourPreference = pref.value;
+    if (provider.status === STATUS.AWAITING_COOKING_PREFERENCE) {
+      patch.sampleDutyState = {
+        stage: pref.value === 'both' ? 'both_prompt' : 'initial_prompt',
+        initialChoice: pref.value,
+        alternateChoice: getOtherDutyPreference(pref.value)
+      };
+    }
+  }
+  if (pref.field === 'loginPhone') patch.appLoginPhone = String(phone).replace(/\D/g, '');
+  if (pref.field === 'agency') Object.assign(patch, { worksWithAgency: pref.value, worksWithAgencyAnsweredAt: now });
+  await updateProvider(phone, patch);
+  await appendHistory(phone, { type: 'system', event: 'late_tap_change_applied', field: pref.field, value: pref.value });
+  const after = await getProvider(phone);
+  if (after && after.termsAccepted) await syncProviderToPulsoHub(after);
+  return after;
+}
+
+/** Returns true when the message was a late tap (or its Yes / No) and is handled. */
+async function handleLateTap(phone, provider, message) {
+  const replyId = getInteractiveReplyId(message);
+  if (!replyId || !provider) return false;
+
+  if (replyId === BUTTON_IDS.PREF_CHANGE_YES || replyId === BUTTON_IDS.PREF_CHANGE_NO) {
+    const pending = provider.pendingPreferenceChange;
+    if (!pending) return false;
+    let after = provider;
+    if (replyId === BUTTON_IDS.PREF_CHANGE_YES) {
+      after = await applyPreferenceChange(phone, provider, pending);
+      await sendAndLog(phone, 'text', MESSAGES.prefChangeDone);
+    } else {
+      await updateProvider(phone, { pendingPreferenceChange: null });
+      await appendHistory(phone, { type: 'system', event: 'late_tap_change_declined', field: pending.field });
+      await sendAndLog(phone, 'text', MESSAGES.prefChangeKept);
+    }
+    // Back to where she was; a joined caregiver has no question to go back to.
+    if (WELCOME_BACK_STATUSES.has(after.status)) await sendPromptForCurrentStatus(phone, after);
+    return true;
+  }
+
+  const pref = lateTapPreference(replyId);
+  if (pref) {
+    if (ownsPreferenceButton(provider, pref)) return false;
+    // A login-number tap only makes sense once she has been asked it.
+    if (pref.field === 'loginPhone' && !provider.appLoginPhone) return false;
+    if (pref.field === 'agency' && provider.worksWithAgency === undefined) return false;
+    if (currentPreferenceValue(provider, pref) === pref.value) return false;
+    await updateProvider(phone, { pendingPreferenceChange: { ...pref, askedAt: new Date().toISOString() } });
+    await sendAndLog(phone, 'buttons', {
+      body: preferenceQuestion(pref),
+      buttons: [
+        { id: BUTTON_IDS.PREF_CHANGE_YES, title: UI_TEXT.prefChangeYesTitle },
+        { id: BUTTON_IDS.PREF_CHANGE_NO, title: UI_TEXT.prefChangeNoTitle }
+      ]
+    });
+    return true;
+  }
+
+  const owners = LATE_STEP_BUTTONS[replyId];
+  if (owners && !owners.includes(provider.status) && WELCOME_BACK_STATUSES.has(provider.status)) {
+    await sendPromptForCurrentStatus(phone, provider);
+    return true;
+  }
+  return false;
 }
 
 const WELCOME_BACK_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
@@ -4633,6 +4752,46 @@ async function markNeedsCall(phone, by) {
   return getProvider(phone);
 }
 
+/* The caregiver is asked for a new photo: the sample (if any), then the note.
+   Inside her 24-hour window plain messages go; outside it only a template is
+   delivered, so the approved caregiver_photo_retake carries the sample (or
+   Pulso's standard one) and the note. The sample link is kept on her photo
+   record and synced, so the app can show it too. */
+async function sendPhotoRetakeRequest(provider, note, sampleUrl, reviewerPhone) {
+  const caregiver = provider.phone;
+  await updateProvider(caregiver, {
+    profilePhoto: { ...(provider.profilePhoto || {}), status: 'retake', reviewedAt: new Date().toISOString(), reviewedBy: reviewerPhone, note, sampleUrl: sampleUrl || null },
+    ...buildReviewerWorkflowPatch(provider.verification && provider.verification.reviewerWorkflow, null)
+  });
+  await appendHistory(caregiver, { type: 'system', event: 'profile_photo_retake_requested', reviewedBy: reviewerPhone, note, sampleUrl: sampleUrl || null });
+  const asked = await getProvider(caregiver);
+  await syncProviderToPulsoHub(asked);
+  const inWindow = isInsideFreeWindow(asked);
+  let via = 'messages';
+  await runWithProviderFlow(asked, async () => {
+    if (!inWindow && config.photoRetakeTemplateEnabled) {
+      via = 'template';
+      await sendAndLog(caregiver, 'template', {
+        name: config.photoRetakeTemplateName,
+        languageCode: /english/.test(String(asked.flowId || '')) ? 'en' : 'ml',
+        components: [
+          { type: 'header', parameters: [{ type: 'image', image: { link: sampleUrl || config.profilePhotoSampleUrl } }] },
+          { type: 'body', parameters: [{ type: 'text', text: String(note).replace(/\s+/g, ' ').slice(0, 900) }] }
+        ]
+      }, reviewerPhone);
+      return;
+    }
+    if (sampleUrl) {
+      await sendAndLog(caregiver, 'image_url', { link: sampleUrl, caption: MESSAGES.profilePhotoSampleCaption }, reviewerPhone);
+    }
+    await sendAndLog(caregiver, 'text', MESSAGES.profilePhotoRetakeRequest.replace('{{note}}', note), reviewerPhone);
+  });
+  const warn = !inWindow && via !== 'template'
+    ? ' She has not written on WhatsApp in 24 hours, so WhatsApp may not deliver it until the photo template is approved.'
+    : '';
+  await sendText(reviewerPhone, `Asked ${asked.fullName || caregiver} for a new photo${sampleUrl ? ' with a sample' : ''}.${warn}`);
+}
+
 async function handleReviewerMessage(phone, message) {
   let reviewAction = parseReviewerAction(message);
   const scopedReviewer = isNoCertificateReviewerPhone(phone) && !isReviewerPhone(phone);
@@ -4678,8 +4837,58 @@ async function handleReviewerMessage(phone, message) {
         reviewerPhone: phone
       })
     );
-    await sendText(phone, `Type a short note for ${target.fullName || providerPhone} (e.g. "Stand straight, full body, in daylight"). It goes to the caregiver with the request for a new photo.`);
+    // Three ways to answer (16 Oct 2026): type a note; send a photo with the
+    // note as its caption; or Pulso's own sample with a note.
+    await sendButtons(
+      phone,
+      `New photo for ${target.fullName || providerPhone}: type a short note (e.g. "Stand straight, full body, in daylight"), or send a sample photo with your note written as its caption.`,
+      [
+        { id: `${REVIEW_ACTIONS.PHOTO_SAMPLE}${providerPhone}`, title: 'Use our sample' },
+        { id: `${REVIEW_ACTIONS.PHOTO_NOTE_ONLY}${providerPhone}`, title: 'Note only' }
+      ]
+    );
     return;
+  }
+
+  if (reviewAction && (reviewAction.action === 'photo_sample' || reviewAction.action === 'photo_note_only')) {
+    const target = await getProvider(providerPhone);
+    const flow = target && target.verification && target.verification.reviewerWorkflow;
+    if (!target || !flow || flow.stage !== 'awaiting_photo_note') {
+      await sendText(phone, `No new-photo request is open for ${providerPhone}.`);
+      return;
+    }
+    await updateProvider(providerPhone, buildReviewerWorkflowPatch(flow, {
+      photoSampleUrl: reviewAction.action === 'photo_sample' ? config.profilePhotoSampleUrl : null
+    }));
+    await sendText(phone, reviewAction.action === 'photo_sample'
+      ? `Type the note for ${target.fullName || providerPhone}. It goes with Pulso's sample photo.`
+      : `Type the note for ${target.fullName || providerPhone}.`);
+    return;
+  }
+
+  // A photo sent while a new-photo note is open is the sample; its caption is
+  // the note. No caption: the note is asked for next.
+  if (message && message.type === 'image' && message.image) {
+    const candidates = await listReviewerWorkflowProviders(phone);
+    const open = candidates.find((c) => c && c.verification && c.verification.reviewerWorkflow &&
+      c.verification.reviewerWorkflow.reviewerPhone === phone && c.verification.reviewerWorkflow.stage === 'awaiting_photo_note');
+    if (open) {
+      const { archiveIncomingMedia } = require('./mediaStorage');
+      const archived = await archiveIncomingMedia(open.phone, message, 'photo_sample');
+      const sampleUrl = archived && archived.cloudStorageUrl;
+      if (!sampleUrl) {
+        await sendText(phone, 'That photo could not be saved. Please send it again, or tap Use our sample.');
+        return;
+      }
+      const caption = String(message.image.caption || '').trim();
+      if (!caption) {
+        await updateProvider(open.phone, buildReviewerWorkflowPatch(open.verification.reviewerWorkflow, { photoSampleUrl: sampleUrl }));
+        await sendText(phone, `Got the sample. Now type the note for ${open.fullName || open.phone}.`);
+        return;
+      }
+      await sendPhotoRetakeRequest(open, caption, sampleUrl, phone);
+      return;
+    }
   }
 
   if (reviewAction && reviewAction.action === 'note_text') {
@@ -4698,17 +4907,7 @@ async function handleReviewerMessage(phone, message) {
         await sendText(phone, 'Please send a non-empty note.');
         return;
       }
-      await updateProvider(photoNoteProvider.phone, {
-        profilePhoto: { ...(photoNoteProvider.profilePhoto || {}), status: 'retake', reviewedAt: new Date().toISOString(), reviewedBy: phone, note },
-        ...buildReviewerWorkflowPatch(photoNoteProvider.verification.reviewerWorkflow, null)
-      });
-      await appendHistory(photoNoteProvider.phone, { type: 'system', event: 'profile_photo_retake_requested', reviewedBy: phone, note });
-      const asked = await getProvider(photoNoteProvider.phone);
-      await syncProviderToPulsoHub(asked);
-      await runWithProviderFlow(asked, async () => {
-        await sendAndLog(photoNoteProvider.phone, 'text', MESSAGES.profilePhotoRetakeRequest.replace('{{note}}', note), phone);
-      });
-      await sendText(phone, `Asked ${asked.fullName || photoNoteProvider.phone} for a new photo.`);
+      await sendPhotoRetakeRequest(photoNoteProvider, note, photoNoteProvider.verification.reviewerWorkflow.photoSampleUrl || null, phone);
       return;
     }
 
@@ -5210,6 +5409,12 @@ async function processIncomingMessage(phone, message) {
   // line of welcome before the step she stopped at.
   if (isWelcomeBack(provider)) {
     await sendAndLog(phone, 'text', MESSAGES.welcomeBack);
+  }
+
+  // A tap on an older message's button (16 Oct 2026): a preference asks
+  // "change to …?" first; a step re-shows the question she is on.
+  if (await handleLateTap(phone, provider, message)) {
+    return;
   }
 
   // The reviewer asked for a new full-length photo: the next photo she sends

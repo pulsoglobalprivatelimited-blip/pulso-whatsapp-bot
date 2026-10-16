@@ -46,7 +46,10 @@ const REVIEW_ACTIONS = {
   // The full-length photo (11 Oct 2026): accept it, or ask for a new one with
   // a note to the caregiver.
   PHOTO_ACCEPT: 'review_photo_accept_',
-  PHOTO_RETAKE: 'review_photo_retake_'
+  PHOTO_RETAKE: 'review_photo_retake_',
+  // After New photo (16 Oct 2026): send Pulso's sample with the note, or the note only.
+  PHOTO_SAMPLE: 'review_photo_sample_',
+  PHOTO_NOTE_ONLY: 'review_photo_noteonly_'
 };
 
 const PROFILE_PHOTO_REVIEW_TEMPLATE = process.env.PROFILE_PHOTO_REVIEW_TEMPLATE || 'caregiver_photo_review';
@@ -87,7 +90,9 @@ async function notifyProfilePhotoReview(provider) {
     { type: 'button', sub_type: 'quick_reply', index: '1', parameters: [{ type: 'payload', payload: `${REVIEW_ACTIONS.PHOTO_RETAKE}${providerPhone}` }] }
   ];
   const results = [];
-  for (const to of getReviewerPhones()) {
+  // Once per phone (16 Oct 2026): the two settings in this list are the same
+  // number, so the photo reached 9446600809 twice.
+  for (const to of uniquePhones(getReviewerPhones())) {
     try {
       const result = await sendTemplate(to, PROFILE_PHOTO_REVIEW_TEMPLATE, 'en', components);
       results.push({ to, ok: true, result });
@@ -1785,6 +1790,12 @@ function parseReviewerAction(message) {
 
   if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.PHOTO_ACCEPT)) {
     return { action: 'photo_accept', phone: interactiveReplyId.slice(REVIEW_ACTIONS.PHOTO_ACCEPT.length) };
+  }
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.PHOTO_SAMPLE)) {
+    return { action: 'photo_sample', phone: interactiveReplyId.slice(REVIEW_ACTIONS.PHOTO_SAMPLE.length) };
+  }
+  if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.PHOTO_NOTE_ONLY)) {
+    return { action: 'photo_note_only', phone: interactiveReplyId.slice(REVIEW_ACTIONS.PHOTO_NOTE_ONLY.length) };
   }
   if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.PHOTO_RETAKE)) {
     return { action: 'photo_retake', phone: interactiveReplyId.slice(REVIEW_ACTIONS.PHOTO_RETAKE.length) };

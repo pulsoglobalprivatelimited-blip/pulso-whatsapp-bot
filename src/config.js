@@ -104,6 +104,11 @@ module.exports = {
   basicAgeReviewTemplateName: process.env.BASIC_AGE_REVIEW_TEMPLATE_NAME || 'certificate_review_basic_age',
   // Duty broadcast to Basic caregivers (4 Oct 2026). Answers go to this ONE
   // number and nowhere else. Off until Meta approves the templates.
+  // The standard full-length sample (founder, 16 Oct 2026; not a real person),
+  // and the template that carries a sample + note outside the 24-hour window.
+  profilePhotoSampleUrl: process.env.PROFILE_PHOTO_SAMPLE_URL || 'https://whatsapp.pulso.co.in/admin/assets/profile_photo_sample.jpg',
+  photoRetakeTemplateName: process.env.PHOTO_RETAKE_TEMPLATE_NAME || 'caregiver_photo_retake',
+  photoRetakeTemplateEnabled: process.env.PHOTO_RETAKE_TEMPLATE_ENABLED === 'true',
   dutyBroadcastEnabled: process.env.DUTY_BROADCAST_ENABLED === 'true',
   // The full-length photo step in onboarding (11 Oct 2026). Off for now at the
   // founder's word: consent, height and weight are still asked; the photo comes

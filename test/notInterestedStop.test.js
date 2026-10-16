@@ -95,7 +95,8 @@ test('any other tap at the name question asks her to type it; a typed name is sa
   const phone = '919000000954';
   records.set(phone, joining(phone, STATUS.AWAITING_NAME));
   sent.length = 0;
-  await flow.processIncomingMessage(phone, tap('duty_hour_24', '24 hour'));
+  // Not a preference button (16 Oct 2026: those ask "change to …?" instead).
+  await flow.processIncomingMessage(phone, tap('sex_female', 'Female'));
   assert.equal(records.get(phone).status, STATUS.AWAITING_NAME);
   assert.equal(records.get(phone).fullName, undefined);
   assert.deepEqual(sent.filter((m) => m.to === phone).map((m) => m.body), ['ദയവായി താങ്കളുടെ പൂർണ്ണ പേര് type ചെയ്യുക.']);
