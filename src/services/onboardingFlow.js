@@ -1612,6 +1612,17 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
     await sendAndLog(phone, 'text', MESSAGES.termsAccepted, sender);
   }
 
+  // Duty channel invite, once (17 Oct 2026). Never blocks joining.
+  try {
+    const { shouldSendChannelInvite, channelInviteText } = require('./channelInvite');
+    if (shouldSendChannelInvite(refreshedProvider)) {
+      await sendAndLog(phone, 'text', channelInviteText(), sender);
+      await updateProvider(phone, { channelInviteSentAt: new Date().toISOString() });
+    }
+  } catch (error) {
+    console.error('[CHANNEL_INVITE_ERROR]', error.message);
+  }
+
   const sentPulsoAppQuestion = hasHistoryEvent(
     refreshedProvider,
     (entry) =>
