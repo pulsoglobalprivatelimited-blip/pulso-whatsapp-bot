@@ -724,6 +724,22 @@ app.post('/internal/photo-review', async (req, res) => {
   }
 });
 
+// Block / unblock notice to a caregiver, asked by the Pulso server
+// (notifyProviderBlockChange in pulso_hub). Founder, 21 Oct 2026.
+app.post('/internal/provider-notice', async (req, res) => {
+  if (!hasPulsoServerSecret(req)) return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const { sendProviderNotice } = require('./services/providerNotice');
+    const { sendTemplate } = require('./services/metaClient');
+    const { getProvider, appendHistory } = require('./services/providerService');
+    const result = await sendProviderNotice(req.body || {}, { sendTemplate, getProvider, appendHistory });
+    return res.json({ ok: true, ...result });
+  } catch (error) {
+    const detail = error && error.response && error.response.data ? JSON.stringify(error.response.data).slice(0, 300) : '';
+    return res.status(400).json({ ok: false, error: `${error.message}${detail ? ` ${detail}` : ''}` });
+  }
+});
+
 app.get('/internal/duty-broadcast/:id', async (req, res) => {
   if (!hasPulsoServerSecret(req)) return res.status(401).json({ error: 'unauthorized' });
   try {
