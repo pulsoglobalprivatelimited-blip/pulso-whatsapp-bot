@@ -8,6 +8,7 @@
 
 const ALLOWED_TEMPLATES = Object.freeze({
   provider_blocked_until: 2, // {{1}} first name, {{2}} date
+  provider_blocked_until_v2: 2, // founder's own Malayalam wording, 22 Oct 2026
   provider_blocked_permanent: 1, // {{1}} first name
   provider_unblocked: 1, // {{1}} first name
 });

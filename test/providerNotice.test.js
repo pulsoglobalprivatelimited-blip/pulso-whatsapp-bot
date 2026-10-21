@@ -42,3 +42,7 @@ test('refuses anything but the three notice templates, the two languages and the
   assert.throws(() => validate({ ...ok, params: [''] }), /wrong template values/);
   assert.throws(() => validate({ ...ok, phone: '123' }), /phone is required/);
 });
+
+test('the founder\'s v2 wording of the 90-day block is allowed', () => {
+  assert.doesNotThrow(() => validate({ phone: '919876543210', templateName: 'provider_blocked_until_v2', languageCode: 'ml', params: ['Jisha', '19 January'] }));
+});
