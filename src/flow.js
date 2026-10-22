@@ -276,6 +276,10 @@ const MESSAGES = {
     'ദയവായി താഴെയുള്ള options-ിൽ നിന്നും ഒരു duty hour preference തിരഞ്ഞെടുക്കുക: 8 hour / 24 hour / രണ്ടും.',
   dutyHourPreference8HourNotice:
     '8 hour duty തിരഞ്ഞെടുക്കുന്നവർ ശ്രദ്ധിക്കുക: stay ഉം food ഉം ലഭിക്കില്ല. Food ഉം stay ഉം 24 hour duty-ക്ക് മാത്രമാണ് ലഭിക്കുക.',
+  // 8-hour duties are few (founder, 22 Oct 2026). Sent after the notice above
+  // when she picks 8 hour only; both regions.
+  dutyHourPreference8HourScarceNotice:
+    'ശ്രദ്ധിക്കുക: 8 hour duty വളരെ കുറവാണ്. Pulso-യിലെ മിക്ക duty-കളും 24 hour ആണ്. 8 hour മാത്രം തിരഞ്ഞെടുത്താൽ duty ലഭിക്കാൻ കൂടുതൽ സമയം കാത്തിരിക്കേണ്ടി വന്നേക്കാം.',
   // Supporting care (15 Oct 2026). The founder's sample, word for word; the
   // figures are filled from the tier card by getCookingQuestionFor.
   cookingQuestion:
@@ -502,16 +506,16 @@ const MESSAGES = {
   termsIntro:
     `ഞങ്ങളോടൊപ്പം ചേരുന്നതിന് മുമ്പ് താഴെ നൽകിയിരിക്കുന്ന എല്ലാ നിർദേശങ്ങളും ദയവായി വായിക്കുക.
 
-1. ഡ്യൂട്ടി സ്വീകരിച്ച ശേഷം, ₹1999 വിലയുള്ള യൂണിഫോം കിറ്റ് എടുക്കേണ്ടതാണ്.
+1. ഡ്യൂട്ടി സ്വീകരിച്ച ശേഷം, ₹1499 വിലയുള്ള യൂണിഫോം കിറ്റ് എടുക്കേണ്ടതാണ്.
 ഈ കിറ്റിൽ ഒരു ജോടി യൂണിഫോവും ഒരു ഐഡി കാർഡും ഉൾപ്പെടുന്നതാണ്.
 
-ഞങ്ങളോടൊപ്പം കുറഞ്ഞത് 90 ദിവസം ഡ്യൂട്ടി പൂർത്തിയാക്കിയ ശേഷം, യൂണിഫോം ഓഫിസിൽ തിരികെ നൽകിയാൽ ₹1999 പൂർണ്ണമായി റിഫണ്ട് ലഭിക്കും.
+ഞങ്ങളോടൊപ്പം കുറഞ്ഞത് 90 ദിവസം ഡ്യൂട്ടി പൂർത്തിയാക്കിയ ശേഷം, യൂണിഫോം ഓഫിസിൽ തിരികെ നൽകിയാൽ ₹1499 പൂർണ്ണമായി റിഫണ്ട് ലഭിക്കും.
 
 കൂടുതൽ ഒരു ജോടി യൂണിഫോം ആവശ്യമുണ്ടെങ്കിൽ, ₹1250 അടച്ച് വാങ്ങാവുന്നതാണ്.
 ഈ അധിക യൂണിഫോമിന്റെ തുക റിഫണ്ടബിൾ അല്ല.
 
 👉 **പേയ്മെന്റ് ഓപ്ഷൻ:**
-യൂണിഫോം കിറ്റിനുള്ള ₹1999 ഒരുമിച്ച് അടയ്ക്കാൻ കഴിയാത്ത പക്ഷം, ആദ്യ 4 ദിവസത്തെ ഡ്യൂട്ടി പേയ്മെന്റിൽ നിന്ന് ആദ്യ 3 ദിവസങ്ങളിൽ ദിവസവും ₹500 വീതവും 4-ാം ദിവസം ₹499 വീതവും കുറച്ച് ഈ തുക അടയ്ക്കാനുള്ള സൗകര്യവും ലഭ്യമാണ്.
+യൂണിഫോം കിറ്റിനുള്ള ₹1499 ഒരുമിച്ച് അടയ്ക്കാൻ കഴിയാത്ത പക്ഷം, ആദ്യ 3 ദിവസത്തെ ഡ്യൂട്ടി പേയ്മെന്റിൽ നിന്ന് ആദ്യ 2 ദിവസങ്ങളിൽ ദിവസവും ₹500 വീതവും 3-ാം ദിവസം ₹499-ഉം കുറച്ച് ഈ തുക അടയ്ക്കാനുള്ള സൗകര്യവും ലഭ്യമാണ്.
 
 2. ദയവായി ശ്രദ്ധിക്കുക: നിങ്ങൾ ഞങ്ങളുടെ സ്ഥിരം ശമ്പള ജീവനക്കാരൻ അല്ല. നിങ്ങൾ ജോലി ചെയ്യുന്ന ദിവസങ്ങളിലാണ് നിങ്ങൾക്ക് വരുമാനം ലഭിക്കുക. ഞങ്ങൾ നിങ്ങളിലേക്ക് ഡ്യൂട്ടി/ജോലി അവസരങ്ങൾ നൽകുന്നതാണ്. നിങ്ങൾ ആ സർവീസ് ഏറ്റെടുത്തു വിജയകരമായി പൂർത്തിയാക്കിയാൽ അതിന് അനുയോജ്യമായ പേയ്മെന്റ് ലഭിക്കും. ജോലി ചെയ്യാത്ത ദിവസങ്ങളിൽ ശമ്പളമോ മറ്റ് പേയ്മെന്റുകളോ ലഭിക്കില്ല. നിങ്ങൾ ചെയ്ത ജോലികളുടെ പേയ്മെന്റ് ദിവസേന നൽകുന്നതായിരിക്കും. ഈ സംവിധാനത്തെക്കുറിച്ച് വ്യക്തമായി മനസ്സിലാക്കി സഹകരിക്കണമെന്ന് അഭ്യർത്ഥിക്കുന്നു. നിങ്ങളുടെ സഹകരണത്തിനും വിശ്വാസത്തിനും നന്ദി.
 
@@ -529,6 +533,24 @@ const MESSAGES = {
     'നന്ദി. താങ്കളുടെ onboarding വിജയകരമായി പൂർത്തിയായി.\n\nഇനി മുതൽ താങ്കൾക്ക് Pulso വഴി duty offers ലഭിച്ചു തുടങ്ങും.\n\nPulso വഴി ആകെ 180 ദിവസത്തെ verified duty പൂർത്തിയാക്കിയാൽ, Pulso Global Private Limited-ന്റെ Experience Certificate ലഭിക്കും.\n\nനിലവിൽ പൂർത്തിയാക്കിയ verified duty: **0 ദിവസം**.',
   termsDeclined:
     'ശരി. താൽപര്യമുണ്ടെങ്കിൽ പിന്നീട് വീണ്ടും message ചെയ്യാം.',
+  /* ₹500 subscription fee (founder, 22 Oct 2026; pulso_hub
+     docs/provider_subscription_fee_plan.md). Kerala only, new joiners only;
+     subscriptionFee.js decides who. The two points go in FRONT of the terms
+     above as 1 and 2 (the old points move down). Founder's Malayalam, verbatim. */
+  termsFeePoints: [
+    'Pulso-യിൽ അംഗമാകുന്നതിനായി ഒറ്റത്തവണ ₹500 (tax included) സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കണം.\n\nPulso ആപ്പിലൂടെ 180 ദിവസത്തെ ജോലി പൂർത്തിയാക്കിയാൽ, നികുതി കുറച്ച ശേഷം ഈ തുക തിരികെ ലഭിക്കും.',
+    'ഡ്യൂട്ടി ലഭ്യത മാർക്കറ്റ് ആവശ്യകത അനുസരിച്ചായിരിക്കും — കേരളത്തിൽ പരിചരണം ആവശ്യമുള്ള രോഗികളുടെ എണ്ണം, ആവശ്യമായ പരിചരണത്തിന്റെ തരം, നിങ്ങളുടെ യോഗ്യത, നിങ്ങളുടെ ലഭ്യത, നിങ്ങളുടെ റേറ്റിംഗ് എന്നിവയെ ആശ്രയിച്ചിരിക്കും. ഒരു നിശ്ചിത എണ്ണം ഡ്യൂട്ടികളോ നിശ്ചിത മാസവരുമാനമോ Pulso ഉറപ്പു നൽകുന്നില്ല. Pulso പരസ്യങ്ങളിൽ കാണിക്കുന്ന വരുമാനം ഫുൾ-ടൈം ഡ്യൂട്ടി അടിസ്ഥാനമാക്കിയുള്ള ഉദാഹരണങ്ങൾ മാത്രമാണ്, ഉറപ്പല്ല.'
+  ],
+  // Replaces the "no registration fee" line of the working model when the fee applies.
+  workingModelFeeLine:
+    '- Pulso-യിൽ അംഗമാകുന്നതിനായി ഒറ്റത്തവണ ₹500 (tax included) സബ്സ്ക്രിപ്ഷൻ ഫീസ് Pulso ആപ്പിൽ അടയ്ക്കണം; 180 ദിവസത്തെ ജോലിക്ക് ശേഷം നികുതി കുറച്ച് തിരികെ ലഭിക്കും',
+  // After Accept, instead of termsAccepted, when the fee applies. Founder-approved.
+  termsAcceptedFee:
+    'നന്ദി. Pulso-യിൽ ചേരുന്നത് പൂർത്തിയാക്കാൻ Pulso ആപ്പ് ഇൻസ്റ്റാൾ ചെയ്ത്, ഇതേ നമ്പർ ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്ത്, terms സമ്മതിച്ച്, ₹500 സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കുക. അതിനു ശേഷം ഡ്യൂട്ടി ഓഫറുകൾ ലഭിച്ചു തുടങ്ങും.',
+  subscriptionFeeReminder:
+    'നിങ്ങളുടെ Pulso അംഗത്വം പൂർത്തിയാക്കാൻ ₹500 സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കാൻ ബാക്കിയുണ്ട്. Pulso ആപ്പിൽ ഇതേ നമ്പർ ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്ത് ഫീസ് അടയ്ക്കുക. അതിനു ശേഷം ഡ്യൂട്ടി ഓഫറുകൾ ലഭിച്ചു തുടങ്ങും.',
+  subscriptionFeePaid:
+    'നന്ദി! ₹500 സബ്സ്ക്രിപ്ഷൻ ഫീസ് ലഭിച്ചു. നിങ്ങൾ ഇപ്പോൾ Pulso അംഗമാണ്. GST രസീത് (നമ്പർ {{receiptNo}}) ഇതോടൊപ്പം അയയ്ക്കുന്നു.\n\nPulso ആപ്പിലൂടെ 180 ദിവസത്തെ ജോലി പൂർത്തിയാക്കിയാൽ, നികുതി കുറച്ച ശേഷം ₹424 തിരികെ ലഭിക്കും.',
   postOnboardingSupport:
     'ഇനി മുതൽ ലഭ്യമായ duty offers താങ്കൾക്ക് Pulso app വഴി ലഭിക്കുന്നതാണ്.\n\nഓരോ duty offer-ഉം ശ്രദ്ധിച്ച് വായിക്കുക.\n\nതാങ്കൾക്ക് അനുയോജ്യമായ duty ആണെങ്കിൽ Pulso app വഴി accept ചെയ്യാം.\n\nതാങ്കൾക്ക് അനുയോജ്യമല്ലാത്ത duty ആണെങ്കിൽ reject ചെയ്യുകയോ ignore ചെയ്യുകയോ ചെയ്യാം.',
   mobileAppCampaignAnnouncement:
@@ -650,6 +672,8 @@ const ENGLISH_BASE_MESSAGES = {
   dutyHourPreferenceRetry: 'Please select one duty hour preference: 8 hour / 24 hour / Both.',
   dutyHourPreference8HourNotice:
     'Please note: stay and food are not provided for 8-hour duty. Stay and food are available only for 24-hour duty.',
+  dutyHourPreference8HourScarceNotice:
+    'Please note: 8-hour duties are very few. Most Pulso duties are 24-hour. If you choose only 8-hour duty, you may wait a long time for a duty.',
   cookingQuestion:
     `🍲 *Duties with cooking — ₹{{extra}} more a day*\n\nAre you willing to cook food for the patient?\n(For the patient only. You do not cook for the family.)\n\n24 hours: ₹{{base24h}} + ₹{{extra}} = *₹{{total24h}}/day*\n8 hours: ₹{{base8h}} + ₹{{extra}} = *₹{{total8h}}/day*`,
   cookingRetry: 'Please tap one of the buttons below: "Yes, I can cook" or "No".',
@@ -809,7 +833,7 @@ const ENGLISH_BASE_MESSAGES = {
   experienceCertificateNotice:
     '*\ud83d\udcc4 Experience Certificate*\n\nCaregivers / Nursing Professionals who complete 180 days of duty with Pulso in total will receive the official Experience Certificate of Pulso Global Private Limited, which works in the healthcare \u0026 senior care sector.\n\nPulso Global Private Limited\nHealthcare \u0026 Senior Care Services\nCIN: U86201KL2023PTC084619\nRegistered Office: JC Chambers, Panampilly Nagar, Ernakulam, Kerala \u2013 682036\n\ud83c\udf10 pulso.co.in',
   termsIntro:
-    `Before joining Pulso, please read all instructions carefully.\n\n1. After accepting your first duty, you need to collect a uniform kit worth Rs 1999.\nThis kit includes one pair of uniform and one ID card.\n\nAfter completing at least 90 days of duty with us, if you return the uniform to the office, the full Rs 1999 will be refunded.\n\nIf you need one additional pair of uniform, you can buy it by paying Rs 1250.\nThis extra uniform amount is not refundable.\n\nPayment option:\nIf you are unable to pay Rs 1999 for the uniform kit at once, you can pay it through deduction from your first 4 days of duty payment. Rs 500 will be deducted per day for the first 3 duty days, and Rs 499 will be deducted on the 4th duty day.\n\n2. Please note: you are not a permanent salaried employee of Pulso. You will receive payment only for the days you work. Pulso shares duty/job opportunities with you. If you accept and complete a duty successfully, you will receive the applicable payment. You will not receive salary or payment for days you do not work. Payment for completed work will be given daily.\n\n3. We will share available duty offers with you. Please read each duty offer carefully. You can accept or decline. But after accepting a duty, last-minute cancellation makes it difficult for us to arrange another provider. Providers who cancel after accepting may be blocked from accepting future duty offers.`,
+    `Before joining Pulso, please read all instructions carefully.\n\n1. After accepting your first duty, you need to collect a uniform kit worth Rs 1499.\nThis kit includes one pair of uniform and one ID card.\n\nAfter completing at least 90 days of duty with us, if you return the uniform to the office, the full Rs 1499 will be refunded.\n\nIf you need one additional pair of uniform, you can buy it by paying Rs 1250.\nThis extra uniform amount is not refundable.\n\nPayment option:\nIf you are unable to pay Rs 1499 for the uniform kit at once, you can pay it through deduction from your first 3 days of duty payment. Rs 500 will be deducted per day for the first 2 duty days, and Rs 499 will be deducted on the 3rd duty day.\n\n2. Please note: you are not a permanent salaried employee of Pulso. You will receive payment only for the days you work. Pulso shares duty/job opportunities with you. If you accept and complete a duty successfully, you will receive the applicable payment. You will not receive salary or payment for days you do not work. Payment for completed work will be given daily.\n\n3. We will share available duty offers with you. Please read each duty offer carefully. You can accept or decline. But after accepting a duty, last-minute cancellation makes it difficult for us to arrange another provider. Providers who cancel after accepting may be blocked from accepting future duty offers.`,
   termsQuestion: 'Do you accept the terms and conditions?',
   termsReminder:
     'You have not accepted the terms and conditions yet. To complete onboarding, please reply "continue".',
@@ -818,6 +842,19 @@ const ENGLISH_BASE_MESSAGES = {
   termsAccepted:
     'Thank you. Your onboarding is complete.\n\nWe will start sending you duty offers. After 180 days of duty you will receive an experience certificate from Pulso Global Private Limited. You have completed 0 days so far.',
   termsDeclined: 'Okay. If you are interested later, you can message us again.',
+  // ₹500 subscription fee (22 Oct 2026). English mirror of the Malayalam above.
+  termsFeePoints: [
+    'To become a Pulso member, you pay a one-time subscription fee of ₹500 (tax included).\n\nWhen you complete 180 days of duty through the Pulso app, this amount is refunded to you after deducting tax.',
+    'Duty availability depends on market requirements — the number of patients needing care in your area, the type of care needed, your qualification, your availability and your ratings. Pulso does not promise any minimum number of duties or any fixed monthly income. Any earnings shown in Pulso advertisements are examples based on full-time duty, not a guarantee.'
+  ],
+  workingModelFeeLine:
+    '- To become a Pulso member you pay a one-time subscription fee of ₹500 (tax included) in the Pulso app; it is refunded after 180 days of duty, after deducting tax',
+  termsAcceptedFee:
+    'Thank you. To finish joining Pulso, install the Pulso app, sign in with this same number, agree to the terms and pay the ₹500 subscription fee. Duty offers start after that.',
+  subscriptionFeeReminder:
+    'Your Pulso membership is not complete yet: the ₹500 subscription fee is still to be paid. Please sign in to the Pulso app with this same number and pay the fee. Duty offers start after that.',
+  subscriptionFeePaid:
+    'Thank you! Your ₹500 subscription fee is received. You are now a Pulso member. Your GST receipt (No. {{receiptNo}}) is attached.\n\nWhen you complete 180 days of duty through the Pulso app, ₹424 is refunded to you after deducting tax.',
   postOnboardingSupport:
     'From now onwards, available duty offers will be sent to you through the Pulso app.\n\nPlease read each duty offer carefully.\n\nIf a duty is suitable for you, you can accept it through the Pulso app.\n\nIf a duty is not suitable, you can reject or ignore it.',
   mobileAppCampaignAnnouncement:

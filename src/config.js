@@ -172,6 +172,17 @@ module.exports = {
   termsReminderResumeKeyword: process.env.TERMS_REMINDER_RESUME_KEYWORD || 'continue',
   termsReminderTemplateName: process.env.TERMS_REMINDER_TEMPLATE_NAME || '',
   termsReminderTemplateLanguage: process.env.TERMS_REMINDER_TEMPLATE_LANGUAGE || 'en',
+  // ₹500 subscription fee (22 Oct 2026, subscriptionFee.js). OFF until the
+  // founder switches it on; START_AT is the ISO instant from which new chats
+  // pay; the same two settings must be on in the hub (app_config/provider_subscription_fee).
+  subscriptionFeeEnabled: process.env.SUBSCRIPTION_FEE_ENABLED === 'true',
+  subscriptionFeeRegions: process.env.SUBSCRIPTION_FEE_REGIONS || 'kerala',
+  subscriptionFeeStartAt: process.env.SUBSCRIPTION_FEE_START_AT || '',
+  subscriptionFeeAmount: Number(process.env.SUBSCRIPTION_FEE_AMOUNT || 500),
+  subscriptionFeeFirstReminderHours: Number(process.env.SUBSCRIPTION_FEE_FIRST_REMINDER_HOURS || 24),
+  subscriptionFeeSecondReminderHours: Number(process.env.SUBSCRIPTION_FEE_SECOND_REMINDER_HOURS || 72),
+  subscriptionFeeReminderTemplateName: process.env.SUBSCRIPTION_FEE_REMINDER_TEMPLATE_NAME || '',
+  subscriptionFeePaidTemplateName: process.env.SUBSCRIPTION_FEE_PAID_TEMPLATE_NAME || '',
   pulsoHubBotSyncUrl: process.env.PULSO_HUB_BOT_SYNC_URL || '',
   pulsoHubBotSyncSecret: process.env.PULSO_HUB_BOT_SYNC_SECRET || '',
   // Same project and the same Cloud Run hash, so this is derived from the sync

@@ -130,6 +130,21 @@ async function listProviderSummaries() {
   }));
 }
 
+// Caregivers who accepted the terms but have not paid the ₹500 subscription
+// fee yet (subscriptionFee.js); the day-1 / day-3 reminder sweep reads this.
+async function listSubscriptionFeeDueProviders() {
+  const snapshot = await getFirestore()
+    .collection('providers')
+    .where('subscriptionFee.status', '==', 'due')
+    .select('phone', 'status', 'language', 'flowId', 'region', 'district', 'createdAt', 'fullName', 'subscriptionFee')
+    .get();
+
+  return snapshot.docs.map((doc) => ({
+    phone: doc.id,
+    ...doc.data()
+  }));
+}
+
 async function listProviderTermsReminderCandidates() {
   const snapshot = await getFirestore()
     .collection('providers')
@@ -289,6 +304,7 @@ module.exports = {
   listProviders,
   listProviderSummaries,
   listProviderTermsReminderCandidates,
+  listSubscriptionFeeDueProviders,
   listPendingVerificationNotificationProviders,
   listProvidersByStatus,
   listPendingAppActivationProviders,

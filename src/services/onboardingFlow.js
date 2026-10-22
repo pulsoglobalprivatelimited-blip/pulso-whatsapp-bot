@@ -29,6 +29,7 @@ const {
   HEIGHT_OPTIONS,
   heightLabelFor
 } = require('../flow');
+const subscriptionFee = require('./subscriptionFee');
 const { sendText, sendButtons, sendList, sendTemplate, sendVideoById, sendImageByUrl } = require('./metaClient');
 const { getHubAppActivation } = require('./hubAppActivationService');
 const {
@@ -38,6 +39,7 @@ const {
   getProvider,
   listProviders,
   listProviderTermsReminderCandidates,
+  listSubscriptionFeeDueProviders,
   listPendingVerificationNotificationProviders,
   listReviewerWorkflowProviders,
   listProvidersByStatus
@@ -1022,6 +1024,10 @@ async function notify8HourNoStayOrFood(phone, dutyHourPreference) {
   }
 
   await sendAndLog(phone, 'text', MESSAGES.dutyHourPreference8HourNotice);
+  // 8-hour duties are few (founder, 22 Oct 2026): said to an 8-hour-only pick.
+  if (dutyHourPreference === '8_hour' && MESSAGES.dutyHourPreference8HourScarceNotice) {
+    await sendAndLog(phone, 'text', MESSAGES.dutyHourPreference8HourScarceNotice);
+  }
 }
 
 /* While her application waits for review. A call-review applicant (no
@@ -1103,7 +1109,13 @@ async function sendTermsButtons(phone) {
   });
 }
 
+// With the ₹500 fee points in front for a new Kerala joiner (subscriptionFee.js).
+function termsIntroFor(provider) {
+  return subscriptionFee.termsIntroFor(provider, MESSAGES);
+}
+
 function hasSentTermsIntro(provider) {
+  const variants = subscriptionFee.termsIntroVariants(MESSAGES);
   return hasHistoryEvent(
     provider,
     (entry) =>
@@ -1111,7 +1123,7 @@ function hasSentTermsIntro(provider) {
       entry.type === 'outbound_message' &&
       entry.payload &&
       entry.payload.kind === 'text' &&
-      entry.payload.body === MESSAGES.termsIntro
+      variants.includes(entry.payload.body)
   );
 }
 
@@ -1120,7 +1132,7 @@ async function sendTermsIntroIfMissing(phone, provider, sender = 'bot') {
     return false;
   }
 
-  await sendAndLog(phone, 'text', MESSAGES.termsIntro, sender);
+  await sendAndLog(phone, 'text', termsIntroFor(provider), sender);
   return true;
 }
 
@@ -1571,7 +1583,11 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
   }
 
   return runWithProviderFlow(currentProvider, async () => {
+  // ₹500 subscription fee (22 Oct 2026): a new Kerala joiner is marked due;
+  // the app takes the money, the hub gates offers until then.
+  const feeApplies = subscriptionFee.feeAppliesTo(currentProvider);
   await updateStatus(phone, STATUS.COMPLETED, 15, {
+    ...(feeApplies ? { subscriptionFee: subscriptionFee.dueRecord(currentProvider, completionTime) } : {}),
     termsAccepted: true,
     pulsoAppRequired: true,
     pulsoAppActivationStatus: 'required',
@@ -1599,6 +1615,7 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
   }
 
   const refreshedProvider = await getProvider(phone);
+  const acceptedText = feeApplies && MESSAGES.termsAcceptedFee ? MESSAGES.termsAcceptedFee : MESSAGES.termsAccepted;
   const sentTermsAcceptedMessage = hasHistoryEvent(
     refreshedProvider,
     (entry) =>
@@ -1606,10 +1623,10 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
       entry.type === 'outbound_message' &&
       entry.payload &&
       entry.payload.kind === 'text' &&
-      entry.payload.body === MESSAGES.termsAccepted
+      (entry.payload.body === MESSAGES.termsAccepted || entry.payload.body === MESSAGES.termsAcceptedFee)
   );
   if (!sentTermsAcceptedMessage) {
-    await sendAndLog(phone, 'text', MESSAGES.termsAccepted, sender);
+    await sendAndLog(phone, 'text', acceptedText, sender);
   }
 
   // Duty channel invite, once (17 Oct 2026). Never blocks joining.
@@ -2222,6 +2239,73 @@ async function reconcileAcceptedTermsProviders(targetPhones = null) {
   return { scanned: providers.length, fixed };
 }
 
+// ₹500 subscription fee: day-1 and day-3 reminders to those who accepted the
+// terms but have not paid in the app (subscriptionFee.js). Same shape as the
+// terms reminder: a template when one is configured (the 24-hour window has
+// closed by then), plain text otherwise.
+const SUBSCRIPTION_FEE_REMINDER_EVENT = 'subscription_fee_reminder_sent';
+
+async function remindProviderToPaySubscriptionFee(provider) {
+  return runWithProviderFlow(provider, async () => {
+    if (!provider || !provider.phone || !subscriptionFee.isReminderDue(provider)) {
+      return false;
+    }
+    const s = subscriptionFee.settings();
+    let reminderKind = 'text';
+    if (s.reminderTemplateName) {
+      await sendAndLog(provider.phone, 'template', {
+        name: s.reminderTemplateName,
+        languageCode: provider.language === 'en' ? 'en' : 'ml',
+        components: [{ type: 'body', parameters: [{ type: 'text', text: (String(provider.fullName || '').trim().split(/\s+/)[0] || 'Caregiver').slice(0, 60) }] }]
+      }, 'fee-reminder');
+      reminderKind = 'template';
+    } else {
+      await sendAndLog(provider.phone, 'text', MESSAGES.subscriptionFeeReminder, 'fee-reminder');
+    }
+    await updateProvider(provider.phone, {
+      subscriptionFee: {
+        ...provider.subscriptionFee,
+        remindersSent: subscriptionFee.reminderCount(provider) + 1,
+        lastReminderAt: new Date().toISOString(),
+        lastReminderKind: reminderKind
+      }
+    });
+    await appendHistory(provider.phone, { type: 'system', event: SUBSCRIPTION_FEE_REMINDER_EVENT, reminderKind });
+    return true;
+  });
+}
+
+async function runSubscriptionFeeReminderSweep() {
+  if (!subscriptionFee.settings().enabled) {
+    return { scanned: 0, due: 0, sent: 0, disabled: true };
+  }
+  const providers = await listSubscriptionFeeDueProviders();
+  const due = providers.filter((provider) => subscriptionFee.isReminderDue(provider));
+  let sent = 0;
+  for (const provider of due) {
+    try {
+      if (await remindProviderToPaySubscriptionFee(provider)) sent += 1;
+    } catch (error) {
+      console.error('[SUBSCRIPTION_FEE_REMINDER_ERROR]', provider.phone, error.message, error.response ? JSON.stringify(error.response.data) : '');
+    }
+  }
+  if (due.length) console.log(`[SUBSCRIPTION_FEE_REMINDER] due ${due.length}, sent ${sent}`);
+  return { scanned: providers.length, due: due.length, sent };
+}
+
+let subscriptionFeeReminderInterval = null;
+function startSubscriptionFeeReminderScheduler() {
+  if (subscriptionFeeReminderInterval) return subscriptionFeeReminderInterval;
+  const intervalMs = Math.max(1, config.termsReminderCheckIntervalMinutes) * 60 * 1000;
+  subscriptionFeeReminderInterval = setInterval(() => {
+    runSubscriptionFeeReminderSweep().catch((error) => {
+      console.error('[SUBSCRIPTION_FEE_REMINDER_SCHEDULER_ERROR]', error);
+    });
+  }, intervalMs);
+  if (typeof subscriptionFeeReminderInterval.unref === 'function') subscriptionFeeReminderInterval.unref();
+  return subscriptionFeeReminderInterval;
+}
+
 function startTermsReminderScheduler() {
   if (termsReminderInterval) {
     return termsReminderInterval;
@@ -2465,7 +2549,7 @@ async function sendPromptForCurrentStatus(phone, provider) {
       return;
     }
     case STATUS.AWAITING_TERMS_ACCEPTANCE:
-      await sendAndLog(phone, 'text', MESSAGES.termsIntro);
+      await sendAndLog(phone, 'text', termsIntroFor(provider));
       await sendTermsButtons(phone);
       return;
     case STATUS.COMPLETED:
@@ -2559,7 +2643,7 @@ async function continueAfterEarlyAge(phone) {
   if (notice) {
     await sendAndLog(phone, 'text', notice);
   }
-  await sendAndLog(phone, 'text', getWorkingModelFor(provider, tiers));
+  await sendAndLog(phone, 'text', subscriptionFee.applyWorkingModelFeeLine(getWorkingModelFor(provider, tiers), provider, MESSAGES));
   // Its own bubble, between the working model and the interest question. Inside
   // the working model this sat at character 1,836 of 1,935, below a "Read more"
   // fold that falls at about 640 - correct, and invisible. It lands here
@@ -4131,7 +4215,7 @@ async function handleTerms(phone, message) {
       termsReminderReplyReceivedAt: new Date().toISOString()
     });
     await sendAndLog(phone, 'text', MESSAGES.termsReminderResume);
-    await sendAndLog(phone, 'text', MESSAGES.termsIntro);
+    await sendAndLog(phone, 'text', termsIntroFor(provider));
     await sendTermsButtons(phone);
     return;
   }
@@ -5874,6 +5958,10 @@ module.exports = {
   runLegacyTermsReminderBackfill,
   runTermsReminderSweep,
   startTermsReminderScheduler,
+  runSubscriptionFeeReminderSweep,
+  startSubscriptionFeeReminderScheduler,
+  remindProviderToPaySubscriptionFee,
+  termsIntroFor,
   runDutyDaysMilestoneSweep,
   startDutyDaysMilestoneScheduler,
   startFlow,

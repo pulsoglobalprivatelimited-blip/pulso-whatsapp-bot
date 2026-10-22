@@ -39,6 +39,9 @@ function buildProviderSyncPayload(provider) {
     worksWithAgency: provider.worksWithAgency === true ? true : provider.worksWithAgency === false ? false : null,
     addDutyInterest: provider.addDutyInterest || '',
     completedAt: provider.completedAt || null,
+    // ₹500 subscription fee (22 Oct 2026): {required, status due|paid, dueSince…}
+    // or null when the fee does not apply to her. The hub gates offers on it.
+    subscriptionFee: provider.subscriptionFee && typeof provider.subscriptionFee === 'object' ? provider.subscriptionFee : null,
     verification: provider.verification || {},
     // Set when the person is onboarding through the Pulso app: the hub pushes
     // the reviewer's decision to this user, and activates them on Accept.

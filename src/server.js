@@ -16,6 +16,7 @@ const {
   adminUploadCertificateFiles,
   runTermsReminderSweep,
   startTermsReminderScheduler,
+  startSubscriptionFeeReminderScheduler,
   startDutyDaysMilestoneScheduler,
   startDetailsCheckScheduler
 } = require('./services/onboardingFlow');
@@ -734,6 +735,22 @@ app.post('/internal/provider-notice', async (req, res) => {
     const { getProvider, appendHistory } = require('./services/providerService');
     const result = await sendProviderNotice(req.body || {}, { sendTemplate, getProvider, appendHistory });
     return res.json({ ok: true, ...result });
+  } catch (error) {
+    const detail = error && error.response && error.response.data ? JSON.stringify(error.response.data).slice(0, 300) : '';
+    return res.status(400).json({ ok: false, error: `${error.message}${detail ? ` ${detail}` : ''}` });
+  }
+});
+
+// The hub says a caregiver paid the ₹500 subscription fee in the app
+// (22 Oct 2026): stop the reminders, log it, send her the receipt.
+app.post('/internal/subscription-fee-paid', async (req, res) => {
+  if (!hasPulsoServerSecret(req)) return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const { markPaid } = require('./services/subscriptionFee');
+    const { sendText, sendDocumentByUrl, sendTemplate } = require('./services/metaClient');
+    const { getProvider, updateProvider, appendHistory } = require('./services/providerService');
+    const result = await markPaid(req.body || {}, { getProvider, updateProvider, appendHistory, sendText, sendDocumentByUrl, sendTemplate });
+    return res.json(result);
   } catch (error) {
     const detail = error && error.response && error.response.data ? JSON.stringify(error.response.data).slice(0, 300) : '';
     return res.status(400).json({ ok: false, error: `${error.message}${detail ? ` ${detail}` : ''}` });
@@ -1662,6 +1679,7 @@ initializeStorage()
   })
   .then(() => {
     startTermsReminderScheduler();
+    startSubscriptionFeeReminderScheduler();
     startDutyDaysMilestoneScheduler();
     startDetailsCheckScheduler();
     startCertificateReviewCatchUpScheduler();

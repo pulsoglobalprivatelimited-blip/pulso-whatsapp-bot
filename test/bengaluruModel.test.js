@@ -77,8 +77,9 @@ test('Kerala, both languages, reads exactly what it read before', () => {
   assert.match(KL_EN.MESSAGES.workingModel, /Duty location can be anywhere in Kerala/);
   assert.match(KL_EN.MESSAGES.workingModel, /Payment will be credited daily to your account/);
   assert.match(KL_EN.MESSAGES.workingModel, /the office team will call you for verification/);
-  assert.match(KL_EN.MESSAGES.termsIntro, /deduction from your first 4 days of duty payment/);
-  assert.match(KL_EN.MESSAGES.termsIntro, /uniform kit worth Rs 1999/);
+  // Kit ₹1,499 over three duty days (founder, 22 Oct 2026).
+  assert.match(KL_EN.MESSAGES.termsIntro, /deduction from your first 3 days of duty payment/);
+  assert.match(KL_EN.MESSAGES.termsIntro, /uniform kit worth Rs 1499/);
   assert.match(KL_EN.MESSAGES.sampleDutyOffer24Hour, /Location: Vennala, Ernakulam/);
   assert.match(KL_EN.MESSAGES.sampleDutyOffer24Hour, /Family verified/);
   assert.match(KL_ML.MESSAGES.workingModel, /Duty area കേരളത്തിൽ എവിടെയും ആയിരിക്കാം/);
