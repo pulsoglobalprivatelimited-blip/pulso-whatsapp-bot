@@ -165,6 +165,24 @@ function validatePaid(body = {}) {
  * updateProvider, appendHistory, sendText, sendDocumentByUrl, sendTemplate.
  */
 async function markPaid(body, deps) {
+  // Ops let her in without paying: reminders stop, nothing is sent to her.
+  if (body && body.waived === true) {
+    const phone = String(body.phone || '').replace(/\D/g, '');
+    if (phone.length < 11 || phone.length > 15) throw new Error('phone is required');
+    const provider = await deps.getProvider(phone);
+    if (!provider) return { ok: true, known: false, phone };
+    await deps.updateProvider(phone, {
+      subscriptionFee: {
+        ...(provider.subscriptionFee && typeof provider.subscriptionFee === 'object' ? provider.subscriptionFee : {}),
+        required: true,
+        status: 'waived',
+        waivedAt: new Date().toISOString(),
+        waiveNote: String(body.note || '').slice(0, 300),
+      },
+    });
+    await deps.appendHistory(phone, { type: 'system', event: 'subscription_fee_waived', note: String(body.note || '').slice(0, 300) });
+    return { ok: true, known: true, waived: true };
+  }
   const paid = validatePaid(body);
   const provider = await deps.getProvider(paid.phone);
   if (!provider) return { ok: true, known: false, phone: paid.phone };

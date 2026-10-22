@@ -145,3 +145,12 @@ test('8-hour scarcity warning exists in both languages', () => {
   assert.ok(EN.dutyHourPreference8HourScarceNotice.startsWith('Please note: 8-hour duties are very few.'));
   assert.ok(FLOWS.karnataka_english.MESSAGES.dutyHourPreference8HourScarceNotice, 'Bengaluru gets the warning too');
 });
+
+test('ops waived the fee: reminders stop, she is not messaged', async () => {
+  const deps = fakeDeps({ ...kerala, subscriptionFee: { required: true, status: 'due', dueSince: 'x', remindersSent: 1 } });
+  const r = await fee.markPaid({ phone: '919876543210', waived: true, note: 'joined at the office' }, deps);
+  assert.deepEqual(r, { ok: true, known: true, waived: true });
+  assert.equal(deps.calls.updates[0].subscriptionFee.status, 'waived');
+  assert.equal(deps.calls.texts.length, 0);
+  assert.equal(fee.isReminderDue({ ...kerala, subscriptionFee: deps.calls.updates[0].subscriptionFee }, Date.now() + 10 * DAY), false);
+});
