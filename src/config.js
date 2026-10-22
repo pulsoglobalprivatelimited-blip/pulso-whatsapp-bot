@@ -181,8 +181,10 @@ module.exports = {
   subscriptionFeeAmount: Number(process.env.SUBSCRIPTION_FEE_AMOUNT || 499),
   subscriptionFeeFirstReminderHours: Number(process.env.SUBSCRIPTION_FEE_FIRST_REMINDER_HOURS || 24),
   subscriptionFeeSecondReminderHours: Number(process.env.SUBSCRIPTION_FEE_SECOND_REMINDER_HOURS || 72),
-  subscriptionFeeReminderTemplateName: process.env.SUBSCRIPTION_FEE_REMINDER_TEMPLATE_NAME || '',
-  subscriptionFeePaidTemplateName: process.env.SUBSCRIPTION_FEE_PAID_TEMPLATE_NAME || '',
+  // Both templates APPROVED by Meta on 22 Oct 2026, so these are the defaults;
+  // the env vars only matter if a replacement template is ever made.
+  subscriptionFeeReminderTemplateName: process.env.SUBSCRIPTION_FEE_REMINDER_TEMPLATE_NAME || 'provider_fee_reminder',
+  subscriptionFeePaidTemplateName: process.env.SUBSCRIPTION_FEE_PAID_TEMPLATE_NAME || 'provider_fee_receipt',
   pulsoHubBotSyncUrl: process.env.PULSO_HUB_BOT_SYNC_URL || '',
   pulsoHubBotSyncSecret: process.env.PULSO_HUB_BOT_SYNC_SECRET || '',
   // Same project and the same Cloud Run hash, so this is derived from the sync
