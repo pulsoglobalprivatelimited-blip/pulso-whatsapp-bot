@@ -123,15 +123,16 @@ test('the working model quotes Basic flat, GDA as a range, in both languages', a
     assert.match(gda, /₹900 മുതൽ ₹1200 വരെ/);
     assert.doesNotMatch(gda, /₹600 മുതൽ ₹700 വരെ/, 'the floor is not the wage');
     const nurse = flow.getWorkingModelFor('gnm', LIVE);
-    assert.match(nurse, /₹1200 ലഭിക്കും/);
-    assert.match(nurse, /₹1400 ലഭിക്കും/);
-    assert.doesNotMatch(nurse, /₹2200/, 'the old hand-written nurse range is gone');
+    // Founder, 22 Oct 2026: nurses are told a range, 24 hours first.
+    assert.match(nurse, /24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹800 മുതൽ ₹2200 വരെ ലഭിക്കും/);
+    assert.match(nurse, /8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹800 മുതൽ ₹1200 വരെ ലഭിക്കും/);
+    assert.doesNotMatch(nurse, /₹1400 ലഭിക്കും/, 'the flat nurse figure is no longer the message');
   });
   await flow.runWithFlow('kerala_english', async () => {
     const basic = flow.getWorkingModelFor('basic_caregiver', LIVE);
     assert.match(basic, /For 24-hour duty, you will receive Rs 750 per day[\s\S]*For 8-hour duty, you will receive Rs 650 per day/);
     assert.match(flow.getWorkingModelFor('hca', LIVE), /Rs 900 to Rs 1200 per day[\s\S]*Rs 800 to Rs 900 per day/);
-    assert.match(flow.getWorkingModelFor('bsc_nursing', LIVE), /Rs 1400 per day[\s\S]*Rs 1200 per day/);
+    assert.match(flow.getWorkingModelFor('bsc_nursing', LIVE), /Rs 800 to Rs 2200 per day[\s\S]*Rs 800 to Rs 1200 per day/);
   });
 });
 
@@ -159,7 +160,7 @@ test('the duty-hours summary follows the same bands', async () => {
   await flow.runWithFlow('kerala_malayalam', async () => {
     assert.equal(flow.getDutyHourPaymentSummaryFor('no_certificate', LIVE), '24 hour - ദിവസത്തിൽ ₹750\n8 hour - ദിവസത്തിൽ ₹650' + ML_TAIL);
     assert.equal(flow.getDutyHourPaymentSummaryFor('gda', LIVE), '24 hour - ദിവസത്തിൽ ₹900 മുതൽ ₹1200 വരെ\n8 hour - ദിവസത്തിൽ ₹800 മുതൽ ₹900 വരെ' + ML_TAIL);
-    assert.equal(flow.getDutyHourPaymentSummaryFor('gnm', LIVE), '24 hour - ദിവസത്തിൽ ₹1400\n8 hour - ദിവസത്തിൽ ₹1200' + ML_TAIL);
+    assert.equal(flow.getDutyHourPaymentSummaryFor('gnm', LIVE), '24 hour - ദിവസത്തിൽ ₹800 മുതൽ ₹2200 വരെ\n8 hour - ദിവസത്തിൽ ₹800 മുതൽ ₹1200 വരെ' + ML_TAIL);
   });
   await flow.runWithFlow('kerala_english', async () => {
     assert.equal(flow.getDutyHourPaymentSummaryFor('basic_caregiver', LIVE), '24 hour - Rs 750 per day\n8 hour - Rs 650 per day' + EN_TAIL);

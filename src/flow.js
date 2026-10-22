@@ -1431,6 +1431,14 @@ const GDA_SHOWN_FALLBACK = {
  * shown24h in that doc.
  */
 const BASIC_SHOWN_FALLBACK = { shown8h: 650, shown24h: 750 };
+/**
+ * What the nurse band (GNM, BSc nursing) is TOLD. The founder set a range on
+ * 22 Oct 2026: 8 hours ₹800 to ₹1200, 24 hours ₹800 to ₹2200 a day. The
+ * payout in app_config/provider_tiers still prices bookings; these are the
+ * words only. Overridable per figure as tiers.nurse.shownFrom8h / shownTo8h /
+ * shownFrom24h / shownTo24h in that doc.
+ */
+const NURSE_SHOWN_FALLBACK = { shownFrom8h: 800, shownTo8h: 1200, shownFrom24h: 800, shownTo24h: 2200 };
 
 function tierFigures(tiers) {
   const t = tiers && typeof tiers === 'object' ? tiers : {};
@@ -1446,7 +1454,13 @@ function tierFigures(tiers) {
     const n = Math.round(Number((t.basic || {})[key]));
     return Number.isFinite(n) && n > 0 ? n : BASIC_SHOWN_FALLBACK[key];
   };
+  const nurseShown = (key) => {
+    const n = Math.round(Number((t.nurse || {})[key]));
+    return Number.isFinite(n) && n > 0 ? n : NURSE_SHOWN_FALLBACK[key];
+  };
   return {
+    nFrom8: nurseShown('shownFrom8h'), nTo8: nurseShown('shownTo8h'),
+    nFrom24: nurseShown('shownFrom24h'), nTo24: nurseShown('shownTo24h'),
     b8: basicShown('shown8h'), b24: basicShown('shown24h'),
     g8: pick('gda', 'payout8h'), g24: pick('gda', 'payout24h'),
     n8: pick('nurse', 'payout8h'), n24: pick('nurse', 'payout24h'),
@@ -1505,8 +1519,8 @@ function workingModelRateLines(band, language, f) {
   if (language === 'ml') {
     if (band === 'nurse') {
       return [
-        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.n24} ലഭിക്കും`,
-        `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.n8} ലഭിക്കും. ${earningsGrowthLine('ml')}`
+        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.nFrom24, f.nTo24)} ലഭിക്കും`,
+        `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.nFrom8, f.nTo8)} ലഭിക്കും. ${earningsGrowthLine('ml')}`
       ];
     }
     if (band === 'basic') {
@@ -1522,7 +1536,7 @@ function workingModelRateLines(band, language, f) {
     ];
   }
   if (band === 'nurse') {
-    return [`For 24-hour duty, you will receive Rs ${f.n24} per day`, `For 8-hour duty, you will receive Rs ${f.n8} per day. ${earningsGrowthLine('en')}`];
+    return [`For 24-hour duty, you will receive ${enRange(f.nFrom24, f.nTo24)} per day`, `For 8-hour duty, you will receive ${enRange(f.nFrom8, f.nTo8)} per day. ${earningsGrowthLine('en')}`];
   }
   if (band === 'basic') {
     return [`For 24-hour duty, you will receive Rs ${f.b24} per day`, `For 8-hour duty, you will receive Rs ${f.b8} per day. ${earningsGrowthLine('en')}`];
@@ -1765,12 +1779,12 @@ function getDutyHourPaymentSummaryFor(qualification, tiers) {
   const tail = `\n\n${earningsGrowthLine(flow.language)}`;
   // 24 hours first, then 8 — founder's order, 9 Oct 2026.
   if (flow.language === 'ml') {
-    if (band === 'nurse') return `24 hour - ദിവസത്തിൽ ₹${f.n24}\n8 hour - ദിവസത്തിൽ ₹${f.n8}${tail}`;
+    if (band === 'nurse') return `24 hour - ദിവസത്തിൽ ${mlRange(f.nFrom24, f.nTo24)}\n8 hour - ദിവസത്തിൽ ${mlRange(f.nFrom8, f.nTo8)}${tail}`;
     return band === 'basic'
       ? `24 hour - ദിവസത്തിൽ ₹${f.b24}\n8 hour - ദിവസത്തിൽ ₹${f.b8}${tail}`
       : `24 hour - ദിവസത്തിൽ ${mlRange(f.gFrom24, f.gTo24)}\n8 hour - ദിവസത്തിൽ ${mlRange(f.gFrom8, f.gTo8)}${tail}`;
   }
-  if (band === 'nurse') return `24 hour - Rs ${f.n24} per day\n8 hour - Rs ${f.n8} per day${tail}`;
+  if (band === 'nurse') return `24 hour - ${enRange(f.nFrom24, f.nTo24)} per day\n8 hour - ${enRange(f.nFrom8, f.nTo8)} per day${tail}`;
   return band === 'basic'
     ? `24 hour - Rs ${f.b24} per day\n8 hour - Rs ${f.b8} per day${tail}`
     : `24 hour - ${enRange(f.gFrom24, f.gTo24)} per day\n8 hour - ${enRange(f.gFrom8, f.gTo8)} per day${tail}`;
