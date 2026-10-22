@@ -1,6 +1,6 @@
 'use strict';
 
-// The ₹500 one-time subscription fee (founder, 22 Oct 2026; plan in pulso_hub
+// The ₹499 one-time subscription fee (founder, 22 Oct 2026; plan in pulso_hub
 // docs/provider_subscription_fee_plan.md).
 //
 //  - Kerala only, and only people whose chat STARTED on or after the start
@@ -35,7 +35,7 @@ function settings() {
     enabled: config.subscriptionFeeEnabled === true,
     regions: regions.length ? regions : DEFAULT_REGIONS,
     startAtMs: Number.isFinite(startAtMs) ? startAtMs : null,
-    amount: Number(config.subscriptionFeeAmount || 500),
+    amount: Number(config.subscriptionFeeAmount || 499),
     reminderHours: [config.subscriptionFeeFirstReminderHours, config.subscriptionFeeSecondReminderHours]
       .map(Number)
       .filter((h) => Number.isFinite(h) && h > 0)

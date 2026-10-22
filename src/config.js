@@ -178,7 +178,7 @@ module.exports = {
   subscriptionFeeEnabled: process.env.SUBSCRIPTION_FEE_ENABLED === 'true',
   subscriptionFeeRegions: process.env.SUBSCRIPTION_FEE_REGIONS || 'kerala',
   subscriptionFeeStartAt: process.env.SUBSCRIPTION_FEE_START_AT || '',
-  subscriptionFeeAmount: Number(process.env.SUBSCRIPTION_FEE_AMOUNT || 500),
+  subscriptionFeeAmount: Number(process.env.SUBSCRIPTION_FEE_AMOUNT || 499),
   subscriptionFeeFirstReminderHours: Number(process.env.SUBSCRIPTION_FEE_FIRST_REMINDER_HOURS || 24),
   subscriptionFeeSecondReminderHours: Number(process.env.SUBSCRIPTION_FEE_SECOND_REMINDER_HOURS || 72),
   subscriptionFeeReminderTemplateName: process.env.SUBSCRIPTION_FEE_REMINDER_TEMPLATE_NAME || '',

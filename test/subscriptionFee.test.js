@@ -43,7 +43,7 @@ test('a fee-payer reads the fee and market points first; the old points move dow
   const text = fee.termsIntroFor(kerala, ML, NOW);
   const paragraphs = text.split('\n\n');
   assert.equal(paragraphs[0], ML.termsIntro.split('\n\n')[0]);
-  assert.ok(paragraphs[1].startsWith('1. Pulso-യിൽ അംഗമാകുന്നതിനായി ഒറ്റത്തവണ ₹500 (tax included) സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കണം.'));
+  assert.ok(paragraphs[1].startsWith('1. Pulso-യിൽ അംഗമാകുന്നതിനായി ഒറ്റത്തവണ ₹499 (tax included) സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കണം.'));
   assert.ok(paragraphs[2].startsWith('Pulso ആപ്പിലൂടെ 180 ദിവസത്തെ ജോലി'));
   assert.ok(paragraphs[3].startsWith('2. ഡ്യൂട്ടി ലഭ്യത മാർക്കറ്റ് ആവശ്യകത'));
   assert.ok(paragraphs[3].includes('കേരളത്തിൽ'));
@@ -53,7 +53,7 @@ test('a fee-payer reads the fee and market points first; the old points move dow
   assert.ok(!text.includes('\n\n1. ഡ്യൂട്ടി സ്വീകരിച്ച'));
   // English mirror
   const en = fee.termsIntroFor({ ...kerala, flowId: 'kerala_english' }, EN, NOW);
-  assert.ok(en.includes('\n\n1. To become a Pulso member, you pay a one-time subscription fee of ₹500 (tax included).'));
+  assert.ok(en.includes('\n\n1. To become a Pulso member, you pay a one-time subscription fee of ₹499 (tax included).'));
   assert.ok(en.includes('\n\n2. Duty availability depends on market requirements'));
   assert.ok(en.includes('\n\n3. After accepting your first duty, you need to collect a uniform kit worth Rs 1499.'));
   assert.ok(en.includes('\n\n5. We will share available duty offers'));
@@ -83,7 +83,7 @@ test('the working model drops "no registration fee" for a fee-payer only', () =>
 
 test('the record written at Accept, and a paid one is never overwritten', () => {
   const r = fee.dueRecord(kerala, '2026-11-02T10:00:00.000Z');
-  assert.deepEqual(r, { required: true, status: 'due', amount: 500, dueSince: '2026-11-02T10:00:00.000Z', remindersSent: 0 });
+  assert.deepEqual(r, { required: true, status: 'due', amount: 499, dueSince: '2026-11-02T10:00:00.000Z', remindersSent: 0 });
   const paid = { required: true, status: 'paid', amount: 500, paidAt: 'x' };
   assert.deepEqual(fee.dueRecord({ ...kerala, subscriptionFee: paid }), paid);
 });
@@ -123,7 +123,7 @@ test('the hub says she paid: record marked, receipt sent, said once', async () =
   assert.equal(deps.calls.updates[0].subscriptionFee.remindersSent, 1, 'earlier fields kept');
   assert.equal(deps.calls.texts.length, 1);
   assert.ok(deps.calls.texts[0].body.includes('PS/26-27/000001'));
-  assert.ok(deps.calls.texts[0].body.startsWith('നന്ദി! ₹500'));
+  assert.ok(deps.calls.texts[0].body.startsWith('നന്ദി! ₹499'));
   assert.equal(deps.calls.docs[0].link, 'https://x/r.pdf');
   assert.equal(deps.calls.history.filter((e) => e.event === 'subscription_fee_paid').length, 1);
   // The webhook and the app confirm the same payment: no second message.

@@ -533,24 +533,24 @@ const MESSAGES = {
     'നന്ദി. താങ്കളുടെ onboarding വിജയകരമായി പൂർത്തിയായി.\n\nഇനി മുതൽ താങ്കൾക്ക് Pulso വഴി duty offers ലഭിച്ചു തുടങ്ങും.\n\nPulso വഴി ആകെ 180 ദിവസത്തെ verified duty പൂർത്തിയാക്കിയാൽ, Pulso Global Private Limited-ന്റെ Experience Certificate ലഭിക്കും.\n\nനിലവിൽ പൂർത്തിയാക്കിയ verified duty: **0 ദിവസം**.',
   termsDeclined:
     'ശരി. താൽപര്യമുണ്ടെങ്കിൽ പിന്നീട് വീണ്ടും message ചെയ്യാം.',
-  /* ₹500 subscription fee (founder, 22 Oct 2026; pulso_hub
+  /* ₹499 subscription fee (founder, 22 Oct 2026; pulso_hub
      docs/provider_subscription_fee_plan.md). Kerala only, new joiners only;
      subscriptionFee.js decides who. The two points go in FRONT of the terms
      above as 1 and 2 (the old points move down). Founder's Malayalam, verbatim. */
   termsFeePoints: [
-    'Pulso-യിൽ അംഗമാകുന്നതിനായി ഒറ്റത്തവണ ₹500 (tax included) സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കണം.\n\nPulso ആപ്പിലൂടെ 180 ദിവസത്തെ ജോലി പൂർത്തിയാക്കിയാൽ, നികുതി കുറച്ച ശേഷം ഈ തുക തിരികെ ലഭിക്കും.',
+    'Pulso-യിൽ അംഗമാകുന്നതിനായി ഒറ്റത്തവണ ₹499 (tax included) സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കണം.\n\nPulso ആപ്പിലൂടെ 180 ദിവസത്തെ ജോലി പൂർത്തിയാക്കിയാൽ, നികുതി കുറച്ച ശേഷം ഈ തുക തിരികെ ലഭിക്കും.',
     'ഡ്യൂട്ടി ലഭ്യത മാർക്കറ്റ് ആവശ്യകത അനുസരിച്ചായിരിക്കും — കേരളത്തിൽ പരിചരണം ആവശ്യമുള്ള രോഗികളുടെ എണ്ണം, ആവശ്യമായ പരിചരണത്തിന്റെ തരം, നിങ്ങളുടെ യോഗ്യത, നിങ്ങളുടെ ലഭ്യത, നിങ്ങളുടെ റേറ്റിംഗ് എന്നിവയെ ആശ്രയിച്ചിരിക്കും. ഒരു നിശ്ചിത എണ്ണം ഡ്യൂട്ടികളോ നിശ്ചിത മാസവരുമാനമോ Pulso ഉറപ്പു നൽകുന്നില്ല. Pulso പരസ്യങ്ങളിൽ കാണിക്കുന്ന വരുമാനം ഫുൾ-ടൈം ഡ്യൂട്ടി അടിസ്ഥാനമാക്കിയുള്ള ഉദാഹരണങ്ങൾ മാത്രമാണ്, ഉറപ്പല്ല.'
   ],
   // Replaces the "no registration fee" line of the working model when the fee applies.
   workingModelFeeLine:
-    '- Pulso-യിൽ അംഗമാകുന്നതിനായി ഒറ്റത്തവണ ₹500 (tax included) സബ്സ്ക്രിപ്ഷൻ ഫീസ് Pulso ആപ്പിൽ അടയ്ക്കണം; 180 ദിവസത്തെ ജോലിക്ക് ശേഷം നികുതി കുറച്ച് തിരികെ ലഭിക്കും',
+    '- Pulso-യിൽ അംഗമാകുന്നതിനായി ഒറ്റത്തവണ ₹499 (tax included) സബ്സ്ക്രിപ്ഷൻ ഫീസ് Pulso ആപ്പിൽ അടയ്ക്കണം; 180 ദിവസത്തെ ജോലിക്ക് ശേഷം നികുതി കുറച്ച് തിരികെ ലഭിക്കും',
   // After Accept, instead of termsAccepted, when the fee applies. Founder-approved.
   termsAcceptedFee:
-    'നന്ദി. Pulso-യിൽ ചേരുന്നത് പൂർത്തിയാക്കാൻ Pulso ആപ്പ് ഇൻസ്റ്റാൾ ചെയ്ത്, ഇതേ നമ്പർ ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്ത്, terms സമ്മതിച്ച്, ₹500 സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കുക. അതിനു ശേഷം ഡ്യൂട്ടി ഓഫറുകൾ ലഭിച്ചു തുടങ്ങും.',
+    'നന്ദി. Pulso-യിൽ ചേരുന്നത് പൂർത്തിയാക്കാൻ Pulso ആപ്പ് ഇൻസ്റ്റാൾ ചെയ്ത്, ഇതേ നമ്പർ ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്ത്, terms സമ്മതിച്ച്, ₹499 സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കുക. അതിനു ശേഷം ഡ്യൂട്ടി ഓഫറുകൾ ലഭിച്ചു തുടങ്ങും.',
   subscriptionFeeReminder:
-    'നിങ്ങളുടെ Pulso അംഗത്വം പൂർത്തിയാക്കാൻ ₹500 സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കാൻ ബാക്കിയുണ്ട്. Pulso ആപ്പിൽ ഇതേ നമ്പർ ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്ത് ഫീസ് അടയ്ക്കുക. അതിനു ശേഷം ഡ്യൂട്ടി ഓഫറുകൾ ലഭിച്ചു തുടങ്ങും.',
+    'നിങ്ങളുടെ Pulso അംഗത്വം പൂർത്തിയാക്കാൻ ₹499 സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കാൻ ബാക്കിയുണ്ട്. Pulso ആപ്പിൽ ഇതേ നമ്പർ ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്ത് ഫീസ് അടയ്ക്കുക. അതിനു ശേഷം ഡ്യൂട്ടി ഓഫറുകൾ ലഭിച്ചു തുടങ്ങും.',
   subscriptionFeePaid:
-    'നന്ദി! ₹500 സബ്സ്ക്രിപ്ഷൻ ഫീസ് ലഭിച്ചു. നിങ്ങൾ ഇപ്പോൾ Pulso അംഗമാണ്. GST രസീത് (നമ്പർ {{receiptNo}}) ഇതോടൊപ്പം അയയ്ക്കുന്നു.\n\nPulso ആപ്പിലൂടെ 180 ദിവസത്തെ ജോലി പൂർത്തിയാക്കിയാൽ, നികുതി കുറച്ച ശേഷം ₹424 തിരികെ ലഭിക്കും.',
+    'നന്ദി! ₹499 സബ്സ്ക്രിപ്ഷൻ ഫീസ് ലഭിച്ചു. നിങ്ങൾ ഇപ്പോൾ Pulso അംഗമാണ്. GST രസീത് (നമ്പർ {{receiptNo}}) ഇതോടൊപ്പം അയയ്ക്കുന്നു.\n\nPulso ആപ്പിലൂടെ 180 ദിവസത്തെ ജോലി പൂർത്തിയാക്കിയാൽ, നികുതി കുറച്ച ശേഷം ₹423 തിരികെ ലഭിക്കും.',
   postOnboardingSupport:
     'ഇനി മുതൽ ലഭ്യമായ duty offers താങ്കൾക്ക് Pulso app വഴി ലഭിക്കുന്നതാണ്.\n\nഓരോ duty offer-ഉം ശ്രദ്ധിച്ച് വായിക്കുക.\n\nതാങ്കൾക്ക് അനുയോജ്യമായ duty ആണെങ്കിൽ Pulso app വഴി accept ചെയ്യാം.\n\nതാങ്കൾക്ക് അനുയോജ്യമല്ലാത്ത duty ആണെങ്കിൽ reject ചെയ്യുകയോ ignore ചെയ്യുകയോ ചെയ്യാം.',
   mobileAppCampaignAnnouncement:
@@ -842,19 +842,19 @@ const ENGLISH_BASE_MESSAGES = {
   termsAccepted:
     'Thank you. Your onboarding is complete.\n\nWe will start sending you duty offers. After 180 days of duty you will receive an experience certificate from Pulso Global Private Limited. You have completed 0 days so far.',
   termsDeclined: 'Okay. If you are interested later, you can message us again.',
-  // ₹500 subscription fee (22 Oct 2026). English mirror of the Malayalam above.
+  // ₹499 subscription fee (22 Oct 2026). English mirror of the Malayalam above.
   termsFeePoints: [
-    'To become a Pulso member, you pay a one-time subscription fee of ₹500 (tax included).\n\nWhen you complete 180 days of duty through the Pulso app, this amount is refunded to you after deducting tax.',
+    'To become a Pulso member, you pay a one-time subscription fee of ₹499 (tax included).\n\nWhen you complete 180 days of duty through the Pulso app, this amount is refunded to you after deducting tax.',
     'Duty availability depends on market requirements — the number of patients needing care in your area, the type of care needed, your qualification, your availability and your ratings. Pulso does not promise any minimum number of duties or any fixed monthly income. Any earnings shown in Pulso advertisements are examples based on full-time duty, not a guarantee.'
   ],
   workingModelFeeLine:
-    '- To become a Pulso member you pay a one-time subscription fee of ₹500 (tax included) in the Pulso app; it is refunded after 180 days of duty, after deducting tax',
+    '- To become a Pulso member you pay a one-time subscription fee of ₹499 (tax included) in the Pulso app; it is refunded after 180 days of duty, after deducting tax',
   termsAcceptedFee:
-    'Thank you. To finish joining Pulso, install the Pulso app, sign in with this same number, agree to the terms and pay the ₹500 subscription fee. Duty offers start after that.',
+    'Thank you. To finish joining Pulso, install the Pulso app, sign in with this same number, agree to the terms and pay the ₹499 subscription fee. Duty offers start after that.',
   subscriptionFeeReminder:
-    'Your Pulso membership is not complete yet: the ₹500 subscription fee is still to be paid. Please sign in to the Pulso app with this same number and pay the fee. Duty offers start after that.',
+    'Your Pulso membership is not complete yet: the ₹499 subscription fee is still to be paid. Please sign in to the Pulso app with this same number and pay the fee. Duty offers start after that.',
   subscriptionFeePaid:
-    'Thank you! Your ₹500 subscription fee is received. You are now a Pulso member. Your GST receipt (No. {{receiptNo}}) is attached.\n\nWhen you complete 180 days of duty through the Pulso app, ₹424 is refunded to you after deducting tax.',
+    'Thank you! Your ₹499 subscription fee is received. You are now a Pulso member. Your GST receipt (No. {{receiptNo}}) is attached.\n\nWhen you complete 180 days of duty through the Pulso app, ₹423 is refunded to you after deducting tax.',
   postOnboardingSupport:
     'From now onwards, available duty offers will be sent to you through the Pulso app.\n\nPlease read each duty offer carefully.\n\nIf a duty is suitable for you, you can accept it through the Pulso app.\n\nIf a duty is not suitable, you can reject or ignore it.',
   mobileAppCampaignAnnouncement:
