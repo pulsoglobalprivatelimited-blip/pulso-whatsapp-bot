@@ -135,7 +135,7 @@ async function listProviderSummaries() {
 async function listSubscriptionFeeDueProviders() {
   const snapshot = await getFirestore()
     .collection('providers')
-    .where('subscriptionFee.status', '==', 'due')
+    .where('subscriptionFee.status', 'in', ['due', 'trial'])
     .select('phone', 'status', 'language', 'flowId', 'region', 'district', 'createdAt', 'fullName', 'subscriptionFee')
     .get();
 

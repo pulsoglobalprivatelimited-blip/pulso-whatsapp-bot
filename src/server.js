@@ -768,6 +768,32 @@ app.post('/internal/uae-licence-reviewed', require('./services/uaeLicence').uaeL
   return { getProvider, updateProvider, appendHistory, sendText, sendTemplate, isWithinWhatsappReplyWindow, saveProviderContact, notifyUaeLicenceApproved };
 }));
 
+// The 7-day free trial (24 Oct 2026). The hub owns the clock: it calls the
+// first when her first app sign-in starts it, the second when it runs out
+// unpaid and the offer inbox is locked. Both only store; the reminder sweep
+// sends the words in daytime.
+app.post('/internal/subscription-fee-trial-started', async (req, res) => {
+  if (!hasPulsoServerSecret(req)) return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const { markTrialStarted } = require('./services/subscriptionFee');
+    const { getProvider, updateProvider, appendHistory } = require('./services/providerService');
+    return res.json(await markTrialStarted(req.body || {}, { getProvider, updateProvider, appendHistory }));
+  } catch (error) {
+    return res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post('/internal/subscription-fee-locked', async (req, res) => {
+  if (!hasPulsoServerSecret(req)) return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const { markLocked } = require('./services/subscriptionFee');
+    const { getProvider, updateProvider, appendHistory } = require('./services/providerService');
+    return res.json(await markLocked(req.body || {}, { getProvider, updateProvider, appendHistory }));
+  } catch (error) {
+    return res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
 app.get('/internal/duty-broadcast/:id', async (req, res) => {
   if (!hasPulsoServerSecret(req)) return res.status(401).json({ error: 'unauthorized' });
   try {

@@ -42,7 +42,31 @@ function settings() {
       .sort((a, b) => a - b),
     reminderTemplateName: String(config.subscriptionFeeReminderTemplateName || '').trim(),
     paidTemplateName: String(config.subscriptionFeePaidTemplateName || '').trim(),
+    // 7-day free trial (24 Oct 2026); see config.js.
+    trialDays: Math.max(0, Math.floor(Number(config.subscriptionFeeTrialDays) || 0)),
+    trialReminderHours: String(config.subscriptionFeeTrialReminderHours || '')
+      .split(',')
+      .map(Number)
+      .filter((h) => Number.isFinite(h) && h > 0)
+      .sort((a, b) => a - b),
+    trialReminderTemplateName: String(config.subscriptionFeeTrialReminderTemplateName || '').trim(),
+    trialOverTemplateName: String(config.subscriptionFeeTrialOverTemplateName || '').trim(),
+    trialTemplatesApproved: config.subscriptionFeeTrialTemplatesApproved === true,
   };
+}
+
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+
+/** 08:00–20:59 IST: reminders never go out at night. */
+function withinSendHours(now = Date.now()) {
+  const istHour = Math.floor(((now + 5.5 * HOUR_MS) % DAY_MS) / HOUR_MS);
+  return istHour >= 8 && istHour < 21;
+}
+
+/** A record of the trial kind (new joiner after 24 Oct 2026), whatever its status now. */
+function isTrialRecord(fee) {
+  return Boolean(fee && typeof fee === 'object' && Number(fee.trialDays) > 0);
 }
 
 /** Whether this caregiver pays. Decided once: a record with `required` wins. */
@@ -109,12 +133,32 @@ function applyWorkingModelFeeLine(text, provider, messages, now = Date.now()) {
   return out;
 }
 
-/** The record written at Accept; an existing decision (paid, waived) is kept. */
+/**
+ * The record written at Accept; an existing decision (paid, waived, a running
+ * trial) is kept. With a trial configured she starts as `trial` with no
+ * dates: the hub stamps trialStartsAt at her first app sign-in
+ * (/internal/subscription-fee-trial-started) and flips her to `due` when it
+ * runs out (/internal/subscription-fee-locked). With trialDays 0 the old
+ * pay-first record is written, as before 24 Oct 2026.
+ */
 function dueRecord(provider, now = new Date().toISOString(), s = settings()) {
   const existing = provider && provider.subscriptionFee && typeof provider.subscriptionFee === 'object'
     ? provider.subscriptionFee
     : null;
   if (existing && existing.status && existing.status !== 'due') return existing;
+  if (existing && existing.status === 'due' && isTrialRecord(existing)) return existing;
+  if (s.trialDays > 0) {
+    return {
+      required: true,
+      status: 'trial',
+      amount: s.amount,
+      trialDays: s.trialDays,
+      acceptedAt: (existing && existing.acceptedAt) || now,
+      trialStartsAt: null,
+      trialEndsAt: null,
+      remindersSent: 0,
+    };
+  }
   return {
     required: true,
     status: 'due',
@@ -124,15 +168,115 @@ function dueRecord(provider, now = new Date().toISOString(), s = settings()) {
   };
 }
 
+/**
+ * What the sweep should send this caregiver now, or null:
+ *   {kind:'trial_reminder', daysLeft, index}  at trialReminderHours after the start
+ *   {kind:'trial_over'}                        once, after the hub locked her
+ * Pay-first records (no trialDays) are not handled here; see isReminderDue.
+ */
+function trialStage(provider, now = Date.now(), s = settings()) {
+  const fee = provider && provider.subscriptionFee;
+  if (!isTrialRecord(fee)) return null;
+  if (fee.status === 'trial') {
+    const startMs = Date.parse(String(fee.trialStartsAt || ''));
+    if (!Number.isFinite(startMs)) return null;
+    const index = reminderCount(provider);
+    const nextHours = s.trialReminderHours[index];
+    if (!nextHours || now - startMs < nextHours * HOUR_MS) return null;
+    const endMs = Date.parse(String(fee.trialEndsAt || '')) || startMs + Number(fee.trialDays) * DAY_MS;
+    if (now >= endMs) return null; // the lock message covers it
+    return { kind: 'trial_reminder', index, daysLeft: Math.max(1, Math.ceil((endMs - now) / DAY_MS)) };
+  }
+  if (fee.status === 'due' && fee.lockedAt && !fee.trialOverSentAt) return { kind: 'trial_over' };
+  return null;
+}
+
+function validateTrialStarted(body = {}) {
+  const phone = String(body.phone || '').replace(/\D/g, '');
+  if (phone.length < 11 || phone.length > 15) throw new Error('phone is required');
+  const startsAt = String(body.trialStartsAt || new Date().toISOString());
+  if (Number.isNaN(Date.parse(startsAt))) throw new Error('trialStartsAt must be a date');
+  const endsAt = String(body.trialEndsAt || new Date(Date.parse(startsAt) + settings().trialDays * DAY_MS).toISOString());
+  if (Number.isNaN(Date.parse(endsAt))) throw new Error('trialEndsAt must be a date');
+  return { phone, uid: String(body.uid || ''), trialStartsAt: startsAt, trialEndsAt: endsAt };
+}
+
+/** The hub: her first app sign-in started the clock. Dates stored, nothing sent (the app shows the countdown). */
+async function markTrialStarted(body, deps) {
+  const t = validateTrialStarted(body);
+  const provider = await deps.getProvider(t.phone);
+  if (!provider) return { ok: true, known: false, phone: t.phone };
+  const fee = provider.subscriptionFee && typeof provider.subscriptionFee === 'object' ? provider.subscriptionFee : {};
+  if (fee.status && fee.status !== 'trial' && fee.status !== 'due') return { ok: true, known: true, ignored: fee.status };
+  if (fee.trialStartsAt) return { ok: true, known: true, repeated: true };
+  await deps.updateProvider(t.phone, {
+    subscriptionFee: {
+      ...fee,
+      required: true,
+      status: 'trial',
+      amount: Number(fee.amount) || settings().amount,
+      trialDays: Number(fee.trialDays) || settings().trialDays || Math.round((Date.parse(t.trialEndsAt) - Date.parse(t.trialStartsAt)) / DAY_MS),
+      trialStartsAt: t.trialStartsAt,
+      trialEndsAt: t.trialEndsAt,
+      remindersSent: 0,
+    },
+  });
+  await deps.appendHistory(t.phone, { type: 'system', event: 'subscription_fee_trial_started', trialStartsAt: t.trialStartsAt, trialEndsAt: t.trialEndsAt });
+  return { ok: true, known: true };
+}
+
+function validateLocked(body = {}) {
+  const phone = String(body.phone || '').replace(/\D/g, '');
+  if (phone.length < 11 || phone.length > 15) throw new Error('phone is required');
+  const lockedAt = String(body.lockedAt || new Date().toISOString());
+  if (Number.isNaN(Date.parse(lockedAt))) throw new Error('lockedAt must be a date');
+  return { phone, uid: String(body.uid || ''), lockedAt };
+}
+
+/** The hub: the trial ran out unpaid, the inbox is locked. The sweep sends the message in daytime. */
+async function markLocked(body, deps) {
+  const t = validateLocked(body);
+  const provider = await deps.getProvider(t.phone);
+  if (!provider) return { ok: true, known: false, phone: t.phone };
+  const fee = provider.subscriptionFee && typeof provider.subscriptionFee === 'object' ? provider.subscriptionFee : {};
+  if (fee.status === 'paid' || fee.status === 'waived') return { ok: true, known: true, ignored: fee.status };
+  if (fee.status === 'due' && fee.lockedAt) return { ok: true, known: true, repeated: true };
+  await deps.updateProvider(t.phone, {
+    subscriptionFee: {
+      ...fee,
+      required: true,
+      status: 'due',
+      amount: Number(fee.amount) || settings().amount,
+      trialDays: Number(fee.trialDays) || settings().trialDays,
+      lockedAt: t.lockedAt,
+      dueSince: t.lockedAt,
+    },
+  });
+  await deps.appendHistory(t.phone, { type: 'system', event: 'subscription_fee_locked', lockedAt: t.lockedAt });
+  return { ok: true, known: true };
+}
+
+/** The plain-text forms (logged in her chat; the templates carry the same words). */
+function trialReminderText(provider, daysLeft) {
+  const messages = messagesForProvider(provider);
+  return String(messages.subscriptionFeeTrialReminder || '').replace('{{days}}', String(daysLeft));
+}
+
+function trialOverText(provider) {
+  const messages = messagesForProvider(provider);
+  return String(messages.subscriptionFeeTrialOver || '');
+}
+
 function reminderCount(provider) {
   const n = Number(provider && provider.subscriptionFee && provider.subscriptionFee.remindersSent);
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
-/** Day 1 and day 3 after Accept, while still unpaid. */
+/** Day 1 and day 3 after Accept, while still unpaid: the pay-first records only. */
 function isReminderDue(provider, now = Date.now(), s = settings()) {
   const fee = provider && provider.subscriptionFee;
   if (!fee || fee.status !== 'due') return false;
+  if (isTrialRecord(fee)) return false; // trialStage() decides for these
   const sinceMs = Date.parse(String(fee.dueSince || ''));
   if (!Number.isFinite(sinceMs)) return false;
   const nextHours = s.reminderHours[reminderCount(provider)];
@@ -256,6 +400,15 @@ module.exports = {
   dueRecord,
   reminderCount,
   isReminderDue,
+  withinSendHours,
+  isTrialRecord,
+  trialStage,
+  validateTrialStarted,
+  markTrialStarted,
+  validateLocked,
+  markLocked,
+  trialReminderText,
+  trialOverText,
   messagesForProvider,
   paidMessage,
   validatePaid,

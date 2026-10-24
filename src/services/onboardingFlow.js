@@ -2280,9 +2280,43 @@ async function reconcileAcceptedTermsProviders(targetPhones = null) {
 // closed by then), plain text otherwise.
 const SUBSCRIPTION_FEE_REMINDER_EVENT = 'subscription_fee_reminder_sent';
 
+// 7-day trial records (24 Oct 2026): "2 days left" / "1 day left" after the
+// start the hub stamped, and "trial over" once after the hub locked her.
+// Only as the two approved templates, only in daytime; until Meta approves
+// them nothing goes (the app shows the countdown and the pay screen).
+async function remindTrialProvider(provider, stage) {
+  const s = subscriptionFee.settings();
+  if (!s.trialTemplatesApproved || !subscriptionFee.withinSendHours()) return false;
+  const name = stage.kind === 'trial_over' ? s.trialOverTemplateName : s.trialReminderTemplateName;
+  if (!name) return false;
+  const first = (String(provider.fullName || '').trim().split(/\s+/)[0] || 'Caregiver').slice(0, 60);
+  const parameters = [{ type: 'text', text: first }];
+  if (stage.kind === 'trial_reminder') parameters.push({ type: 'text', text: String(stage.daysLeft) });
+  await sendAndLog(provider.phone, 'template', {
+    name,
+    languageCode: provider.language === 'en' ? 'en' : 'ml',
+    components: [{ type: 'body', parameters }]
+  }, 'fee-reminder');
+  const nowIso = new Date().toISOString();
+  const patch = stage.kind === 'trial_over'
+    ? { trialOverSentAt: nowIso }
+    : { remindersSent: subscriptionFee.reminderCount(provider) + 1, lastReminderAt: nowIso, lastReminderKind: 'template' };
+  await updateProvider(provider.phone, { subscriptionFee: { ...provider.subscriptionFee, ...patch } });
+  await appendHistory(provider.phone, {
+    type: 'system',
+    event: stage.kind === 'trial_over' ? 'subscription_fee_trial_over_sent' : SUBSCRIPTION_FEE_REMINDER_EVENT,
+    reminderKind: 'template',
+    ...(stage.kind === 'trial_reminder' ? { daysLeft: stage.daysLeft } : {})
+  });
+  return true;
+}
+
 async function remindProviderToPaySubscriptionFee(provider) {
   return runWithProviderFlow(provider, async () => {
-    if (!provider || !provider.phone || !subscriptionFee.isReminderDue(provider)) {
+    if (!provider || !provider.phone) return false;
+    const stage = subscriptionFee.trialStage(provider);
+    if (stage) return remindTrialProvider(provider, stage);
+    if (!subscriptionFee.isReminderDue(provider)) {
       return false;
     }
     const s = subscriptionFee.settings();
@@ -2315,7 +2349,7 @@ async function runSubscriptionFeeReminderSweep() {
     return { scanned: 0, due: 0, sent: 0, disabled: true };
   }
   const providers = await listSubscriptionFeeDueProviders();
-  const due = providers.filter((provider) => subscriptionFee.isReminderDue(provider));
+  const due = providers.filter((provider) => subscriptionFee.isReminderDue(provider) || subscriptionFee.trialStage(provider));
   let sent = 0;
   for (const provider of due) {
     try {
