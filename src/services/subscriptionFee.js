@@ -89,11 +89,20 @@ function termsIntroVariants(messages) {
   return [messages.termsIntro, withFeePoints(messages.termsIntro, messages.termsFeePoints)];
 }
 
-/** The working model with its "no registration fee" line swapped for the fee line. */
+/**
+ * The working model for a fee-payer: its "no registration fee" line is taken
+ * OUT, and nothing is put in its place. The fee itself is said only with the
+ * terms, after the certificate is approved or a Basic caregiver is approved on
+ * the call (founder, 24 Oct 2026: "The fee only should be showed with terms
+ * and conditions message. Not before that"). The line still comes out because
+ * telling a future fee-payer "no registration fee" would be untrue.
+ * `messages` is kept in the signature for the callers; it is not needed now.
+ */
 function applyWorkingModelFeeLine(text, provider, messages, now = Date.now()) {
-  if (!feeAppliesTo(provider, now) || !messages || !messages.workingModelFeeLine) return text;
+  void messages;
+  if (!feeAppliesTo(provider, now)) return text;
   let out = String(text || '');
-  for (const line of NO_FEE_LINES) out = out.split(line).join(messages.workingModelFeeLine);
+  for (const line of NO_FEE_LINES) out = out.split(`\n${line}`).join('').split(line).join('');
   return out;
 }
 

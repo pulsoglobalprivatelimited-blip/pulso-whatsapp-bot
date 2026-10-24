@@ -70,13 +70,17 @@ test('everyone else reads the terms exactly as before', () => {
   assert.deepEqual(fee.termsIntroVariants(ML), [ML.termsIntro, fee.withFeePoints(ML.termsIntro, ML.termsFeePoints)]);
 });
 
-test('the working model drops "no registration fee" for a fee-payer only', () => {
+test('the working model drops "no registration fee" for a fee-payer, and says nothing about the fee', () => {
+  // Founder, 24 Oct 2026: the fee is told only with the terms, after approval.
   const ml = fee.applyWorkingModelFeeLine(ML.workingModel, kerala, ML, NOW);
   assert.ok(!ml.includes('registration fee ഒന്നും നൽകേണ്ടതില്ല'));
-  assert.ok(ml.includes(ML.workingModelFeeLine));
+  assert.ok(!ml.includes('499'), 'no fee figure before the terms');
+  assert.ok(!ml.includes('സബ്സ്ക്രിപ്ഷൻ'));
+  assert.ok(!/\n\n\n|\n\s*\n- *\n/.test(ml), 'no empty line left where the line was');
+  assert.ok(ml.includes('- ഇഷ്ടമുള്ള duty-കൾ മാത്രം സ്വീകരിച്ചാൽ മതി\n\n'), 'the list before it ends cleanly');
   const en = fee.applyWorkingModelFeeLine(EN.workingModel, { ...kerala, flowId: 'kerala_english' }, EN, NOW);
   assert.ok(!en.includes('There is no registration fee to join Pulso'));
-  assert.ok(en.includes(EN.workingModelFeeLine));
+  assert.ok(!en.includes('499') && !/subscription/i.test(en));
   const old = { ...kerala, createdAt: new Date(START - DAY).toISOString() };
   assert.equal(fee.applyWorkingModelFeeLine(ML.workingModel, old, ML, NOW), ML.workingModel);
 });
