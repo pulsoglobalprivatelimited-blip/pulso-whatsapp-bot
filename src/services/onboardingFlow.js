@@ -5454,6 +5454,15 @@ async function processIncomingMessage(phone, message) {
 
   await recordInbound(phone, message);
 
+  // Offer feedback (25 Oct 2026): a caregiver answering "why didn't you accept"
+  // is handled there. After recordInbound, so the whole chat shows in the inbox.
+  try {
+    const { handleOfferFeedbackReply } = require('./offerFeedback');
+    if (await handleOfferFeedbackReply(phone, message, { sendAndLog })) return;
+  } catch (error) {
+    console.error('[OFFER_FEEDBACK_REPLY_ERROR]', error.message);
+  }
+
   // Job-board code ("JOB APNA KANNUR"): keep the first one, never block the chat.
   try {
     const { jobBoardSourceUpdate } = require('./jobBoardSource');
