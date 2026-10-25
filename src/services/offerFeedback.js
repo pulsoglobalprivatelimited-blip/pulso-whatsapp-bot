@@ -224,6 +224,19 @@ async function handleOfferFeedbackReply(phone, message, { sendAndLog, nowMs = Da
   return true;
 }
 
+/* True when this message belongs to the feedback flow: a tap on one of its
+   buttons, or anything from someone who already answered it. Used to let the
+   31 of 302 caregivers on the old pre-onboarded list through that filter. */
+async function isOfferFeedbackMessage(phone, message) {
+  if (replyId(message).startsWith('ofb_')) return true;
+  try {
+    const snap = await getFirestore().collection(COLLECTION).doc(normalizePhone(phone)).get();
+    return snap.exists && !snap.data().optedOut;
+  } catch (_) {
+    return false;
+  }
+}
+
 /** The template message for one caregiver (sent by src/scripts/sendOfferFeedback.js). */
 function templateComponents(name) {
   return [
@@ -247,5 +260,6 @@ module.exports = {
   replyId,
   templateComponents,
   handleOfferFeedbackReply,
+  isOfferFeedbackMessage,
   normalizePhone
 };

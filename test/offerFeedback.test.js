@@ -122,3 +122,7 @@ test('the founder\'s Malayalam is kept word for word', () => {
   assert.equal(f.TEXT.stopped, 'ശരി. ഇനി ഇത്തരം സന്ദേശങ്ങൾ നിങ്ങൾക്ക് ലഭിക്കില്ല.');
   assert.equal(f.LIST_ROWS[5].title, 'മറ്റെന്തെങ്കിലും കാരണം');
 });
+
+test('a feedback tap is recognised even for a number on the pre-onboarded list', async () => {
+  assert.equal(await f.isOfferFeedbackMessage('919000000001', { type: 'button', button: { payload: 'ofb_pay' } }), true);
+});

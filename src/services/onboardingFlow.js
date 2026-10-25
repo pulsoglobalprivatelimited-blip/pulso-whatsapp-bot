@@ -5443,7 +5443,13 @@ async function processIncomingMessage(phone, message) {
   }
 
   if (isPreOnboardedPhone(phone)) {
-    return;
+    // Offer feedback (25 Oct 2026) reaches some caregivers on this old list;
+    // their answers still count, nothing else from them does.
+    let feedback = false;
+    try {
+      feedback = await require('./offerFeedback').isOfferFeedbackMessage(phone, message);
+    } catch (_) {}
+    if (!feedback) return;
   }
 
   const provider = await getOrCreateProvider(phone);
