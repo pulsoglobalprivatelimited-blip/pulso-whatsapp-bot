@@ -1401,6 +1401,19 @@ app.get('/admin/providers', async (req, res) => {
       basicTierAgeThreshold,
       region: inferProviderRegion(provider) || provider.region || null
     }));
+    // Offer feedback (25 Oct 2026): who was asked and what they answered, for
+    // the inbox filter. People asked who have no chat record yet still appear.
+    try {
+      const feedback = await require('./services/offerFeedback').inboxInfo();
+      const byPhone = new Map(providers.map((p) => [String(p.phone || '').replace(/\D/g, ''), p]));
+      for (const [phone, info] of Object.entries(feedback)) {
+        const existing = byPhone.get(phone);
+        if (existing) existing.offerFeedback = info;
+        else providers.push({ phone, fullName: info.sentName || '', status: 'offer_feedback', lastMessageAt: info.answeredAt || info.sentAt, region: 'kerala', dashboardSummary: true, offerFeedback: info });
+      }
+    } catch (error) {
+      console.error('[ADMIN_PROVIDERS_OFFER_FEEDBACK]', error.message);
+    }
 
     if (!requestedRegion) {
       return res.json({ providers });

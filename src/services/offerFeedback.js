@@ -237,6 +237,36 @@ async function isOfferFeedbackMessage(phone, message) {
   }
 }
 
+/* For the admin inbox: who was asked (src/data/offerFeedbackSent.json, written
+   from the sender's log because the sending Mac cannot write this database)
+   and what each one answered. Keyed by phone (91XXXXXXXXXX). */
+async function inboxInfo() {
+  let sent = {};
+  try { sent = require('../data/offerFeedbackSent.json'); } catch (_) {}
+  const info = {};
+  for (const [phone, s] of Object.entries(sent)) info[phone] = { sentAt: s.sentAt, sentName: s.name, district: s.district };
+  try {
+    const snap = await getFirestore().collection(COLLECTION).get();
+    snap.forEach((doc) => {
+      const d = doc.data() || {};
+      info[doc.id] = {
+        ...(info[doc.id] || {}),
+        replied: Array.isArray(d.answers) && d.answers.length > 0,
+        reason: d.reason || '',
+        expectedPay: d.expectedPay || null,
+        preferredArea: d.preferredArea || '',
+        freeWhen: d.freeWhen || '',
+        ownWords: d.ownWords || d.typed || '',
+        optedOut: d.optedOut === true,
+        answeredAt: d.answeredAt || ''
+      };
+    });
+  } catch (error) {
+    console.error('[OFFER_FEEDBACK_INBOX]', error.message);
+  }
+  return info;
+}
+
 /** The template message for one caregiver (sent by src/scripts/sendOfferFeedback.js). */
 function templateComponents(name) {
   return [
@@ -261,5 +291,6 @@ module.exports = {
   templateComponents,
   handleOfferFeedbackReply,
   isOfferFeedbackMessage,
+  inboxInfo,
   normalizePhone
 };

@@ -17,6 +17,7 @@
     list: document.getElementById('inbox-list'),
     count: document.getElementById('inbox-count'),
     channelFilters: document.getElementById('channel-filters'),
+    ofbFilters: document.getElementById('ofb-filters'),
     search: document.getElementById('inbox-search'),
     clear: document.getElementById('inbox-clear'),
     refresh: document.getElementById('inbox-refresh'),
@@ -41,6 +42,7 @@
   let selectedPhone = null;
   let searchTerm = '';
   let channelFilter = 'all';
+  let ofbFilter = '';
   let renderedHistoryCount = -1;
 
   /* ---- data ------------------------------------------------------------- */
@@ -141,12 +143,50 @@
     return String((provider && provider.lastChannel) || 'whatsapp');
   }
 
+  /* Offer feedback (25 Oct 2026): caregivers asked on WhatsApp why they did
+     not accept duty offers, and what each one answered. */
+  const OFB_REASON = {
+    not_seen: "Didn't see offers",
+    pay: 'Pay too low',
+    too_far: 'Too far',
+    '8_hour_only': '8-hour only',
+    working_elsewhere: 'Working elsewhere',
+    family_health: 'Family / health',
+    free_now: 'Free now',
+    something_else: 'Own reason',
+    other: 'Opened the list'
+  };
+  const OFB_WHEN = { this_week: 'this week', next_month: 'next month', not_now: 'not now' };
+
+  function matchesOfb(provider, filter) {
+    const f = provider && provider.offerFeedback;
+    if (!f || !f.sentAt && !f.replied) return false;
+    if (filter === 'sent') return true;
+    if (filter === 'replied') return Boolean(f.replied);
+    if (filter === 'free_now') return f.reason === 'free_now';
+    if (filter === 'no_reply') return !f.replied;
+    return true;
+  }
+
+  function ofbLabel(provider) {
+    const f = provider && provider.offerFeedback;
+    if (!f) return '';
+    if (f.optedOut) return 'Feedback: stopped';
+    if (!f.replied) return 'Feedback: no reply yet';
+    let label = OFB_REASON[f.reason] || (f.ownWords ? 'Typed a reply' : 'Replied');
+    if (f.reason === 'pay' && f.expectedPay) label += ` (₹${f.expectedPay}${f.expectedPay >= 900 ? '+' : ''})`;
+    if (f.reason === 'too_far' && f.preferredArea) label += ` (${f.preferredArea})`;
+    if (f.reason === 'working_elsewhere' && f.freeWhen) label += ` (free ${OFB_WHEN[f.freeWhen] || f.freeWhen})`;
+    return `Feedback: ${label}`;
+  }
+
   function getVisibleProviders() {
     const term = searchTerm.trim().toLowerCase();
     const digits = term.replace(/\D/g, '');
     return providers.filter((provider) => {
       const channelMatch = channelFilter === 'all' || providerChannel(provider) === channelFilter;
       if (!channelMatch) return false;
+      if (ofbFilter && !matchesOfb(provider, ofbFilter)) return false;
       if (!term) return true;
       const name = (provider.fullName || '').toLowerCase();
       const phone = String(provider.phone || '');
@@ -175,6 +215,7 @@
             ${providerChannel(provider) === 'app' ? Chat.channelBadge({ channel: 'app' }) : ''}
             <span class="chat-dot${attention ? '' : ' hidden'}"></span>
           </span>
+          ${provider.offerFeedback ? `<span class="chat-sub"><span class="chat-status-pill${provider.offerFeedback.reason === 'free_now' ? ' attention' : ''}">${Chat.escapeHtml(ofbLabel(provider))}</span></span>` : ''}
         </span>
       </button>
     `;
@@ -183,7 +224,7 @@
   function renderList() {
     const visible = getVisibleProviders();
     const appCount = providers.filter((p) => providerChannel(p) === 'app').length;
-    const base = searchTerm || channelFilter !== 'all'
+    const base = searchTerm || channelFilter !== 'all' || ofbFilter
       ? `${visible.length} of ${providers.length} conversations`
       : `${providers.length} conversations`;
     els.count.textContent = appCount
@@ -375,6 +416,18 @@
   }
 
   /* ---- thread ----------------------------------------------------------- */
+  /* The feedback question was sent from the sending tool, not through this
+     bot, so it is not in the history; say when it went out, and the answer. */
+  function ofbBanner(provider) {
+    const listed = providers.find((p) => Back ? Back.samePhone(p.phone, provider.phone) : p.phone === provider.phone);
+    const f = provider.offerFeedback || (listed && listed.offerFeedback);
+    if (!f || !f.sentAt) return '';
+    const when = new Date(f.sentAt);
+    const sent = Number.isNaN(when.getTime()) ? '' : when.toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const own = f.ownWords ? ` · "${f.ownWords}"` : '';
+    return `<p class="attachment-empty" style="text-align:center">Offer feedback question sent ${Chat.escapeHtml(sent)} from 77361 67744 · ${Chat.escapeHtml(ofbLabel({ offerFeedback: f }).replace('Feedback: ', ''))}${Chat.escapeHtml(own)}</p>`;
+  }
+
   function renderThread(provider, { keepScroll } = {}) {
     const history = Array.isArray(provider.history) ? provider.history : [];
     const status = getDashboardStatus(provider);
@@ -392,7 +445,7 @@
     renderAppStatus(provider);
 
     const atBottom = els.scroll.scrollHeight - els.scroll.scrollTop - els.scroll.clientHeight < 80;
-    els.history.innerHTML = Chat.buildHistoryHtml(history);
+    els.history.innerHTML = ofbBanner(provider) + Chat.buildHistoryHtml(history);
     renderedHistoryCount = history.length;
 
     if (!keepScroll || atBottom) {
@@ -426,6 +479,12 @@
       if (selectedPhone !== phone) return; // user moved on
       renderThread(provider);
     } catch (error) {
+      // Asked for feedback but never chatted with this bot: no record yet.
+      const listed = providers.find((p) => p.phone === phone);
+      if (listed && listed.offerFeedback) {
+        renderThread({ ...listed, history: [] });
+        return;
+      }
       els.history.innerHTML = `<p class="attachment-empty">${Chat.escapeHtml(error.message || 'Could not load conversation.')}</p>`;
     }
   }
@@ -462,6 +521,16 @@
     const row = event.target.closest('.chat-row');
     if (row && row.dataset.phone) selectChat(row.dataset.phone);
   });
+
+  if (els.ofbFilters) {
+    els.ofbFilters.addEventListener('click', (event) => {
+      const chip = event.target.closest('[data-ofb]');
+      if (!chip) return;
+      ofbFilter = ofbFilter === chip.dataset.ofb ? '' : chip.dataset.ofb;
+      els.ofbFilters.querySelectorAll('.inbox-chip').forEach((c) => c.classList.toggle('active', c.dataset.ofb === ofbFilter));
+      renderList();
+    });
+  }
 
   els.channelFilters.addEventListener('click', (event) => {
     const chip = event.target.closest('[data-channel]');
