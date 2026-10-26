@@ -50,7 +50,6 @@ function parseRegion(message) {
 
   const normalized = normalizeText(getMessageText(message));
   if (isDubaiCaregiverText(getMessageText(message))) return 'uae';
-  if (['uae', 'uae (dubai)', 'dubai', 'u.a.e', 'emirates'].includes(normalized)) return 'uae';
   if (['kerala', 'malayalam', 'ml'].includes(normalized)) return 'kerala';
   if (['karnataka', 'bangalore', 'bengaluru', 'english', 'en'].includes(normalized)) {
     return 'karnataka';

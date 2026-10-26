@@ -673,9 +673,11 @@ const MESSAGES = {
 
 const REGION_OPTIONS = [
   { id: BUTTON_IDS.REGION_KERALA, title: 'Kerala' },
-  { id: BUTTON_IDS.REGION_KARNATAKA, title: 'Karnataka' },
-  { id: BUTTON_IDS.REGION_UAE, title: 'UAE (Dubai)' }
+  { id: BUTTON_IDS.REGION_KARNATAKA, title: 'Karnataka' }
 ];
+// UAE is NOT in the region list (27 Oct 2026): a Kottayam caregiver from the
+// Kerala ad picked it on the first night. Dubai is reached only from the Dubai
+// ad (its ad id, or the "DUBAI CAREGIVER" first message).
 
 const LANGUAGE_OPTIONS = [
   { id: BUTTON_IDS.LANGUAGE_MALAYALAM, title: 'മലയാളം' },
@@ -685,7 +687,7 @@ const LANGUAGE_OPTIONS = [
 const ENGLISH_BASE_MESSAGES = {
   ...MESSAGES,
   regionQuestion: 'Welcome to Pulso.\n\nPlease select your region.',
-  regionRetry: 'Please select Kerala, Karnataka or UAE (Dubai) to continue.',
+  regionRetry: 'Please select Kerala or Karnataka to continue.',
   welcomeQualification: 'Please select your qualification.',
   notEligible:
     'Please select one option from the list below. If you do not have a certificate, select "No certificate".',

@@ -2418,7 +2418,7 @@ async function sendLanguageSelectionList(phone) {
 async function handleRegionSelection(phone, message) {
   const region = parseRegion(message);
   if (!region) {
-    await sendAndLog(phone, 'text', 'Please select Kerala, Karnataka or UAE (Dubai) to continue.');
+    await sendAndLog(phone, 'text', 'Please select Kerala or Karnataka to continue.');
     await sendRegionSelectionList(phone);
     return;
   }
@@ -5637,7 +5637,9 @@ async function processIncomingMessage(phone, message) {
 
   // The Dubai caregiver ad opens with "DUBAI CAREGIVER" (contract, 26 Oct
   // 2026): region uae is chosen for her, and only the language is asked.
-  if (provider.status === STATUS.NEW && !provider.flowId && isDubaiCaregiverText(getMessageText(message))) {
+  const dubaiAdIds = String(process.env.UAE_CAREGIVER_AD_IDS || '').split(',').map((v) => v.trim()).filter(Boolean);
+  const fromDubaiAd = Boolean(message && message.referral && dubaiAdIds.includes(String(message.referral.source_id || '')));
+  if (provider.status === STATUS.NEW && !provider.flowId && (fromDubaiAd || isDubaiCaregiverText(getMessageText(message)))) {
     await assignProviderFlow(phone, DEFAULT_FLOW_ID_BY_REGION.uae, 'dubai_caregiver_ad');
     await updateStatus(phone, STATUS.AWAITING_LANGUAGE_SELECTION, 1.6);
     await sendLanguageSelectionList(phone);

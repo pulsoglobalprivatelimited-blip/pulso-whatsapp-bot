@@ -133,15 +133,27 @@ test('"DUBAI CAREGIVER" picks region uae and asks only the language', async () =
   assert.equal(records.get(phone).status, STATUS.AWAITING_QUALIFICATION);
 });
 
-test('any other first message still gets the region list, now with UAE (Dubai)', async () => {
+test('any other first message gets the region list WITHOUT UAE; typing Uae there does not pick Dubai', async () => {
   const phone = dubaiNumber();
   await say(phone, text('Hi'));
   const list = lastToHer(phone);
   assert.equal(list.kind, 'list');
-  assert.deepEqual(list.sections[0].rows.map((r) => r.title), ['Kerala', 'Karnataka', 'UAE (Dubai)']);
-  await say(phone, row(BUTTON_IDS.REGION_UAE));
-  assert.equal(records.get(phone).region, 'uae');
-  assert.equal(records.get(phone).status, STATUS.AWAITING_LANGUAGE_SELECTION);
+  assert.deepEqual(list.sections[0].rows.map((r) => r.title), ['Kerala', 'Karnataka']);
+  await say(phone, text('Uae'));
+  assert.notEqual(records.get(phone).region, 'uae');
+});
+
+test('a tap on a registered Dubai caregiver ad starts region uae even without the prefix', async () => {
+  const before = process.env.UAE_CAREGIVER_AD_IDS;
+  process.env.UAE_CAREGIVER_AD_IDS = '999000111';
+  try {
+    const phone = dubaiNumber();
+    await say(phone, { ...text('Hello! Can I get more info on this?'), referral: { source_id: '999000111', source_type: 'ad' } });
+    assert.equal(records.get(phone).region, 'uae');
+    assert.equal(records.get(phone).status, STATUS.AWAITING_LANGUAGE_SELECTION);
+  } finally {
+    if (before === undefined) delete process.env.UAE_CAREGIVER_AD_IDS; else process.env.UAE_CAREGIVER_AD_IDS = before;
+  }
 });
 
 test('after the care duties, the licence question replaces the certificate photo', async () => {

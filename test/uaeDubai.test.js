@@ -46,7 +46,8 @@ test('two UAE flows, region uae, AED, Dubai areas; the region list and default f
   }
   assert.equal(UAE_EN.language, 'en');
   assert.equal(UAE_ML.language, 'ml');
-  assert.deepEqual(flow.REGION_OPTIONS.map((r) => r.title), ['Kerala', 'Karnataka', 'UAE (Dubai)']);
+  // UAE is never in the public region list (27 Oct 2026: a Kerala-ad caregiver picked it).
+  assert.deepEqual(flow.REGION_OPTIONS.map((r) => r.title), ['Kerala', 'Karnataka']);
   assert.equal(flow.DEFAULT_FLOW_ID_BY_REGION.uae, 'uae_english');
   assert.equal(flow.getFlowIdFor('uae', 'ml'), 'uae_malayalam');
   assert.equal(regionService.inferRegionFromDistrict('Al Barsha'), 'uae');
@@ -181,7 +182,7 @@ test('no cooking question in Dubai until the doc gives an AED figure for it', ()
 const typed = (body) => ({ type: 'text', text: { body } });
 const tap = (id) => ({ type: 'interactive', interactive: { type: 'list_reply', list_reply: { id, title: 'x' } } });
 
-test('"DUBAI CAREGIVER" in any case starts region uae; the region row and words do too', () => {
+test('"DUBAI CAREGIVER" in any case starts region uae; typing Dubai alone does not', () => {
   for (const words of ['DUBAI CAREGIVER', 'dubai caregiver', '  Dubai  Caregiver - I want a job']) {
     assert.equal(isDubaiCaregiverText(words), true, words);
     assert.equal(parseRegion(typed(words)), 'uae', words);
@@ -189,7 +190,8 @@ test('"DUBAI CAREGIVER" in any case starts region uae; the region row and words 
   assert.equal(isDubaiCaregiverText('caregiver in dubai'), false);
   assert.equal(isDubaiCaregiverText('DUBAI AGENCY'), false);
   assert.equal(parseRegion(tap(BUTTON_IDS.REGION_UAE)), 'uae');
-  assert.equal(parseRegion(typed('Dubai')), 'uae');
+  assert.equal(parseRegion(typed('Dubai')), null);
+  assert.equal(parseRegion(typed('Uae')), null);
   assert.equal(parseRegion(typed('Kerala')), 'kerala');
 });
 
