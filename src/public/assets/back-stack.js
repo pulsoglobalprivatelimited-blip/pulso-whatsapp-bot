@@ -23,7 +23,7 @@
   'use strict';
 
   const KEY = 'pulsoBack';
-  const DESK_ROOTS = ['/admin', '/admin/kerala', '/admin/karnataka'];
+  const DESK_ROOTS = ['/admin', '/admin/kerala', '/admin/karnataka', '/admin/dubai'];
 
   function createBackStack(global) {
     const history = global.history;

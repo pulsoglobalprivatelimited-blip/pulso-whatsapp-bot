@@ -64,6 +64,7 @@
     const path = global.location.pathname.replace(/\/+$/, '').toLowerCase();
     if (path === '/admin/kerala') return 'kerala';
     if (path === '/admin/karnataka') return 'karnataka';
+    if (path === '/admin/dubai') return 'uae';
     return '';
   }
 
@@ -82,7 +83,7 @@
   function titleFor(side) {
     const config = SIDES[side];
     if (!region) return config.title;
-    const label = region.charAt(0).toUpperCase() + region.slice(1);
+    const label = region === 'uae' ? 'Dubai' : region.charAt(0).toUpperCase() + region.slice(1);
     if (side === 'provider') return `${label} provider verification desk`;
     if (side === 'agency') return `${label} partner agency desk`;
     if (side === 'supply') return `${label} supply enquiry desk`;

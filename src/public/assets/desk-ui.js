@@ -77,6 +77,7 @@
     /* regions */
     kerala: 'Kerala',
     karnataka: 'Karnataka',
+    uae: 'Dubai',
 
     /* app activation */
     verified: 'App verified',

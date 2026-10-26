@@ -407,6 +407,11 @@ function getDashboardRegionFromPath() {
   if (path === '/admin/karnataka') {
     return 'karnataka';
   }
+  // Dubai has its own desk only (founder, 27 Oct 2026): never mixed into
+  // the all-region or Kerala lists, Basic pool included.
+  if (path === '/admin/dubai') {
+    return 'uae';
+  }
   return '';
 }
 
@@ -414,6 +419,7 @@ function configureDashboardShell() {
   toggleNav('all', !dashboardRegion);
   toggleNav('kerala', dashboardRegion === 'kerala');
   toggleNav('karnataka', dashboardRegion === 'karnataka');
+  toggleNav('dubai', dashboardRegion === 'uae');
 
   if (!dashboardRegion) {
     return;
@@ -952,7 +958,7 @@ function getVisibleProviders() {
   return sortForQueue(providers.filter((item) => {
     const matchesFilter = currentFilter === 'all' || getDashboardStatus(item) === currentFilter;
     const region = getProviderRegion(item);
-    const matchesRegion = currentRegionFilter === 'all' || region === currentRegionFilter;
+    const matchesRegion = regionMatches(region);
     const matchesApp = matchesAppFilter(item);
     const matchesQualification = matchesQualificationFilter(item);
     const matchesCompletedWindow = currentFilter !== 'completed' || matchesCompletedRange(item);
@@ -968,9 +974,16 @@ function getVisibleProviders() {
   }));
 }
 
+/* "All regions" means the India regions. Dubai caregivers show only on the
+   Dubai desk (/admin/dubai) — founder, 27 Oct 2026. */
+function regionMatches(region) {
+  if (currentRegionFilter === 'all') return region !== 'uae';
+  return region === currentRegionFilter;
+}
+
 function normalizeRegion(value) {
   const normalized = String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
-  if (normalized === 'kerala' || normalized === 'karnataka') {
+  if (normalized === 'kerala' || normalized === 'karnataka' || normalized === 'uae') {
     return normalized;
   }
   return '';
@@ -979,6 +992,10 @@ function normalizeRegion(value) {
 function getRegionForFlowId(flowId) {
   if (flowId === 'karnataka_english') {
     return 'karnataka';
+  }
+
+  if (flowId === 'uae_english' || flowId === 'uae_malayalam') {
+    return 'uae';
   }
 
   if (flowId === 'kerala_malayalam') {
@@ -994,6 +1011,7 @@ function getProviderRegion(provider) {
 
 function formatRegionLabel(value) {
   const region = normalizeRegion(value) || 'kerala';
+  if (region === 'uae') return 'Dubai';
   return region === 'karnataka' ? 'Karnataka' : 'Kerala';
 }
 
@@ -1098,7 +1116,7 @@ function matchesQualificationFilter(provider) {
 
 function updateDashboardMetrics() {
   const metricProviders = providers.filter((item) => (
-    currentRegionFilter === 'all' || getProviderRegion(item) === currentRegionFilter
+    regionMatches(getProviderRegion(item))
   ));
 
   pendingCount.textContent = metricProviders.filter((item) => getDashboardStatus(item) === 'certificate_verification_pending').length;
@@ -1347,7 +1365,7 @@ function updateDeskCounts() {
   if (!window.PulsoDeskShell) return;
 
   const inRegion = providers.filter((item) => (
-    currentRegionFilter === 'all' || getProviderRegion(item) === currentRegionFilter
+    regionMatches(getProviderRegion(item))
   ));
   const needsYou = inRegion.filter((item) => {
     const tone = providerTone(item);

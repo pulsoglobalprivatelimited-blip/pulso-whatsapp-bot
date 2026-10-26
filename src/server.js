@@ -1139,6 +1139,10 @@ app.get('/admin/karnataka', (_req, res) => {
   res.sendFile(path.join(config.publicDir, 'admin', 'index.html'));
 });
 
+app.get('/admin/dubai', (_req, res) => {
+  res.sendFile(path.join(config.publicDir, 'admin', 'index.html'));
+});
+
 app.get('/admin/provider-support', (_req, res) => {
   res.sendFile(path.join(config.publicDir, 'admin', 'provider-support.html'));
 });
