@@ -5,13 +5,23 @@ const { inferProviderRegion } = require('./regionService');
 
 function buildProviderSyncPayload(provider) {
   const flow = provider && provider.flowId ? FLOWS[provider.flowId] : null;
+  const region = inferProviderRegion(provider) || '';
 
   return {
     phone: provider.phone || '',
     // The number she logs in to the Pulso app with (founder, 14 Oct 2026);
     // her WhatsApp number unless she or the reviewer gave another.
     appLoginPhone: provider.appLoginPhone || provider.phone || '',
-    region: inferProviderRegion(provider) || '',
+    region,
+    // Dubai (26 Oct 2026): the licence she typed. The hub writes
+    // uaeLicence {status: 'pending_photos', …}; the photos come from the app.
+    ...(region === 'uae'
+      ? {
+          dhaLicenceNumber: provider.dhaLicenceNumber || '',
+          licenceCompanyName: provider.licenceCompanyName || '',
+          licenceStaffId: provider.licenceStaffId || '',
+        }
+      : {}),
     language: provider.language || (flow && flow.language) || '',
     flowId: provider.flowId || '',
     qualification: provider.qualification || '',

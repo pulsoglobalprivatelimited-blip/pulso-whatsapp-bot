@@ -40,6 +40,9 @@ const STATUS = {
   AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE: 'awaiting_sample_duty_offer_preference',
   AWAITING_EXPECTED_DUTIES_CONFIRMATION: 'awaiting_expected_duties_confirmation',
   AWAITING_CERTIFICATE: 'awaiting_certificate',
+  // Dubai (26 Oct 2026): the certificate photo becomes a typed DHA licence
+  // number (or company name + staff ID). Photos are taken later in the app.
+  AWAITING_DHA_LICENCE: 'awaiting_dha_licence',
   AWAITING_NAME: 'awaiting_name',
   AWAITING_AGE: 'awaiting_age',
   AGE_REJECTED: 'age_rejected',
@@ -70,6 +73,7 @@ const STATUS = {
 const BUTTON_IDS = {
   REGION_KERALA: 'region_kerala',
   REGION_KARNATAKA: 'region_karnataka',
+  REGION_UAE: 'region_uae',
   LANGUAGE_MALAYALAM: 'language_malayalam',
   LANGUAGE_ENGLISH: 'language_english',
   QUALIFICATION_GDA: 'qualification_gda',
@@ -249,6 +253,30 @@ const KARNATAKA_DISTRICTS = [
   { id: 'district_bagalkot', title: 'Bagalkot', value: 'Bagalkot' },
   { id: 'district_chamarajanagar', title: 'Chamarajanagar', value: 'Chamarajanagar' },
   { id: 'district_vijayanagara', title: 'Vijayanagara', value: 'Vijayanagara' }
+];
+
+// Dubai (26 Oct 2026): the areas take the place of the Bengaluru districts.
+// The values are unique across all regions (regionService maps a district
+// value back to its region), hence "Other area, Dubai" rather than "Other".
+const UAE_DISTRICTS = [
+  { id: 'district_dxb_al_barsha', title: 'Al Barsha', value: 'Al Barsha' },
+  { id: 'district_dxb_al_nahda', title: 'Al Nahda', value: 'Al Nahda' },
+  { id: 'district_dxb_al_qusais', title: 'Al Qusais', value: 'Al Qusais' },
+  { id: 'district_dxb_bur_dubai', title: 'Bur Dubai', value: 'Bur Dubai' },
+  { id: 'district_dxb_deira', title: 'Deira', value: 'Deira' },
+  { id: 'district_dxb_discovery_gardens', title: 'Discovery Gardens', value: 'Discovery Gardens' },
+  { id: 'district_dxb_international_city', title: 'International City', value: 'International City' },
+  { id: 'district_dxb_jlt', title: 'JLT', value: 'JLT' },
+  { id: 'district_dxb_jvc', title: 'JVC', value: 'JVC' },
+  { id: 'district_dxb_jumeirah', title: 'Jumeirah', value: 'Jumeirah' },
+  { id: 'district_dxb_karama', title: 'Karama', value: 'Karama' },
+  { id: 'district_dxb_marina', title: 'Marina', value: 'Marina' },
+  { id: 'district_dxb_mirdif', title: 'Mirdif', value: 'Mirdif' },
+  { id: 'district_dxb_satwa', title: 'Satwa', value: 'Satwa' },
+  { id: 'district_dxb_silicon_oasis', title: 'Silicon Oasis', value: 'Silicon Oasis' },
+  { id: 'district_dxb_al_quoz', title: 'Al Quoz', value: 'Al Quoz' },
+  { id: 'district_dxb_business_bay', title: 'Business Bay', value: 'Business Bay' },
+  { id: 'district_dxb_other', title: 'Other', value: 'Other area, Dubai' }
 ];
 
 const MESSAGES = {
@@ -645,7 +673,8 @@ const MESSAGES = {
 
 const REGION_OPTIONS = [
   { id: BUTTON_IDS.REGION_KERALA, title: 'Kerala' },
-  { id: BUTTON_IDS.REGION_KARNATAKA, title: 'Karnataka' }
+  { id: BUTTON_IDS.REGION_KARNATAKA, title: 'Karnataka' },
+  { id: BUTTON_IDS.REGION_UAE, title: 'UAE (Dubai)' }
 ];
 
 const LANGUAGE_OPTIONS = [
@@ -656,7 +685,7 @@ const LANGUAGE_OPTIONS = [
 const ENGLISH_BASE_MESSAGES = {
   ...MESSAGES,
   regionQuestion: 'Welcome to Pulso.\n\nPlease select your region.',
-  regionRetry: 'Please select Kerala or Karnataka to continue.',
+  regionRetry: 'Please select Kerala, Karnataka or UAE (Dubai) to continue.',
   welcomeQualification: 'Please select your qualification.',
   notEligible:
     'Please select one option from the list below. If you do not have a certificate, select "No certificate".',
@@ -1268,6 +1297,189 @@ const KARNATAKA_MALAYALAM_MESSAGES = {
   sampleDutyOffer24Hour: bengaluruMlSample(MESSAGES.sampleDutyOffer24Hour, 'Vennala (nearby)')
 };
 
+/* ---- Dubai, UAE (26 Oct 2026) ----------------------------------------------
+   Founder: the Dubai caregiver onboarding is the Bengaluru flow SAME TO SAME.
+   Only three things change: the place (Bengaluru -> Dubai, areas of Dubai),
+   the money (Rs / ₹ -> AED, "cash or UPI" -> "cash or bank transfer") and the
+   proof (the certificate photo becomes a typed DHA licence number; the
+   licence card photo and a selfie are taken later in the app). So every UAE
+   text is the Bengaluru text with those swaps made by assertion: toDubai
+   throws at load if a Bengaluru, Rs, ₹ or UPI is left behind, and swapExact
+   throws if a rate marker moved. Contract: pulso_hub docs/uae_build_contract.md. */
+const INR_WORKING_MODEL_MARKERS = {
+  ml: [
+    '8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹600 മുതൽ ₹900 വരെ ലഭിക്കും',
+    '24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 മുതൽ ₹1000 വരെ ലഭിക്കും'
+  ],
+  en: [
+    'For 8-hour duty, you will receive Rs 600 to Rs 900 per day',
+    'For 24-hour duty, you will receive Rs 750 to Rs 1000 per day'
+  ]
+};
+// The same two lines in AED (the GDA band of the contract). They are markers
+// too: getWorkingModelFor swaps in the band's real lines at send time.
+const UAE_WORKING_MODEL_MARKERS = {
+  ml: [
+    '8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ AED 60 മുതൽ AED 90 വരെ ലഭിക്കും',
+    '24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ AED 80 മുതൽ AED 120 വരെ ലഭിക്കും'
+  ],
+  en: [
+    'For 8-hour duty, you will receive AED 60 to AED 90 per day',
+    'For 24-hour duty, you will receive AED 80 to AED 120 per day'
+  ]
+};
+const DUBAI_SWAPS = [
+  ['Jayanagar, Bengaluru', 'Al Barsha, Dubai'],
+  ['Bengaluru-വിലെ', 'Dubai-യിലെ'],
+  ['Bengaluru-വിൽ', 'Dubai-യിൽ'],
+  ['Bengaluru', 'Dubai'],
+  ['cash or UPI', 'cash or bank transfer'],
+  ['cash / UPI', 'cash / bank transfer'],
+  ['cash അല്ലെങ്കിൽ UPI', 'cash അല്ലെങ്കിൽ bank transfer'],
+  ['Rs {{', 'AED {{'],
+  ['₹ {{', 'AED {{'],
+  ['₹{{', 'AED {{'],
+  ['apps.apple.com/in/', 'apps.apple.com/ae/']
+];
+const NOT_FOR_DUBAI = /₹|\bRs\b|\bUPI\b|Bengaluru|Karnataka/;
+
+function toDubai(source) {
+  const out = DUBAI_SWAPS.reduce((t, [from, to]) => t.split(from).join(to), String(source));
+  const left = out.match(NOT_FOR_DUBAI);
+  if (left) throw new Error(`Dubai text still says "${left[0]}": ${out.slice(0, 60)}`);
+  return out;
+}
+
+function dubaiWorkingModel(source, language) {
+  const parked = INR_WORKING_MODEL_MARKERS[language].reduce(
+    (text, marker, i) => swapExact(text, marker, UAE_WORKING_MODEL_MARKERS[language][i]),
+    String(source)
+  );
+  return toDubai(parked);
+}
+
+const UAE_APP_LINKS = {
+  android: 'https://play.google.com/store/apps/details?id=com.pulso.global&pcampaignid=web_share',
+  iphone: 'https://apps.apple.com/ae/app/pulso/id6757874217'
+};
+
+// The founder's licence question, exact (contract, 26 Oct 2026).
+const DHA_LICENCE_REQUEST_EN =
+  'Type your DHA licence number.\nCaregiver without a DHA licence? Type your company name and staff ID number instead.\nOnly the number. Do not send ID cards or your passport here.';
+const DHA_LICENCE_REQUEST_ML =
+  'നിങ്ങളുടെ DHA licence number type ചെയ്യുക.\nDHA licence ഇല്ലാത്ത caregiver ആണോ? പകരം നിങ്ങളുടെ company-യുടെ പേരും staff ID number-ഉം type ചെയ്യുക.\nNumber മാത്രം മതി. ID card-ഓ passport-ഓ ഇവിടെ അയയ്ക്കരുത്.';
+
+// Said after Accept, where Bengaluru sends the app install question.
+const UAE_APP_INSTRUCTIONS_EN = `Install the Pulso app:
+
+Android: ${UAE_APP_LINKS.android}
+iPhone: ${UAE_APP_LINKS.iphone}
+
+Sign in with this WhatsApp number.
+
+Take 2 photos in the app: your DHA licence card (or company ID card) and a selfie holding it. We check and reply within 1 day.`;
+const UAE_APP_INSTRUCTIONS_ML = `Pulso app install ചെയ്യുക:
+
+Android: ${UAE_APP_LINKS.android}
+iPhone: ${UAE_APP_LINKS.iphone}
+
+ഈ WhatsApp number ഉപയോഗിച്ച് sign in ചെയ്യുക.
+
+App-ൽ 2 ഫോട്ടോ എടുക്കുക: നിങ്ങളുടെ DHA licence card (അല്ലെങ്കിൽ company ID card), അത് കയ്യിൽ പിടിച്ചുള്ള ഒരു selfie. ഞങ്ങൾ പരിശോധിച്ച് 1 ദിവസത്തിനുള്ളിൽ മറുപടി നൽകും.`;
+
+/* Texts that are India-only and never sent to a Dubai caregiver: the ₹499
+   subscription fee (never due in the UAE), the experience certificate of an
+   Indian company, and the Duty Card question (its rewards are that
+   certificate and a ₹100 bonus). Null, so a stray send fails loudly in a test
+   rather than quoting rupees. */
+const UAE_NOT_SENT = {
+  experienceCertificateNotice: null,
+  termsFeePoints: [],
+  workingModelFeeLine: null,
+  termsAcceptedFee: null,
+  subscriptionFeeReminder: null,
+  subscriptionFeePaid: null,
+  agencyQuestion: null,
+  agencyYes: null,
+  addDutyInterestQuestion: null,
+  addDutyProcedure: null,
+  addDutyInstallFirst: null,
+  addDutyLater: null,
+  // There is no certificate review in Dubai: the licence is checked in the app.
+  certificateApproved: null,
+  certificateApprovedBasic: null
+};
+
+function dubaiMessages(base, language) {
+  const en = language === 'en';
+  return {
+    ...base,
+    ...UAE_NOT_SENT,
+    workingModel: dubaiWorkingModel(base.workingModel, language),
+    sampleDutyOffer24Hour: toDubai(base.sampleDutyOffer24Hour),
+    sampleDutyOffer8Hour: toDubai(base.sampleDutyOffer8Hour),
+    termsIntro: toDubai(base.termsIntro),
+    cookingQuestion: toDubai(base.cookingQuestion),
+    sampleDutyCookingLine: toDubai(base.sampleDutyCookingLine),
+    detailsQualificationBasicNotice: toDubai(base.detailsQualificationBasicNotice),
+    termsRateBasic: toDubai(base.termsRateBasic),
+    basicTierAgeNotice: toDubai(base.basicTierAgeNotice),
+    // Nobody checked a certificate in Dubai, so its first line goes.
+    termsRateBasicAge: toDubai(swapExact(
+      base.termsRateBasicAge,
+      en ? 'Your certificate has been checked and approved.\n\n' : 'നിങ്ങളുടെ സർട്ടിഫിക്കറ്റ് പരിശോധിച്ചു അംഗീകരിച്ചു.\n\n',
+      ''
+    )),
+    pulsoAppIphoneLink: toDubai(base.pulsoAppIphoneLink),
+    pulsoAppAndroidLink: toDubai(base.pulsoAppAndroidLink),
+    districtQuestion: en
+      ? 'Please select your area in Dubai from the list below. If your area is not shown, open the next list.'
+      : 'താഴെയുള്ള ആദ്യ list-ിൽ നിന്ന് Dubai-യിലെ താങ്കളുടെ area തിരഞ്ഞെടുക്കുക. Area കാണുന്നില്ലെങ്കിൽ അടുത്ത list തുറക്കുക.',
+    districtRetry: en
+      ? 'Please select your area from the list below.'
+      : 'ദയവായി താഴെയുള്ള list-ിൽ നിന്ന് താങ്കളുടെ area തിരഞ്ഞെടുക്കുക.',
+    districtListQuestion: en
+      ? 'Please select your area from the list below.'
+      : 'താഴെയുള്ള list-ിൽ നിന്ന് താങ്കളുടെ area തിരഞ്ഞെടുക്കുക.',
+    detailsCheckLabels: { ...base.detailsCheckLabels, district: 'Area' },
+    loginPhoneTypeAsk: en ? 'Please type the UAE mobile number.' : 'ദയവായി UAE mobile number type ചെയ്യുക.',
+    loginPhoneRetry: en
+      ? 'Please type a UAE mobile number (e.g. 050 123 4567).'
+      : 'ദയവായി UAE mobile number type ചെയ്യുക (ഉദാ: 050 123 4567).',
+    // Bengaluru's line goes on to the 180-day experience certificate.
+    termsAccepted: en
+      ? 'Thank you. Your onboarding is complete.'
+      : 'നന്ദി. താങ്കളുടെ onboarding വിജയകരമായി പൂർത്തിയായി.',
+    dhaLicenceRequest: en ? DHA_LICENCE_REQUEST_EN : DHA_LICENCE_REQUEST_ML,
+    dhaLicenceTypeOnly: en
+      ? 'Please type only the number. Do not send photos or documents here.'
+      : 'ദയവായി number മാത്രം type ചെയ്യുക. ഫോട്ടോയോ document-ഓ ഇവിടെ അയയ്ക്കരുത്.',
+    uaeAppInstructions: en ? UAE_APP_INSTRUCTIONS_EN : UAE_APP_INSTRUCTIONS_ML,
+    // The hub saw her sign in: what is left is the two photos.
+    pulsoAppActivationVerified: en
+      ? 'You are signed in to the Pulso app.\n\nTake 2 photos in the app: your DHA licence card (or company ID card) and a selfie holding it. We check and reply within 1 day.\n\nPlease keep your app notifications turned on.'
+      : 'താങ്കൾ Pulso app-ൽ sign in ചെയ്തു.\n\nApp-ൽ 2 ഫോട്ടോ എടുക്കുക: നിങ്ങളുടെ DHA licence card (അല്ലെങ്കിൽ company ID card), അത് കയ്യിൽ പിടിച്ചുള്ള ഒരു selfie. ഞങ്ങൾ പരിശോധിച്ച് 1 ദിവസത്തിനുള്ളിൽ മറുപടി നൽകും.\n\nദയവായി app notifications on ആക്കി വയ്ക്കുക.'
+  };
+}
+
+const UAE_ENGLISH_MESSAGES = dubaiMessages(KARNATAKA_MESSAGES, 'en');
+const UAE_MALAYALAM_MESSAGES = dubaiMessages(KARNATAKA_MALAYALAM_MESSAGES, 'ml');
+
+const UAE_ENGLISH_UI_TEXT = {
+  ...KARNATAKA_UI_TEXT,
+  districtButtonText: 'Select area',
+  districtSectionTitle: 'Areas of Dubai',
+  nextListDescription: 'Open if your area is not here',
+  previousListDescription: 'See previous areas'
+};
+const UAE_MALAYALAM_UI_TEXT = {
+  ...UI_TEXT,
+  districtButtonText: 'Area തിരഞ്ഞെടുക്കുക',
+  districtSectionTitle: 'Areas of Dubai',
+  nextListDescription: 'Area ഇവിടെ ഇല്ലെങ്കിൽ തുറക്കുക',
+  previousListDescription: 'മുൻപത്തെ areas കാണുക'
+};
+
 const FLOWS = {
   kerala_malayalam: {
     id: 'kerala_malayalam',
@@ -1304,6 +1516,28 @@ const FLOWS = {
     QUALIFICATIONS: ENGLISH_QUALIFICATIONS,
     DISTRICTS: KARNATAKA_DISTRICTS,
     UI_TEXT: KARNATAKA_UI_TEXT
+  },
+  uae_malayalam: {
+    id: 'uae_malayalam',
+    region: 'uae',
+    language: 'ml',
+    currency: 'AED',
+    workingModelMarkers: UAE_WORKING_MODEL_MARKERS.ml,
+    MESSAGES: UAE_MALAYALAM_MESSAGES,
+    QUALIFICATIONS,
+    DISTRICTS: UAE_DISTRICTS,
+    UI_TEXT: UAE_MALAYALAM_UI_TEXT
+  },
+  uae_english: {
+    id: 'uae_english',
+    region: 'uae',
+    language: 'en',
+    currency: 'AED',
+    workingModelMarkers: UAE_WORKING_MODEL_MARKERS.en,
+    MESSAGES: UAE_ENGLISH_MESSAGES,
+    QUALIFICATIONS: ENGLISH_QUALIFICATIONS,
+    DISTRICTS: UAE_DISTRICTS,
+    UI_TEXT: UAE_ENGLISH_UI_TEXT
   }
 };
 
@@ -1311,7 +1545,8 @@ const FLOWS = {
 // question has not been answered — today's behaviour for every existing record.
 const DEFAULT_FLOW_ID_BY_REGION = {
   kerala: 'kerala_malayalam',
-  karnataka: 'karnataka_english'
+  karnataka: 'karnataka_english',
+  uae: 'uae_english'
 };
 
 function getFlowIdFor(region, language) {
@@ -1440,6 +1675,71 @@ const BASIC_SHOWN_FALLBACK = { shown8h: 650, shown24h: 750 };
  */
 const NURSE_SHOWN_FALLBACK = { shownFrom8h: 800, shownTo8h: 1200, shownFrom24h: 800, shownTo24h: 2200 };
 
+/* Dubai's AED figures (founder-confirmed, 26 Oct 2026; contract). The live
+   ones are app_config/provider_tiers markets.uae.tiers; these stand behind
+   each figure the doc does not carry, so a Dubai caregiver can never be quoted
+   a rupee figure. Basic is flat: what she is told is her payout. */
+const UAE_TIER_DEFAULTS = {
+  basic: { payout8h: 60, payout24h: 80, familyFloor8h: 60, familyFloor24h: 80 },
+  gda: {
+    payout8h: 70, payout24h: 90, familyFloor8h: 70, familyFloor24h: 90,
+    shownFrom8h: 60, shownTo8h: 90, shownFrom24h: 80, shownTo24h: 120, sample8h: 70, sample24h: 100
+  },
+  nurse: {
+    payout8h: 100, payout24h: 150, familyFloor8h: 100, familyFloor24h: 150,
+    shownFrom8h: 100, shownTo8h: 150, shownFrom24h: 150, shownTo24h: 250, sample8h: 100, sample24h: 150
+  }
+};
+
+/** The UAE market's tiers, in the shape every function below reads. */
+function uaeTiers(tiers) {
+  const t = tiers && typeof tiers === 'object' ? tiers : {};
+  if (t.market === 'uae') return t;
+  const market = t.markets && typeof t.markets === 'object' && t.markets.uae && typeof t.markets.uae === 'object'
+    ? t.markets.uae
+    : {};
+  const source = market.tiers && typeof market.tiers === 'object' ? market.tiers : {};
+  const out = { market: 'uae', currency: 'AED', basicTierAgeThreshold: t.basicTierAgeThreshold };
+  for (const band of RATE_BANDS) {
+    const defaults = UAE_TIER_DEFAULTS[band];
+    const given = source[band] && typeof source[band] === 'object' ? source[band] : {};
+    const merged = {};
+    for (const key of new Set([...Object.keys(defaults), ...Object.keys(given)])) {
+      const n = Math.round(Number(given[key]));
+      const value = Number.isFinite(n) && n > 0 ? n : defaults[key];
+      if (value !== undefined) merged[key] = value;
+    }
+    if (band === 'basic') {
+      merged.shown8h = merged.shown8h || merged.payout8h;
+      merged.shown24h = merged.shown24h || merged.payout24h;
+    }
+    out[band] = merged;
+  }
+  // Supporting care (cooking) has no AED figure yet: without one in the doc
+  // the cooking question is simply not asked in Dubai.
+  const extra = Math.round(Number(market.supportingCareExtraPerDay));
+  if (Number.isFinite(extra) && extra > 0) out.supportingCareExtraPerDay = extra;
+  return out;
+}
+
+/** India reads the doc's own tiers, as before; a UAE flow reads its market. */
+function tiersForActiveFlow(tiers) {
+  return getActiveFlow().region === 'uae' ? uaeTiers(tiers) : tiers;
+}
+
+function isUaeFlowActive() {
+  return getActiveFlow().region === 'uae';
+}
+
+/** "Rs 600" / "₹600" for India, "AED 60" in the UAE. */
+function enMoney(n, currency) {
+  return currency === 'AED' ? `AED ${n}` : `Rs ${n}`;
+}
+
+function mlMoney(n, currency) {
+  return currency === 'AED' ? `AED ${n}` : `₹${n}`;
+}
+
 function tierFigures(tiers) {
   const t = tiers && typeof tiers === 'object' ? tiers : {};
   const pick = (name, key) => {
@@ -1474,16 +1774,7 @@ function tierFigures(tiers) {
 // lines are swapped in by exact match. The markers are the GDA-range lines as
 // written in MESSAGES.workingModel; swapExact throws if either is reworded
 // without this table, rather than silently sending the wrong band.
-const WORKING_MODEL_MARKERS = {
-  ml: [
-    '8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹600 മുതൽ ₹900 വരെ ലഭിക്കും',
-    '24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹750 മുതൽ ₹1000 വരെ ലഭിക്കും'
-  ],
-  en: [
-    'For 8-hour duty, you will receive Rs 600 to Rs 900 per day',
-    'For 24-hour duty, you will receive Rs 750 to Rs 1000 per day'
-  ]
-};
+const WORKING_MODEL_MARKERS = INR_WORKING_MODEL_MARKERS;
 
 /**
  * Said right under the pay figures, to every band.
@@ -1503,15 +1794,15 @@ function earningsGrowthLine(language) {
 }
 
 /** "₹650 മുതൽ ₹900 വരെ", or just "₹650" when the two ends meet. */
-function mlRange(from, to) {
-  return from === to ? `₹${from}` : `₹${from} മുതൽ ₹${to} വരെ`;
+function mlRange(from, to, currency) {
+  return from === to ? mlMoney(from, currency) : `${mlMoney(from, currency)} മുതൽ ${mlMoney(to, currency)} വരെ`;
 }
 
-function enRange(from, to) {
-  return from === to ? `Rs ${from}` : `Rs ${from} to Rs ${to}`;
+function enRange(from, to, currency) {
+  return from === to ? enMoney(from, currency) : `${enMoney(from, currency)} to ${enMoney(to, currency)}`;
 }
 
-function workingModelRateLines(band, language, f) {
+function workingModelRateLines(band, language, f, currency) {
   /* 24 hours first, then 8 — founder's order, 9 Oct 2026. The two lines land
      on the founder's numbered points 7 and 8 in that order, and the growth
      sentence rides on the second of them so it still reads after both
@@ -1519,31 +1810,31 @@ function workingModelRateLines(band, language, f) {
   if (language === 'ml') {
     if (band === 'nurse') {
       return [
-        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.nFrom24, f.nTo24)} ലഭിക്കും`,
-        `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.nFrom8, f.nTo8)} ലഭിക്കും. ${earningsGrowthLine('ml')}`
+        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.nFrom24, f.nTo24, currency)} ലഭിക്കും`,
+        `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.nFrom8, f.nTo8, currency)} ലഭിക്കും. ${earningsGrowthLine('ml')}`
       ];
     }
     if (band === 'basic') {
       return [
-        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b24} ലഭിക്കും`,
-        `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ₹${f.b8} ലഭിക്കും. ${earningsGrowthLine('ml')}`
+        `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlMoney(f.b24, currency)} ലഭിക്കും`,
+        `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlMoney(f.b8, currency)} ലഭിക്കും. ${earningsGrowthLine('ml')}`
       ];
     }
     /* A range whose two ends are the same figure is one figure (mlRange). */
     return [
-      `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.gFrom24, f.gTo24)} ലഭിക്കും`,
-      `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.gFrom8, f.gTo8)} ലഭിക്കും. ${earningsGrowthLine('ml')}`
+      `24 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.gFrom24, f.gTo24, currency)} ലഭിക്കും`,
+      `8 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ ${mlRange(f.gFrom8, f.gTo8, currency)} ലഭിക്കും. ${earningsGrowthLine('ml')}`
     ];
   }
   if (band === 'nurse') {
-    return [`For 24-hour duty, you will receive ${enRange(f.nFrom24, f.nTo24)} per day`, `For 8-hour duty, you will receive ${enRange(f.nFrom8, f.nTo8)} per day. ${earningsGrowthLine('en')}`];
+    return [`For 24-hour duty, you will receive ${enRange(f.nFrom24, f.nTo24, currency)} per day`, `For 8-hour duty, you will receive ${enRange(f.nFrom8, f.nTo8, currency)} per day. ${earningsGrowthLine('en')}`];
   }
   if (band === 'basic') {
-    return [`For 24-hour duty, you will receive Rs ${f.b24} per day`, `For 8-hour duty, you will receive Rs ${f.b8} per day. ${earningsGrowthLine('en')}`];
+    return [`For 24-hour duty, you will receive ${enMoney(f.b24, currency)} per day`, `For 8-hour duty, you will receive ${enMoney(f.b8, currency)} per day. ${earningsGrowthLine('en')}`];
   }
   return [
-    `For 24-hour duty, you will receive ${enRange(f.gFrom24, f.gTo24)} per day`,
-    `For 8-hour duty, you will receive ${enRange(f.gFrom8, f.gTo8)} per day. ${earningsGrowthLine('en')}`
+    `For 24-hour duty, you will receive ${enRange(f.gFrom24, f.gTo24, currency)} per day`,
+    `For 8-hour duty, you will receive ${enRange(f.gFrom8, f.gTo8, currency)} per day. ${earningsGrowthLine('en')}`
   ];
 }
 
@@ -1571,6 +1862,7 @@ function sampleDutyRates(band, f) {
 
 function getSampleDutyOfferFor(qualification, tiers, choice) {
   if (choice !== '24_hour' && choice !== '8_hour') return null;
+  tiers = tiersForActiveFlow(tiers);
   const flow = getActiveFlow();
   const template = choice === '24_hour'
     ? flow.MESSAGES.sampleDutyOffer24Hour
@@ -1581,10 +1873,13 @@ function getSampleDutyOfferFor(qualification, tiers, choice) {
      TIER_FALLBACK for anything zero or unreadable, so these are always real
      figures. A throw would look like protection while never firing. */
   const { day8, day24 } = sampleDutyRates(rateBandFor(qualification, tiers), tierFigures(tiers));
+  /* India writes the month as before ("30000"); Dubai's poster and plan write
+     it grouped, "AED 3,000". */
+  const figure = flow.currency === 'AED' ? (n) => Number(n).toLocaleString('en-US') : String;
   const sample = String(template)
-    .split('{{payout8h}}').join(String(day8))
-    .split('{{payout24h}}').join(String(day24))
-    .split('{{total24h}}').join(String(day24 * SAMPLE_MONTH_DAYS));
+    .split('{{payout8h}}').join(figure(day8))
+    .split('{{payout24h}}').join(figure(day24))
+    .split('{{total24h}}').join(figure(day24 * SAMPLE_MONTH_DAYS));
   /* She said yes to cooking a moment ago: the sample says what that adds. One
      line, so the offer itself still reads the same as everyone else's. */
   const line = flow.MESSAGES.sampleDutyCookingLine;
@@ -1603,6 +1898,7 @@ const SUPPORTING_CARE_EXTRA_DEFAULT = 500;
 const COOKING_TIERS = ['basic', 'gda'];
 
 function supportingCareExtraPerDay(tiers) {
+  tiers = tiersForActiveFlow(tiers);
   const n = Math.round(Number(tiers && tiers.supportingCareExtraPerDay));
   return Number.isFinite(n) && n > 0 ? n : SUPPORTING_CARE_EXTRA_DEFAULT;
 }
@@ -1612,6 +1908,9 @@ function supportingCareExtraPerDay(tiers) {
 const NURSE_TIER_QUALIFICATIONS = ['gnm', 'bsc_nursing', 'post_basic_bsc_nursing', 'msc_nursing'];
 
 function isCookingQuestionFor(subject, tiers) {
+  tiers = tiersForActiveFlow(tiers);
+  // Dubai: asked only once the doc carries an AED figure for it.
+  if (tiers && tiers.market === 'uae' && !tiers.supportingCareExtraPerDay) return false;
   const who = subjectOf(subject);
   const qualification = String(who.qualification || '').trim().toLowerCase();
   if (!qualification || NURSE_TIER_QUALIFICATIONS.includes(qualification)) return false;
@@ -1632,6 +1931,7 @@ function formatRupees(n) {
    actually pays her. GDA at the default card reads ₹700 + ₹500 = ₹1,200 and
    ₹600 + ₹500 = ₹1,100, the founder's sample. */
 function cookingPayFor(subject, tiers) {
+  tiers = tiersForActiveFlow(tiers);
   const t = tiers && typeof tiers === 'object' ? tiers : {};
   const band = rateBandFor(subjectOf(subject), tiers) === 'basic' ? 'basic' : 'gda';
   const pick = (key) => {
@@ -1662,6 +1962,7 @@ function getCookingQuestionFor(subject, tiers) {
  * both irrelevant and unkind.
  */
 function getBasicTierAgeNoticeFor(subject, tiers) {
+  tiers = tiersForActiveFlow(tiers);
   const who = subjectOf(subject);
   if (!isOverBasicTierAge(who.age, tiers)) return null;
   if (rateBandFor({ qualification: who.qualification }, tiers) === 'basic') return null;
@@ -1680,6 +1981,7 @@ function getBasicTierAgeNoticeFor(subject, tiers) {
  * figures in the working model; a change at the check gets them in one line.
  */
 function getBasicQualificationNoticeFor(subject, tiers) {
+  tiers = tiersForActiveFlow(tiers);
   const who = subjectOf(subject);
   if (rateBandFor({ qualification: who.qualification }, tiers) !== 'basic') return null;
   const template = getActiveFlow().MESSAGES.detailsQualificationBasicNotice;
@@ -1692,10 +1994,11 @@ function getBasicQualificationNoticeFor(subject, tiers) {
 
 /** The working model for the flow in play, at the rate this qualification earns. */
 function getWorkingModelFor(qualification, tiers) {
+  tiers = tiersForActiveFlow(tiers);
   const flow = getActiveFlow();
   const band = rateBandFor(qualification, tiers);
-  const markers = WORKING_MODEL_MARKERS[flow.language] || WORKING_MODEL_MARKERS.en;
-  const lines = workingModelRateLines(band, flow.language, tierFigures(tiers));
+  const markers = flow.workingModelMarkers || WORKING_MODEL_MARKERS[flow.language] || WORKING_MODEL_MARKERS.en;
+  const lines = workingModelRateLines(band, flow.language, tierFigures(tiers), flow.currency);
   /* Two passes, through placeholders. A one-pass swap broke the day the card
      was set to the very figures the markers carry (GDA 24h 750–1000, 10 Oct
      2026): the first line swapped in matched the second marker word for word,
@@ -1751,10 +2054,14 @@ function getTermsRateFor(subject, tiers) {
   /* Keyed on the band, not the qualification: whoever is paid the Basic rate
      reads the Basic rate before accepting, however they got there. Which
      sentence explains it is a separate question — see termsRateBasicAge. */
+  tiers = tiersForActiveFlow(tiers);
   const who = subjectOf(subject);
   if (rateBandFor(who, tiers) !== 'basic') return null;
   const messages = getActiveFlow().MESSAGES;
-  const isBasicQualified = String(who.qualification || '').toLowerCase() === 'basic_caregiver';
+  /* Dubai has no reviewer to turn "No certificate" into "Basic caregiver",
+     so there the qualification she picked is the reason itself. */
+  const isBasicQualified = String(who.qualification || '').toLowerCase() === 'basic_caregiver' ||
+    (getActiveFlow().region === 'uae' && isBasicQualification(who.qualification));
   const template = isBasicQualified ? messages.termsRateBasic : messages.termsRateBasicAge;
   if (!template) return null;
   const basic = (tiers && tiers.basic) || {};
@@ -1772,22 +2079,24 @@ function getTermsRateFor(subject, tiers) {
 
 /** The two-line pay summary shown with the duty-hours question, per band. */
 function getDutyHourPaymentSummaryFor(qualification, tiers) {
+  tiers = tiersForActiveFlow(tiers);
   const flow = getActiveFlow();
+  const c = flow.currency;
   const messages = flow.MESSAGES;
   const band = rateBandFor(qualification, tiers);
   const f = tierFigures(tiers);
   const tail = `\n\n${earningsGrowthLine(flow.language)}`;
   // 24 hours first, then 8 — founder's order, 9 Oct 2026.
   if (flow.language === 'ml') {
-    if (band === 'nurse') return `24 hour - ദിവസത്തിൽ ${mlRange(f.nFrom24, f.nTo24)}\n8 hour - ദിവസത്തിൽ ${mlRange(f.nFrom8, f.nTo8)}${tail}`;
+    if (band === 'nurse') return `24 hour - ദിവസത്തിൽ ${mlRange(f.nFrom24, f.nTo24, c)}\n8 hour - ദിവസത്തിൽ ${mlRange(f.nFrom8, f.nTo8, c)}${tail}`;
     return band === 'basic'
-      ? `24 hour - ദിവസത്തിൽ ₹${f.b24}\n8 hour - ദിവസത്തിൽ ₹${f.b8}${tail}`
-      : `24 hour - ദിവസത്തിൽ ${mlRange(f.gFrom24, f.gTo24)}\n8 hour - ദിവസത്തിൽ ${mlRange(f.gFrom8, f.gTo8)}${tail}`;
+      ? `24 hour - ദിവസത്തിൽ ${mlMoney(f.b24, c)}\n8 hour - ദിവസത്തിൽ ${mlMoney(f.b8, c)}${tail}`
+      : `24 hour - ദിവസത്തിൽ ${mlRange(f.gFrom24, f.gTo24, c)}\n8 hour - ദിവസത്തിൽ ${mlRange(f.gFrom8, f.gTo8, c)}${tail}`;
   }
-  if (band === 'nurse') return `24 hour - ${enRange(f.nFrom24, f.nTo24)} per day\n8 hour - ${enRange(f.nFrom8, f.nTo8)} per day${tail}`;
+  if (band === 'nurse') return `24 hour - ${enRange(f.nFrom24, f.nTo24, c)} per day\n8 hour - ${enRange(f.nFrom8, f.nTo8, c)} per day${tail}`;
   return band === 'basic'
-    ? `24 hour - Rs ${f.b24} per day\n8 hour - Rs ${f.b8} per day${tail}`
-    : `24 hour - ${enRange(f.gFrom24, f.gTo24)} per day\n8 hour - ${enRange(f.gFrom8, f.gTo8)} per day${tail}`;
+    ? `24 hour - ${enMoney(f.b24, c)} per day\n8 hour - ${enMoney(f.b8, c)} per day${tail}`
+    : `24 hour - ${enRange(f.gFrom24, f.gTo24, c)} per day\n8 hour - ${enRange(f.gFrom8, f.gTo8, c)} per day${tail}`;
 }
 
 function getActiveFlow() {
@@ -1875,6 +2184,11 @@ module.exports = {
   DEFAULT_FLOW_ID,
   DEFAULT_FLOW_ID_BY_REGION,
   getFlowIdFor,
+  UAE_TIER_DEFAULTS,
+  UAE_APP_LINKS,
+  DHA_LICENCE_REQUEST_EN,
+  uaeTiers,
+  isUaeFlowActive,
   isNurseQualification,
   getWorkingModelFor,
   isBasicQualification,

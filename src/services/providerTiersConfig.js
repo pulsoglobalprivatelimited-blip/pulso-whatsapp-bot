@@ -48,6 +48,9 @@ function normalize(doc) {
       if (n > 0) out[t][k] = n;
     }
   }
+  // Other markets (Dubai, 26 Oct 2026: markets.uae) are carried as they are;
+  // flow.js uaeTiers reads them figure by figure with the AED defaults behind.
+  if (doc && doc.markets && typeof doc.markets === 'object') out.markets = doc.markets;
   return out;
 }
 

@@ -185,6 +185,10 @@ module.exports = {
   // the env vars only matter if a replacement template is ever made.
   subscriptionFeeReminderTemplateName: process.env.SUBSCRIPTION_FEE_REMINDER_TEMPLATE_NAME || 'provider_fee_reminder',
   subscriptionFeePaidTemplateName: process.env.SUBSCRIPTION_FEE_PAID_TEMPLATE_NAME || 'provider_fee_receipt',
+  // Dubai licence review (26 Oct 2026): outside her 24-hour window only an
+  // approved template reaches her. Empty = no template exists yet; the send is
+  // tried as text and a closed window is reported back to the hub.
+  uaeLicenceReviewedTemplateName: process.env.UAE_LICENCE_REVIEWED_TEMPLATE || '',
   pulsoHubBotSyncUrl: process.env.PULSO_HUB_BOT_SYNC_URL || '',
   pulsoHubBotSyncSecret: process.env.PULSO_HUB_BOT_SYNC_SECRET || '',
   // Same project and the same Cloud Run hash, so this is derived from the sync

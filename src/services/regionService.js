@@ -15,7 +15,7 @@ const DISTRICT_REGIONS = Object.values(FLOWS).reduce((acc, flow) => {
 
 function normalizeRegion(value) {
   const normalized = String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
-  if (normalized === 'kerala' || normalized === 'karnataka') {
+  if (normalized === 'kerala' || normalized === 'karnataka' || normalized === 'uae') {
     return normalized;
   }
   return null;

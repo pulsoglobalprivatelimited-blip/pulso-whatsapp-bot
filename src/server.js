@@ -757,6 +757,15 @@ app.post('/internal/subscription-fee-paid', async (req, res) => {
   }
 });
 
+// Dubai (26 Oct 2026): the hub reviewed a UAE caregiver's licence photos
+// (approve / reject / video_call). Same secret as subscription-fee-paid.
+app.post('/internal/uae-licence-reviewed', require('./services/uaeLicence').uaeLicenceReviewedHandler(() => {
+  const { sendText, sendTemplate } = require('./services/metaClient');
+  const { getProvider, updateProvider, appendHistory } = require('./services/providerService');
+  const { isWithinWhatsappReplyWindow } = require('./services/onboardingFlow');
+  return { getProvider, updateProvider, appendHistory, sendText, sendTemplate, isWithinWhatsappReplyWindow };
+}));
+
 app.get('/internal/duty-broadcast/:id', async (req, res) => {
   if (!hasPulsoServerSecret(req)) return res.status(401).json({ error: 'unauthorized' });
   try {
@@ -1516,10 +1525,12 @@ app.get('/admin/providers/:phone', async (req, res) => {
    as "91…". Missing means "leave it"; a wrong one is refused, never guessed. */
 function deskLoginPhone(value) {
   if (value === undefined || value === null || String(value).trim() === '') return null;
-  const { parseIndianMobile } = require('./services/messageParser');
-  const parsed = parseIndianMobile({ type: 'text', text: { body: String(value) } });
+  const { parseIndianMobile, parseUaeMobile } = require('./services/messageParser');
+  const typed = { type: 'text', text: { body: String(value) } };
+  // A Dubai number (+971 5X XXX XXXX) stays a Dubai number (26 Oct 2026).
+  const parsed = parseIndianMobile(typed) || parseUaeMobile(typed);
   if (!parsed) {
-    const error = new Error('App login number must be a 10-digit mobile number');
+    const error = new Error('App login number must be a 10-digit Indian or a UAE mobile number');
     error.statusCode = 400;
     throw error;
   }

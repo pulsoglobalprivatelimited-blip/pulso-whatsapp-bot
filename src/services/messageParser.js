@@ -46,13 +46,22 @@ function parseRegion(message) {
   const replyId = getInteractiveReplyId(message);
   if (replyId === BUTTON_IDS.REGION_KERALA) return 'kerala';
   if (replyId === BUTTON_IDS.REGION_KARNATAKA) return 'karnataka';
+  if (replyId === BUTTON_IDS.REGION_UAE) return 'uae';
 
   const normalized = normalizeText(getMessageText(message));
+  if (isDubaiCaregiverText(getMessageText(message))) return 'uae';
+  if (['uae', 'uae (dubai)', 'dubai', 'u.a.e', 'emirates'].includes(normalized)) return 'uae';
   if (['kerala', 'malayalam', 'ml'].includes(normalized)) return 'kerala';
   if (['karnataka', 'bangalore', 'bengaluru', 'english', 'en'].includes(normalized)) {
     return 'karnataka';
   }
   return null;
+}
+
+/* The Dubai caregiver ad opens the chat with "DUBAI CAREGIVER" (contract,
+   26 Oct 2026). Any case, any spacing, anything after it. */
+function isDubaiCaregiverText(text) {
+  return /^\s*dubai\s+caregiver\b/i.test(String(text || ''));
 }
 
 function parseLanguage(message) {
@@ -261,6 +270,18 @@ function parseHeightRange(message) {
   const normalized = normalizeText(getMessageText(message));
   if (['skip', 'ഒഴിവാക്കുക', 'later'].includes(normalized)) return 'skip';
   return null;
+}
+
+/* A UAE mobile number typed by hand: 05X XXX XXXX, 5XXXXXXXX, 9715XXXXXXXX or
+   +971 5X XXX XXXX, any spacing. Returns the 12-digit "9715…" form, or null.
+   Never turned into a "91…" number. */
+function parseUaeMobile(message) {
+  if (getInteractiveReplyId(message)) return null;
+  let digits = String(getMessageText(message) || '').replace(/\D/g, '');
+  if (digits.startsWith('00971')) digits = digits.slice(2);
+  if (digits.length === 12 && digits.startsWith('971')) digits = digits.slice(3);
+  else if (digits.length === 10 && digits.startsWith('05')) digits = digits.slice(1);
+  return /^5\d{8}$/.test(digits) ? `971${digits}` : null;
 }
 
 /* An Indian mobile number typed by hand: 10 digits starting 6-9, with or
@@ -537,6 +558,8 @@ module.exports = {
   parseHeightRange,
   parseWeightKg,
   parseIndianMobile,
+  parseUaeMobile,
+  isDubaiCaregiverText,
   parseProfileConsent,
   parseProfilePhotoAction,
   parseStillAvailable,

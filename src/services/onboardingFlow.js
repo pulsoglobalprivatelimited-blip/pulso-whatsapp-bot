@@ -26,9 +26,11 @@ const {
   UI_TEXT,
   getFlowConfig,
   runWithProviderFlow,
+  isUaeFlowActive,
   HEIGHT_OPTIONS,
   heightLabelFor
 } = require('../flow');
+const { parseLicenceAnswer } = require('./uaeLicence');
 const subscriptionFee = require('./subscriptionFee');
 const { sendText, sendButtons, sendList, sendTemplate, sendVideoById, sendImageByUrl } = require('./metaClient');
 const { getHubAppActivation } = require('./hubAppActivationService');
@@ -109,6 +111,8 @@ const {
   parseHeightRange,
   parseWeightKg,
   parseIndianMobile,
+  parseUaeMobile,
+  isDubaiCaregiverText,
   parseProfileConsent,
   parseProfilePhotoAction,
   parseStillAvailable,
@@ -239,11 +243,17 @@ async function handleAgentHelpRequest(phone) {
 const SAME_NUMBER_PHRASES = [
   ['WhatsApp onboarding-ൽ ഉപയോഗിച്ച അതേ phone number', (n) => `${n} എന്ന phone number`],
   ['the same phone number used for WhatsApp onboarding', (n) => `the phone number ${n}`],
-  ['the same number you used for onboarding', (n) => `the number ${n}`]
+  ['the same number you used for onboarding', (n) => `the number ${n}`],
+  // Dubai's app message (26 Oct 2026).
+  ['Sign in with this WhatsApp number', (n) => `Sign in with the number ${n}`],
+  ['ഈ WhatsApp number ഉപയോഗിച്ച് sign in ചെയ്യുക', (n) => `${n} എന്ന number ഉപയോഗിച്ച് sign in ചെയ്യുക`]
 ];
 
 function displayPhone(value) {
   const digits = String(value || '').replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('9715')) {
+    return `+971 ${digits.slice(3, 5)} ${digits.slice(5, 8)} ${digits.slice(8)}`;
+  }
   const local = digits.length === 12 && digits.startsWith('91') ? digits.slice(2) : digits;
   return local.length === 10 ? `+91 ${local.slice(0, 5)} ${local.slice(5)}` : `+${digits}`;
 }
@@ -322,6 +332,7 @@ function getStepForStatus(status) {
     [STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE]: 6,
     [STATUS.AWAITING_EXPECTED_DUTIES_CONFIRMATION]: 7,
     [STATUS.AWAITING_CERTIFICATE]: 8,
+    [STATUS.AWAITING_DHA_LICENCE]: 8,
     [STATUS.AWAITING_NAME]: 9,
     [STATUS.AWAITING_AGE]: 10,
     [STATUS.AWAITING_SEX]: 11,
@@ -1196,6 +1207,9 @@ async function sendAddDutyProcedure(phone, provider) {
 
 // Called at the end of both wrap-ups. Asks once per person, ever.
 async function askAgencyQuestionAfterOnboarding(phone, sender = 'bot') {
+  // The Duty Card is India-only (its rewards are the Indian company's
+  // experience certificate and a ₹100 bonus): the UAE flows carry no text.
+  if (!MESSAGES.agencyQuestion) return;
   const provider = await getProvider(phone);
   if (!provider) return;
   if (hasHistoryEvent(provider, (entry) => entry && entry.type === 'system' && entry.event === 'agency_question_sent')) {
@@ -1650,7 +1664,27 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
       entry.payload.body &&
       entry.payload.body.body === MESSAGES.pulsoAppInstallQuestion
   );
-  if (!sentPulsoAppQuestion) {
+  if (!sentPulsoAppQuestion && MESSAGES.uaeAppInstructions) {
+    /* Dubai (26 Oct 2026): where Bengaluru asks "Which phone do you use?",
+       one message carries both install links, the sign-in line and the two
+       photos; then "Have you installed and logged in?", whose tap runs the
+       same hub activation check as Bengaluru's. */
+    const alreadySent = hasHistoryEvent(
+      refreshedProvider,
+      (entry) => entry && entry.type === 'outbound_message' && entry.payload && entry.payload.body === MESSAGES.uaeAppInstructions
+    );
+    if (!alreadySent) {
+      await updateProvider(phone, {
+        pulsoAppActivationStatus: 'link_sent',
+        pulsoAppPromptStage: MOBILE_APP_STAGE_INSTALLED_CONFIRMATION,
+        mobileAppCampaignStage: MOBILE_APP_STAGE_INSTALLED_CONFIRMATION,
+        mobileAppCampaignStatus: MOBILE_APP_CAMPAIGN_STATUS.REQUIRED,
+        pulsoAppLinkSentAt: new Date().toISOString()
+      });
+      await sendAndLog(phone, 'text', MESSAGES.uaeAppInstructions, sender);
+      await sendPulsoAppInstalledConfirmationButtons(phone);
+    }
+  } else if (!sentPulsoAppQuestion) {
     await sendOptionalVideo(
       () => sendDutyAcceptVideo(phone, refreshedProvider, sender),
       phone,
@@ -1900,6 +1934,7 @@ function isCompletedProviderEligibleForAgencyQuestion(provider) {
   return Boolean(
     provider &&
       provider.phone &&
+      inferProviderRegion(provider) !== 'uae' &&
       provider.status === STATUS.COMPLETED &&
       provider.termsAccepted === true &&
       provider.worksWithAgency === undefined &&
@@ -2383,7 +2418,7 @@ async function sendLanguageSelectionList(phone) {
 async function handleRegionSelection(phone, message) {
   const region = parseRegion(message);
   if (!region) {
-    await sendAndLog(phone, 'text', 'Please select Kerala or Karnataka to continue.');
+    await sendAndLog(phone, 'text', 'Please select Kerala, Karnataka or UAE (Dubai) to continue.');
     await sendRegionSelectionList(phone);
     return;
   }
@@ -2493,6 +2528,9 @@ async function sendPromptForCurrentStatus(phone, provider) {
       }
       return;
     }
+    case STATUS.AWAITING_DHA_LICENCE:
+      await sendAndLog(phone, 'text', MESSAGES.dhaLicenceRequest);
+      return;
     case STATUS.AWAITING_NAME:
       await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
       return;
@@ -2649,7 +2687,10 @@ async function continueAfterEarlyAge(phone) {
   // fold that falls at about 640 - correct, and invisible. It lands here
   // because this is the moment she decides whether to go on, and 180 days of
   // work is a large thing to ask without saying what it earns her.
-  await sendAndLog(phone, 'text', MESSAGES.experienceCertificateNotice);
+  // Not in Dubai: the certificate is an Indian company's (26 Oct 2026).
+  if (MESSAGES.experienceCertificateNotice) {
+    await sendAndLog(phone, 'text', MESSAGES.experienceCertificateNotice);
+  }
   await sendInterestButtons(phone);
 }
 
@@ -2805,6 +2846,15 @@ async function handleExpectedDutiesConfirmation(phone, message) {
   if (action !== 'accept') {
     await sendAndLog(phone, 'text', MESSAGES.expectedDutiesRetry);
     await sendExpectedDutiesFlow(phone);
+    return;
+  }
+
+  // Dubai (26 Oct 2026): the certificate photo becomes the typed licence
+  // step, for everyone — "without a DHA licence" is answered there with a
+  // company name and staff ID. The photos are taken later in the app.
+  if (isUaeFlowActive()) {
+    await updateStatus(phone, STATUS.AWAITING_DHA_LICENCE, 8, { expectedDutiesAccepted: true });
+    await sendAndLog(phone, 'text', MESSAGES.dhaLicenceRequest);
     return;
   }
 
@@ -3083,6 +3133,93 @@ async function handleCertificate(phone, message) {
   scheduleCertificateCollectionPrompt(phone);
 }
 
+/**
+ * Dubai's proof step (26 Oct 2026): she TYPES her DHA licence number, or her
+ * company name and staff ID. A photo or document sent here is not stored or
+ * forwarded anywhere — she is asked to type the number only (the founder's
+ * text says "Do not send ID cards or your passport here"). Then the flow goes
+ * on exactly where Bengaluru's goes on after the certificate.
+ */
+async function handleDhaLicence(phone, message) {
+  const type = message && message.type;
+  if (['image', 'document', 'video', 'audio', 'sticker'].includes(type)) {
+    await appendHistory(phone, { type: 'system', event: 'uae_licence_media_refused', mediaType: type });
+    await sendAndLog(phone, 'text', MESSAGES.dhaLicenceTypeOnly);
+    await sendAndLog(phone, 'text', MESSAGES.dhaLicenceRequest);
+    return;
+  }
+
+  const parsed = getInteractiveReplyId(message) ? null : parseLicenceAnswer(getMessageText(message));
+  if (!parsed) {
+    await sendAndLog(phone, 'text', MESSAGES.dhaLicenceRequest);
+    return;
+  }
+
+  await updateProvider(phone, {
+    dhaLicenceNumber: parsed.dhaLicenceNumber || null,
+    licenceCompanyName: parsed.licenceCompanyName || null,
+    licenceStaffId: parsed.licenceStaffId || null,
+    licenceText: parsed.licenceText,
+    licenceTypedAt: new Date().toISOString()
+  });
+  await appendHistory(phone, { type: 'system', event: 'uae_licence_typed', kind: parsed.kind });
+  await finalizeCertificateCollection(phone);
+}
+
+/**
+ * Dubai's stand-in for sendForReview (26 Oct 2026): there is no certificate
+ * review — the licence is checked in the app (photos + selfie, ops review on
+ * the hub). So the details check leads straight to the terms, as a
+ * certificate approval does in Bengaluru, with the Basic rate line first for
+ * whoever is paid it. verification reads `verified` with method
+ * `uae_app_licence`, because the hub activates a completed bot onboarding
+ * only on `verified`; UAE offers stay gated on uaeLicence.status there.
+ */
+async function sendUaeToTerms(phone, options = {}) {
+  if (options.expectStatus) {
+    const current = await getProvider(phone);
+    if (!current || current.status !== options.expectStatus) {
+      return false;
+    }
+  }
+  const now = new Date().toISOString();
+  await updateStatus(phone, STATUS.AWAITING_TERMS_ACCEPTANCE, 14, {
+    ...(options.patch || {}),
+    termsSentAt: now,
+    termsReminderSentAt: null,
+    termsReminderCount: 0,
+    termsReminderKind: null,
+    termsReminderReplyReceivedAt: null,
+    termsDeclinedAt: null,
+    verification: {
+      status: 'verified',
+      method: 'uae_app_licence',
+      notes: 'UAE: licence photos are checked in the Pulso app',
+      needsCall: false,
+      reviewedAt: now,
+      reviewedBy: 'uae_app_licence'
+    }
+  });
+  if (options.historyEvent) {
+    await appendHistory(phone, { type: 'system', ...options.historyEvent });
+  }
+  await appendHistory(phone, { type: 'system', event: 'uae_terms_sent_without_certificate_review' });
+  if (options.silent) {
+    return true;
+  }
+  const provider = await getProvider(phone);
+  const line = getTermsRateFor(
+    { qualification: provider.qualification, age: provider.age, careTier: provider.careTier },
+    await getProviderTiers()
+  );
+  if (line) {
+    await sendAndLog(phone, 'text', line);
+  }
+  await sendTermsIntroIfMissing(phone, provider);
+  await sendTermsButtons(phone);
+  return true;
+}
+
 async function requestAdditionalDocument(phone, requestedBy, note) {
   const provider = await getProvider(phone);
   if (!provider) {
@@ -3183,6 +3320,7 @@ const STOP_ON_NOT_INTERESTED_STATUSES = new Set([
   STATUS.AWAITING_COOKING_PREFERENCE,
   STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE,
   STATUS.AWAITING_CERTIFICATE,
+  STATUS.AWAITING_DHA_LICENCE,
   STATUS.AWAITING_NAME,
   STATUS.AWAITING_AGE,
   STATUS.AWAITING_SEX,
@@ -3353,6 +3491,7 @@ const WELCOME_BACK_STATUSES = new Set([
   STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE,
   STATUS.AWAITING_EXPECTED_DUTIES_CONFIRMATION,
   STATUS.AWAITING_CERTIFICATE,
+  STATUS.AWAITING_DHA_LICENCE,
   STATUS.AWAITING_NAME,
   STATUS.AWAITING_AGE,
   STATUS.AWAITING_SEX,
@@ -3680,7 +3819,11 @@ async function handleLoginPhone(phone, message) {
     await sendAndLog(phone, 'text', MESSAGES.loginPhoneTypeAsk);
     return;
   } else {
-    chosen = parseIndianMobile(message);
+    // A Dubai caregiver types a UAE number (+971 5X …), kept as 9715…; an
+    // Indian one is still accepted from her, as everywhere else.
+    chosen = isUaeFlowActive()
+      ? parseUaeMobile(message) || parseIndianMobile(message)
+      : parseIndianMobile(message);
     if (!chosen) {
       await sendAndLog(phone, 'text', MESSAGES.loginPhoneRetry);
       if (!(provider && provider.loginPhoneTyping)) await sendLoginPhoneQuestion(phone);
@@ -3944,7 +4087,8 @@ async function applyQualificationEdit(phone, editing, qualification) {
     };
   }
 
-  const needsCertificate = !DETAILS_NO_UPLOAD_QUALIFICATIONS.includes(qualification);
+  // Dubai's licence does not depend on the qualification: nothing to upload.
+  const needsCertificate = !isUaeFlowActive() && !DETAILS_NO_UPLOAD_QUALIFICATIONS.includes(qualification);
   if (needsCertificate) {
     // Still editing until the new paper is in; finalizeCertificateCollection
     // brings her back to the check.
@@ -4061,6 +4205,9 @@ async function sendForReview(phone, options = {}) {
   }
   reviewSendsInFlight.add(phone);
   try {
+    if (isUaeFlowActive()) {
+      return await sendUaeToTerms(phone, options);
+    }
     if (options.expectStatus) {
       const current = await getProvider(phone);
       if (!current || current.status !== options.expectStatus) {
@@ -4532,18 +4679,18 @@ async function handleCompleted(phone, message) {
   // from the hub, so the chat and the app never disagree. Checked only after
   // onboarding is complete, because before that "certificate" means the GDA or
   // GNM certificate she was asked to upload.
-  if (isDutyDaysQuestion(message)) {
+  if (MESSAGES.experienceCertificateNotice && isDutyDaysQuestion(message)) {
     const progress = await getDutyDaysProgress(provider);
     await sendAndLog(phone, 'text', dutyDaysMessage(progress, (provider && provider.language) || 'ml'));
     return;
   }
 
   // "duty" resends the Duty Card steps; "agency" asks the question again.
-  if (isAddDutyKeyword(message)) {
+  if (MESSAGES.addDutyProcedure && isAddDutyKeyword(message)) {
     await sendAddDutyProcedure(phone, provider);
     return;
   }
-  if (isAgencyKeyword(message)) {
+  if (MESSAGES.agencyQuestion && isAgencyKeyword(message)) {
     await updateProvider(phone, {
       pulsoAppPromptStage: MOBILE_APP_STAGE_AGENCY_QUESTION,
       mobileAppCampaignStage: MOBILE_APP_STAGE_AGENCY_QUESTION,
@@ -5488,6 +5635,15 @@ async function processIncomingMessage(phone, message) {
     return;
   }
 
+  // The Dubai caregiver ad opens with "DUBAI CAREGIVER" (contract, 26 Oct
+  // 2026): region uae is chosen for her, and only the language is asked.
+  if (provider.status === STATUS.NEW && !provider.flowId && isDubaiCaregiverText(getMessageText(message))) {
+    await assignProviderFlow(phone, DEFAULT_FLOW_ID_BY_REGION.uae, 'dubai_caregiver_ad');
+    await updateStatus(phone, STATUS.AWAITING_LANGUAGE_SELECTION, 1.6);
+    await sendLanguageSelectionList(phone);
+    return;
+  }
+
   if (provider.status === STATUS.NEW) {
     await startFlow(phone);
     return;
@@ -5565,6 +5721,9 @@ async function processIncomingMessage(phone, message) {
       return;
     case STATUS.AWAITING_CERTIFICATE:
       await handleCertificate(phone, message);
+      return;
+    case STATUS.AWAITING_DHA_LICENCE:
+      await handleDhaLicence(phone, message);
       return;
     case STATUS.AWAITING_NAME:
       await handleName(phone, message);

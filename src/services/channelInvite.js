@@ -22,7 +22,8 @@ function channelInviteText() {
 /** Kerala only; never twice. */
 function shouldSendChannelInvite(provider = {}) {
   if (!channelUrl()) return false;
-  if (String(provider.region || '').toLowerCase() === 'karnataka') return false;
+  const region = String(provider.region || '').toLowerCase();
+  if (region === 'karnataka' || region === 'uae') return false;
   return !provider.channelInviteSentAt;
 }
 

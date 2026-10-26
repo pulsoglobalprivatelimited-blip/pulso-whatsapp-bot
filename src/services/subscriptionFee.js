@@ -48,6 +48,9 @@ function settings() {
 /** Whether this caregiver pays. Decided once: a record with `required` wins. */
 function feeAppliesTo(provider, now = Date.now(), s = settings()) {
   if (!provider) return false;
+  // Never in the UAE (contract, 26 Oct 2026): not by config, not by a stray
+  // `required` on the record. The fee is an India-only thing.
+  if (inferProviderRegion(provider) === 'uae') return false;
   const fee = provider.subscriptionFee;
   if (fee && typeof fee === 'object') {
     if (fee.exempt === true) return false;

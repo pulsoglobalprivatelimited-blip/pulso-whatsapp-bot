@@ -49,6 +49,7 @@ const QUALIFICATION_LABEL = {
 const REGION_LABEL = {
   kerala: 'Kerala',
   karnataka: 'Karnataka',
+  uae: 'Dubai',
 };
 
 // The words the existing hand-entered names use: Nurse rather than BSc Nursing,
