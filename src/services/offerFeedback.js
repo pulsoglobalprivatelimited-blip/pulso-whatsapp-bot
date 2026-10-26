@@ -160,24 +160,17 @@ function decide(record, message, nowMs) {
   return null;
 }
 
+/* Her Pulso profile. The bot may not write pulso-hub users directly
+   (PERMISSION_DENIED, seen live 26 Oct), and the bot→hub sync carries a fixed
+   list of fields: dutyHourPreference is on it, the feedback answers are not.
+   So the 8-hour answer goes through the sync; the answers stay here (inbox
+   filter) until the hub accepts them. */
 async function saveToHub(phone, hubPatch, dutyHours) {
-  if (!hubPatch && !dutyHours) return;
-  const { getHubFirestore } = require('./hubStorage');
-  const db = getHubFirestore();
-  const local = phone.slice(-10);
-  const candidates = [`+91${local}`, `91${local}`, local];
-  let ref = null;
-  for (const field of ['phoneE164', 'phone']) {
-    for (const value of candidates) {
-      const snap = await db.collection('users').where(field, '==', value).limit(1).get();
-      if (!snap.empty) { ref = snap.docs[0].ref; break; }
-    }
-    if (ref) break;
-  }
-  if (!ref) return;
-  const update = { offerFeedback: { ...(hubPatch || {}), source: 'whatsapp_offer_feedback', updatedAt: new Date().toISOString() } };
-  if (dutyHours) update.dutyHourPreference = dutyHours;
-  await ref.set(update, { merge: true });
+  if (!dutyHours) return;
+  const { updateProvider } = require('./providerService');
+  const { syncProviderToPulsoHub } = require('./pulsoHubSyncService');
+  const provider = await updateProvider(phone, { dutyHourPreference: dutyHours });
+  if (provider) await syncProviderToPulsoHub(provider);
 }
 
 async function alertTeam(phone, record) {
