@@ -71,7 +71,17 @@ function photoReviewCourseLabel(qualification) {
  * carry the caregiver's phone. Outside the 24-hour window only a template
  * delivers, and the reviewer is usually outside it.
  */
+// The UAE sandbox (+971 50 000 01xx). India's sandbox numbers keep their
+// alerts, as the reviewers' own tests expect.
+function isSandboxProvider(provider) {
+  return Boolean(provider) && /^9715000001\d{2}$/.test(String(provider.phone || '').replace(/\D/g, ''));
+}
+
 async function notifyProfilePhotoReview(provider) {
+  // Sandbox numbers never reach the real reviewers' WhatsApp (27 Oct 2026).
+  if (isSandboxProvider(provider)) {
+    return { sent: false, recipients: [], attempts: [], skipped: 'test_identity' };
+  }
   const photo = provider && provider.profilePhoto;
   const link = photo && photo.cloudStorageUrl;
   const providerPhone = normalizePhone(provider && provider.phone);
@@ -1048,6 +1058,10 @@ async function sendAdditionalDocumentMedia(provider, attachment) {
 }
 
 async function notifyCertificateUploaded(provider, attachments) {
+  // Sandbox numbers never reach the real reviewers' WhatsApp (27 Oct 2026).
+  if (isSandboxProvider(provider)) {
+    return { sent: false, recipients: [], attempts: [], skipped: 'test_identity' };
+  }
   // Someone who picked "No certificate" sent nothing to look at: the reviewer
   // has to ring her, then approve (as Basic) or reject. Say so up front, or the
   // alert opens with "certificate uploaded" over an empty card.
@@ -1338,6 +1352,10 @@ async function notifyNoCertificateApplication(provider, recipients, options = {}
 }
 
 async function notifyCertificateReviewed(provider, decision, reviewedBy, notes) {
+  // Sandbox numbers never reach the real reviewers' WhatsApp (27 Oct 2026).
+  if (isSandboxProvider(provider)) {
+    return { sent: false, recipients: [], attempts: [], skipped: 'test_identity' };
+  }
   const body = joinLines([
     `Pulso alert: certificate ${decision}`,
     ...formatProviderSummary(provider),
@@ -1349,6 +1367,10 @@ async function notifyCertificateReviewed(provider, decision, reviewedBy, notes) 
 }
 
 async function notifyAdditionalDocumentRequested(provider, requestedBy, note) {
+  // Sandbox numbers never reach the real reviewers' WhatsApp (27 Oct 2026).
+  if (isSandboxProvider(provider)) {
+    return { sent: false, recipients: [], attempts: [], skipped: 'test_identity' };
+  }
   const body = joinLines([
     'Pulso alert: additional document requested',
     ...formatProviderSummary(provider),
@@ -1360,6 +1382,10 @@ async function notifyAdditionalDocumentRequested(provider, requestedBy, note) {
 }
 
 async function notifyAdditionalDocumentUploaded(provider, attachment, request) {
+  // Sandbox numbers never reach the real reviewers' WhatsApp (27 Oct 2026).
+  if (isSandboxProvider(provider)) {
+    return { sent: false, recipients: [], attempts: [], skipped: 'test_identity' };
+  }
   const to = getCertificateReviewPhone();
   const body = joinLines([
     'Pulso alert: requested additional document uploaded',
@@ -1414,6 +1440,10 @@ function uaeLicenceLine(provider) {
 }
 
 async function notifyOnboardingCompleted(provider) {
+  // Sandbox numbers never reach the real reviewers' WhatsApp (27 Oct 2026).
+  if (isSandboxProvider(provider)) {
+    return { sent: false, recipients: [], attempts: [], skipped: 'test_identity' };
+  }
   const contactLink = buildProviderContactLink(provider && provider.phone);
   // Dubai (founder, 27 Oct 2026): the WhatsApp steps are not the end - the
   // licence is checked in the app. Say so, and no Save contact link until ops
@@ -1453,6 +1483,10 @@ async function notifyOnboardingCompleted(provider) {
 // Dubai: ops approved the licence in the app. Now she is complete, and the
 // Save contact link that India gets at the end of WhatsApp goes out here.
 async function notifyUaeLicenceApproved(provider) {
+  // Sandbox numbers never reach the real reviewers' WhatsApp (27 Oct 2026).
+  if (isSandboxProvider(provider)) {
+    return { sent: false, recipients: [], attempts: [], skipped: 'test_identity' };
+  }
   const contactLink = buildProviderContactLink(provider && provider.phone);
   const body = joinLines([
     'Pulso alert: Dubai caregiver onboarding completed (licence approved)',
@@ -1467,6 +1501,10 @@ async function notifyUaeLicenceApproved(provider) {
 }
 
 async function notifyAgentHelpRequested(provider) {
+  // Sandbox numbers never reach the real reviewers' WhatsApp (27 Oct 2026).
+  if (isSandboxProvider(provider)) {
+    return { sent: false, recipients: [], attempts: [], skipped: 'test_identity' };
+  }
   const helpNumber = normalizePhone(config.agentHelpWhatsappNumber);
   const backupHelpNumber = normalizePhone(config.secondaryNotificationPhone);
   const recipients = [

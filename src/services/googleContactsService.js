@@ -208,7 +208,9 @@ function phoneKey(value) {
 // through the whole onboarding, including completion. They are not people and
 // must never land in the ops phone book.
 function isTestIdentity(phone) {
-  return /^(91)?(9000000|8000000)\d{3}$/.test(String(phone || '').replace(/\D/g, ''));
+  const digits = String(phone || '').replace(/\D/g, '');
+  // UAE sandbox (27 Oct 2026): +971 50 000 01xx, OTP 123456.
+  return /^(91)?(9000000|8000000)\d{3}$/.test(digits) || /^9715000001\d{2}$/.test(digits);
 }
 
 // The ops account already held 644 hand-entered contacts before the backfill

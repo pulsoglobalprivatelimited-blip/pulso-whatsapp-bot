@@ -67,3 +67,13 @@ describe('documents review texts (27 Oct 2026)', () => {
     assert.match(reviewedMessage('approve', { name: 'Rini', area: 'Al Qusais', kind: 'emirates_id' }), /You are verified, Rini/);
   });
 });
+
+describe('UAE sandbox is a test identity (27 Oct 2026)', () => {
+  const { isTestIdentity } = require('../src/services/googleContactsService');
+  it('+971 50 000 01xx is never saved as a contact; real UAE numbers are', () => {
+    assert.strictEqual(isTestIdentity('971500000101'), true);
+    assert.strictEqual(isTestIdentity('+971 50 000 0199'), true);
+    assert.strictEqual(isTestIdentity('971542498583'), false);
+    assert.strictEqual(isTestIdentity('919000000144'), true);
+  });
+});

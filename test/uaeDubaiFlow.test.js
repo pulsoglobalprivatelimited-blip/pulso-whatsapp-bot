@@ -402,3 +402,16 @@ test('app reminders: 2 hours after Accept (links), 22 hours after (Need help); n
   const legacy = at(STATUS.COMPLETED, { completedAt: new Date(done).toISOString(), verification: { status: 'verified', method: 'uae_app_licence' } });
   assert.equal(bot.uaeReminderDue(records.get(legacy), done + 3 * 3600e3), null, 'old app-licence records left alone');
 });
+
+test('the UAE sandbox (+971 50 000 01xx) never alerts the real reviewers', async () => {
+  const phone = '971500000101';
+  records.set(phone, { ...blank(phone), region: 'uae', flowId: 'uae_english', language: 'en', status: STATUS.AWAITING_LOGIN_PHONE,
+    qualification: 'hca', age: 30, fullName: 'TEST', sex: 'Female', district: 'Deira', emirate: 'Dubai', interestConfirmed: true,
+    documents: { certificateAttachments: [{ id: 'c1', cloudArchived: true, cloudStorageUrl: 'https://x/c1' }] },
+    history: [{ at: new Date().toISOString(), type: 'inbound_message', payload: {} }] });
+  await say(phone, button(BUTTON_IDS.LOGIN_PHONE_SAME));
+  sent.length = 0;
+  await say(phone, button(BUTTON_IDS.DETAILS_CORRECT));
+  assert.equal(records.get(phone).status, STATUS.VERIFICATION_PENDING);
+  assert.equal(sent.filter((m) => m.to !== phone).length, 0, 'nothing to the reviewers');
+});
