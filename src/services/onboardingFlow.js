@@ -5574,6 +5574,31 @@ async function handleReviewerMessage(phone, message) {
   await sendText(phone, 'Review command not recognized. Use the Approve/Reject button or send APPROVE <provider-phone>.');
 }
 
+function dubaiCaregiverAdIds() {
+  return String(process.env.UAE_CAREGIVER_AD_IDS || '').split(',').map((v) => v.trim()).filter(Boolean);
+}
+
+function referralSourceOf(entry) {
+  const m = entry && (entry.message || entry);
+  return m && m.referral ? String(m.referral.source_id || m.referral.sourceId || '') : '';
+}
+
+/**
+ * Whether this message puts her in the Dubai flow: she has no region and no
+ * flow yet (new, or still at the region list), and this message - or an
+ * earlier one in her chat - carries the Dubai caregiver ad tag, or she typed
+ * "DUBAI CAREGIVER".
+ */
+function shouldEnterDubaiFlow(provider, message) {
+  if (!provider || provider.flowId || provider.region) return false;
+  if (provider.status !== STATUS.NEW && provider.status !== STATUS.AWAITING_REGION_SELECTION) return false;
+  if (isDubaiCaregiverText(getMessageText(message))) return true;
+  const ids = dubaiCaregiverAdIds();
+  if (!ids.length) return false;
+  if (ids.includes(referralSourceOf(message))) return true;
+  return (provider.history || []).some((h) => h && h.type === 'inbound_message' && ids.includes(referralSourceOf(h.payload)));
+}
+
 async function processIncomingMessage(phone, message) {
   // A tap on a duty broadcast (I'm interested / Not now) is handled there and
   // goes only to the duty-interest number; typed words fall through.
@@ -5625,6 +5650,20 @@ async function processIncomingMessage(phone, message) {
     console.error('[JOB_BOARD_SOURCE_ERROR]', error.message);
   }
 
+  // The Dubai caregiver ad opens with "DUBAI CAREGIVER" (contract, 26 Oct
+  // 2026): region uae is chosen for her, and only the language is asked.
+  // 27 Oct 2026: checked BEFORE the region step. A caregiver who typed her own
+  // line ("Kindly find my CV") a second before the ad's tagged message got the
+  // Kerala/Karnataka list and was stuck there with no Dubai option. Now the
+  // Dubai tag counts on any message - or from earlier in the chat - until she
+  // has a region or a flow; a caregiver partway through India is never moved.
+  if (shouldEnterDubaiFlow(provider, message)) {
+    await assignProviderFlow(phone, DEFAULT_FLOW_ID_BY_REGION.uae, 'dubai_caregiver_ad');
+    await updateStatus(phone, STATUS.AWAITING_LANGUAGE_SELECTION, 1.6);
+    await sendLanguageSelectionList(phone);
+    return;
+  }
+
   if (provider.status === STATUS.AWAITING_REGION_SELECTION) {
     await handleRegionSelection(phone, message);
     return;
@@ -5632,17 +5671,6 @@ async function processIncomingMessage(phone, message) {
 
   if (provider.status === STATUS.AWAITING_LANGUAGE_SELECTION) {
     await handleLanguageSelection(phone, message);
-    return;
-  }
-
-  // The Dubai caregiver ad opens with "DUBAI CAREGIVER" (contract, 26 Oct
-  // 2026): region uae is chosen for her, and only the language is asked.
-  const dubaiAdIds = String(process.env.UAE_CAREGIVER_AD_IDS || '').split(',').map((v) => v.trim()).filter(Boolean);
-  const fromDubaiAd = Boolean(message && message.referral && dubaiAdIds.includes(String(message.referral.source_id || '')));
-  if (provider.status === STATUS.NEW && !provider.flowId && (fromDubaiAd || isDubaiCaregiverText(getMessageText(message)))) {
-    await assignProviderFlow(phone, DEFAULT_FLOW_ID_BY_REGION.uae, 'dubai_caregiver_ad');
-    await updateStatus(phone, STATUS.AWAITING_LANGUAGE_SELECTION, 1.6);
-    await sendLanguageSelectionList(phone);
     return;
   }
 
@@ -6103,6 +6131,7 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
 }
 
 module.exports = {
+  shouldEnterDubaiFlow,
   runStillAvailableForInactiveProviders,
   handleProfilePhotoFromApp,
   markNeedsCall,
