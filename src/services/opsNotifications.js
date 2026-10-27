@@ -1382,15 +1382,43 @@ async function notifyAdditionalDocumentUploaded(provider, attachment, request) {
   return null;
 }
 
+function isUaeRegion(provider) {
+  return String((provider && provider.region) || '').toLowerCase() === 'uae';
+}
+
+function onboardingRecipients() {
+  return [
+    getCertificateReviewPhone(),
+    normalizePhone(config.secondaryNotificationPhone)
+  ].filter(Boolean)
+    .filter((phone, index, list) => list.indexOf(phone) === index);
+}
+
+function uaeLicenceLine(provider) {
+  const typed = String((provider && provider.licenceText) || '').trim();
+  return `Licence answer: ${typed || '-'}`;
+}
+
 async function notifyOnboardingCompleted(provider) {
   const contactLink = buildProviderContactLink(provider && provider.phone);
-  const body = joinLines([
-    'Pulso alert: onboarding completed',
-    ...formatProviderSummary(provider),
-    // Dropped rather than sent empty when there is no base URL configured, so a
-    // misconfigured environment never puts a dead link in front of the reviewer.
-    ...(contactLink ? [`Save contact: ${contactLink}`] : [])
-  ]);
+  // Dubai (founder, 27 Oct 2026): the WhatsApp steps are not the end - the
+  // licence is checked in the app. Say so, and no Save contact link until ops
+  // approve (notifyUaeLicenceApproved sends it then).
+  const uae = isUaeRegion(provider);
+  const body = joinLines(uae
+    ? [
+      'Pulso alert: Dubai caregiver finished WhatsApp steps',
+      'NOT complete yet: must sign in to the Pulso app and send licence photo + selfie. Ops approves in the app.',
+      ...formatProviderSummary(provider),
+      uaeLicenceLine(provider)
+    ]
+    : [
+      'Pulso alert: onboarding completed',
+      ...formatProviderSummary(provider),
+      // Dropped rather than sent empty when there is no base URL configured, so a
+      // misconfigured environment never puts a dead link in front of the reviewer.
+      ...(contactLink ? [`Save contact: ${contactLink}`] : [])
+    ]);
 
   const recipients = [
     getCertificateReviewPhone(),
@@ -1402,6 +1430,22 @@ async function notifyOnboardingCompleted(provider) {
     await sendNotificationTo(recipient, body, 'OPS_ONBOARDING_COMPLETED_ERROR');
   }
 
+  return null;
+}
+
+// Dubai: ops approved the licence in the app. Now she is complete, and the
+// Save contact link that India gets at the end of WhatsApp goes out here.
+async function notifyUaeLicenceApproved(provider) {
+  const contactLink = buildProviderContactLink(provider && provider.phone);
+  const body = joinLines([
+    'Pulso alert: Dubai caregiver onboarding completed (licence approved)',
+    ...formatProviderSummary(provider),
+    uaeLicenceLine(provider),
+    ...(contactLink ? [`Save contact: ${contactLink}`] : [])
+  ]);
+  for (const recipient of onboardingRecipients()) {
+    await sendNotificationTo(recipient, body, 'OPS_UAE_LICENCE_APPROVED_ERROR');
+  }
   return null;
 }
 
@@ -1962,6 +2006,7 @@ module.exports = {
   requestCallBasicDecision,
   notifyCertificateReviewed,
   notifyOnboardingCompleted,
+  notifyUaeLicenceApproved,
   parseReviewerAction,
   notifyProfilePhotoReview,
   photoReviewCourseLabel,

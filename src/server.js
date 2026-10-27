@@ -763,7 +763,9 @@ app.post('/internal/uae-licence-reviewed', require('./services/uaeLicence').uaeL
   const { sendText, sendTemplate } = require('./services/metaClient');
   const { getProvider, updateProvider, appendHistory } = require('./services/providerService');
   const { isWithinWhatsappReplyWindow } = require('./services/onboardingFlow');
-  return { getProvider, updateProvider, appendHistory, sendText, sendTemplate, isWithinWhatsappReplyWindow };
+  const { saveProviderContact } = require('./services/googleContactsService');
+  const { notifyUaeLicenceApproved } = require('./services/opsNotifications');
+  return { getProvider, updateProvider, appendHistory, sendText, sendTemplate, isWithinWhatsappReplyWindow, saveProviderContact, notifyUaeLicenceApproved };
 }));
 
 app.get('/internal/duty-broadcast/:id', async (req, res) => {

@@ -164,6 +164,13 @@ async function handleLicenceReviewed(body, deps) {
     }
   }
 
+  // Approved = complete (founder, 27 Oct 2026). Only now does she go in the
+  // ops phone book and only now do ops get the Save contact link. Never fails
+  // the review: a contact that did not save is recorded, not raised.
+  if (provider && reviewed.action === 'approve') {
+    await afterApproval(reviewed.phone, deps);
+  }
+
   if (provider) {
     await deps.appendHistory(reviewed.phone, {
       type: 'outbound_message',
@@ -181,6 +188,35 @@ async function handleLicenceReviewed(body, deps) {
     ...(delivered === 'none' ? { reason: error ? error.message : 'outside_whatsapp_window' } : {}),
     text
   };
+}
+
+async function afterApproval(phone, deps) {
+  const fresh = await deps.getProvider(phone);
+  if (typeof deps.saveProviderContact === 'function') {
+    try {
+      const r = await deps.saveProviderContact(fresh);
+      await deps.updateProvider(phone, {
+        contactSync: {
+          status: r.ok ? 'saved' : r.skipped ? 'skipped' : 'failed',
+          skipped: r.skipped === true,
+          reason: r.reason || '',
+          savedAt: new Date().toISOString(),
+          resourceName: r.resourceName || '',
+          name: r.name || ''
+        }
+      });
+      await deps.appendHistory(phone, { type: 'system', event: r.ok ? 'google_contact_saved' : 'google_contact_skipped', details: { reason: r.reason || '', name: r.name || '' } });
+    } catch (error) {
+      console.error('[UAE_CONTACT_SAVE_ERROR]', phone, error.message);
+    }
+  }
+  if (typeof deps.notifyUaeLicenceApproved === 'function') {
+    try {
+      await deps.notifyUaeLicenceApproved(await deps.getProvider(phone));
+    } catch (error) {
+      console.error('[UAE_APPROVED_ALERT_ERROR]', phone, error.message);
+    }
+  }
 }
 
 /**

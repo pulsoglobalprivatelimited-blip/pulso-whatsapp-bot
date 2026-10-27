@@ -302,6 +302,12 @@ async function getAccessToken() {
 // Never throws for a configuration or API problem: a contact that failed to
 // save must not hold up a caregiver's onboarding. The caller records the reason
 // and the backfill script can retry later.
+function isAwaitingUaeLicence(provider) {
+  if (String((provider && provider.region) || '').toLowerCase() !== 'uae') return false;
+  const review = provider.uaeLicenceReview;
+  return !(review && review.action === 'approve');
+}
+
 async function saveProviderContact(provider, options = {}) {
   if (!provider || !provider.phone) {
     return { ok: false, skipped: true, reason: 'missing_provider' };
@@ -317,6 +323,14 @@ async function saveProviderContact(provider, options = {}) {
 
   if (isTestIdentity(provider.phone)) {
     return { ok: false, skipped: true, reason: 'test_identity' };
+  }
+
+  // Dubai (founder, 27 Oct 2026): a Dubai caregiver is not complete when the
+  // WhatsApp steps end - her licence photos are checked in the app. Her
+  // contact is saved only after ops approve the licence (uaeLicenceReview
+  // approve, written by /internal/uae-licence-reviewed). Covers the backfill too.
+  if (isAwaitingUaeLicence(provider)) {
+    return { ok: false, skipped: true, reason: 'uae_awaiting_licence_approval' };
   }
 
   // Already in the phone book by hand. Record that entry as ours rather than
@@ -384,6 +398,7 @@ async function saveProviderContact(provider, options = {}) {
 
 module.exports = {
   saveProviderContact,
+  isAwaitingUaeLicence,
   listExistingContactsByPhone,
   indexConnectionsByPhone,
   phoneKey,
