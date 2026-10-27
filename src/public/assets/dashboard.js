@@ -752,7 +752,7 @@ function formatDutyHourPreference(value) {
 
 function normalizeQualification(value) {
   const normalized = String(value || '').trim().toLowerCase();
-  const validQualifications = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving', 'basic_caregiver', 'no_certificate', 'nursing_student'];
+  const validQualifications = ['gda', 'gnm', 'anm', 'hca', 'cna', 'bsc_nursing', 'other_caregiving', 'basic_caregiver', 'no_certificate', 'nursing_student'];
   return validQualifications.includes(normalized) ? normalized : '';
 }
 
@@ -761,6 +761,7 @@ function formatQualification(value) {
   if (value === 'gnm') return 'GNM';
   if (value === 'anm') return 'ANM';
   if (value === 'hca') return 'HCA';
+  if (value === 'cna') return 'CNA';
   if (value === 'bsc_nursing') return 'BSc Nursing';
   if (value === 'other_caregiving') return 'Other caregiving';
   if (value === 'basic_caregiver') return 'Basic caregiver';

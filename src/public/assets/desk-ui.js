@@ -42,6 +42,7 @@
     gnm: 'GNM',
     anm: 'ANM',
     hca: 'HCA',
+    cna: 'CNA',
     bsc_nursing: 'BSc Nursing',
     other_caregiving: 'Other caregiving',
     basic_caregiver: 'Basic caregiver',

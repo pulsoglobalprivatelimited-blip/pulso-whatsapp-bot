@@ -87,6 +87,8 @@ const BUTTON_IDS = {
   QUALIFICATION_GNM: 'qualification_gnm',
   QUALIFICATION_ANM: 'qualification_anm',
   QUALIFICATION_HCA: 'qualification_hca',
+  // UAE only (founder, 27 Oct 2026): Certified Nursing Assistant, GDA band.
+  QUALIFICATION_CNA: 'qualification_cna',
   QUALIFICATION_BSC_NURSING: 'qualification_bsc_nursing',
   QUALIFICATION_OTHER_CAREGIVING: 'qualification_other_caregiving',
   QUALIFICATION_NO_CERTIFICATE: 'qualification_no_certificate',
@@ -1548,6 +1550,8 @@ function dubaiMessages(base, language) {
     certificateRetry: withEmiratesIdLine(base.certificateRetry, language),
     certificateRetryNamed: withEmiratesIdLine(base.certificateRetryNamed, language),
     certificateApproved: firstParagraph(base.certificateApproved),
+    certificatePapers: { ...(base.certificatePapers || {}), cna: CNA_CERTIFICATE_PAPER[en ? 'en' : 'ml'] },
+    qualificationRetry: swapExact(base.qualificationRetry, 'HCA /', 'HCA / CNA /'),
     certificateApprovedBasic: base.certificateApprovedBasic,
     visaQuestion: plan.visaQuestion,
     visaRetry: plan.visaRetry,
@@ -1612,6 +1616,26 @@ function dubaiMessages(base, language) {
       : 'താങ്കൾ Pulso app-ൽ sign in ചെയ്തു.\n\nആദ്യ duty-ക്ക് മുൻപ് app-ൽ Emirates ID-യും ഒരു selfie-യും ചേർക്കുക. ഞങ്ങൾ പരിശോധിച്ച് 1 ദിവസത്തിനുള്ളിൽ മറുപടി നൽകും.\n\nദയവായി app notifications on ആക്കി വയ്ക്കുക.'
   };
 }
+
+/* CNA (Certified Nursing Assistant) is a UAE qualification only (founder,
+   27 Oct 2026). It sits in the GDA band: not Basic, not a nurse. The UAE lists
+   are the India lists with one CNA row after HCA; Kerala and Bengaluru never
+   see it. WhatsApp allows 10 rows in a list. */
+const CNA_ROW = { id: BUTTON_IDS.QUALIFICATION_CNA, title: 'CNA', description: 'Certified Nursing Assistant' };
+function withCnaRow(list) {
+  const out = [];
+  for (const row of list) {
+    out.push(row);
+    if (row.id === BUTTON_IDS.QUALIFICATION_HCA) out.push(CNA_ROW);
+  }
+  return out;
+}
+const UAE_QUALIFICATIONS = withCnaRow(QUALIFICATIONS);
+const UAE_ENGLISH_QUALIFICATIONS = withCnaRow(ENGLISH_QUALIFICATIONS);
+const CNA_CERTIFICATE_PAPER = {
+  en: 'CNA (Certified Nursing Assistant) certificate',
+  ml: 'CNA (Certified Nursing Assistant) certificate'
+};
 
 const UAE_ENGLISH_MESSAGES = dubaiMessages(KARNATAKA_MESSAGES, 'en');
 const UAE_MALAYALAM_MESSAGES = dubaiMessages(KARNATAKA_MALAYALAM_MESSAGES, 'ml');
@@ -1689,7 +1713,7 @@ const FLOWS = {
     currency: 'AED',
     workingModelMarkers: UAE_WORKING_MODEL_MARKERS.ml,
     MESSAGES: UAE_MALAYALAM_MESSAGES,
-    QUALIFICATIONS,
+    QUALIFICATIONS: UAE_QUALIFICATIONS,
     DISTRICTS: UAE_DISTRICTS,
     EMIRATE_DISTRICTS: UAE_EMIRATE_DISTRICTS,
     UI_TEXT: UAE_MALAYALAM_UI_TEXT
@@ -1701,7 +1725,7 @@ const FLOWS = {
     currency: 'AED',
     workingModelMarkers: UAE_WORKING_MODEL_MARKERS.en,
     MESSAGES: UAE_ENGLISH_MESSAGES,
-    QUALIFICATIONS: ENGLISH_QUALIFICATIONS,
+    QUALIFICATIONS: UAE_ENGLISH_QUALIFICATIONS,
     DISTRICTS: UAE_DISTRICTS,
     EMIRATE_DISTRICTS: UAE_EMIRATE_DISTRICTS,
     UI_TEXT: UAE_ENGLISH_UI_TEXT

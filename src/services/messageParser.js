@@ -80,6 +80,7 @@ function parseQualification(message) {
   if (replyId === BUTTON_IDS.QUALIFICATION_GNM) return 'gnm';
   if (replyId === BUTTON_IDS.QUALIFICATION_ANM) return 'anm';
   if (replyId === BUTTON_IDS.QUALIFICATION_HCA) return 'hca';
+  if (replyId === BUTTON_IDS.QUALIFICATION_CNA) return 'cna';
   if (replyId === BUTTON_IDS.QUALIFICATION_BSC_NURSING) return 'bsc_nursing';
   if (replyId === BUTTON_IDS.QUALIFICATION_OTHER_CAREGIVING) return 'other_caregiving';
   if (replyId === BUTTON_IDS.QUALIFICATION_NO_CERTIFICATE) return 'no_certificate';
@@ -102,6 +103,8 @@ function parseQualification(message) {
   if (normalized.includes('gnm')) return 'gnm';
   if (normalized.includes('anm')) return 'anm';
   if (normalized.includes('hca')) return 'hca';
+  // CNA is UAE-only; onboardingFlow drops it outside a UAE flow.
+  if (/\bcna\b/.test(normalized) || normalized.includes('certified nursing assistant')) return 'cna';
   if (normalized.includes('bsc nursing') || normalized.includes('b.sc nursing')) return 'bsc_nursing';
   if (
     normalized.includes('caregiving') ||

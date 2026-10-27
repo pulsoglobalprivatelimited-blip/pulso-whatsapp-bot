@@ -365,7 +365,7 @@ function getStepForStatus(status) {
 
 function normalizeApprovedQualification(value) {
   const normalized = String(value || '').trim().toLowerCase();
-  const validQualifications = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving', 'basic_caregiver', 'nursing_student'];
+  const validQualifications = ['gda', 'gnm', 'anm', 'hca', 'cna', 'bsc_nursing', 'other_caregiving', 'basic_caregiver', 'nursing_student'];
   return validQualifications.includes(normalized) ? normalized : null;
 }
 
@@ -2756,7 +2756,9 @@ async function sendPromptForCurrentStatus(phone, provider) {
 }
 
 async function handleQualification(phone, message) {
-  const qualification = parseQualification(message);
+  const parsed = parseQualification(message);
+  // CNA is a UAE qualification only (founder, 27 Oct 2026).
+  const qualification = parsed === 'cna' && !isUaeFlowActive() ? null : parsed;
   const editing = await detailsEditFor(phone, 'qualification');
   if (editing) {
     // A typed "no" here is not a refusal to go on: she is changing an answer.

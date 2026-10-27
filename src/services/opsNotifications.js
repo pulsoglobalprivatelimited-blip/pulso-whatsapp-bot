@@ -58,7 +58,7 @@ const PROFILE_PHOTO_REVIEW_TEMPLATE = process.env.PROFILE_PHOTO_REVIEW_TEMPLATE 
 function photoReviewCourseLabel(qualification) {
   const q = String(qualification || '').trim().toLowerCase();
   const labels = {
-    gda: 'GDA', gnm: 'GNM', anm: 'ANM', hca: 'HCA', bsc_nursing: 'BSc Nursing',
+    gda: 'GDA', gnm: 'GNM', anm: 'ANM', hca: 'HCA', cna: 'CNA', bsc_nursing: 'BSc Nursing',
     other_caregiving: 'Other caregiving course', basic_caregiver: 'Basic caregiver',
     no_certificate: 'No certificate', nursing_student: 'Nursing student'
   };
@@ -128,6 +128,15 @@ const BASIC_REASON_BUTTONS = [
 // basic_caregiver: no formal certificate, taken on for practical experience.
 // Chosen by the reviewer looking at the upload, never offered to the candidate.
 const APPROVABLE_QUALIFICATIONS = ['gda', 'gnm', 'anm', 'hca', 'bsc_nursing', 'other_caregiving', 'basic_caregiver'];
+// CNA is UAE-only (founder, 27 Oct 2026): the reviewer sees it after HCA for a
+// UAE caregiver and never for Kerala or Bengaluru. Replies are matched against
+// both, so a CNA tap is always understood.
+const UAE_APPROVABLE_QUALIFICATIONS = ['gda', 'gnm', 'anm', 'hca', 'cna', 'bsc_nursing', 'other_caregiving', 'basic_caregiver'];
+
+function approvableQualificationsFor(provider) {
+  const { inferProviderRegion } = require('./regionService');
+  return inferProviderRegion(provider || {}) === 'uae' ? UAE_APPROVABLE_QUALIFICATIONS : APPROVABLE_QUALIFICATIONS;
+}
 
 function normalizePhone(value) {
   return String(value || '').replace(/\D/g, '');
@@ -533,7 +542,7 @@ function buildConfirmationButtons(providerPhone, action) {
 
 function normalizeQualification(value) {
   const normalized = String(value || '').trim().toLowerCase();
-  return APPROVABLE_QUALIFICATIONS.includes(normalized) ? normalized : null;
+  return UAE_APPROVABLE_QUALIFICATIONS.includes(normalized) ? normalized : null;
 }
 
 function formatQualification(value) {
@@ -541,6 +550,7 @@ function formatQualification(value) {
   if (value === 'gnm') return 'GNM';
   if (value === 'anm') return 'ANM';
   if (value === 'hca') return 'HCA';
+  if (value === 'cna') return 'CNA';
   if (value === 'bsc_nursing') return 'BSc Nursing';
   if (value === 'other_caregiving') return 'Other caregiving';
   if (value === 'basic_caregiver') return 'Basic caregiver';
@@ -549,8 +559,8 @@ function formatQualification(value) {
   return value ? formatStatus(value) : '-';
 }
 
-function buildApproveQualificationRows(providerPhone) {
-  return APPROVABLE_QUALIFICATIONS.map((qualification) => ({
+function buildApproveQualificationRows(providerPhone, provider = null) {
+  return approvableQualificationsFor(provider).map((qualification) => ({
     id: `${REVIEW_ACTIONS.APPROVE_QUALIFICATION}${qualification}_${providerPhone}`,
     title: formatQualification(qualification)
   }));
@@ -1564,7 +1574,7 @@ async function requestReviewQualificationSelection(provider, reviewerPhone) {
     return await sendList(to, body, 'Select qualification', [
       {
         title: 'Approved qualification',
-        rows: buildApproveQualificationRows(provider.phone)
+        rows: buildApproveQualificationRows(provider.phone, provider)
       }
     ]);
   } catch (error) {
@@ -1848,7 +1858,7 @@ function parseReviewerAction(message) {
 
   if (interactiveReplyId && interactiveReplyId.startsWith(REVIEW_ACTIONS.APPROVE_QUALIFICATION)) {
     const value = interactiveReplyId.slice(REVIEW_ACTIONS.APPROVE_QUALIFICATION.length);
-    const qualification = APPROVABLE_QUALIFICATIONS.find((item) => value.startsWith(`${item}_`));
+    const qualification = UAE_APPROVABLE_QUALIFICATIONS.find((item) => value.startsWith(`${item}_`));
 
     if (qualification) {
       return {
@@ -2071,5 +2081,6 @@ module.exports = {
   requestRejectNoteOrConfirmation,
   requestRejectReason,
   requestReviewQualificationSelection,
+  buildApproveQualificationRows,
   requestReviewConfirmation
 };
