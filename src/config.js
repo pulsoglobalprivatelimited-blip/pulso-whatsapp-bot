@@ -189,6 +189,17 @@ module.exports = {
   // approved template reaches her. Empty = no template exists yet; the send is
   // tried as text and a closed window is reported back to the hub.
   uaeLicenceReviewedTemplateName: process.env.UAE_LICENCE_REVIEWED_TEMPLATE || '',
+  // 7-day free trial (founder, 24 Oct 2026): a new joiner is marked `trial`
+  // at Accept; the hub starts the clock at her first app sign-in and locks
+  // the offer inbox when it runs out, telling this bot on both. Reminders at
+  // these hours after the start (2 days left, 1 day left), and one "trial
+  // over" message after the lock. The two templates are NOT approved yet:
+  // nothing is sent until the flag is on (the app shows the countdown).
+  subscriptionFeeTrialDays: Number(process.env.SUBSCRIPTION_FEE_TRIAL_DAYS || 7),
+  subscriptionFeeTrialReminderHours: process.env.SUBSCRIPTION_FEE_TRIAL_REMINDER_HOURS || '120,144',
+  subscriptionFeeTrialReminderTemplateName: process.env.SUBSCRIPTION_FEE_TRIAL_REMINDER_TEMPLATE_NAME || 'provider_fee_trial_reminder',
+  subscriptionFeeTrialOverTemplateName: process.env.SUBSCRIPTION_FEE_TRIAL_OVER_TEMPLATE_NAME || 'provider_fee_trial_over',
+  subscriptionFeeTrialTemplatesApproved: process.env.SUBSCRIPTION_FEE_TRIAL_TEMPLATES_APPROVED === 'true',
   pulsoHubBotSyncUrl: process.env.PULSO_HUB_BOT_SYNC_URL || '',
   pulsoHubBotSyncSecret: process.env.PULSO_HUB_BOT_SYNC_SECRET || '',
   // Same project and the same Cloud Run hash, so this is derived from the sync

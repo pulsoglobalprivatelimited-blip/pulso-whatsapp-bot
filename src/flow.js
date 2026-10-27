@@ -577,7 +577,8 @@ const MESSAGES = {
      subscriptionFee.js decides who. The two points go in FRONT of the terms
      above as 1 and 2 (the old points move down). Founder's Malayalam, verbatim. */
   termsFeePoints: [
-    'Pulso-യിൽ അംഗമാകുന്നതിനായി ഒറ്റത്തവണ ₹499 (tax included) സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കണം.\n\nPulso ആപ്പിലൂടെ 180 ദിവസത്തെ ജോലി പൂർത്തിയാക്കിയാൽ, നികുതി കുറച്ച ശേഷം ഈ തുക തിരികെ ലഭിക്കും.',
+    // 7-day free trial added 24 Oct 2026 (founder: "Mention 7 days trial also").
+    'Pulso-യിൽ അംഗമാകുന്നതിനായി ഒറ്റത്തവണ ₹499 (tax included) സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കണം. Pulso ആപ്പിൽ ആദ്യമായി സൈൻ ഇൻ ചെയ്യുന്ന ദിവസം മുതൽ ആദ്യത്തെ 7 ദിവസം സൗജന്യ ട്രയൽ ആണ്; അതിനു ശേഷം ഡ്യൂട്ടി ഓഫറുകൾ കാണാൻ ഫീസ് അടയ്ക്കണം.\n\nPulso ആപ്പിലൂടെ 180 ദിവസത്തെ ജോലി പൂർത്തിയാക്കിയാൽ, നികുതി കുറച്ച ശേഷം ഈ തുക തിരികെ ലഭിക്കും.',
     'ഡ്യൂട്ടി ലഭ്യത മാർക്കറ്റ് ആവശ്യകത അനുസരിച്ചായിരിക്കും — കേരളത്തിൽ പരിചരണം ആവശ്യമുള്ള രോഗികളുടെ എണ്ണം, ആവശ്യമായ പരിചരണത്തിന്റെ തരം, നിങ്ങളുടെ യോഗ്യത, നിങ്ങളുടെ ലഭ്യത, നിങ്ങളുടെ റേറ്റിംഗ് എന്നിവയെ ആശ്രയിച്ചിരിക്കും. ഒരു നിശ്ചിത എണ്ണം ഡ്യൂട്ടികളോ നിശ്ചിത മാസവരുമാനമോ Pulso ഉറപ്പു നൽകുന്നില്ല.'
   ],
   // Replaces the "no registration fee" line of the working model when the fee applies.
@@ -585,7 +586,13 @@ const MESSAGES = {
     '- Pulso-യിൽ അംഗമാകുന്നതിനായി ഒറ്റത്തവണ ₹499 (tax included) സബ്സ്ക്രിപ്ഷൻ ഫീസ് Pulso ആപ്പിൽ അടയ്ക്കണം; 180 ദിവസത്തെ ജോലിക്ക് ശേഷം നികുതി കുറച്ച് തിരികെ ലഭിക്കും',
   // After Accept, instead of termsAccepted, when the fee applies. Founder-approved.
   termsAcceptedFee:
-    'നന്ദി. Pulso-യിൽ ചേരുന്നത് പൂർത്തിയാക്കാൻ Pulso ആപ്പ് ഇൻസ്റ്റാൾ ചെയ്ത്, ഇതേ നമ്പർ ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്ത്, terms സമ്മതിച്ച്, ₹499 സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കുക. അതിനു ശേഷം ഡ്യൂട്ടി ഓഫറുകൾ ലഭിച്ചു തുടങ്ങും.',
+    'നന്ദി. Pulso ആപ്പ് ഇൻസ്റ്റാൾ ചെയ്ത്, ഇതേ നമ്പർ ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്യുക. ആദ്യത്തെ 7 ദിവസം ഡ്യൂട്ടി ഓഫറുകൾ സൗജന്യമായി ലഭിക്കും. അതിനു ശേഷം ഓഫറുകൾ തുടർന്നും കാണാൻ ₹499 സബ്സ്ക്രിപ്ഷൻ ഫീസ് ആപ്പിൽ അടയ്ക്കണം.',
+  // Trial reminders (day 5: 2 days left, day 6: 1 day left) and the message
+  // after the lock. Sent as templates (same words, with her name in front).
+  subscriptionFeeTrialReminder:
+    'നിങ്ങളുടെ Pulso സൗജന്യ ട്രയൽ {{days}} ദിവസം കൂടി മാത്രം. അതിനു ശേഷവും ഡ്യൂട്ടി ഓഫറുകൾ കാണാൻ ₹499 സബ്സ്ക്രിപ്ഷൻ ഫീസ് Pulso ആപ്പിൽ ഇപ്പോൾ തന്നെ അടയ്ക്കാം.',
+  subscriptionFeeTrialOver:
+    'നിങ്ങളുടെ Pulso സൗജന്യ ട്രയൽ കഴിഞ്ഞു. പുതിയ ഡ്യൂട്ടികളുടെ അറിയിപ്പുകൾ തുടർന്നും വരും; അവ കാണാനും സ്വീകരിക്കാനും Pulso ആപ്പിൽ ₹499 സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കുക.',
   subscriptionFeeReminder:
     'നിങ്ങളുടെ Pulso അംഗത്വം പൂർത്തിയാക്കാൻ ₹499 സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കാൻ ബാക്കിയുണ്ട്. Pulso ആപ്പിൽ ഇതേ നമ്പർ ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്ത് ഫീസ് അടയ്ക്കുക. അതിനു ശേഷം ഡ്യൂട്ടി ഓഫറുകൾ ലഭിച്ചു തുടങ്ങും.',
   subscriptionFeePaid:
@@ -886,13 +893,17 @@ const ENGLISH_BASE_MESSAGES = {
   termsDeclined: 'Okay. If you are interested later, you can message us again.',
   // ₹499 subscription fee (22 Oct 2026). English mirror of the Malayalam above.
   termsFeePoints: [
-    'To become a Pulso member, you pay a one-time subscription fee of ₹499 (tax included).\n\nWhen you complete 180 days of duty through the Pulso app, this amount is refunded to you after deducting tax.',
+    'To become a Pulso member, you pay a one-time subscription fee of ₹499 (tax included). The first 7 days from the day you first sign in to the Pulso app are a free trial; after that, you pay the fee to see duty offers.\n\nWhen you complete 180 days of duty through the Pulso app, this amount is refunded to you after deducting tax.',
     'Duty availability depends on market requirements — the number of patients needing care in your area, the type of care needed, your qualification, your availability and your ratings. Pulso does not promise any minimum number of duties or any fixed monthly income.'
   ],
   workingModelFeeLine:
     '- To become a Pulso member you pay a one-time subscription fee of ₹499 (tax included) in the Pulso app; it is refunded after 180 days of duty, after deducting tax',
   termsAcceptedFee:
-    'Thank you. To finish joining Pulso, install the Pulso app, sign in with this same number, agree to the terms and pay the ₹499 subscription fee. Duty offers start after that.',
+    'Thank you. Install the Pulso app and sign in with this same number. For the first 7 days you get duty offers free. After that, pay the ₹499 subscription fee in the app to keep seeing offers.',
+  subscriptionFeeTrialReminder:
+    'Your Pulso free trial has {{days}} day(s) left. To keep seeing duty offers after it, you can pay the ₹499 subscription fee in the Pulso app now.',
+  subscriptionFeeTrialOver:
+    'Your Pulso free trial is over. Alerts for new duties will keep coming; to see and accept them, pay the ₹499 subscription fee in the Pulso app.',
   subscriptionFeeReminder:
     'Your Pulso membership is not complete yet: the ₹499 subscription fee is still to be paid. Please sign in to the Pulso app with this same number and pay the fee. Duty offers start after that.',
   subscriptionFeePaid:
@@ -1500,6 +1511,8 @@ const UAE_NOT_SENT = {
   termsAcceptedFee: null,
   subscriptionFeeReminder: null,
   subscriptionFeePaid: null,
+  subscriptionFeeTrialReminder: null,
+  subscriptionFeeTrialOver: null,
   agencyQuestion: null,
   agencyYes: null,
   addDutyInterestQuestion: null,
