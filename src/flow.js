@@ -1847,7 +1847,8 @@ const NURSE_SHOWN_FALLBACK = { shownFrom8h: 800, shownTo8h: 1200, shownFrom24h: 
    each figure the doc does not carry, so a Dubai caregiver can never be quoted
    a rupee figure. Basic is flat: what she is told is her payout. */
 const UAE_TIER_DEFAULTS = {
-  basic: { payout8h: 60, payout24h: 80, familyFloor8h: 60, familyFloor24h: 80 },
+  // 12 hours (founder, 27 Oct 2026): Basic AED 70; nurse AED 120–180.
+  basic: { payout8h: 60, payout24h: 80, familyFloor8h: 60, familyFloor24h: 80, shown12h: 70 },
   gda: {
     payout8h: 70, payout24h: 90, familyFloor8h: 70, familyFloor24h: 90,
     shownFrom8h: 70, shownTo8h: 100, shownFrom24h: 80, shownTo24h: 120, sample8h: 70, sample24h: 100,
@@ -1856,7 +1857,8 @@ const UAE_TIER_DEFAULTS = {
   },
   nurse: {
     payout8h: 100, payout24h: 150, familyFloor8h: 100, familyFloor24h: 150,
-    shownFrom8h: 100, shownTo8h: 150, shownFrom24h: 150, shownTo24h: 250, sample8h: 100, sample24h: 150
+    shownFrom8h: 100, shownTo8h: 150, shownFrom24h: 150, shownTo24h: 250, sample8h: 100, sample24h: 150,
+    shownFrom12h: 120, shownTo12h: 180, sample12h: 150
   }
 };
 

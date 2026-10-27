@@ -120,7 +120,7 @@ test('nurse: AED 150-250 (24h), AED 100-150 (8h), sample AED 150/day = AED 4,500
   const r = render('uae_english', { qualification: 'gnm', age: 30 });
   assert.match(r.model, /For 24-hour duty, you will receive AED 150 to AED 250 per day/);
   assert.match(r.model, /For 8-hour duty, you will receive AED 100 to AED 150 per day/);
-  assert.equal(r.summary.split('\n\n')[0], '24 hour - AED 150 to AED 250 per day\n8 hour - AED 100 to AED 150 per day');
+  assert.equal(r.summary.split('\n\n')[0], '24 hour - AED 150 to AED 250 per day\n12 hour - AED 120 to AED 180 per day\n8 hour - AED 100 to AED 150 per day');
   assert.match(r.s24, /AED 150 per day, fixed by the agency\nAED 4,500 for 30 days/);
   assert.match(r.s8, /AED 100 per day/);
 });
@@ -353,4 +353,16 @@ test('UAE help texts carry no India office line or Kochi address (27 Oct 2026)',
     assert.match(M.postOnboardingContactSupport, /77361 29809/);
     assert.doesNotMatch(M.postOnboardingLinks, /Kochi|Ambeel/);
   }
+});
+
+test('12 hours for nurse (AED 120-180, sample 150) and Basic (AED 70) (founder, 27 Oct 2026)', () => {
+  const nurse = render('uae_english', { qualification: 'gnm', age: 30 });
+  assert.match(nurse.model, /For 12-hour duty, you will receive AED 120 to AED 180 per day/);
+  assert.match(nurse.summary, /12 hour - AED 120 to AED 180 per day/);
+  const s12 = flow.runWithFlow('uae_english', () => flow.getSampleDutyOfferFor({ qualification: 'gnm', age: 30 }, INDIA_TIERS, '12_hour'));
+  assert.match(s12, /AED 150 per day/);
+  const basic = render('uae_english', { qualification: 'basic_caregiver', age: 30 });
+  assert.match(basic.model, /For 12-hour duty, you will receive AED 70 per day/);
+  const ml = render('uae_malayalam', { qualification: 'gnm', age: 30 });
+  assert.match(ml.model, /12 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ AED 120 മുതൽ AED 180 വരെ ലഭിക്കും/);
 });
