@@ -1560,6 +1560,12 @@ function dubaiMessages(base, language) {
     uaeAppReminder1: plan.reminder1,
     uaeAppReminder2: plan.reminder2,
     uaeVisaValues: plan.visaValues,
+    // UAE (27 Oct 2026, found in the phone test): no India office line to call
+    // and no Kochi address; the WhatsApp help line and the website stay.
+    postOnboardingContactSupport: en
+      ? 'For help, you can send a WhatsApp message to +91 77361 29809 at any time.\nWe are always ready to help you. 👍🏼'
+      : '+91 77361 29809 എന്ന നമ്പറിൽ 24 മണിക്കൂറും WhatsApp സന്ദേശം അയക്കാം.\nനിങ്ങൾക്ക് സഹായം നൽകാൻ ഞങ്ങൾ എപ്പോഴും തയ്യാറാണ്. 👍🏼',
+    postOnboardingLinks: 'Website:\nhttps://www.pulso.co.in/',
     sampleDutyOffer24Hour: toDubai(base.sampleDutyOffer24Hour),
     sampleDutyOffer8Hour: toDubai(base.sampleDutyOffer8Hour),
     termsIntro: toDubai(base.termsIntro),

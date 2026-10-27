@@ -345,3 +345,12 @@ test('outside the 24-hour window with no template: reported, not raised; Malayal
   assert.match(result.text, /^✅ Priya, താങ്കൾ verified ആണ്\./);
   assert.equal(reviewedMessage('approve', { name: 'Anu', area: '', language: 'en' }), '✅ You are verified, Anu.\nKeep the Pulso app notifications ON. Duty offers near you will come in the app.');
 });
+
+test('UAE help texts carry no India office line or Kochi address (27 Oct 2026)', () => {
+  for (const id of ['uae_english', 'uae_malayalam']) {
+    const M = FLOWS[id].MESSAGES;
+    assert.doesNotMatch(M.postOnboardingContactSupport, /8714105333/);
+    assert.match(M.postOnboardingContactSupport, /77361 29809/);
+    assert.doesNotMatch(M.postOnboardingLinks, /Kochi|Ambeel/);
+  }
+});
