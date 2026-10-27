@@ -7,7 +7,7 @@ const { FLOWS, STATUS, DEFAULT_FLOW_ID_BY_REGION } = require('../flow');
 const FLOW_IDS_BY_REGION = DEFAULT_FLOW_ID_BY_REGION;
 
 const DISTRICT_REGIONS = Object.values(FLOWS).reduce((acc, flow) => {
-  flow.DISTRICTS.forEach((district) => {
+  [...flow.DISTRICTS, ...(flow.EMIRATE_DISTRICTS || [])].forEach((district) => {
     acc[String(district.value).trim().toLowerCase()] = flow.region;
   });
   return acc;

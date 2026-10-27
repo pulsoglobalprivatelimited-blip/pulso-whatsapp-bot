@@ -745,6 +745,7 @@ function updateCompletedRangeFilterState() {
 function formatDutyHourPreference(value) {
   if (value === '8_hour') return '8 hour (8 am to 6 pm) - 900rs per day';
   if (value === '24_hour') return '24 hour - 1200 rs per day';
+  if (value === '12_hour') return '12 hour';
   if (value === 'both') return 'Both (8 hour and 24 hour)';
   return value || '-';
 }
@@ -1817,6 +1818,7 @@ async function renderDetail(provider) {
     'qualification'
   );
   setReviewField('review-login-phone-input', localMobile(detailProvider.appLoginPhone || detailProvider.phone), detailPhone, 'loginPhone');
+  syncUaeApproveAs(detailProvider);
   // The record decides this as much as the dropdown does: someone over the age
   // threshold lands on the Basic rate whatever certificate they hold.
   syncBasicReasonField();
@@ -1975,15 +1977,35 @@ function setReviewStatus(message, kind) {
 }
 
 /* "+91 98765 43210" / "919876543210" → "9876543210"; anything else as typed. */
+/* UAE nurses (27 Oct 2026): Approve as nurse only with an active DHA licence. */
+function isUaeNurseRecord(record) {
+  return Boolean(record) && String(record.region || '').toLowerCase() === 'uae' &&
+    ['gnm', 'bsc_nursing'].includes(String(record.qualification || '').toLowerCase());
+}
+
+function syncUaeApproveAs(record) {
+  const select = document.getElementById('review-uae-approve-as');
+  if (!select) return;
+  select.hidden = !isUaeNurseRecord(record);
+  select.value = record && record.dhaLicenceNumber && !record.uaeNurseWithoutLicence ? 'nurse' : 'caregiver';
+}
+
+/* An Indian number is kept as its 10 digits; a UAE one (+971 5X XXX XXXX,
+   or 05X XXX XXXX) as 9715XXXXXXXX (27 Oct 2026: the desk refused every
+   Dubai login number as "not a 10-digit mobile"). */
 function localMobile(value) {
   let digits = String(value || '').replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('9715')) return digits;
+  if (digits.length === 10 && digits.startsWith('05')) return `971${digits.slice(1)}`;
+  if (digits.length === 9 && digits.startsWith('5')) return `971${digits}`;
   if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
   else if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
   return digits;
 }
 
 function validLoginMobile(value) {
-  return /^[6-9]\d{9}$/.test(localMobile(value));
+  const digits = localMobile(value);
+  return /^[6-9]\d{9}$/.test(digits) || /^9715\d{8}$/.test(digits);
 }
 
 async function saveLoginPhone() {
@@ -1991,7 +2013,7 @@ async function saveLoginPhone() {
   const input = document.getElementById('review-login-phone-input');
   const value = localMobile(input && input.value);
   if (!validLoginMobile(value)) {
-    sayReviewResult('App login number must be a 10-digit mobile number.', 'error');
+    sayReviewResult('App login number must be a 10-digit Indian or a UAE (05X XXX XXXX) mobile number.', 'error');
     return;
   }
   try {
@@ -2004,7 +2026,7 @@ async function saveLoginPhone() {
     const index = providers.findIndex((item) => item.phone === saved.phone);
     if (index >= 0) providers[index] = saved;
     renderDetail(saved);
-    sayReviewResult(`App login number saved: ${PulsoDesk.formatPhone(`91${value}`)}.`, 'success');
+    sayReviewResult(`App login number saved: ${PulsoDesk.formatPhone(value.startsWith('971') ? value : `91${value}`)}.`, 'success');
   } catch (error) {
     sayReviewResult(error.message || 'Could not save the login number.', 'error');
   }
@@ -2030,9 +2052,11 @@ async function submitReview(action) {
 
   const appLoginPhone = localMobile((document.getElementById('review-login-phone-input') || {}).value);
   if (approving && appLoginPhone && !validLoginMobile(appLoginPhone)) {
-    sayReviewResult('App login number must be a 10-digit mobile number.', 'error');
+    sayReviewResult('App login number must be a 10-digit Indian or a UAE (05X XXX XXXX) mobile number.', 'error');
     return;
   }
+  const approveAsSelect = document.getElementById('review-uae-approve-as');
+  const approveAs = approving && approveAsSelect && !approveAsSelect.hidden ? approveAsSelect.value : undefined;
 
   if (approving && landsOnBasicRate(record, qualification) && basicTierReasons.length === 0) {
     sayReviewResult(`${basicRateQuestion(record)} Then approve.`, 'error');
@@ -2053,7 +2077,7 @@ async function submitReview(action) {
     const reviewed = await fetchJson(`/admin/providers/${selectedPhone}/${action}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes, qualification, basicTierReasons, ...(approving && appLoginPhone ? { appLoginPhone } : {}) })
+      body: JSON.stringify({ notes, qualification, basicTierReasons, ...(approveAs ? { approveAs } : {}), ...(approving && appLoginPhone ? { appLoginPhone } : {}) })
     });
 
     // Saved: what is on screen now came back from the server, so it is no

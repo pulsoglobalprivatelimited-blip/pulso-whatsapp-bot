@@ -20,6 +20,13 @@ function buildProviderSyncPayload(provider) {
           dhaLicenceNumber: provider.dhaLicenceNumber || '',
           licenceCompanyName: provider.licenceCompanyName || '',
           licenceStaffId: provider.licenceStaffId || '',
+          // UAE plan (27 Oct 2026): the visa answer, the emirate, and the tier
+          // the desk approved (a nurse without a DHA licence works as 'gda').
+          uaeVisaType: provider.uaeVisaType || '',
+          emirate: provider.emirate || '',
+          uaeNurseWithoutLicence: provider.uaeNurseWithoutLicence === true,
+          careTier: provider.careTier || '',
+          uaeApprovedAs: provider.uaeApprovedAs || '',
         }
       : {}),
     language: provider.language || (flow && flow.language) || '',

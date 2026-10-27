@@ -27,6 +27,9 @@ const {
   getFlowConfig,
   runWithProviderFlow,
   isUaeFlowActive,
+  UAE_VISA_OPTIONS,
+  UAE_EMIRATES,
+  UAE_APP_LINKS,
   HEIGHT_OPTIONS,
   heightLabelFor
 } = require('../flow');
@@ -95,6 +98,9 @@ const {
   parseAgeCorrectionAction,
   parseSex,
   parseDistrict,
+  parseUaeVisa,
+  parseEmirate,
+  parseDhaHas,
   parseDistrictListAction,
   parseTermsAcceptance,
   parsePulsoAppInstallInterest,
@@ -246,6 +252,8 @@ const SAME_NUMBER_PHRASES = [
   ['the same number you used for onboarding', (n) => `the number ${n}`],
   // Dubai's app message (26 Oct 2026).
   ['Sign in with this WhatsApp number', (n) => `Sign in with the number ${n}`],
+  // UAE app reminder (27 Oct 2026).
+  ['sign in with this WhatsApp number', (n) => `sign in with ${n}`],
   ['ഈ WhatsApp number ഉപയോഗിച്ച് sign in ചെയ്യുക', (n) => `${n} എന്ന number ഉപയോഗിച്ച് sign in ചെയ്യുക`]
 ];
 
@@ -333,6 +341,9 @@ function getStepForStatus(status) {
     [STATUS.AWAITING_EXPECTED_DUTIES_CONFIRMATION]: 7,
     [STATUS.AWAITING_CERTIFICATE]: 8,
     [STATUS.AWAITING_DHA_LICENCE]: 8,
+    [STATUS.AWAITING_DHA_LICENCE_HAS]: 7.5,
+    [STATUS.AWAITING_VISA_TYPE]: 3.5,
+    [STATUS.AWAITING_EMIRATE]: 12,
     [STATUS.AWAITING_NAME]: 9,
     [STATUS.AWAITING_AGE]: 10,
     [STATUS.AWAITING_SEX]: 11,
@@ -665,8 +676,46 @@ async function continueAfterProfilePhoto(phone) {
     await sendDetailsCheck(phone, null, { first: true, patch: {} });
     return;
   }
+  // UAE (27 Oct 2026): the emirate first; only Dubai gets the area list.
+  if (isUaeFlowActive()) {
+    await updateStatus(phone, STATUS.AWAITING_EMIRATE, 12, { districtListPage: 1 });
+    await sendEmirateList(phone);
+    return;
+  }
   await updateStatus(phone, STATUS.AWAITING_DISTRICT, 12, { districtListPage: 1 });
   await sendDistrictList(phone);
+}
+
+async function handleEmirate(phone, message) {
+  const emirate = parseEmirate(message);
+  if (!emirate) {
+    await sendAndLog(phone, 'text', MESSAGES.emirateRetry);
+    await sendEmirateList(phone);
+    return;
+  }
+  await applyEmirate(phone, emirate, null);
+}
+
+/* Dubai: on to the Dubai area list. Anywhere else the emirate is her area.
+   `editing` is the record when she is changing her area at the details check. */
+async function applyEmirate(phone, emirate, editing) {
+  await appendHistory(phone, { type: 'system', event: 'uae_emirate', emirate });
+  if (emirate === 'Dubai') {
+    if (editing) {
+      await updateProvider(phone, { emirate, districtListPage: 1 });
+    } else {
+      await updateStatus(phone, STATUS.AWAITING_DISTRICT, 12, { emirate, districtListPage: 1 });
+    }
+    await sendDistrictList(phone);
+    return;
+  }
+  if (editing) {
+    await applyDetailsEdit(phone, editing, 'district', editing.district, emirate, { district: emirate, emirate, districtListPage: 1 });
+    await sendDetailsCheck(phone);
+    return;
+  }
+  await updateStatus(phone, STATUS.AWAITING_LOGIN_PHONE, 12.5, { emirate, district: emirate, districtListPage: 1, loginPhoneTyping: false });
+  await sendLoginPhoneQuestion(phone);
 }
 
 async function handleHeight(phone, message) {
@@ -951,15 +1000,74 @@ async function continueReactivationWalk(phone) {
   await sendHeightList(phone);
 }
 
-async function sendDutyHourPreferenceButtons(phone) {
-  await sendAndLog(phone, 'buttons', {
-    body: MESSAGES.dutyHourPreferenceQuestion,
-    buttons: [
-      { id: BUTTON_IDS.DUTY_HOUR_8, title: '8 hour' },
-      { id: BUTTON_IDS.DUTY_HOUR_24, title: '24 hour' },
-      { id: BUTTON_IDS.DUTY_HOUR_BOTH, title: UI_TEXT.dutyBothTitle }
+/* UAE (27 Oct 2026): four choices with the 12-hour shift. WhatsApp allows
+   three buttons, so in the UAE the question is a list. */
+function uaeDutyHourList(body) {
+  return {
+    body,
+    buttonText: UI_TEXT.dutyListButtonText || 'Choose duty',
+    sections: [
+      {
+        title: 'Duty',
+        rows: [
+          { id: BUTTON_IDS.DUTY_HOUR_8, title: '8 hour' },
+          { id: BUTTON_IDS.DUTY_HOUR_12, title: '12 hour' },
+          { id: BUTTON_IDS.DUTY_HOUR_24, title: '24 hour' },
+          { id: BUTTON_IDS.DUTY_HOUR_BOTH, title: UI_TEXT.dutyBothTitle }
+        ]
+      }
+    ]
+  };
+}
+
+function isUaeNurse(provider) {
+  return isUaeFlowActive() && ['gnm', 'bsc_nursing'].includes(String((provider && provider.qualification) || '').toLowerCase());
+}
+
+async function sendUaeVisaList(phone) {
+  await sendAndLog(phone, 'list', {
+    body: MESSAGES.visaQuestion,
+    buttonText: UI_TEXT.visaButtonText || 'Choose visa',
+    sections: [
+      {
+        title: 'Visa',
+        rows: UAE_VISA_OPTIONS.map((o) => ({ id: o.id, title: o.title, ...(o.description ? { description: o.description } : {}) }))
+      }
     ]
   });
+}
+
+async function sendEmirateList(phone) {
+  await sendAndLog(phone, 'list', {
+    body: MESSAGES.emirateQuestion,
+    buttonText: UI_TEXT.emirateButtonText || 'Choose emirate',
+    sections: [{ title: 'UAE', rows: UAE_EMIRATES.map((e) => ({ id: e.id, title: e.title })) }]
+  });
+}
+
+async function sendDhaHasButtons(phone) {
+  await sendAndLog(phone, 'buttons', {
+    body: MESSAGES.dhaHasQuestion,
+    buttons: [
+      { id: BUTTON_IDS.DHA_HAS_YES, title: UI_TEXT.dhaHasYesTitle || 'Yes' },
+      { id: BUTTON_IDS.DHA_HAS_NOT_YET, title: UI_TEXT.dhaHasNotYetTitle || 'Not yet' }
+    ]
+  });
+}
+
+async function sendDutyHourPreferenceButtons(phone) {
+  if (isUaeFlowActive()) {
+    await sendAndLog(phone, 'list', uaeDutyHourList(MESSAGES.dutyHourPreferenceQuestion));
+  } else {
+    await sendAndLog(phone, 'buttons', {
+      body: MESSAGES.dutyHourPreferenceQuestion,
+      buttons: [
+        { id: BUTTON_IDS.DUTY_HOUR_8, title: '8 hour' },
+        { id: BUTTON_IDS.DUTY_HOUR_24, title: '24 hour' },
+        { id: BUTTON_IDS.DUTY_HOUR_BOTH, title: UI_TEXT.dutyBothTitle }
+      ]
+    });
+  }
   const provider = await getProvider(phone);
   await sendAndLog(phone, 'text', getDutyHourPaymentSummaryFor(provider, await getProviderTiers()));
 }
@@ -989,6 +1097,7 @@ async function sendSampleDutyOfferPrompt(phone) {
 
 function getOtherDutyPreference(value) {
   if (value === 'both') return null;
+  if (value === '12_hour') return '24_hour';
   return value === '24_hour' ? '8_hour' : '24_hour';
 }
 
@@ -1017,6 +1126,10 @@ async function sendOtherSamplePrompt(phone, dutyHourPreference) {
 }
 
 async function sendFinalDutyChoiceButtons(phone) {
+  if (isUaeFlowActive()) {
+    await sendAndLog(phone, 'list', uaeDutyHourList(MESSAGES.sampleDutyFinalChoiceQuestion));
+    return;
+  }
   await sendAndLog(phone, 'buttons', {
     body: MESSAGES.sampleDutyFinalChoiceQuestion,
     buttons: [
@@ -2531,6 +2644,15 @@ async function sendPromptForCurrentStatus(phone, provider) {
     case STATUS.AWAITING_DHA_LICENCE:
       await sendAndLog(phone, 'text', MESSAGES.dhaLicenceRequest);
       return;
+    case STATUS.AWAITING_DHA_LICENCE_HAS:
+      await sendDhaHasButtons(phone);
+      return;
+    case STATUS.AWAITING_VISA_TYPE:
+      await sendUaeVisaList(phone);
+      return;
+    case STATUS.AWAITING_EMIRATE:
+      await sendEmirateList(phone);
+      return;
     case STATUS.AWAITING_NAME:
       await sendAndLog(phone, 'text', MESSAGES.nameQuestion);
       return;
@@ -2849,12 +2971,13 @@ async function handleExpectedDutiesConfirmation(phone, message) {
     return;
   }
 
-  // Dubai (26 Oct 2026): the certificate photo becomes the typed licence
-  // step, for everyone — "without a DHA licence" is answered there with a
-  // company name and staff ID. The photos are taken later in the app.
-  if (isUaeFlowActive()) {
-    await updateStatus(phone, STATUS.AWAITING_DHA_LICENCE, 8, { expectedDutiesAccepted: true });
-    await sendAndLog(phone, 'text', MESSAGES.dhaLicenceRequest);
+  // UAE (founder, 27 Oct 2026): most caregivers there hold no DHA licence and
+  // must never feel one is needed. Only a nurse (BSc / GNM) is asked "Do you
+  // have a DHA nursing licence?"; everyone else goes the Bengaluru way below
+  // (certificate photo, or no certificate and a call).
+  if (isUaeNurse(await getProvider(phone))) {
+    await updateStatus(phone, STATUS.AWAITING_DHA_LICENCE_HAS, 7.5, { expectedDutiesAccepted: true });
+    await sendDhaHasButtons(phone);
     return;
   }
 
@@ -3140,6 +3263,30 @@ async function handleCertificate(phone, message) {
  * text says "Do not send ID cards or your passport here"). Then the flow goes
  * on exactly where Bengaluru's goes on after the certificate.
  */
+/* "Do you have a DHA nursing licence?" (UAE nurses, 27 Oct 2026).
+   Yes: the number, then the nursing certificate. Not yet: she joins as a
+   caregiver now (caregiver band), and sends the nursing certificate. */
+async function handleDhaHas(phone, message) {
+  const answer = parseDhaHas(message);
+  if (!answer) {
+    await sendAndLog(phone, 'text', MESSAGES.dhaHasRetry);
+    await sendDhaHasButtons(phone);
+    return;
+  }
+  await appendHistory(phone, { type: 'system', event: 'uae_dha_licence_answer', answer });
+  if (answer === 'yes') {
+    await updateStatus(phone, STATUS.AWAITING_DHA_LICENCE, 8, { dhaLicenceAnswer: 'yes', uaeNurseWithoutLicence: false });
+    await sendAndLog(phone, 'text', MESSAGES.dhaLicenceRequest);
+    return;
+  }
+  await updateStatus(phone, STATUS.AWAITING_CERTIFICATE, 8, {
+    dhaLicenceAnswer: 'not_yet',
+    uaeNurseWithoutLicence: true,
+    careTier: 'gda'
+  });
+  await sendAndLog(phone, 'text', MESSAGES.dhaNotYet);
+}
+
 async function handleDhaLicence(phone, message) {
   const type = message && message.type;
   if (['image', 'document', 'video', 'audio', 'sticker'].includes(type)) {
@@ -3149,75 +3296,23 @@ async function handleDhaLicence(phone, message) {
     return;
   }
 
+  // Nurses only now: a licence number, nothing else (a company and staff ID
+  // was the caregivers' answer, and caregivers are no longer asked).
   const parsed = getInteractiveReplyId(message) ? null : parseLicenceAnswer(getMessageText(message));
-  if (!parsed) {
+  if (!parsed || parsed.kind !== 'licence') {
     await sendAndLog(phone, 'text', MESSAGES.dhaLicenceRequest);
     return;
   }
 
   await updateProvider(phone, {
     dhaLicenceNumber: parsed.dhaLicenceNumber || null,
-    licenceCompanyName: parsed.licenceCompanyName || null,
-    licenceStaffId: parsed.licenceStaffId || null,
     licenceText: parsed.licenceText,
     licenceTypedAt: new Date().toISOString()
   });
   await appendHistory(phone, { type: 'system', event: 'uae_licence_typed', kind: parsed.kind });
-  await finalizeCertificateCollection(phone);
-}
-
-/**
- * Dubai's stand-in for sendForReview (26 Oct 2026): there is no certificate
- * review — the licence is checked in the app (photos + selfie, ops review on
- * the hub). So the details check leads straight to the terms, as a
- * certificate approval does in Bengaluru, with the Basic rate line first for
- * whoever is paid it. verification reads `verified` with method
- * `uae_app_licence`, because the hub activates a completed bot onboarding
- * only on `verified`; UAE offers stay gated on uaeLicence.status there.
- */
-async function sendUaeToTerms(phone, options = {}) {
-  if (options.expectStatus) {
-    const current = await getProvider(phone);
-    if (!current || current.status !== options.expectStatus) {
-      return false;
-    }
-  }
-  const now = new Date().toISOString();
-  await updateStatus(phone, STATUS.AWAITING_TERMS_ACCEPTANCE, 14, {
-    ...(options.patch || {}),
-    termsSentAt: now,
-    termsReminderSentAt: null,
-    termsReminderCount: 0,
-    termsReminderKind: null,
-    termsReminderReplyReceivedAt: null,
-    termsDeclinedAt: null,
-    verification: {
-      status: 'verified',
-      method: 'uae_app_licence',
-      notes: 'UAE: licence photos are checked in the Pulso app',
-      needsCall: false,
-      reviewedAt: now,
-      reviewedBy: 'uae_app_licence'
-    }
-  });
-  if (options.historyEvent) {
-    await appendHistory(phone, { type: 'system', ...options.historyEvent });
-  }
-  await appendHistory(phone, { type: 'system', event: 'uae_terms_sent_without_certificate_review' });
-  if (options.silent) {
-    return true;
-  }
-  const provider = await getProvider(phone);
-  const line = getTermsRateFor(
-    { qualification: provider.qualification, age: provider.age, careTier: provider.careTier },
-    await getProviderTiers()
-  );
-  if (line) {
-    await sendAndLog(phone, 'text', line);
-  }
-  await sendTermsIntroIfMissing(phone, provider);
-  await sendTermsButtons(phone);
-  return true;
+  // Then the nursing certificate, like every other UAE applicant.
+  await updateStatus(phone, STATUS.AWAITING_CERTIFICATE, 8, {});
+  await sendAndLog(phone, 'text', MESSAGES.nurseCertificateRequest);
 }
 
 async function requestAdditionalDocument(phone, requestedBy, note) {
@@ -3321,6 +3416,9 @@ const STOP_ON_NOT_INTERESTED_STATUSES = new Set([
   STATUS.AWAITING_SAMPLE_DUTY_OFFER_PREFERENCE,
   STATUS.AWAITING_CERTIFICATE,
   STATUS.AWAITING_DHA_LICENCE,
+  STATUS.AWAITING_DHA_LICENCE_HAS,
+  STATUS.AWAITING_VISA_TYPE,
+  STATUS.AWAITING_EMIRATE,
   STATUS.AWAITING_NAME,
   STATUS.AWAITING_AGE,
   STATUS.AWAITING_SEX,
@@ -3356,6 +3454,7 @@ function lateTapPreference(replyId) {
     case BUTTON_IDS.COOKING_NO: return { field: 'cooking', value: false };
     case BUTTON_IDS.DUTY_HOUR_8: return { field: 'dutyHours', value: '8_hour' };
     case BUTTON_IDS.DUTY_HOUR_24: return { field: 'dutyHours', value: '24_hour' };
+    case BUTTON_IDS.DUTY_HOUR_12: return { field: 'dutyHours', value: '12_hour' };
     case BUTTON_IDS.DUTY_HOUR_BOTH: return { field: 'dutyHours', value: 'both' };
     case BUTTON_IDS.LOGIN_PHONE_SAME: return { field: 'loginPhone', value: 'whatsapp' };
     case BUTTON_IDS.AGENCY_YES: return { field: 'agency', value: true };
@@ -3492,6 +3591,9 @@ const WELCOME_BACK_STATUSES = new Set([
   STATUS.AWAITING_EXPECTED_DUTIES_CONFIRMATION,
   STATUS.AWAITING_CERTIFICATE,
   STATUS.AWAITING_DHA_LICENCE,
+  STATUS.AWAITING_DHA_LICENCE_HAS,
+  STATUS.AWAITING_VISA_TYPE,
+  STATUS.AWAITING_EMIRATE,
   STATUS.AWAITING_NAME,
   STATUS.AWAITING_AGE,
   STATUS.AWAITING_SEX,
@@ -3604,7 +3706,27 @@ async function handleAge(phone, message) {
     return;
   }
 
+  // UAE (27 Oct 2026): "Which visa are you on now?" right after the age.
+  // Stored and shown to ops and agencies; nobody is stopped by the answer.
+  if (isUaeFlowActive() && !(asked && asked.uaeVisaType)) {
+    await updateStatus(phone, STATUS.AWAITING_VISA_TYPE, 3.5, { age });
+    await sendUaeVisaList(phone);
+    return;
+  }
+
   await updateProvider(phone, { age });
+  await continueAfterEarlyAge(phone);
+}
+
+async function handleVisaType(phone, message) {
+  const visa = parseUaeVisa(message);
+  if (!visa) {
+    await sendAndLog(phone, 'text', MESSAGES.visaRetry);
+    await sendUaeVisaList(phone);
+    return;
+  }
+  await updateProvider(phone, { uaeVisaType: visa, uaeVisaTypeAt: new Date().toISOString() });
+  await appendHistory(phone, { type: 'system', event: 'uae_visa_type', visa });
   await continueAfterEarlyAge(phone);
 }
 
@@ -3759,6 +3881,15 @@ async function handleSex(phone, message) {
 }
 
 async function handleDistrict(phone, message) {
+  // UAE: an emirate tapped here (the details-check change starts with the
+  // emirate list) is handled as the emirate.
+  if (isUaeFlowActive()) {
+    const emirate = parseEmirate(message);
+    if (emirate) {
+      await applyEmirate(phone, emirate, await detailsEditFor(phone, 'district'));
+      return;
+    }
+  }
   const provider = await getProvider(phone);
   const pageSize = UI_TEXT.districtPageSize || 7;
   const pageCount = Math.max(1, Math.ceil(DISTRICTS.length / pageSize));
@@ -3784,7 +3915,11 @@ async function handleDistrict(phone, message) {
 
   const editing = await detailsEditFor(phone, 'district');
   if (editing) {
-    await applyDetailsEdit(phone, editing, 'district', editing.district, district, { district, districtListPage: 1 });
+    await applyDetailsEdit(phone, editing, 'district', editing.district, district, {
+      district,
+      districtListPage: 1,
+      ...(isUaeFlowActive() ? { emirate: 'Dubai' } : {})
+    });
     await sendDetailsCheck(phone);
     return;
   }
@@ -3905,9 +4040,21 @@ function buildDetailsCheckBody(provider, prefix = null) {
     `${labels.qualification}: ${qualificationLabelFor(p.qualification)}`,
     `${labels.height || 'Height'}: ${heightLabelFor(p.heightRange) || '-'}`,
     `${labels.weight || 'Weight'}: ${p.weightKg ? `${p.weightKg} kg` : '-'}`,
+    ...(isUaeFlowActive() ? uaeDetailsLines(p, labels) : []),
     `${labels.loginPhone || 'App login number'}: ${displayPhone(p.appLoginPhone || p.phone)}`
   ];
   return prefix ? `${prefix}\n\n${lines.join('\n')}` : lines.join('\n');
+}
+
+/* UAE (27 Oct 2026): the visa answer, the emirate (when it is not already the
+   area) and a nurse's DHA licence number. */
+function uaeDetailsLines(p, labels) {
+  const visaValues = MESSAGES.uaeVisaValues || {};
+  return [
+    p.uaeVisaType ? `${labels.visa || 'Visa'}: ${visaValues[p.uaeVisaType] || p.uaeVisaType}` : null,
+    p.emirate && p.emirate !== p.district ? `${labels.emirate || 'Emirate'}: ${p.emirate}` : null,
+    p.dhaLicenceNumber ? `${labels.dhaLicence || 'DHA licence'}: ${p.dhaLicenceNumber}` : null
+  ].filter(Boolean);
 }
 
 function buildDetailsCheckButtons() {
@@ -3975,6 +4122,10 @@ async function sendDetailsEditQuestion(phone, field) {
       await sendSexButtons(phone);
       return;
     case 'district':
+      if (isUaeFlowActive()) {
+        await sendEmirateList(phone);
+        return;
+      }
       await sendDistrictList(phone);
       return;
     case 'qualification':
@@ -4088,7 +4239,7 @@ async function applyQualificationEdit(phone, editing, qualification) {
   }
 
   // Dubai's licence does not depend on the qualification: nothing to upload.
-  const needsCertificate = !isUaeFlowActive() && !DETAILS_NO_UPLOAD_QUALIFICATIONS.includes(qualification);
+  const needsCertificate = !DETAILS_NO_UPLOAD_QUALIFICATIONS.includes(qualification);
   if (needsCertificate) {
     // Still editing until the new paper is in; finalizeCertificateCollection
     // brings her back to the check.
@@ -4205,9 +4356,6 @@ async function sendForReview(phone, options = {}) {
   }
   reviewSendsInFlight.add(phone);
   try {
-    if (isUaeFlowActive()) {
-      return await sendUaeToTerms(phone, options);
-    }
     if (options.expectStatus) {
       const current = await getProvider(phone);
       if (!current || current.status !== options.expectStatus) {
@@ -4329,6 +4477,94 @@ async function runDetailsCheckSweep(options = {}) {
   } finally {
     detailsCheckSweepRunning = false;
   }
+}
+
+/* UAE app reminders (founder, 27 Oct 2026). A UAE caregiver who finished
+   but has not signed into the app gets two nudges, both inside WhatsApp's
+   24-hour window: 2 hours after Accept (the links again) and 22 hours after
+   (with a Need help button). The hub is asked first, so someone who already
+   signed in hears nothing. The older app-licence records are left alone
+   (founder: no action for them). `now` and `providers` are injectable. */
+const UAE_REMINDER_1_MS = 2 * 60 * 60 * 1000;
+const UAE_REMINDER_2_MS = 22 * 60 * 60 * 1000;
+let uaeReminderInterval = null;
+let uaeReminderRunning = false;
+
+function uaeReminderDue(provider, now) {
+  if (!provider || provider.status !== STATUS.COMPLETED) return null;
+  if (String(provider.region || '').toLowerCase() !== 'uae') return null;
+  if (provider.pulsoAppActivationStatus === 'verified') return null;
+  if (provider.verification && provider.verification.method === 'uae_app_licence') return null;
+  const done = Date.parse(provider.completedAt || '');
+  if (!Number.isFinite(done)) return null;
+  const waited = now - done;
+  if (!provider.uaeAppReminder1At && waited >= UAE_REMINDER_1_MS && waited < UAE_REMINDER_2_MS) return 1;
+  if (!provider.uaeAppReminder2At && waited >= UAE_REMINDER_2_MS) return 2;
+  return null;
+}
+
+async function runUaeAppReminderSweep(options = {}) {
+  if (uaeReminderRunning && !options.providers) return { skipped: 'already_running' };
+  uaeReminderRunning = true;
+  const now = Number.isFinite(options.now) ? options.now : Date.now();
+  const result = { scanned: 0, reminded1: 0, reminded2: 0, signedIn: 0, outsideWindow: 0, errors: 0 };
+  try {
+    const providers = options.providers || (await listProvidersByStatus(STATUS.COMPLETED)).filter((p) => String(p.region || '').toLowerCase() === 'uae');
+    for (const candidate of providers) {
+      const which = uaeReminderDue(candidate, now);
+      if (!which) continue;
+      result.scanned += 1;
+      try {
+        const hub = options.skipHub ? null : await syncPulsoAppActivationFromHub(candidate.phone, { source: 'uae_reminder', provider: candidate, notify: 'window' });
+        if (hub && ['verified', 'already_verified'].includes(hub.result)) {
+          result.signedIn += 1;
+          continue;
+        }
+        if (!isWithinWhatsappReplyWindow(candidate, now)) {
+          result.outsideWindow += 1;
+          await updateProvider(candidate.phone, { [which === 1 ? 'uaeAppReminder1At' : 'uaeAppReminder2At']: 'skipped_outside_window' });
+          continue;
+        }
+        await runWithProviderFlow(candidate, async () => {
+          const field = which === 1 ? 'uaeAppReminder1At' : 'uaeAppReminder2At';
+          // Marked first: one reminder each, even if the send fails.
+          await updateProvider(candidate.phone, { [field]: new Date(now).toISOString() });
+          const name = String(candidate.fullName || '').trim().split(/\s+/)[0] || '';
+          const fill = (t) => String(t || '')
+            .split('{{name}}').join(name)
+            .split('{{android}}').join(UAE_APP_LINKS.android)
+            .split('{{iphone}}').join(UAE_APP_LINKS.iphone)
+            .replace('Hi , ', 'Hi, ');
+          if (which === 1) {
+            await sendAndLog(candidate.phone, 'text', fill(MESSAGES.uaeAppReminder1));
+          } else {
+            await sendAndLog(candidate.phone, 'buttons', {
+              body: fill(MESSAGES.uaeAppReminder2),
+              buttons: [{ id: BUTTON_IDS.PULSO_APP_NEED_HELP, title: UI_TEXT.needHelpTitle || UI_TEXT.appNeedHelpTitle }]
+            });
+          }
+          await appendHistory(candidate.phone, { type: 'system', event: `uae_app_reminder_${which}` });
+        });
+        result[which === 1 ? 'reminded1' : 'reminded2'] += 1;
+      } catch (error) {
+        result.errors += 1;
+        console.error('[UAE_APP_REMINDER_ERROR]', candidate.phone, error && error.message);
+      }
+    }
+    if (result.scanned) console.log('[UAE_APP_REMINDER_SWEEP]', JSON.stringify(result));
+    return result;
+  } finally {
+    uaeReminderRunning = false;
+  }
+}
+
+function startUaeAppReminderScheduler() {
+  if (uaeReminderInterval || String(process.env.UAE_APP_REMINDERS_ENABLED || 'true') === 'false') return uaeReminderInterval;
+  uaeReminderInterval = setInterval(() => {
+    runUaeAppReminderSweep().catch((error) => console.error('[UAE_APP_REMINDER_SCHEDULER_ERROR]', error));
+  }, 15 * 60 * 1000);
+  if (typeof uaeReminderInterval.unref === 'function') uaeReminderInterval.unref();
+  return uaeReminderInterval;
 }
 
 function startDetailsCheckScheduler() {
@@ -5755,6 +5991,15 @@ async function processIncomingMessage(phone, message) {
     case STATUS.AWAITING_DHA_LICENCE:
       await handleDhaLicence(phone, message);
       return;
+    case STATUS.AWAITING_DHA_LICENCE_HAS:
+      await handleDhaHas(phone, message);
+      return;
+    case STATUS.AWAITING_VISA_TYPE:
+      await handleVisaType(phone, message);
+      return;
+    case STATUS.AWAITING_EMIRATE:
+      await handleEmirate(phone, message);
+      return;
     case STATUS.AWAITING_NAME:
       await handleName(phone, message);
       return;
@@ -5894,7 +6139,19 @@ function hasAlreadyBeenApproved(provider) {
    of Accept / Decline buttons on a record that had already moved past that
    step. Now the second call reports who approved and when, and sends nothing.
    Mirrors invitePartnerAfterTermsCore in pulso-hub, which answers the same way. */
-async function approveCertificate(phone, reviewedBy, notes, qualification, reasons) {
+/* UAE nurse approvals (27 Oct 2026): "Approve as nurse" needs an active DHA
+   licence; "as caregiver" puts a nurse on the caregiver (GDA) band. Without a
+   choice from the desk: a nurse with no licence number is a caregiver. Returns
+   'gda', 'nurse' (clear any caregiver tier) or null (not a UAE nurse). */
+function uaeNurseTierFor(provider, approvedQualification, approveAs) {
+  if (String((provider && provider.region) || '').toLowerCase() !== 'uae') return null;
+  if (!['gnm', 'bsc_nursing'].includes(approvedQualification)) return null;
+  if (approveAs === 'caregiver') return 'gda';
+  if (approveAs === 'nurse') return 'nurse';
+  return provider.dhaLicenceNumber && !provider.uaeNurseWithoutLicence ? 'nurse' : 'gda';
+}
+
+async function approveCertificate(phone, reviewedBy, notes, qualification, reasons, options = {}) {
   const provider = await getProvider(phone);
   if (!provider) {
     throw new Error('Provider not found');
@@ -5940,10 +6197,13 @@ async function approveCertificate(phone, reviewedBy, notes, qualification, reaso
      nurse at all; the tier is stored beside it instead, which is what the
      hub's tierForProvider already expects to read. */
   const careTier = tierDecisionFor(basicTierReasons);
+  const uaeNurseTier = careTier ? null : uaeNurseTierFor(provider, approvedQualification, options.approveAs);
   await updateProvider(phone, {
     candidateSelectedQualification,
     qualification: approvedQualification,
     ...(careTier ? { careTier, basicTierReasons } : {}),
+    ...(uaeNurseTier === 'gda' ? { careTier: 'gda', uaeApprovedAs: 'caregiver' } : {}),
+    ...(uaeNurseTier === 'nurse' ? { careTier: null, uaeApprovedAs: 'nurse', uaeNurseWithoutLicence: false } : {}),
     status: STATUS.AWAITING_TERMS_ACCEPTANCE,
     currentStep: 14,
     termsSentAt: reviewedAt,
@@ -6132,6 +6392,10 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
 
 module.exports = {
   shouldEnterDubaiFlow,
+  runUaeAppReminderSweep,
+  startUaeAppReminderScheduler,
+  uaeReminderDue,
+  uaeNurseTierFor,
   runStillAvailableForInactiveProviders,
   handleProfilePhotoFromApp,
   markNeedsCall,

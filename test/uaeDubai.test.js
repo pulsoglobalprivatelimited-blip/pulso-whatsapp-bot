@@ -70,8 +70,9 @@ test('the UAE texts are the Bengaluru texts with Dubai, AED and bank transfer sw
   assert.equal(
     en.workingModel,
     blr.workingModel
-      .replace("In Bengaluru we give", 'In Dubai we give')
+      .replace("In Bengaluru we give", 'In the UAE we give')
       .replace('anywhere in Bengaluru', 'anywhere in Dubai')
+      .replace('Duty timing may be 8 hours or 24 hours', 'Duty timing may be 8 hours, 12 hours or 24 hours')
       .replace('Rs 600 to Rs 900', 'AED 60 to AED 90')
       .replace('Rs 750 to Rs 1000', 'AED 80 to AED 120')
       .replace('by cash or UPI', 'by cash or bank transfer')
@@ -83,12 +84,19 @@ test('the UAE texts are the Bengaluru texts with Dubai, AED and bank transfer sw
   assert.match(UAE_ML.MESSAGES.workingModel, /Duty area Dubai-യിൽ എവിടെയും ആയിരിക്കാം/);
   assert.match(UAE_ML.MESSAGES.workingModel, /cash അല്ലെങ്കിൽ bank transfer/);
   assert.match(UAE_ML.MESSAGES.sampleDutyOffer8Hour, /Agency pays you directly \(cash \/ bank transfer\)/);
-  assert.equal(en.dhaLicenceRequest, 'Type your DHA licence number.\nCaregiver without a DHA licence? Type your company name and staff ID number instead.\nOnly the number. Do not send ID cards or your passport here.');
+  // 27 Oct 2026: nurses only, the founder's lines 1 and 3 word for word.
+  assert.equal(en.dhaLicenceRequest, 'Type your DHA licence number.\nOnly the number. Do not send ID cards or your passport here.');
   assert.match(UAE_ML.MESSAGES.dhaLicenceRequest, /DHA licence/);
-  assert.match(UAE_ML.MESSAGES.dhaLicenceRequest, /staff ID/);
+  assert.doesNotMatch(UAE_ML.MESSAGES.dhaLicenceRequest, /staff ID/);
+  assert.equal(en.certificateRequest, 'Please send a clear photo of your certificate.\n\nNot your CV or resume — we need the certificate itself.\nDo not send your Emirates ID or passport.');
+  assert.equal(en.certificateApproved, 'Your certificate has been verified.\nYou are eligible to join Pulso.');
+  assert.equal(en.dhaHasQuestion, 'Do you have a DHA nursing licence?');
+  assert.equal(en.visaQuestion, 'Which visa are you on now?');
+  assert.equal(en.emirateQuestion, 'Which emirate do you live in?');
   assert.match(en.uaeAppInstructions, /play\.google\.com.*\n.*apps\.apple\.com\/ae\//);
   assert.match(en.uaeAppInstructions, /Sign in with this WhatsApp number\./);
-  assert.match(en.uaeAppInstructions, /Take 2 photos in the app: your DHA licence card \(or company ID card\) and a selfie holding it\. We check and reply within 1 day\.$/);
+  assert.match(en.uaeAppInstructions, /Keep the app notifications ON\. Duty offers from agencies will come in the app\.$/);
+  assert.doesNotMatch(en.uaeAppInstructions, /DHA|photo/);
   assert.equal(en.experienceCertificateNotice, null, 'Indian company certificate is not offered in Dubai');
   assert.doesNotMatch(en.termsAccepted, /180|experience/i);
   assert.equal(en.agencyQuestion, null, 'the India-only Duty Card question is not asked');
@@ -117,10 +125,16 @@ test('nurse: AED 150-250 (24h), AED 100-150 (8h), sample AED 150/day = AED 4,500
   assert.match(r.s8, /AED 100 per day/);
 });
 
-test('GDA: AED 80-120 (24h), AED 60-90 (8h), sample AED 100/day = AED 3,000', () => {
+test('GDA: AED 80-120 (24h), AED 80-110 (12h), AED 70-100 (8h), sample AED 100/day = AED 3,000', () => {
   const r = render('uae_english', { qualification: 'gda', age: 30 });
-  assert.match(r.model, /For 24-hour duty, you will receive AED 80 to AED 120 per day/);
-  assert.match(r.model, /For 8-hour duty, you will receive AED 60 to AED 90 per day/);
+  assert.match(r.model, /7\. For 24-hour duty, you will receive AED 80 to AED 120 per day/);
+  assert.match(r.model, /8\. For 12-hour duty, you will receive AED 80 to AED 110 per day/);
+  assert.match(r.model, /9\. For 8-hour duty, you will receive AED 70 to AED 100 per day/);
+  assert.match(r.model, /13\. There will be no housemaid work/);
+  assert.equal(r.summary.split('\n').slice(0, 3).join('|'), '24 hour - AED 80 to AED 120 per day|12 hour - AED 80 to AED 110 per day|8 hour - AED 70 to AED 100 per day');
+  const s12 = flow.runWithFlow('uae_english', () => flow.getSampleDutyOfferFor({ qualification: 'gda', age: 30 }, INDIA_TIERS, '12_hour'));
+  assert.match(s12, /Duty: 12 hours/);
+  assert.match(s12, /AED 90 per day/);
   assert.match(r.s24, /AED 100 per day, fixed by the agency\nAED 3,000 for 30 days/);
   assert.match(r.s8, /AED 70 per day/);
 });

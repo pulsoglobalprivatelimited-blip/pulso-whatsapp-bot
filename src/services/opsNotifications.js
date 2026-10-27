@@ -413,6 +413,7 @@ function formatStatus(value) {
 function formatDutyHourPreference(value) {
   if (value === '8_hour') return '8 hour';
   if (value === '24_hour') return '24 hour';
+  if (value === '12_hour') return '12 hour';
   if (value === 'both') return 'Both';
   return value || '-';
 }
@@ -443,8 +444,21 @@ function formatProviderSummary(provider) {
     `Preferred duty hour: ${formatDutyHourPreference(provider && provider.dutyHourPreference)}`,
     `Qualification: ${provider && provider.qualification ? provider.qualification.toUpperCase() : '-'}`,
     `District: ${(provider && provider.district) || '-'}`,
-    `Status: ${provider && provider.status ? formatStatus(provider.status) : '-'}`
+    `Status: ${provider && provider.status ? formatStatus(provider.status) : '-'}`,
+    ...uaeSummaryLines(provider)
   ];
+}
+
+/* UAE (27 Oct 2026): what the reviewer needs on the alert itself. */
+function uaeSummaryLines(provider) {
+  if (!provider || String(provider.region || '').toLowerCase() !== 'uae') return [];
+  const visa = { company: 'Company visa', family: 'Husband / family visa', visit: 'Visit visa', freelance: 'Freelance / part-time permit', other: 'Other' };
+  return [
+    provider.uaeVisaType ? `Visa: ${visa[provider.uaeVisaType] || provider.uaeVisaType}` : null,
+    provider.emirate ? `Emirate: ${provider.emirate}` : null,
+    provider.dhaLicenceNumber ? `DHA licence: ${provider.dhaLicenceNumber} (check on Sheryan)` : null,
+    provider.uaeNurseWithoutLicence ? 'Nurse without DHA licence: approve as caregiver' : null
+  ].filter(Boolean);
 }
 
 function buildProviderChatLink(phone) {
@@ -1404,8 +1418,11 @@ async function notifyOnboardingCompleted(provider) {
   // Dubai (founder, 27 Oct 2026): the WhatsApp steps are not the end - the
   // licence is checked in the app. Say so, and no Save contact link until ops
   // approve (notifyUaeLicenceApproved sends it then).
-  const uae = isUaeRegion(provider);
-  const body = joinLines(uae
+  // UAE (27 Oct 2026): the certificate is reviewed before the terms again, so
+  // completion is real and the alert is the normal one. Only the older
+  // app-licence records (reviewed in the app) still get the honest line.
+  const legacyUae = isUaeRegion(provider) && provider.verification && provider.verification.method === 'uae_app_licence';
+  const body = joinLines(legacyUae
     ? [
       'Pulso alert: Dubai caregiver finished WhatsApp steps',
       'NOT complete yet: must sign in to the Pulso app and send licence photo + selfie. Ops approves in the app.',

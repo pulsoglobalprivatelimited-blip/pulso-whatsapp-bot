@@ -31,6 +31,7 @@ const CONTACTS_SCOPE = 'https://www.googleapis.com/auth/contacts';
 const DUTY_PREFIX = {
   '24_hour': 'P24',
   '8_hour': 'P8',
+  '12_hour': 'P12',
   both: 'P24&8',
 };
 
@@ -81,6 +82,7 @@ function dutyLabel(dutyHourPreference) {
   const key = String(dutyHourPreference || '').trim().toLowerCase();
   if (key === '24_hour') return '24 hour';
   if (key === '8_hour') return '8 hour';
+  if (key === '12_hour') return '12 hour';
   if (key === 'both') return '24 hour or 8 hour';
   return '';
 }
@@ -304,6 +306,11 @@ async function getAccessToken() {
 // and the backfill script can retry later.
 function isAwaitingUaeLicence(provider) {
   if (String((provider && provider.region) || '').toLowerCase() !== 'uae') return false;
+  // Since 27 Oct 2026 the certificate is reviewed on the desk before the
+  // terms, so a completed UAE caregiver is complete. Only the older records,
+  // whose check was the app licence photos, wait for that approval.
+  const legacy = provider.verification && provider.verification.method === 'uae_app_licence';
+  if (!legacy) return false;
   const review = provider.uaeLicenceReview;
   return !(review && review.action === 'approve');
 }

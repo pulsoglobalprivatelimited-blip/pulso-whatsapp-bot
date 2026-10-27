@@ -18,7 +18,8 @@ const {
   startTermsReminderScheduler,
   startSubscriptionFeeReminderScheduler,
   startDutyDaysMilestoneScheduler,
-  startDetailsCheckScheduler
+  startDetailsCheckScheduler,
+  startUaeAppReminderScheduler
 } = require('./services/onboardingFlow');
 const { getProviderTiers } = require('./services/providerTiersConfig');
 const { processProviderSupportMessage } = require('./services/providerSupportFlow');
@@ -1582,7 +1583,9 @@ app.post('/admin/providers/:phone/approve-certificate', async (req, res) => {
       actor,
       req.body.notes,
       req.body.qualification,
-      req.body.basicTierReasons
+      req.body.basicTierReasons,
+      // UAE nurses: 'nurse' (active DHA licence) or 'caregiver' (27 Oct 2026).
+      { approveAs: ['nurse', 'caregiver'].includes(req.body.approveAs) ? req.body.approveAs : undefined }
     );
     // Still answers with the provider, so the desk's existing rendering is
     // unchanged; the flags ride alongside so it can say "already approved"
@@ -1712,6 +1715,7 @@ initializeStorage()
     startSubscriptionFeeReminderScheduler();
     startDutyDaysMilestoneScheduler();
     startDetailsCheckScheduler();
+    startUaeAppReminderScheduler();
     startCertificateReviewCatchUpScheduler();
     startPulsoAppActivationSweepScheduler();
     // The first pass runs behind the listener so a slow hub never delays boot.

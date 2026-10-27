@@ -6,16 +6,20 @@ const { isAwaitingUaeLicence, saveProviderContact } = require('../src/services/g
 const { handleLicenceReviewed } = require('../src/services/uaeLicence');
 
 describe('Dubai contact is saved only after licence approval (27 Oct 2026)', () => {
-  it('holds a Dubai caregiver until approve, never an India one', () => {
-    assert.strictEqual(isAwaitingUaeLicence({ region: 'uae' }), true);
-    assert.strictEqual(isAwaitingUaeLicence({ region: 'uae', uaeLicenceReview: { action: 'video_call' } }), true);
-    assert.strictEqual(isAwaitingUaeLicence({ region: 'uae', uaeLicenceReview: { action: 'approve' } }), false);
+  // 27 Oct 2026: the certificate is reviewed before the terms again, so only
+  // the older records (checked by app licence photos) wait for that approval.
+  const LEGACY = { status: 'verified', method: 'uae_app_licence' };
+  it('holds only an older app-licence Dubai record until approve, never an India one or a desk-reviewed one', () => {
+    assert.strictEqual(isAwaitingUaeLicence({ region: 'uae', verification: LEGACY }), true);
+    assert.strictEqual(isAwaitingUaeLicence({ region: 'uae', verification: LEGACY, uaeLicenceReview: { action: 'video_call' } }), true);
+    assert.strictEqual(isAwaitingUaeLicence({ region: 'uae', verification: LEGACY, uaeLicenceReview: { action: 'approve' } }), false);
+    assert.strictEqual(isAwaitingUaeLicence({ region: 'uae', verification: { status: 'verified', reviewedBy: 'ops-team' } }), false);
     assert.strictEqual(isAwaitingUaeLicence({ region: 'kerala' }), false);
     assert.strictEqual(isAwaitingUaeLicence({ region: 'karnataka' }), false);
   });
 
-  it('saveProviderContact skips a Dubai caregiver who is not approved', async () => {
-    const r = await saveProviderContact({ phone: '917025119631', region: 'uae', fullName: 'X' });
+  it('saveProviderContact skips an older app-licence Dubai record that is not approved', async () => {
+    const r = await saveProviderContact({ phone: '917025119631', region: 'uae', fullName: 'X', verification: LEGACY });
     assert.deepStrictEqual([r.ok, r.skipped, r.reason], [false, true, 'uae_awaiting_licence_approval']);
   });
 

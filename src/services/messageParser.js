@@ -152,6 +152,8 @@ function parseDutyHourPreference(message) {
   if (replyId === BUTTON_IDS.DUTY_HOUR_8) return '8_hour';
   if (replyId === BUTTON_IDS.DUTY_HOUR_24) return '24_hour';
   if (replyId === BUTTON_IDS.DUTY_HOUR_BOTH) return 'both';
+  // UAE 12-hour shift (27 Oct 2026): only the UAE list sends this id.
+  if (replyId === BUTTON_IDS.DUTY_HOUR_12) return '12_hour';
 
   const normalized = normalizeText(getMessageText(message));
   if (
@@ -162,6 +164,12 @@ function parseDutyHourPreference(message) {
     normalized.includes('24 hour and 8 hour') ||
     normalized.includes('8 & 24')
   ) {
+    return 'both';
+  }
+  if (/(^|\D)12( ?hours?| ?hrs?)?$/.test(normalized) || normalized.includes('12 hour')) {
+    return '12_hour';
+  }
+  if (normalized === 'any duty' || normalized === 'any') {
     return 'both';
   }
   if (
@@ -552,7 +560,43 @@ function parseDetailsCheckAction(message, { typed = true } = {}) {
   return null;
 }
 
+/* UAE plan (27 Oct 2026): visa type, emirate and "Do you have a DHA nursing
+   licence?". Taps only for the lists; a typed name of the option also counts. */
+function pickFromOptions(message, options) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId) {
+    const hit = options.find((o) => o.id === replyId);
+    return hit || null;
+  }
+  const typed = normalizeText(getMessageText(message));
+  if (!typed) return null;
+  return options.find((o) => normalizeText(o.title) === typed || normalizeText(o.value) === typed) || null;
+}
+
+function parseUaeVisa(message) {
+  const hit = pickFromOptions(message, require('../flow').UAE_VISA_OPTIONS);
+  return hit ? hit.value : null;
+}
+
+function parseEmirate(message) {
+  const hit = pickFromOptions(message, require('../flow').UAE_EMIRATES);
+  return hit ? hit.value : null;
+}
+
+function parseDhaHas(message) {
+  const replyId = getInteractiveReplyId(message);
+  if (replyId === BUTTON_IDS.DHA_HAS_YES) return 'yes';
+  if (replyId === BUTTON_IDS.DHA_HAS_NOT_YET) return 'not_yet';
+  const typed = normalizeText(getMessageText(message));
+  if (['yes', 'ഉണ്ട്', 'yes i have'].includes(typed)) return 'yes';
+  if (['not yet', 'no', 'ഇല്ല', 'ഇതുവരെ ഇല്ല'].includes(typed)) return 'not_yet';
+  return null;
+}
+
 module.exports = {
+  parseUaeVisa,
+  parseEmirate,
+  parseDhaHas,
   normalizeText,
   parseHeightRange,
   parseWeightKg,

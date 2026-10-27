@@ -72,6 +72,7 @@
     /* duty preference */
     '8_hour': '8 hour',
     '24_hour': '24 hour',
+    '12_hour': '12 hour',
     both: '8 or 24 hour',
 
     /* regions */

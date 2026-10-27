@@ -43,6 +43,13 @@ const STATUS = {
   // Dubai (26 Oct 2026): the certificate photo becomes a typed DHA licence
   // number (or company name + staff ID). Photos are taken later in the app.
   AWAITING_DHA_LICENCE: 'awaiting_dha_licence',
+  // UAE plan (27 Oct 2026): the licence is asked only to nurses (BSc / GNM),
+  // first as "Do you have a DHA nursing licence?" Yes / Not yet.
+  AWAITING_DHA_LICENCE_HAS: 'awaiting_dha_licence_has',
+  // UAE: "Which visa are you on now?" after the age; stored, nobody stopped.
+  AWAITING_VISA_TYPE: 'awaiting_visa_type',
+  // UAE: the emirate before the area; only Dubai gets the Dubai area list.
+  AWAITING_EMIRATE: 'awaiting_emirate',
   AWAITING_NAME: 'awaiting_name',
   AWAITING_AGE: 'awaiting_age',
   AGE_REJECTED: 'age_rejected',
@@ -88,6 +95,10 @@ const BUTTON_IDS = {
   INTEREST_NO: 'interest_no',
   DUTY_HOUR_8: 'duty_hour_8',
   DUTY_HOUR_24: 'duty_hour_24',
+  // UAE (27 Oct 2026): a 12-hour shift. Sent only by the UAE duty list.
+  DUTY_HOUR_12: 'duty_hour_12',
+  DHA_HAS_YES: 'dha_has_yes',
+  DHA_HAS_NOT_YET: 'dha_has_not_yet',
   DUTY_HOUR_BOTH: 'duty_hour_both',
   COOKING_YES: 'cooking_yes',
   COOKING_NO: 'cooking_no',
@@ -1379,7 +1390,7 @@ iPhone: ${UAE_APP_LINKS.iphone}
 
 Sign in with this WhatsApp number.
 
-Take 2 photos in the app: your DHA licence card (or company ID card) and a selfie holding it. We check and reply within 1 day.`;
+Keep the app notifications ON. Duty offers from agencies will come in the app.`;
 const UAE_APP_INSTRUCTIONS_ML = `Pulso app install ചെയ്യുക:
 
 Android: ${UAE_APP_LINKS.android}
@@ -1387,7 +1398,95 @@ iPhone: ${UAE_APP_LINKS.iphone}
 
 ഈ WhatsApp number ഉപയോഗിച്ച് sign in ചെയ്യുക.
 
-App-ൽ 2 ഫോട്ടോ എടുക്കുക: നിങ്ങളുടെ DHA licence card (അല്ലെങ്കിൽ company ID card), അത് കയ്യിൽ പിടിച്ചുള്ള ഒരു selfie. ഞങ്ങൾ പരിശോധിച്ച് 1 ദിവസത്തിനുള്ളിൽ മറുപടി നൽകും.`;
+App notifications ON ആക്കി വയ്ക്കുക. Agency-കളിൽ നിന്നുള്ള duty offers app-ൽ വരും.`;
+
+/* UAE plan, 27 Oct 2026 (pulso_hub docs/uae_dubai_master_plan.md, texts
+   approved by the founder). The visa answer is only stored; the emirate list
+   replaces "Dubai" as the place; the licence is a nurse's question only. */
+const UAE_VISA_OPTIONS = [
+  { id: 'visa_company', value: 'company', title: 'Company visa', description: 'My employer' },
+  { id: 'visa_family', value: 'family', title: 'Husband / family visa' },
+  { id: 'visa_visit', value: 'visit', title: 'Visit visa' },
+  { id: 'visa_freelance', value: 'freelance', title: 'Freelance permit', description: 'Or part-time permit' },
+  { id: 'visa_other', value: 'other', title: 'Other' }
+];
+const UAE_EMIRATES = [
+  { id: 'emirate_dubai', value: 'Dubai', title: 'Dubai' },
+  { id: 'emirate_sharjah', value: 'Sharjah', title: 'Sharjah' },
+  { id: 'emirate_ajman', value: 'Ajman', title: 'Ajman' },
+  { id: 'emirate_abu_dhabi', value: 'Abu Dhabi', title: 'Abu Dhabi' },
+  { id: 'emirate_al_ain', value: 'Al Ain', title: 'Al Ain' },
+  { id: 'emirate_ras_al_khaimah', value: 'Ras Al Khaimah', title: 'Ras Al Khaimah' },
+  { id: 'emirate_fujairah', value: 'Fujairah', title: 'Fujairah' },
+  { id: 'emirate_umm_al_quwain', value: 'Umm Al Quwain', title: 'Umm Al Quwain' }
+];
+// Outside Dubai the emirate is her area: these are district values too, so
+// regionService maps them back to the UAE.
+const UAE_EMIRATE_DISTRICTS = UAE_EMIRATES.filter((e) => e.value !== 'Dubai').map((e) => ({ id: e.id, title: e.title, value: e.value }));
+const EMIRATES_ID_LINE = { en: 'Do not send your Emirates ID or passport.', ml: 'Emirates ID-യോ passport-ഓ അയയ്ക്കരുത്.' };
+const UAE_PLAN_TEXTS = {
+  en: {
+    visaQuestion: 'Which visa are you on now?',
+    visaRetry: 'Please choose your visa from the list below.',
+    visaButtonText: 'Choose visa',
+    dhaHasQuestion: 'Do you have a DHA nursing licence?',
+    dhaHasRetry: 'Please tap Yes or Not yet.',
+    dhaHasYes: 'Yes',
+    dhaHasNotYet: 'Not yet',
+    // The founder's licence lines 1 and 3, word for word (line 2 was for caregivers).
+    dhaLicenceRequest: 'Type your DHA licence number.\nOnly the number. Do not send ID cards or your passport here.',
+    dhaNotYet:
+      'No problem. You can join Pulso as a caregiver now and get caregiver duties.\nWhen you get your DHA licence, send the number here and we will move you to nurse duties and nurse pay.\n\nPlease send a clear photo of your nursing certificate.\nDo not send your Emirates ID or passport.',
+    nurseCertificateRequest: 'Please send a clear photo of your nursing certificate.\nDo not send your Emirates ID or passport.',
+    emirateQuestion: 'Which emirate do you live in?',
+    emirateRetry: 'Please choose your emirate from the list below.',
+    emirateButtonText: 'Choose emirate',
+    dutyListButtonText: 'Choose duty',
+    dutyAnyTitle: 'Any duty',
+    duty12Line: 'For 12-hour duty, you will receive {{range}} per day',
+    duty12Summary: '12 hour - {{range}} per day',
+    dutyTimingFrom: 'Duty timing may be 8 hours or 24 hours',
+    dutyTimingTo: 'Duty timing may be 8 hours, 12 hours or 24 hours',
+    introFrom: 'In Dubai we give caregivers',
+    introTo: 'In the UAE we give caregivers',
+    appLine: 'Keep the app notifications ON. Duty offers from agencies will come in the app.',
+    reminder1: 'Hi {{name}}, one step left. Install the Pulso app and sign in with this WhatsApp number.\n\nAndroid: {{android}}\niPhone: {{iphone}}',
+    reminder2: 'Hi {{name}}, duty offers start only after you sign in to the Pulso app. It takes 2 minutes.',
+    needHelpTitle: 'Need help',
+    labels: { visa: 'Visa', emirate: 'Emirate', dhaLicence: 'DHA licence' },
+    visaValues: { company: 'Company visa', family: 'Husband / family visa', visit: 'Visit visa', freelance: 'Freelance / part-time permit', other: 'Other' }
+  },
+  ml: {
+    visaQuestion: 'താങ്കൾ ഇപ്പോൾ ഏത് visa-യിലാണ്?',
+    visaRetry: 'ദയവായി താഴെയുള്ള list-ിൽ നിന്ന് visa തിരഞ്ഞെടുക്കുക.',
+    visaButtonText: 'Visa തിരഞ്ഞെടുക്കുക',
+    dhaHasQuestion: 'താങ്കൾക്ക് DHA nursing licence ഉണ്ടോ?',
+    dhaHasRetry: 'ദയവായി ഉണ്ട് അല്ലെങ്കിൽ ഇതുവരെ ഇല്ല tap ചെയ്യുക.',
+    dhaHasYes: 'ഉണ്ട്',
+    dhaHasNotYet: 'ഇതുവരെ ഇല്ല',
+    dhaLicenceRequest: 'നിങ്ങളുടെ DHA licence number type ചെയ്യുക.\nNumber മാത്രം മതി. ID card-ഓ passport-ഓ ഇവിടെ അയയ്ക്കരുത്.',
+    dhaNotYet:
+      'കുഴപ്പമില്ല. ഇപ്പോൾ caregiver ആയി Pulso-യിൽ join ചെയ്ത് caregiver duties ചെയ്യാം.\nDHA licence കിട്ടുമ്പോൾ number ഇവിടെ അയച്ചാൽ ഞങ്ങൾ താങ്കളെ nurse duties-ലേക്കും nurse pay-യിലേക്കും മാറ്റും.\n\nദയവായി താങ്കളുടെ nursing certificate-ന്റെ വ്യക്തമായ ഒരു ഫോട്ടോ അയയ്ക്കുക.\nEmirates ID-യോ passport-ഓ അയയ്ക്കരുത്.',
+    nurseCertificateRequest: 'ദയവായി താങ്കളുടെ nursing certificate-ന്റെ വ്യക്തമായ ഒരു ഫോട്ടോ അയയ്ക്കുക.\nEmirates ID-യോ passport-ഓ അയയ്ക്കരുത്.',
+    emirateQuestion: 'താങ്കൾ UAE-യിലെ ഏത് emirate-ലാണ് താമസിക്കുന്നത്?',
+    emirateRetry: 'ദയവായി താഴെയുള്ള list-ിൽ നിന്ന് emirate തിരഞ്ഞെടുക്കുക.',
+    emirateButtonText: 'Emirate തിരഞ്ഞെടുക്കുക',
+    dutyListButtonText: 'Duty തിരഞ്ഞെടുക്കുക',
+    dutyAnyTitle: 'ഏത് duty-യും',
+    duty12Line: '12 മണിക്കൂർ ഡ്യൂട്ടിക്ക് ദിവസത്തിൽ {{range}} ലഭിക്കും',
+    duty12Summary: '12 hour - ദിവസത്തിൽ {{range}}',
+    dutyTimingFrom: 'Duty timing 8 hours, 24 hours എന്നീ',
+    dutyTimingTo: 'Duty timing 8 hours, 12 hours, 24 hours എന്നീ',
+    introFrom: 'Dubai-യിൽ ഞങ്ങൾ home-care',
+    introTo: 'UAE-യിൽ ഞങ്ങൾ home-care',
+    appLine: 'App notifications ON ആക്കി വയ്ക്കുക. Agency-കളിൽ നിന്നുള്ള duty offers app-ൽ വരും.',
+    reminder1: 'Hi {{name}}, ഒരു step കൂടി മാത്രം. Pulso app install ചെയ്ത് ഈ WhatsApp number ഉപയോഗിച്ച് sign in ചെയ്യുക.\n\nAndroid: {{android}}\niPhone: {{iphone}}',
+    reminder2: 'Hi {{name}}, Pulso app-ൽ sign in ചെയ്തതിന് ശേഷം മാത്രമേ duty offers വരൂ. 2 മിനിറ്റ് മതി.',
+    needHelpTitle: 'സഹായം വേണം',
+    labels: { visa: 'Visa', emirate: 'Emirate', dhaLicence: 'DHA licence' },
+    visaValues: { company: 'Company visa', family: 'Husband / family visa', visit: 'Visit visa', freelance: 'Freelance / part-time permit', other: 'Other' }
+  }
+};
 
 /* Texts that are India-only and never sent to a Dubai caregiver: the ₹499
    subscription fee (never due in the UAE), the experience certificate of an
@@ -1407,17 +1506,47 @@ const UAE_NOT_SENT = {
   addDutyProcedure: null,
   addDutyInstallFirst: null,
   addDutyLater: null,
-  // There is no certificate review in Dubai: the licence is checked in the app.
-  certificateApproved: null,
-  certificateApprovedBasic: null
 };
+
+function withEmiratesIdLine(text, language) {
+  return `${text}\n${EMIRATES_ID_LINE[language === 'ml' ? 'ml' : 'en']}`;
+}
+
+// The Bengaluru approval without its last paragraph: the 180-day experience
+// certificate is an Indian company's (India only).
+function firstParagraph(text) {
+  return String(text || '').split('\n\n')[0];
+}
 
 function dubaiMessages(base, language) {
   const en = language === 'en';
+  const plan = UAE_PLAN_TEXTS[en ? 'en' : 'ml'];
+  const workingModel = swapExact(
+    swapExact(dubaiWorkingModel(base.workingModel, language), plan.introFrom, plan.introTo),
+    plan.dutyTimingFrom,
+    plan.dutyTimingTo
+  );
   return {
     ...base,
     ...UAE_NOT_SENT,
-    workingModel: dubaiWorkingModel(base.workingModel, language),
+    workingModel,
+    certificateRequest: withEmiratesIdLine(base.certificateRequest, language),
+    certificateRequestNamed: withEmiratesIdLine(base.certificateRequestNamed, language),
+    certificateRetry: withEmiratesIdLine(base.certificateRetry, language),
+    certificateRetryNamed: withEmiratesIdLine(base.certificateRetryNamed, language),
+    certificateApproved: firstParagraph(base.certificateApproved),
+    certificateApprovedBasic: base.certificateApprovedBasic,
+    visaQuestion: plan.visaQuestion,
+    visaRetry: plan.visaRetry,
+    dhaHasQuestion: plan.dhaHasQuestion,
+    dhaHasRetry: plan.dhaHasRetry,
+    dhaNotYet: plan.dhaNotYet,
+    nurseCertificateRequest: plan.nurseCertificateRequest,
+    emirateQuestion: plan.emirateQuestion,
+    emirateRetry: plan.emirateRetry,
+    uaeAppReminder1: plan.reminder1,
+    uaeAppReminder2: plan.reminder2,
+    uaeVisaValues: plan.visaValues,
     sampleDutyOffer24Hour: toDubai(base.sampleDutyOffer24Hour),
     sampleDutyOffer8Hour: toDubai(base.sampleDutyOffer8Hour),
     termsIntro: toDubai(base.termsIntro),
@@ -1443,7 +1572,7 @@ function dubaiMessages(base, language) {
     districtListQuestion: en
       ? 'Please select your area from the list below.'
       : 'താഴെയുള്ള list-ിൽ നിന്ന് താങ്കളുടെ area തിരഞ്ഞെടുക്കുക.',
-    detailsCheckLabels: { ...base.detailsCheckLabels, district: 'Area' },
+    detailsCheckLabels: { ...base.detailsCheckLabels, district: 'Area', ...plan.labels },
     loginPhoneTypeAsk: en ? 'Please type the UAE mobile number.' : 'ദയവായി UAE mobile number type ചെയ്യുക.',
     loginPhoneRetry: en
       ? 'Please type a UAE mobile number (e.g. 050 123 4567).'
@@ -1452,15 +1581,16 @@ function dubaiMessages(base, language) {
     termsAccepted: en
       ? 'Thank you. Your onboarding is complete.'
       : 'നന്ദി. താങ്കളുടെ onboarding വിജയകരമായി പൂർത്തിയായി.',
-    dhaLicenceRequest: en ? DHA_LICENCE_REQUEST_EN : DHA_LICENCE_REQUEST_ML,
+    // Nurses only now (27 Oct 2026): the founder's lines 1 and 3.
+    dhaLicenceRequest: plan.dhaLicenceRequest,
     dhaLicenceTypeOnly: en
       ? 'Please type only the number. Do not send photos or documents here.'
       : 'ദയവായി number മാത്രം type ചെയ്യുക. ഫോട്ടോയോ document-ഓ ഇവിടെ അയയ്ക്കരുത്.',
     uaeAppInstructions: en ? UAE_APP_INSTRUCTIONS_EN : UAE_APP_INSTRUCTIONS_ML,
     // The hub saw her sign in: what is left is the two photos.
     pulsoAppActivationVerified: en
-      ? 'You are signed in to the Pulso app.\n\nTake 2 photos in the app: your DHA licence card (or company ID card) and a selfie holding it. We check and reply within 1 day.\n\nPlease keep your app notifications turned on.'
-      : 'താങ്കൾ Pulso app-ൽ sign in ചെയ്തു.\n\nApp-ൽ 2 ഫോട്ടോ എടുക്കുക: നിങ്ങളുടെ DHA licence card (അല്ലെങ്കിൽ company ID card), അത് കയ്യിൽ പിടിച്ചുള്ള ഒരു selfie. ഞങ്ങൾ പരിശോധിച്ച് 1 ദിവസത്തിനുള്ളിൽ മറുപടി നൽകും.\n\nദയവായി app notifications on ആക്കി വയ്ക്കുക.'
+      ? 'You are signed in to the Pulso app.\n\nBefore your first duty, add your Emirates ID and a selfie in the app. We check and reply within 1 day.\n\nPlease keep your app notifications turned on.'
+      : 'താങ്കൾ Pulso app-ൽ sign in ചെയ്തു.\n\nആദ്യ duty-ക്ക് മുൻപ് app-ൽ Emirates ID-യും ഒരു selfie-യും ചേർക്കുക. ഞങ്ങൾ പരിശോധിച്ച് 1 ദിവസത്തിനുള്ളിൽ മറുപടി നൽകും.\n\nദയവായി app notifications on ആക്കി വയ്ക്കുക.'
   };
 }
 
@@ -1469,6 +1599,13 @@ const UAE_MALAYALAM_MESSAGES = dubaiMessages(KARNATAKA_MALAYALAM_MESSAGES, 'ml')
 
 const UAE_ENGLISH_UI_TEXT = {
   ...KARNATAKA_UI_TEXT,
+  dutyBothTitle: UAE_PLAN_TEXTS.en.dutyAnyTitle,
+  dutyListButtonText: UAE_PLAN_TEXTS.en.dutyListButtonText,
+  visaButtonText: UAE_PLAN_TEXTS.en.visaButtonText,
+  emirateButtonText: UAE_PLAN_TEXTS.en.emirateButtonText,
+  dhaHasYesTitle: UAE_PLAN_TEXTS.en.dhaHasYes,
+  dhaHasNotYetTitle: UAE_PLAN_TEXTS.en.dhaHasNotYet,
+  needHelpTitle: UAE_PLAN_TEXTS.en.needHelpTitle,
   districtButtonText: 'Select area',
   districtSectionTitle: 'Areas of Dubai',
   nextListDescription: 'Open if your area is not here',
@@ -1476,6 +1613,13 @@ const UAE_ENGLISH_UI_TEXT = {
 };
 const UAE_MALAYALAM_UI_TEXT = {
   ...UI_TEXT,
+  dutyBothTitle: UAE_PLAN_TEXTS.ml.dutyAnyTitle,
+  dutyListButtonText: UAE_PLAN_TEXTS.ml.dutyListButtonText,
+  visaButtonText: UAE_PLAN_TEXTS.ml.visaButtonText,
+  emirateButtonText: UAE_PLAN_TEXTS.ml.emirateButtonText,
+  dhaHasYesTitle: UAE_PLAN_TEXTS.ml.dhaHasYes,
+  dhaHasNotYetTitle: UAE_PLAN_TEXTS.ml.dhaHasNotYet,
+  needHelpTitle: UAE_PLAN_TEXTS.ml.needHelpTitle,
   districtButtonText: 'Area തിരഞ്ഞെടുക്കുക',
   districtSectionTitle: 'Areas of Dubai',
   nextListDescription: 'Area ഇവിടെ ഇല്ലെങ്കിൽ തുറക്കുക',
@@ -1528,6 +1672,7 @@ const FLOWS = {
     MESSAGES: UAE_MALAYALAM_MESSAGES,
     QUALIFICATIONS,
     DISTRICTS: UAE_DISTRICTS,
+    EMIRATE_DISTRICTS: UAE_EMIRATE_DISTRICTS,
     UI_TEXT: UAE_MALAYALAM_UI_TEXT
   },
   uae_english: {
@@ -1539,6 +1684,7 @@ const FLOWS = {
     MESSAGES: UAE_ENGLISH_MESSAGES,
     QUALIFICATIONS: ENGLISH_QUALIFICATIONS,
     DISTRICTS: UAE_DISTRICTS,
+    EMIRATE_DISTRICTS: UAE_EMIRATE_DISTRICTS,
     UI_TEXT: UAE_ENGLISH_UI_TEXT
   }
 };
@@ -1685,7 +1831,9 @@ const UAE_TIER_DEFAULTS = {
   basic: { payout8h: 60, payout24h: 80, familyFloor8h: 60, familyFloor24h: 80 },
   gda: {
     payout8h: 70, payout24h: 90, familyFloor8h: 70, familyFloor24h: 90,
-    shownFrom8h: 60, shownTo8h: 90, shownFrom24h: 80, shownTo24h: 120, sample8h: 70, sample24h: 100
+    shownFrom8h: 70, shownTo8h: 100, shownFrom24h: 80, shownTo24h: 120, sample8h: 70, sample24h: 100,
+    // 12-hour shift (founder, 27 Oct 2026): AED 80–110; the sample sits inside.
+    shownFrom12h: 80, shownTo12h: 110, sample12h: 90
   },
   nurse: {
     payout8h: 100, payout24h: 150, familyFloor8h: 100, familyFloor24h: 150,
@@ -1863,6 +2011,7 @@ function sampleDutyRates(band, f) {
 }
 
 function getSampleDutyOfferFor(qualification, tiers, choice) {
+  if (choice === '12_hour') return getTwelveHourSampleFor(qualification, tiers);
   if (choice !== '24_hour' && choice !== '8_hour') return null;
   tiers = tiersForActiveFlow(tiers);
   const flow = getActiveFlow();
@@ -1887,6 +2036,27 @@ function getSampleDutyOfferFor(qualification, tiers, choice) {
   const line = flow.MESSAGES.sampleDutyCookingLine;
   if (!line || !hasCookingOptIn(qualification, tiers)) return sample;
   return `${sample}\n\n${String(line).split('{{extra}}').join(formatRupees(supportingCareExtraPerDay(tiers)))}`;
+}
+
+/* UAE only: the 8-hour sample as a 12-hour duty, at the band's 12-hour
+   sample figure (the 8-hour figure when the card has no 12-hour one). */
+function getTwelveHourSampleFor(qualification, tiers) {
+  const flow = getActiveFlow();
+  if (flow.region !== 'uae') return null;
+  const t = tiersForActiveFlow(tiers);
+  const band = rateBandFor(qualification, t);
+  const twelve = twelveHourFigures(band, t);
+  const day = twelve ? twelve.sample : sampleDutyRates(band, tierFigures(t)).day8;
+  const template = String(flow.MESSAGES.sampleDutyOffer8Hour || '');
+  const swaps = flow.language === 'ml'
+    ? [['8 hours (8:00 AM – 4:00 PM)', '12 hours (8:00 AM – 8:00 PM)']]
+    : [['Duty: 8 hours', 'Duty: 12 hours']];
+  let text = template;
+  for (const [from, to] of swaps) {
+    if (!text.includes(from)) return null;
+    text = text.split(from).join(to);
+  }
+  return text.split('{{payout8h}}').join(Number(day).toLocaleString('en-US'));
 }
 
 /**
@@ -1995,6 +2165,51 @@ function getBasicQualificationNoticeFor(subject, tiers) {
 }
 
 /** The working model for the flow in play, at the rate this qualification earns. */
+/* UAE 12-hour shift (founder, 27 Oct 2026). The band's 12-hour range, read
+   per figure from the UAE tier card (gda shownFrom12h / shownTo12h, the same
+   keys on nurse, shown12h on basic). Null when the card has none: then no
+   12-hour line is written, rather than a made-up figure. */
+function twelveHourFigures(band, tiers) {
+  const t = tiers && typeof tiers === 'object' ? tiers : {};
+  const num = (v) => {
+    const n = Math.round(Number(v));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  const row = t[band] || {};
+  if (band === 'basic') {
+    const flat = num(row.shown12h);
+    return flat ? { from: flat, to: flat, sample: flat } : null;
+  }
+  const from = num(row.shownFrom12h);
+  const to = num(row.shownTo12h);
+  if (!from || !to) return null;
+  return { from, to, sample: num(row.sample12h) || from };
+}
+
+function twelveHourRangeText(band, tiers, language, currency) {
+  const f = twelveHourFigures(band, tiers);
+  if (!f) return null;
+  return language === 'ml' ? mlRange(f.from, f.to, currency) : enRange(f.from, f.to, currency);
+}
+
+/* Puts `line` as its own numbered point just before the point holding
+   `beforeText`, and numbers the whole run of points again. */
+function insertNumberedPointBefore(text, beforeText, line) {
+  const rows = String(text).split('\n');
+  const at = rows.findIndex((row) => /^\d+\. /.test(row) && row.includes(beforeText));
+  if (at < 0) return text;
+  rows.splice(at, 0, `0. ${line}`);
+  let start = at;
+  while (start > 0 && /^\d+\. /.test(rows[start - 1])) start -= 1;
+  let n = Number(rows[start].match(/^(\d+)\. /)[1]);
+  if (start === at) n = Number(rows[at + 1].match(/^(\d+)\. /)[1]);
+  for (let i = start; i < rows.length && /^\d+\. /.test(rows[i]); i += 1) {
+    rows[i] = rows[i].replace(/^\d+\. /, `${n}. `);
+    n += 1;
+  }
+  return rows.join('\n');
+}
+
 function getWorkingModelFor(qualification, tiers) {
   tiers = tiersForActiveFlow(tiers);
   const flow = getActiveFlow();
@@ -2010,7 +2225,15 @@ function getWorkingModelFor(qualification, tiers) {
     (t, marker, i) => swapExact(t, marker, `\u0000RATE_LINE_${i}\u0000`),
     String(flow.MESSAGES.workingModel)
   );
-  const text = parked.replace(/\u0000RATE_LINE_(\d)\u0000/g, (_, i) => lines[Number(i)]);
+  let text = parked.replace(/\u0000RATE_LINE_(\d)\u0000/g, (_, i) => lines[Number(i)]);
+  if (flow.region === 'uae') {
+    const range = twelveHourRangeText(band, tiers, flow.language, flow.currency);
+    if (range) {
+      const twelve = UAE_PLAN_TEXTS[flow.language === 'ml' ? 'ml' : 'en'].duty12Line.split('{{range}}').join(range);
+      // Between the 24-hour and the 8-hour line: the 8-hour one carries the growth sentence.
+      text = insertNumberedPointBefore(text, lines[1].split('. ')[0], twelve);
+    }
+  }
   return withNoCertificateLine(text, qualification, flow.MESSAGES);
 }
 
@@ -2081,6 +2304,18 @@ function getTermsRateFor(subject, tiers) {
 
 /** The two-line pay summary shown with the duty-hours question, per band. */
 function getDutyHourPaymentSummaryFor(qualification, tiers) {
+  const summary = dutyHourPaymentSummary(qualification, tiers);
+  const flow = getActiveFlow();
+  if (flow.region !== 'uae') return summary;
+  const t = tiersForActiveFlow(tiers);
+  const range = twelveHourRangeText(rateBandFor(qualification, t), t, flow.language, flow.currency);
+  if (!range) return summary;
+  const rows = summary.split('\n');
+  rows.splice(1, 0, UAE_PLAN_TEXTS[flow.language === 'ml' ? 'ml' : 'en'].duty12Summary.split('{{range}}').join(range));
+  return rows.join('\n');
+}
+
+function dutyHourPaymentSummary(qualification, tiers) {
   tiers = tiersForActiveFlow(tiers);
   const flow = getActiveFlow();
   const c = flow.currency;
@@ -2188,6 +2423,11 @@ module.exports = {
   getFlowIdFor,
   UAE_TIER_DEFAULTS,
   UAE_APP_LINKS,
+  UAE_VISA_OPTIONS,
+  UAE_EMIRATES,
+  UAE_EMIRATE_DISTRICTS,
+  UAE_PLAN_TEXTS,
+  insertNumberedPointBefore,
   DHA_LICENCE_REQUEST_EN,
   uaeTiers,
   isUaeFlowActive,
