@@ -71,18 +71,20 @@ test('the UAE texts are the Bengaluru texts with Dubai, AED and bank transfer sw
     en.workingModel,
     blr.workingModel
       .replace("In Bengaluru we give", 'In the UAE we give')
-      .replace('anywhere in Bengaluru', 'anywhere in Dubai')
+      .replace('anywhere in Bengaluru', 'anywhere in the UAE')
       .replace('Duty timing may be 8 hours or 24 hours', 'Duty timing may be 8 hours, 12 hours or 24 hours')
       .replace('Rs 600 to Rs 900', 'AED 60 to AED 90')
       .replace('Rs 750 to Rs 1000', 'AED 80 to AED 120')
       .replace('by cash or UPI', 'by cash or bank transfer')
+      .replace('Head Office Address:\nPulso Elderlycare, cochin, kerala - 682036', 'Global Head Office Address:\nPulso Elderlycare, cochin, kerala - 682036, India')
   );
   assert.match(en.termsIntro, /duty offers from home-care agencies in Dubai/);
   assert.match(en.termsIntro, /directly, by cash or bank transfer, on the day you and the agency agree/);
   assert.match(en.sampleDutyOffer24Hour, /Location: Al Barsha, Dubai/);
   assert.match(en.sampleDutyOffer24Hour, /AED \{\{payout24h\}\} per day, fixed by the agency\nAED \{\{total24h\}\} for 30 days/);
-  assert.match(UAE_ML.MESSAGES.workingModel, /Duty area Dubai-യിൽ എവിടെയും ആയിരിക്കാം/);
+  assert.match(UAE_ML.MESSAGES.workingModel, /Duty area UAE-യിൽ എവിടെയും ആയിരിക്കാം/);
   assert.match(UAE_ML.MESSAGES.workingModel, /cash അല്ലെങ്കിൽ bank transfer/);
+  assert.match(UAE_ML.MESSAGES.workingModel, /\*\*Global Head Office Address:\*\*\nPulso Elderlycare, Kalamassery, Kochi - 682021, India$/);
   assert.match(UAE_ML.MESSAGES.sampleDutyOffer8Hour, /Agency pays you directly \(cash \/ bank transfer\)/);
   // 27 Oct 2026: nurses only, the founder's lines 1 and 3 word for word.
   assert.equal(en.dhaLicenceRequest, 'Type your DHA licence number.\nOnly the number. Do not send ID cards or your passport here.');

@@ -1462,6 +1462,11 @@ const UAE_PLAN_TEXTS = {
     dutyTimingTo: 'Duty timing may be 8 hours, 12 hours or 24 hours',
     introFrom: 'In Dubai we give caregivers',
     introTo: 'In the UAE we give caregivers',
+    // 28 Oct 2026, founder: the ad runs across the UAE; office line says global head office, India last.
+    locationFrom: 'Duty location can be anywhere in Dubai',
+    locationTo: 'Duty location can be anywhere in the UAE',
+    officeFrom: 'Head Office Address:\nPulso Elderlycare, cochin, kerala - 682036',
+    officeTo: 'Global Head Office Address:\nPulso Elderlycare, cochin, kerala - 682036, India',
     appLine: 'Keep the app notifications ON. Duty offers from agencies will come in the app.',
     reminder1: 'Hi {{name}}, one step left. Install the Pulso app and sign in with this WhatsApp number.\n\nAndroid: {{android}}\niPhone: {{iphone}}',
     reminder2: 'Hi {{name}}, duty offers start only after you sign in to the Pulso app. It takes 2 minutes.',
@@ -1492,6 +1497,10 @@ const UAE_PLAN_TEXTS = {
     dutyTimingTo: 'Duty timing 8 hours, 12 hours, 24 hours എന്നീ',
     introFrom: 'Dubai-യിൽ ഞങ്ങൾ home-care',
     introTo: 'UAE-യിൽ ഞങ്ങൾ home-care',
+    locationFrom: 'Duty area Dubai-യിൽ എവിടെയും ആയിരിക്കാം',
+    locationTo: 'Duty area UAE-യിൽ എവിടെയും ആയിരിക്കാം',
+    officeFrom: '**Office Address:**\nPulso Elderlycare, Kalamassery, Kochi - 682021',
+    officeTo: '**Global Head Office Address:**\nPulso Elderlycare, Kalamassery, Kochi - 682021, India',
     appLine: 'App notifications ON ആക്കി വയ്ക്കുക. Agency-കളിൽ നിന്നുള്ള duty offers app-ൽ വരും.',
     reminder1: 'Hi {{name}}, ഒരു step കൂടി മാത്രം. Pulso app install ചെയ്ത് ഈ WhatsApp number ഉപയോഗിച്ച് sign in ചെയ്യുക.\n\nAndroid: {{android}}\niPhone: {{iphone}}',
     reminder2: 'Hi {{name}}, Pulso app-ൽ sign in ചെയ്തതിന് ശേഷം മാത്രമേ duty offers വരൂ. 2 മിനിറ്റ് മതി.',
@@ -1536,11 +1545,12 @@ function firstParagraph(text) {
 function dubaiMessages(base, language) {
   const en = language === 'en';
   const plan = UAE_PLAN_TEXTS[en ? 'en' : 'ml'];
-  const workingModel = swapExact(
-    swapExact(dubaiWorkingModel(base.workingModel, language), plan.introFrom, plan.introTo),
-    plan.dutyTimingFrom,
-    plan.dutyTimingTo
-  );
+  const workingModel = [
+    [plan.introFrom, plan.introTo],
+    [plan.dutyTimingFrom, plan.dutyTimingTo],
+    [plan.locationFrom, plan.locationTo],
+    [plan.officeFrom, plan.officeTo]
+  ].reduce((text, [from, to]) => swapExact(text, from, to), dubaiWorkingModel(base.workingModel, language));
   return {
     ...base,
     ...UAE_NOT_SENT,
