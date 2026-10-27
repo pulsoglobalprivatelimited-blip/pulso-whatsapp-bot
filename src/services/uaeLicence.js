@@ -78,6 +78,22 @@ const REVIEW_TEXTS = {
 };
 const ACTIONS = Object.keys(REVIEW_TEXTS.en);
 
+// Documents before the first duty (27 Oct 2026): Emirates ID front and back
+// and a selfie, for everyone reviewed on the WhatsApp desk. Approve reads the
+// same; the video-call and retake lines name the Emirates ID.
+const DOCUMENT_TEXTS = {
+  en: {
+    approve: REVIEW_TEXTS.en.approve,
+    video_call: 'Hi {name}, we need to confirm one thing.\nOur team will video-call you for 1 minute today. Please keep your Emirates ID ready.',
+    reject: 'Hi {name}, we could not check your photos. Please open the Pulso app and take the 3 photos again: your Emirates ID front, the back, and a clear selfie, in good light.'
+  },
+  ml: {
+    approve: REVIEW_TEXTS.ml.approve,
+    video_call: 'Hi {name}, ഒരു കാര്യം ഉറപ്പാക്കാനുണ്ട്.\nഞങ്ങളുടെ team ഇന്ന് 1 മിനിറ്റ് video call ചെയ്യും. ദയവായി Emirates ID കയ്യിൽ വയ്ക്കുക.',
+    reject: 'Hi {name}, താങ്കളുടെ ഫോട്ടോകൾ പരിശോധിക്കാൻ കഴിഞ്ഞില്ല. ദയവായി Pulso app തുറന്ന് 3 ഫോട്ടോകൾ വീണ്ടും എടുക്കുക: Emirates ID-യുടെ മുൻവശം, പിൻവശം, വ്യക്തമായ ഒരു selfie, നല്ല വെളിച്ചത്തിൽ.'
+  }
+};
+
 function languageOf(provider) {
   if (provider && provider.language === 'ml') return 'ml';
   const flow = provider && provider.flowId ? FLOWS[provider.flowId] : null;
@@ -85,8 +101,9 @@ function languageOf(provider) {
 }
 
 /** The WhatsApp line for a review decision. */
-function reviewedMessage(action, { name, area, language } = {}) {
-  const set = REVIEW_TEXTS[language === 'ml' ? 'ml' : 'en'];
+function reviewedMessage(action, { name, area, language, kind } = {}) {
+  const texts = kind === 'emirates_id' ? DOCUMENT_TEXTS : REVIEW_TEXTS;
+  const set = texts[language === 'ml' ? 'ml' : 'en'];
   const template = set[action];
   if (!template) throw new Error(`Unknown action: ${action}`);
   return template
@@ -110,7 +127,8 @@ function validateReviewed(body = {}) {
   if (phone.length < 11 || phone.length > 15) throw new Error('phone is required');
   const action = String(body.action || '').trim().toLowerCase();
   if (!ACTIONS.includes(action)) throw new Error('action must be approve, reject or video_call');
-  return { phone, action, name: String(body.name || '').trim().slice(0, 60) };
+  const kind = String(body.kind || '').trim().toLowerCase() === 'emirates_id' ? 'emirates_id' : 'licence';
+  return { phone, action, name: String(body.name || '').trim().slice(0, 60), kind };
 }
 
 /**
@@ -128,7 +146,7 @@ async function handleLicenceReviewed(body, deps) {
   const provider = await deps.getProvider(reviewed.phone);
   const language = languageOf(provider || { flowId: DEFAULT_FLOW_ID_BY_REGION.uae });
   const name = reviewed.name || firstName(provider && provider.fullName) || 'Caregiver';
-  const text = reviewedMessage(reviewed.action, { name, area: areaFor(provider), language });
+  const text = reviewedMessage(reviewed.action, { name, area: areaFor(provider), language, kind: reviewed.kind });
   const at = new Date().toISOString();
 
   if (provider) {
@@ -245,5 +263,6 @@ module.exports = {
   reviewedMessage,
   validateReviewed,
   handleLicenceReviewed,
-  REVIEW_TEXTS
+  REVIEW_TEXTS,
+  DOCUMENT_TEXTS
 };

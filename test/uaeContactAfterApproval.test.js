@@ -57,3 +57,13 @@ describe('Dubai contact is saved only after licence approval (27 Oct 2026)', () 
     });
   }
 });
+
+describe('documents review texts (27 Oct 2026)', () => {
+  const { reviewedMessage } = require('../src/services/uaeLicence');
+  it('names the Emirates ID for the documents check, the licence for the older one', () => {
+    assert.match(reviewedMessage('video_call', { name: 'Rini', kind: 'emirates_id' }), /Emirates ID ready/);
+    assert.match(reviewedMessage('reject', { name: 'Rini', kind: 'emirates_id' }), /3 photos again: your Emirates ID front, the back/);
+    assert.match(reviewedMessage('video_call', { name: 'Rini' }), /licence card ready/);
+    assert.match(reviewedMessage('approve', { name: 'Rini', area: 'Al Qusais', kind: 'emirates_id' }), /You are verified, Rini/);
+  });
+});
