@@ -1412,6 +1412,8 @@ const UAE_NOT_SENT = {
   termsAcceptedFee: null,
   subscriptionFeeReminder: null,
   subscriptionFeePaid: null,
+  subscriptionFeeTrialReminder: null,
+  subscriptionFeeTrialOver: null,
   agencyQuestion: null,
   agencyYes: null,
   addDutyInterestQuestion: null,
