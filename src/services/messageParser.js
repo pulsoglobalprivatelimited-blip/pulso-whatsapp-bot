@@ -586,6 +586,19 @@ function parseUaeVisaOther(message) {
   return hit ? hit.value : null;
 }
 
+function parseUaeNationality(message) {
+  const hit = pickFromOptions(message, require('../flow').UAE_NATIONALITY_OPTIONS);
+  return hit ? hit.value : null;
+}
+
+// A typed country for "Other": letters, spaces, dots and dashes, 2-40 long,
+// in title case ("sri lankan" -> "Sri Lankan").
+function parseTypedCountry(message) {
+  const typed = String(getMessageText(message) || '').replace(/\s+/g, ' ').trim();
+  if (typed.length < 2 || typed.length > 40 || !/^[\p{L} .'-]+$/u.test(typed)) return null;
+  return typed.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
+
 function parseEmirate(message) {
   const hit = pickFromOptions(message, require('../flow').UAE_EMIRATES);
   return hit ? hit.value : null;
@@ -604,6 +617,8 @@ function parseDhaHas(message) {
 module.exports = {
   parseUaeVisa,
   parseUaeVisaOther,
+  parseUaeNationality,
+  parseTypedCountry,
   parseEmirate,
   parseDhaHas,
   normalizeText,

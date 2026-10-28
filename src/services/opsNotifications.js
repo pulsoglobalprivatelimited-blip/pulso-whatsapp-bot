@@ -486,6 +486,8 @@ function uaeSummaryLines(provider) {
   };
   return [
     provider.uaeVisaType ? `Visa: ${visa[provider.uaeVisaType] || provider.uaeVisaType}` : null,
+    // 29 Oct 2026: check it against the Emirates ID front; a mismatch is rejected.
+    provider.uaeNationality ? `Nationality: ${provider.uaeNationality} (must match the Emirates ID)` : null,
     provider.emirate ? `Emirate: ${provider.emirate}` : null,
     provider.dhaLicenceNumber ? `DHA licence: ${provider.dhaLicenceNumber} (check on Sheryan)` : null,
     provider.uaeNurseWithoutLicence ? 'Nurse without DHA licence: approve as caregiver' : null

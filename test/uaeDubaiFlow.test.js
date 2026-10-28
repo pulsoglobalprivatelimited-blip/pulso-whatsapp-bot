@@ -201,7 +201,10 @@ test('the visa question comes right after the age, then the working model with t
   await say(phone, row('visa_family'));
   const p = records.get(phone);
   assert.equal(p.uaeVisaType, 'family');
-  assert.equal(p.status, STATUS.AWAITING_INTEREST);
+  assert.equal(p.status, STATUS.AWAITING_NATIONALITY, 'nationality next (29 Oct 2026)');
+  await say(phone, row('nat_sri_lankan'));
+  assert.equal(records.get(phone).uaeNationality, 'Sri Lankan');
+  assert.equal(records.get(phone).status, STATUS.AWAITING_INTEREST);
   const model = toHer(phone).find((m) => m.kind === 'text' && /Pulso Global Private Limited/.test(m.body));
   assert.match(model.body, /In the UAE we give caregivers/);
   assert.match(model.body, /Duty timing may be 8 hours, 12 hours or 24 hours/);

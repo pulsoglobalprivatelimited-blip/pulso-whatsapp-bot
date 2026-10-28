@@ -50,6 +50,9 @@ const STATUS = {
   AWAITING_VISA_TYPE: 'awaiting_visa_type',
   // UAE (29 Oct 2026): "Other" visa is followed by "Which visa is it?".
   AWAITING_VISA_OTHER: 'awaiting_visa_other',
+  // UAE (29 Oct 2026): nationality after the visa; "Other" types the country.
+  AWAITING_NATIONALITY: 'awaiting_nationality',
+  AWAITING_NATIONALITY_TYPED: 'awaiting_nationality_typed',
   // UAE: the emirate before the area; only Dubai gets the Dubai area list.
   AWAITING_EMIRATE: 'awaiting_emirate',
   AWAITING_NAME: 'awaiting_name',
@@ -1435,6 +1438,20 @@ const UAE_VISA_OTHER_OPTIONS = [
   { id: 'visa_cancelled', value: 'cancelled', title: 'Visa cancelled', description: 'Waiting for a new visa' },
   { id: 'visa_something_else', value: 'other', title: 'Something else' }
 ];
+/* Founder, 29 Oct 2026: nationality after the visa, matched by the reviewer
+   with the Emirates ID front (a mismatch is rejected) and shown to agencies. */
+const UAE_NATIONALITY_OPTIONS = [
+  { id: 'nat_indian', value: 'Indian', title: 'Indian' },
+  { id: 'nat_filipino', value: 'Filipino', title: 'Filipino' },
+  { id: 'nat_sri_lankan', value: 'Sri Lankan', title: 'Sri Lankan' },
+  { id: 'nat_nepali', value: 'Nepali', title: 'Nepali' },
+  { id: 'nat_indonesian', value: 'Indonesian', title: 'Indonesian' },
+  { id: 'nat_kenyan', value: 'Kenyan', title: 'Kenyan' },
+  { id: 'nat_ugandan', value: 'Ugandan', title: 'Ugandan' },
+  { id: 'nat_pakistani', value: 'Pakistani', title: 'Pakistani' },
+  { id: 'nat_bangladeshi', value: 'Bangladeshi', title: 'Bangladeshi' },
+  { id: 'nat_other', value: 'other', title: 'Other' }
+];
 const UAE_EMIRATES = [
   { id: 'emirate_dubai', value: 'Dubai', title: 'Dubai' },
   { id: 'emirate_sharjah', value: 'Sharjah', title: 'Sharjah' },
@@ -1462,6 +1479,11 @@ const UAE_PLAN_TEXTS = {
       freelance: 'Before your first duty, you will upload your freelance permit in the Pulso app.\nDo not send it here.',
       student: 'Before your first duty, you will upload your student work permit in the Pulso app.\nDo not send it here.'
     },
+    nationalityQuestion: 'What is your nationality?',
+    nationalityRetry: 'Please choose your nationality from the list below.',
+    nationalityButtonText: 'Choose nationality',
+    nationalityTypeRequest: 'Type your country.',
+    nationalityTypeRetry: 'Please type the name of your country.',
     // 29 Oct 2026: the "Other" follow-up and its two stops.
     visaOtherQuestion: 'Which visa is it?',
     visaOtherRetry: 'Please choose your visa from the list below.',
@@ -1498,7 +1520,7 @@ const UAE_PLAN_TEXTS = {
     reminder1: 'Hi {{name}}, one step left. Install the Pulso app and sign in with this WhatsApp number.\n\nAndroid: {{android}}\niPhone: {{iphone}}',
     reminder2: 'Hi {{name}}, duty offers start only after you sign in to the Pulso app. It takes 2 minutes.',
     needHelpTitle: 'Need help',
-    labels: { visa: 'Visa', emirate: 'Emirate', dhaLicence: 'DHA licence' },
+    labels: { visa: 'Visa', nationality: 'Nationality', emirate: 'Emirate', dhaLicence: 'DHA licence' },
     visaValues: { company: 'Company visa', family: 'Husband / family visa', visit: 'Visit visa', freelance: 'Freelance / part-time permit', investor: 'Investor / partner visa', student: 'Student visa', maid: 'Maid visa', cancelled: 'Visa cancelled', other: 'Other' }
   },
   ml: {
@@ -1512,6 +1534,11 @@ const UAE_PLAN_TEXTS = {
       freelance: 'ആദ്യ duty-ക്ക് മുമ്പ്, താങ്കളുടെ freelance permit Pulso app-ൽ upload ചെയ്യണം.\nഇവിടെ അയയ്ക്കരുത്.',
       student: 'ആദ്യ duty-ക്ക് മുമ്പ്, താങ്കളുടെ student work permit Pulso app-ൽ upload ചെയ്യണം.\nഇവിടെ അയയ്ക്കരുത്.'
     },
+    nationalityQuestion: 'താങ്കളുടെ nationality ഏതാണ്?',
+    nationalityRetry: 'ദയവായി താഴെയുള്ള list-ിൽ നിന്ന് nationality തിരഞ്ഞെടുക്കുക.',
+    nationalityButtonText: 'Nationality തിരഞ്ഞെടുക്കുക',
+    nationalityTypeRequest: 'താങ്കളുടെ രാജ്യത്തിന്റെ പേര് type ചെയ്യുക.',
+    nationalityTypeRetry: 'ദയവായി രാജ്യത്തിന്റെ പേര് type ചെയ്യുക.',
     visaOtherQuestion: 'ഏത് visa ആണ്?',
     visaOtherRetry: 'ദയവായി താഴെയുള്ള list-ിൽ നിന്ന് visa തിരഞ്ഞെടുക്കുക.',
     maidVisaStop:
@@ -1545,7 +1572,7 @@ const UAE_PLAN_TEXTS = {
     reminder1: 'Hi {{name}}, ഒരു step കൂടി മാത്രം. Pulso app install ചെയ്ത് ഈ WhatsApp number ഉപയോഗിച്ച് sign in ചെയ്യുക.\n\nAndroid: {{android}}\niPhone: {{iphone}}',
     reminder2: 'Hi {{name}}, Pulso app-ൽ sign in ചെയ്തതിന് ശേഷം മാത്രമേ duty offers വരൂ. 2 മിനിറ്റ് മതി.',
     needHelpTitle: 'സഹായം വേണം',
-    labels: { visa: 'Visa', emirate: 'Emirate', dhaLicence: 'DHA licence' },
+    labels: { visa: 'Visa', nationality: 'Nationality', emirate: 'Emirate', dhaLicence: 'DHA licence' },
     visaValues: { company: 'Company visa', family: 'Husband / family visa', visit: 'Visit visa', freelance: 'Freelance / part-time permit', investor: 'Investor / partner visa', student: 'Student visa', maid: 'Maid visa', cancelled: 'Visa cancelled', other: 'Other' }
   }
 };
@@ -1607,6 +1634,10 @@ function dubaiMessages(base, language) {
     visitVisaStop: plan.visitVisaStop,
     visaPaperNotice: plan.visaPaperNotice,
     visaOtherQuestion: plan.visaOtherQuestion,
+    nationalityQuestion: plan.nationalityQuestion,
+    nationalityRetry: plan.nationalityRetry,
+    nationalityTypeRequest: plan.nationalityTypeRequest,
+    nationalityTypeRetry: plan.nationalityTypeRetry,
     visaOtherRetry: plan.visaOtherRetry,
     maidVisaStop: plan.maidVisaStop,
     cancelledVisaStop: plan.cancelledVisaStop,
@@ -1705,6 +1736,7 @@ const UAE_ENGLISH_UI_TEXT = {
   dutyBothTitle: UAE_PLAN_TEXTS.en.dutyAnyTitle,
   dutyListButtonText: UAE_PLAN_TEXTS.en.dutyListButtonText,
   visaButtonText: UAE_PLAN_TEXTS.en.visaButtonText,
+  nationalityButtonText: UAE_PLAN_TEXTS.en.nationalityButtonText,
   emirateButtonText: UAE_PLAN_TEXTS.en.emirateButtonText,
   dhaHasYesTitle: UAE_PLAN_TEXTS.en.dhaHasYes,
   dhaHasNotYetTitle: UAE_PLAN_TEXTS.en.dhaHasNotYet,
@@ -1719,6 +1751,7 @@ const UAE_MALAYALAM_UI_TEXT = {
   dutyBothTitle: UAE_PLAN_TEXTS.ml.dutyAnyTitle,
   dutyListButtonText: UAE_PLAN_TEXTS.ml.dutyListButtonText,
   visaButtonText: UAE_PLAN_TEXTS.ml.visaButtonText,
+  nationalityButtonText: UAE_PLAN_TEXTS.ml.nationalityButtonText,
   emirateButtonText: UAE_PLAN_TEXTS.ml.emirateButtonText,
   dhaHasYesTitle: UAE_PLAN_TEXTS.ml.dhaHasYes,
   dhaHasNotYetTitle: UAE_PLAN_TEXTS.ml.dhaHasNotYet,
@@ -2530,6 +2563,7 @@ module.exports = {
   UAE_APP_LINKS,
   UAE_VISA_OPTIONS,
   UAE_VISA_OTHER_OPTIONS,
+  UAE_NATIONALITY_OPTIONS,
   UAE_EMIRATES,
   UAE_EMIRATE_DISTRICTS,
   UAE_PLAN_TEXTS,

@@ -23,6 +23,8 @@ function buildProviderSyncPayload(provider) {
           // UAE plan (27 Oct 2026): the visa answer, the emirate, and the tier
           // the desk approved (a nurse without a DHA licence works as 'gda').
           uaeVisaType: provider.uaeVisaType || '',
+          // 29 Oct 2026: her nationality, for the reviewer and agencies.
+          uaeNationality: provider.uaeNationality || '',
           emirate: provider.emirate || '',
           uaeNurseWithoutLicence: provider.uaeNurseWithoutLicence === true,
           careTier: provider.careTier || '',

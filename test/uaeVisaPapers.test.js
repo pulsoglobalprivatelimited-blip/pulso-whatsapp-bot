@@ -75,7 +75,7 @@ test('husband visa: told the NOC is uploaded in the app, then the working model'
   assert.equal(records.get(phone).uaeVisaType, 'family');
   const t = texts(phone);
   assert.equal(t[0], "Before your first duty, you will upload your husband's NOC letter in the Pulso app.\nDo not send it here.");
-  assert.equal(records.get(phone).status, STATUS.AWAITING_INTEREST);
+  assert.equal(records.get(phone).status, STATUS.AWAITING_NATIONALITY);
 });
 
 test('freelance: told the permit is uploaded in the app', async () => {
@@ -93,7 +93,7 @@ test('company visa: nothing extra asked or said', async () => {
   await flow.processIncomingMessage(phone, row('visa_company'));
   assert.equal(records.get(phone).uaeVisaType, 'company');
   assert.ok(!texts(phone).some((b) => /NOC|permit|letter/.test(b)));
-  assert.equal(records.get(phone).status, STATUS.AWAITING_INTEREST);
+  assert.equal(records.get(phone).status, STATUS.AWAITING_NATIONALITY);
 });
 
 // "Other" follow-up (founder, 29 Oct 2026).
@@ -142,7 +142,7 @@ test('Other → student: stored, told the student work permit goes in the app', 
   await flow.processIncomingMessage(phone, row('visa_student'));
   assert.equal(records.get(phone).uaeVisaType, 'student');
   assert.equal(texts(phone)[0], 'Before your first duty, you will upload your student work permit in the Pulso app.\nDo not send it here.');
-  assert.equal(records.get(phone).status, STATUS.AWAITING_INTEREST);
+  assert.equal(records.get(phone).status, STATUS.AWAITING_NATIONALITY);
 });
 
 test('Other → investor and something else: carry on with nothing extra', async () => {
@@ -151,7 +151,7 @@ test('Other → investor and something else: carry on with nothing extra', async
     sent.length = 0;
     await flow.processIncomingMessage(phone, row(id));
     assert.equal(records.get(phone).uaeVisaType, value);
-    assert.equal(records.get(phone).status, STATUS.AWAITING_INTEREST);
+    assert.equal(records.get(phone).status, STATUS.AWAITING_NATIONALITY);
     assert.ok(!texts(phone).some((b) => /NOC|permit/.test(b)));
   }
 });
@@ -172,4 +172,48 @@ test('reviewer alert names the answer and what to check', () => {
   assert.match(lines('other'), /Visa: Other – Something else – call her before approving/);
   assert.match(lines('investor'), /Visa: Other – Investor \/ partner visa/);
   assert.match(lines('company'), /Visa: Company visa/);
+});
+
+// Nationality (founder, 29 Oct 2026): after the visa; reviewer matches it with
+// the Emirates ID front; agencies see it.
+test('nationality: ten rows, a pick is saved and the working model follows', async () => {
+  const phone = '971500000162';
+  atVisa(phone);
+  await flow.processIncomingMessage(phone, row('visa_company'));
+  const list = sent.filter((m) => m.to === phone && m.kind === 'list').pop();
+  assert.equal(list.body, 'What is your nationality?');
+  assert.deepEqual(list.sections[0].rows.map((r) => r.title), ['Indian', 'Filipino', 'Sri Lankan', 'Nepali', 'Indonesian', 'Kenyan', 'Ugandan', 'Pakistani', 'Bangladeshi', 'Other']);
+  await flow.processIncomingMessage(phone, row('nat_filipino'));
+  assert.equal(records.get(phone).uaeNationality, 'Filipino');
+  assert.equal(records.get(phone).status, STATUS.AWAITING_INTEREST);
+});
+
+test('nationality Other: she types the country; junk is asked again', async () => {
+  const phone = '971500000163';
+  atVisa(phone);
+  await flow.processIncomingMessage(phone, row('visa_company'));
+  await flow.processIncomingMessage(phone, row('nat_other'));
+  assert.equal(records.get(phone).status, STATUS.AWAITING_NATIONALITY_TYPED);
+  sent.length = 0;
+  await flow.processIncomingMessage(phone, { id: 'm' + Math.random(), type: 'text', text: { body: '12345' } });
+  assert.equal(texts(phone)[0], 'Please type the name of your country.');
+  await flow.processIncomingMessage(phone, { id: 'm' + Math.random(), type: 'text', text: { body: '  ethiopian ' } });
+  assert.equal(records.get(phone).uaeNationality, 'Ethiopian');
+  assert.equal(records.get(phone).status, STATUS.AWAITING_INTEREST);
+});
+
+test('nationality: a typed answer not on the list gets the list again', async () => {
+  const phone = '971500000164';
+  atVisa(phone);
+  await flow.processIncomingMessage(phone, row('visa_company'));
+  sent.length = 0;
+  await flow.processIncomingMessage(phone, { id: 'm' + Math.random(), type: 'text', text: { body: 'hello' } });
+  assert.equal(records.get(phone).status, STATUS.AWAITING_NATIONALITY);
+  assert.equal(texts(phone)[0], 'Please choose your nationality from the list below.');
+});
+
+test('reviewer alert shows the nationality to match with the Emirates ID', () => {
+  const { formatProviderSummary } = require('../src/services/opsNotifications');
+  const out = formatProviderSummary({ region: 'uae', uaeVisaType: 'company', uaeNationality: 'Sri Lankan' }).join('\n');
+  assert.match(out, /Nationality: Sri Lankan \(must match the Emirates ID\)/);
 });

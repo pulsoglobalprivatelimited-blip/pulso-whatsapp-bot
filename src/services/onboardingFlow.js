@@ -29,6 +29,7 @@ const {
   isUaeFlowActive,
   UAE_VISA_OPTIONS,
   UAE_VISA_OTHER_OPTIONS,
+  UAE_NATIONALITY_OPTIONS,
   UAE_EMIRATES,
   UAE_APP_LINKS,
   HEIGHT_OPTIONS,
@@ -101,6 +102,8 @@ const {
   parseDistrict,
   parseUaeVisa,
   parseUaeVisaOther,
+  parseUaeNationality,
+  parseTypedCountry,
   parseEmirate,
   parseDhaHas,
   parseDistrictListAction,
@@ -349,6 +352,8 @@ function getStepForStatus(status) {
     [STATUS.AWAITING_DHA_LICENCE_HAS]: 7.5,
     [STATUS.AWAITING_VISA_TYPE]: 3.5,
     [STATUS.AWAITING_VISA_OTHER]: 3.6,
+    [STATUS.AWAITING_NATIONALITY]: 3.7,
+    [STATUS.AWAITING_NATIONALITY_TYPED]: 3.8,
     [STATUS.AWAITING_EMIRATE]: 12,
     [STATUS.AWAITING_NAME]: 9,
     [STATUS.AWAITING_AGE]: 10,
@@ -1051,6 +1056,19 @@ async function sendUaeVisaOtherList(phone) {
       {
         title: 'Visa',
         rows: UAE_VISA_OTHER_OPTIONS.map((o) => ({ id: o.id, title: o.title, ...(o.description ? { description: o.description } : {}) }))
+      }
+    ]
+  });
+}
+
+async function sendNationalityList(phone) {
+  await sendAndLog(phone, 'list', {
+    body: MESSAGES.nationalityQuestion,
+    buttonText: UI_TEXT.nationalityButtonText || 'Choose nationality',
+    sections: [
+      {
+        title: 'Nationality',
+        rows: UAE_NATIONALITY_OPTIONS.map((o) => ({ id: o.id, title: o.title }))
       }
     ]
   });
@@ -2713,6 +2731,12 @@ async function sendPromptForCurrentStatus(phone, provider) {
     case STATUS.AWAITING_VISA_OTHER:
       await sendUaeVisaOtherList(phone);
       return;
+    case STATUS.AWAITING_NATIONALITY:
+      await sendNationalityList(phone);
+      return;
+    case STATUS.AWAITING_NATIONALITY_TYPED:
+      await sendAndLog(phone, 'text', MESSAGES.nationalityTypeRequest);
+      return;
     case STATUS.AWAITING_EMIRATE:
       await sendEmirateList(phone);
       return;
@@ -3484,6 +3508,8 @@ const STOP_ON_NOT_INTERESTED_STATUSES = new Set([
   STATUS.AWAITING_DHA_LICENCE_HAS,
   STATUS.AWAITING_VISA_TYPE,
   STATUS.AWAITING_VISA_OTHER,
+  STATUS.AWAITING_NATIONALITY,
+  STATUS.AWAITING_NATIONALITY_TYPED,
   STATUS.AWAITING_EMIRATE,
   STATUS.AWAITING_NAME,
   STATUS.AWAITING_AGE,
@@ -3660,6 +3686,8 @@ const WELCOME_BACK_STATUSES = new Set([
   STATUS.AWAITING_DHA_LICENCE_HAS,
   STATUS.AWAITING_VISA_TYPE,
   STATUS.AWAITING_VISA_OTHER,
+  STATUS.AWAITING_NATIONALITY,
+  STATUS.AWAITING_NATIONALITY_TYPED,
   STATUS.AWAITING_EMIRATE,
   STATUS.AWAITING_NAME,
   STATUS.AWAITING_AGE,
@@ -3848,6 +3876,42 @@ async function saveVisaAndContinue(phone, visa) {
   if (paperNotice) {
     await sendAndLog(phone, 'text', paperNotice);
   }
+  // Founder, 29 Oct 2026: then her nationality (new sign-ups).
+  if (MESSAGES.nationalityQuestion) {
+    await updateStatus(phone, STATUS.AWAITING_NATIONALITY, 3.7);
+    await sendNationalityList(phone);
+    return;
+  }
+  await continueAfterEarlyAge(phone);
+}
+
+async function handleNationality(phone, message) {
+  const nationality = parseUaeNationality(message);
+  if (!nationality) {
+    await sendAndLog(phone, 'text', MESSAGES.nationalityRetry);
+    await sendNationalityList(phone);
+    return;
+  }
+  if (nationality === 'other') {
+    await updateStatus(phone, STATUS.AWAITING_NATIONALITY_TYPED, 3.8);
+    await sendAndLog(phone, 'text', MESSAGES.nationalityTypeRequest);
+    return;
+  }
+  await saveNationalityAndContinue(phone, nationality);
+}
+
+async function handleNationalityTyped(phone, message) {
+  const country = parseTypedCountry(message);
+  if (!country) {
+    await sendAndLog(phone, 'text', MESSAGES.nationalityTypeRetry);
+    return;
+  }
+  await saveNationalityAndContinue(phone, country);
+}
+
+async function saveNationalityAndContinue(phone, nationality) {
+  await updateProvider(phone, { uaeNationality: nationality, uaeNationalityAt: new Date().toISOString() });
+  await appendHistory(phone, { type: 'system', event: 'uae_nationality', nationality });
   await continueAfterEarlyAge(phone);
 }
 
@@ -4173,6 +4237,7 @@ function uaeDetailsLines(p, labels) {
   const visaValues = MESSAGES.uaeVisaValues || {};
   return [
     p.uaeVisaType ? `${labels.visa || 'Visa'}: ${visaValues[p.uaeVisaType] || p.uaeVisaType}` : null,
+    p.uaeNationality ? `${labels.nationality || 'Nationality'}: ${p.uaeNationality}` : null,
     p.emirate && p.emirate !== p.district ? `${labels.emirate || 'Emirate'}: ${p.emirate}` : null,
     p.dhaLicenceNumber ? `${labels.dhaLicence || 'DHA licence'}: ${p.dhaLicenceNumber}` : null
   ].filter(Boolean);
@@ -6120,6 +6185,12 @@ async function processIncomingMessage(phone, message) {
       return;
     case STATUS.AWAITING_VISA_OTHER:
       await handleVisaOther(phone, message);
+      return;
+    case STATUS.AWAITING_NATIONALITY:
+      await handleNationality(phone, message);
+      return;
+    case STATUS.AWAITING_NATIONALITY_TYPED:
+      await handleNationalityTyped(phone, message);
       return;
     case STATUS.AWAITING_EMIRATE:
       await handleEmirate(phone, message);
