@@ -3771,8 +3771,27 @@ async function handleVisaType(phone, message) {
     await sendUaeVisaList(phone);
     return;
   }
+  /* Founder, 28 Oct 2026: a visit visa cannot work, so she stops here. The
+     answer is cleared so a restart (she sends Hi with a residence visa) asks
+     the visa again instead of skipping it. */
+  if (visa === 'visit' && MESSAGES.visitVisaStop) {
+    await updateProvider(phone, {
+      status: STATUS.NOT_INTERESTED_RESTARTABLE,
+      uaeVisaType: '',
+      uaeVisitVisaStoppedAt: new Date().toISOString()
+    });
+    await appendHistory(phone, { type: 'system', event: 'uae_visit_visa_stopped' });
+    await sendAndLog(phone, 'text', MESSAGES.visitVisaStop);
+    return;
+  }
   await updateProvider(phone, { uaeVisaType: visa, uaeVisaTypeAt: new Date().toISOString() });
   await appendHistory(phone, { type: 'system', event: 'uae_visa_type', visa });
+  // Husband visa / freelance: the paper is uploaded in the app (WhatsApp
+  // must never be asked for ID papers).
+  const paperNotice = MESSAGES.visaPaperNotice && MESSAGES.visaPaperNotice[visa];
+  if (paperNotice) {
+    await sendAndLog(phone, 'text', paperNotice);
+  }
   await continueAfterEarlyAge(phone);
 }
 

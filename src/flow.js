@@ -1442,6 +1442,13 @@ const UAE_PLAN_TEXTS = {
     visaQuestion: 'Which visa are you on now?',
     visaRetry: 'Please choose your visa from the list below.',
     visaButtonText: 'Choose visa',
+    // Founder, 28 Oct 2026: no visit visa; the papers go in the app, never here.
+    visitVisaStop:
+      'Sorry, Pulso duties need a UAE residence visa. You cannot work on a visit visa.\n\nWhen you have a residence visa, send Hi here and join again.',
+    visaPaperNotice: {
+      family: 'Before your first duty, you will upload your husband\'s NOC letter in the Pulso app.\nDo not send it here.',
+      freelance: 'Before your first duty, you will upload your freelance permit in the Pulso app.\nDo not send it here.'
+    },
     dhaHasQuestion: 'Do you have a DHA nursing licence?',
     dhaHasRetry: 'Please tap Yes or Not yet.',
     dhaHasYes: 'Yes',
@@ -1478,6 +1485,12 @@ const UAE_PLAN_TEXTS = {
     visaQuestion: 'താങ്കൾ ഇപ്പോൾ ഏത് visa-യിലാണ്?',
     visaRetry: 'ദയവായി താഴെയുള്ള list-ിൽ നിന്ന് visa തിരഞ്ഞെടുക്കുക.',
     visaButtonText: 'Visa തിരഞ്ഞെടുക്കുക',
+    visitVisaStop:
+      'ക്ഷമിക്കണം, Pulso duties ചെയ്യാൻ UAE residence visa വേണം. Visit visa-യിൽ ജോലി ചെയ്യാൻ പറ്റില്ല.\n\nResidence visa കിട്ടുമ്പോൾ ഇവിടെ Hi അയച്ച് വീണ്ടും join ചെയ്യുക.',
+    visaPaperNotice: {
+      family: 'ആദ്യ duty-ക്ക് മുമ്പ്, ഭർത്താവിന്റെ NOC letter Pulso app-ൽ upload ചെയ്യണം.\nഇവിടെ അയയ്ക്കരുത്.',
+      freelance: 'ആദ്യ duty-ക്ക് മുമ്പ്, താങ്കളുടെ freelance permit Pulso app-ൽ upload ചെയ്യണം.\nഇവിടെ അയയ്ക്കരുത്.'
+    },
     dhaHasQuestion: 'താങ്കൾക്ക് DHA nursing licence ഉണ്ടോ?',
     dhaHasRetry: 'ദയവായി ഉണ്ട് അല്ലെങ്കിൽ ഇതുവരെ ഇല്ല tap ചെയ്യുക.',
     dhaHasYes: 'ഉണ്ട്',
@@ -1564,6 +1577,8 @@ function dubaiMessages(base, language) {
     qualificationRetry: swapExact(base.qualificationRetry, 'HCA /', 'HCA / CNA /'),
     certificateApprovedBasic: base.certificateApprovedBasic,
     visaQuestion: plan.visaQuestion,
+    visitVisaStop: plan.visitVisaStop,
+    visaPaperNotice: plan.visaPaperNotice,
     visaRetry: plan.visaRetry,
     dhaHasQuestion: plan.dhaHasQuestion,
     dhaHasRetry: plan.dhaHasRetry,
