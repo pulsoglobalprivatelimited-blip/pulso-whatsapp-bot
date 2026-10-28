@@ -7,18 +7,12 @@ const DEFAULT_IVR_WEBHOOK_ALLOWED_IPS = [
   '180.179.198.235'
 ];
 
-const DEFAULT_PULSO_DUTY_ACCEPT_VIDEO_MEDIA_ID = '1862764111082996';
-const DEFAULT_PULSO_APP_ACTIVATION_VIDEO_MEDIA_ID = '1661011455048746';
 const DEFAULT_CERTIFICATE_REVIEW_TEMPLATE_NAME = 'certificate_review_alert';
 // The review alert that carries the certificate and the buttons itself, so it
 // reaches the reviewer outside the 24-hour window. A template's header format is
 // fixed when it is created, so a PDF and a photo need one template each.
 const DEFAULT_CERTIFICATE_REVIEW_FILE_TEMPLATE_NAME = 'certificate_review_v3_file';
 const DEFAULT_CERTIFICATE_REVIEW_IMAGE_TEMPLATE_NAME = 'certificate_review_v3_image';
-const STALE_PULSO_VIDEO_MEDIA_IDS = new Set([
-  '969942785736280',
-  '908615228890468'
-]);
 const DEFAULT_IGNORED_WHATSAPP_PHONE_NUMBER_IDS = ['1086315334572855'];
 const DEFAULT_IGNORED_WHATSAPP_DISPLAY_PHONE_NUMBERS = ['917736101039'];
 
@@ -28,14 +22,6 @@ function parseList(value, fallback = []) {
     .map((item) => item.trim())
     .filter(Boolean);
   return items.length ? items : fallback;
-}
-
-function resolveWhatsappMediaId(value, fallback) {
-  const mediaId = (value || '').toString().trim();
-  if (!mediaId || STALE_PULSO_VIDEO_MEDIA_IDS.has(mediaId)) {
-    return fallback;
-  }
-  return mediaId;
 }
 
 function resolveMediaStorageDir() {
@@ -58,16 +44,13 @@ module.exports = {
   graphApiVersion: process.env.WHATSAPP_GRAPH_API_VERSION || 'v23.0',
   baseUrl: process.env.PUBLIC_BASE_URL || 'http://localhost:3000',
   voiceNoteMediaId: process.env.WORKING_MODEL_AUDIO_MEDIA_ID || '',
-  pulsoDutyAcceptVideoMediaId: resolveWhatsappMediaId(
-    process.env.PULSO_DUTY_ACCEPT_VIDEO_MEDIA_ID,
-    DEFAULT_PULSO_DUTY_ACCEPT_VIDEO_MEDIA_ID
-  ),
-  pulsoAppActivationVideoMediaId: resolveWhatsappMediaId(
-    process.env.PULSO_APP_ACTIVATION_VIDEO_MEDIA_ID,
-    DEFAULT_PULSO_APP_ACTIVATION_VIDEO_MEDIA_ID
-  ),
-  // The UAE how-to video (accept, PIN start, check-in; 28 Oct 2026). A web
-  // link, because an uploaded WhatsApp media id expires after 30 days.
+  // The bot's videos, by web link (28 Oct 2026): an uploaded WhatsApp media id
+  // expires after 30 days, and the India ones had, so every send failed.
+  pulsoDutyAcceptVideoUrl:
+    process.env.PULSO_DUTY_ACCEPT_VIDEO_URL || 'https://www.pulso.co.in/videos/pulso-duty-accept.mp4',
+  pulsoAppActivationVideoUrl:
+    process.env.PULSO_APP_ACTIVATION_VIDEO_URL || 'https://www.pulso.co.in/videos/pulso-app-activation.mp4',
+  // The UAE how-to video (accept, PIN start, check-in; 28 Oct 2026).
   uaeHowToVideoUrl:
     process.env.UAE_HOW_TO_VIDEO_URL || 'https://www.pulso.co.in/uae/assets/how-to-take-a-duty.mp4',
   termsAndConditionsUrl: process.env.TERMS_AND_CONDITIONS_URL || '',

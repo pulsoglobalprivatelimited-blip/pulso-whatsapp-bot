@@ -49,3 +49,14 @@ test('order after Accept: install links, then the video, then "Have you installe
   const buttons = src.indexOf('await sendPulsoAppInstalledConfirmationButtons(phone);', links);
   assert.ok(links > 0 && video > links && buttons > video);
 });
+
+test('India videos also go by pulso.co.in link (the media ids had expired)', () => {
+  assert.equal(config.pulsoDutyAcceptVideoUrl, 'https://www.pulso.co.in/videos/pulso-duty-accept.mp4');
+  assert.equal(config.pulsoAppActivationVideoUrl, 'https://www.pulso.co.in/videos/pulso-app-activation.mp4');
+  for (const id of Object.keys(flow.FLOWS).filter((f) => !f.startsWith('uae_'))) {
+    const m = flow.runWithFlow(id, () => flow.MESSAGES);
+    assert.ok(m.pulsoDutyAcceptVideoCaption && m.pulsoAppActivationVideoCaption, `${id} keeps both captions`);
+  }
+  const src = fs.readFileSync(path.join(__dirname, '../src/services/onboardingFlow.js'), 'utf8');
+  assert.doesNotMatch(src, /sendAndLog\([^)]*'video',\s*\{\s*mediaId/, 'no flow video goes by media id any more');
+});

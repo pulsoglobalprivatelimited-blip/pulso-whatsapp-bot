@@ -1509,42 +1509,32 @@ function hasHistoryEvent(provider, predicate) {
   return history.some(predicate);
 }
 
-function hasVideoSendHistory(provider, event, mediaId) {
+/* Videos go by a pulso.co.in link (28 Oct 2026): an uploaded WhatsApp media
+   id dies after 30 days, and the India ones had, so every send failed. Once
+   per person per video; a send by the old media id counts as already sent. */
+function hasVideoSendHistory(provider, event, link) {
   return hasHistoryEvent(
     provider,
-    (entry) => {
-      if (entry && entry.type === 'system' && entry.event === event) {
-        return !entry.mediaId || entry.mediaId === mediaId;
-      }
-
-      return (
-        entry &&
-        entry.type === 'outbound_message' &&
-        entry.payload &&
-        entry.payload.kind === 'video' &&
-        entry.payload.body &&
-        entry.payload.body.mediaId === mediaId
-      );
-    }
+    (entry) => entry && entry.type === 'system' && entry.event === event && (entry.link === link || Boolean(entry.mediaId))
   );
 }
 
-async function sendVideoOnce(phone, provider, mediaId, caption, event, sender = 'bot') {
-  if (!mediaId) {
-    console.warn(`[VIDEO_SEND_SKIPPED] ${event} media id is not configured`);
+async function sendVideoOnce(phone, provider, link, caption, event, sender = 'bot') {
+  if (!link || !caption) {
+    console.warn(`[VIDEO_SEND_SKIPPED] ${event} link or caption is not configured`);
     return false;
   }
 
   const currentProvider = provider || (await getProvider(phone));
-  if (hasVideoSendHistory(currentProvider, event, mediaId)) {
+  if (hasVideoSendHistory(currentProvider, event, link)) {
     return false;
   }
 
-  await sendAndLog(phone, 'video', { mediaId, caption }, sender);
+  await sendAndLog(phone, 'video_url', { link, caption }, sender);
   await appendHistory(phone, {
     type: 'system',
     event,
-    mediaId,
+    link,
     sentAt: new Date().toISOString()
   });
   return true;
@@ -1554,7 +1544,7 @@ async function sendDutyAcceptVideo(phone, provider, sender = 'bot') {
   return sendVideoOnce(
     phone,
     provider,
-    config.pulsoDutyAcceptVideoMediaId,
+    config.pulsoDutyAcceptVideoUrl,
     MESSAGES.pulsoDutyAcceptVideoCaption,
     DUTY_ACCEPT_VIDEO_HISTORY_EVENT,
     sender
@@ -1565,25 +1555,23 @@ async function sendPulsoAppActivationVideo(phone, provider, sender = 'bot') {
   return sendVideoOnce(
     phone,
     provider,
-    config.pulsoAppActivationVideoMediaId,
+    config.pulsoAppActivationVideoUrl,
     MESSAGES.pulsoAppActivationVideoCaption,
     APP_ACTIVATION_VIDEO_HISTORY_EVENT,
     sender
   );
 }
 
-// Once per caregiver; the link is the video's identity, so a new file at a
-// new link is sent again.
+// The UAE how-to video (accept, PIN start, check in), English only.
 async function sendUaeHowToVideo(phone, provider, sender = 'bot') {
-  const link = config.uaeHowToVideoUrl;
-  if (!link || !MESSAGES.uaeHowToVideoCaption) return false;
-  const currentProvider = provider || (await getProvider(phone));
-  if (hasHistoryEvent(currentProvider, (e) => e && e.type === 'system' && e.event === UAE_HOW_TO_VIDEO_HISTORY_EVENT && e.link === link)) {
-    return false;
-  }
-  await sendAndLog(phone, 'video_url', { link, caption: MESSAGES.uaeHowToVideoCaption }, sender);
-  await appendHistory(phone, { type: 'system', event: UAE_HOW_TO_VIDEO_HISTORY_EVENT, link, sentAt: new Date().toISOString() });
-  return true;
+  return sendVideoOnce(
+    phone,
+    provider,
+    config.uaeHowToVideoUrl,
+    MESSAGES.uaeHowToVideoCaption,
+    UAE_HOW_TO_VIDEO_HISTORY_EVENT,
+    sender
+  );
 }
 
 async function sendOptionalVideo(sendVideo, phone, label) {
