@@ -581,6 +581,11 @@ function parseUaeVisa(message) {
   return hit ? hit.value : null;
 }
 
+function parseUaeVisaOther(message) {
+  const hit = pickFromOptions(message, require('../flow').UAE_VISA_OTHER_OPTIONS);
+  return hit ? hit.value : null;
+}
+
 function parseEmirate(message) {
   const hit = pickFromOptions(message, require('../flow').UAE_EMIRATES);
   return hit ? hit.value : null;
@@ -598,6 +603,7 @@ function parseDhaHas(message) {
 
 module.exports = {
   parseUaeVisa,
+  parseUaeVisaOther,
   parseEmirate,
   parseDhaHas,
   normalizeText,

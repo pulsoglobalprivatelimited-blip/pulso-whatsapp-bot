@@ -471,7 +471,19 @@ function formatProviderSummary(provider) {
 /* UAE (27 Oct 2026): what the reviewer needs on the alert itself. */
 function uaeSummaryLines(provider) {
   if (!provider || String(provider.region || '').toLowerCase() !== 'uae') return [];
-  const visa = { company: 'Company visa', family: 'Husband / family visa', visit: 'Visit visa', freelance: 'Freelance / part-time permit', other: 'Other' };
+  // 29 Oct 2026: the "Other" follow-up answers; a student and "something
+  // else" tell the reviewer what to check before approving.
+  const visa = {
+    company: 'Company visa',
+    family: 'Husband / family visa',
+    visit: 'Visit visa',
+    freelance: 'Freelance / part-time permit',
+    investor: 'Other – Investor / partner visa',
+    student: 'Other – Student visa – check her student work permit before approving',
+    maid: 'Maid visa – cannot work, reject',
+    cancelled: 'Visa cancelled – cannot work, reject',
+    other: 'Other – Something else – call her before approving'
+  };
   return [
     provider.uaeVisaType ? `Visa: ${visa[provider.uaeVisaType] || provider.uaeVisaType}` : null,
     provider.emirate ? `Emirate: ${provider.emirate}` : null,
@@ -2041,6 +2053,7 @@ function parseReviewerAction(message) {
 
 module.exports = {
   requestBasicTierReasonSelection,
+  formatProviderSummary,
   buildProviderContactLink,
   buildCertificateReviewBodyValues,
   getRejectReasonDetails,

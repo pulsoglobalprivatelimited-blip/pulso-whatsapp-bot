@@ -48,6 +48,8 @@ const STATUS = {
   AWAITING_DHA_LICENCE_HAS: 'awaiting_dha_licence_has',
   // UAE: "Which visa are you on now?" after the age; stored, nobody stopped.
   AWAITING_VISA_TYPE: 'awaiting_visa_type',
+  // UAE (29 Oct 2026): "Other" visa is followed by "Which visa is it?".
+  AWAITING_VISA_OTHER: 'awaiting_visa_other',
   // UAE: the emirate before the area; only Dubai gets the Dubai area list.
   AWAITING_EMIRATE: 'awaiting_emirate',
   AWAITING_NAME: 'awaiting_name',
@@ -1423,6 +1425,16 @@ const UAE_VISA_OPTIONS = [
   { id: 'visa_freelance', value: 'freelance', title: 'Freelance permit', description: 'Or part-time permit' },
   { id: 'visa_other', value: 'other', title: 'Other' }
 ];
+/* Founder, 29 Oct 2026: after "Other", one more list. Maid and cancelled stop
+   (cannot work for an agency); a student uploads her student work permit in
+   the app; investor carries on; "Something else" stays 'other' and ops calls. */
+const UAE_VISA_OTHER_OPTIONS = [
+  { id: 'visa_investor', value: 'investor', title: 'Investor / partner visa' },
+  { id: 'visa_student', value: 'student', title: 'Student visa' },
+  { id: 'visa_maid', value: 'maid', title: 'Maid visa', description: 'Domestic worker visa' },
+  { id: 'visa_cancelled', value: 'cancelled', title: 'Visa cancelled', description: 'Waiting for a new visa' },
+  { id: 'visa_something_else', value: 'other', title: 'Something else' }
+];
 const UAE_EMIRATES = [
   { id: 'emirate_dubai', value: 'Dubai', title: 'Dubai' },
   { id: 'emirate_sharjah', value: 'Sharjah', title: 'Sharjah' },
@@ -1447,8 +1459,16 @@ const UAE_PLAN_TEXTS = {
       'Sorry, Pulso duties need a UAE residence visa. You cannot work on a visit visa.\n\nWhen you have a residence visa, send Hi here and join again.',
     visaPaperNotice: {
       family: 'Before your first duty, you will upload your husband\'s NOC letter in the Pulso app.\nDo not send it here.',
-      freelance: 'Before your first duty, you will upload your freelance permit in the Pulso app.\nDo not send it here.'
+      freelance: 'Before your first duty, you will upload your freelance permit in the Pulso app.\nDo not send it here.',
+      student: 'Before your first duty, you will upload your student work permit in the Pulso app.\nDo not send it here.'
     },
+    // 29 Oct 2026: the "Other" follow-up and its two stops.
+    visaOtherQuestion: 'Which visa is it?',
+    visaOtherRetry: 'Please choose your visa from the list below.',
+    maidVisaStop:
+      'Sorry, a maid or domestic worker visa cannot work for an agency. You cannot join Pulso on this visa.\n\nWhen you have a different visa, send Hi here and join again.',
+    cancelledVisaStop:
+      'Pulso duties need a valid UAE residence visa.\n\nWhen your new visa comes, send Hi here and join again.',
     dhaHasQuestion: 'Do you have a DHA nursing licence?',
     dhaHasRetry: 'Please tap Yes or Not yet.',
     dhaHasYes: 'Yes',
@@ -1479,7 +1499,7 @@ const UAE_PLAN_TEXTS = {
     reminder2: 'Hi {{name}}, duty offers start only after you sign in to the Pulso app. It takes 2 minutes.',
     needHelpTitle: 'Need help',
     labels: { visa: 'Visa', emirate: 'Emirate', dhaLicence: 'DHA licence' },
-    visaValues: { company: 'Company visa', family: 'Husband / family visa', visit: 'Visit visa', freelance: 'Freelance / part-time permit', other: 'Other' }
+    visaValues: { company: 'Company visa', family: 'Husband / family visa', visit: 'Visit visa', freelance: 'Freelance / part-time permit', investor: 'Investor / partner visa', student: 'Student visa', maid: 'Maid visa', cancelled: 'Visa cancelled', other: 'Other' }
   },
   ml: {
     visaQuestion: 'താങ്കൾ ഇപ്പോൾ ഏത് visa-യിലാണ്?',
@@ -1489,8 +1509,15 @@ const UAE_PLAN_TEXTS = {
       'ക്ഷമിക്കണം, Pulso duties ചെയ്യാൻ UAE residence visa വേണം. Visit visa-യിൽ ജോലി ചെയ്യാൻ പറ്റില്ല.\n\nResidence visa കിട്ടുമ്പോൾ ഇവിടെ Hi അയച്ച് വീണ്ടും join ചെയ്യുക.',
     visaPaperNotice: {
       family: 'ആദ്യ duty-ക്ക് മുമ്പ്, ഭർത്താവിന്റെ NOC letter Pulso app-ൽ upload ചെയ്യണം.\nഇവിടെ അയയ്ക്കരുത്.',
-      freelance: 'ആദ്യ duty-ക്ക് മുമ്പ്, താങ്കളുടെ freelance permit Pulso app-ൽ upload ചെയ്യണം.\nഇവിടെ അയയ്ക്കരുത്.'
+      freelance: 'ആദ്യ duty-ക്ക് മുമ്പ്, താങ്കളുടെ freelance permit Pulso app-ൽ upload ചെയ്യണം.\nഇവിടെ അയയ്ക്കരുത്.',
+      student: 'ആദ്യ duty-ക്ക് മുമ്പ്, താങ്കളുടെ student work permit Pulso app-ൽ upload ചെയ്യണം.\nഇവിടെ അയയ്ക്കരുത്.'
     },
+    visaOtherQuestion: 'ഏത് visa ആണ്?',
+    visaOtherRetry: 'ദയവായി താഴെയുള്ള list-ിൽ നിന്ന് visa തിരഞ്ഞെടുക്കുക.',
+    maidVisaStop:
+      'ക്ഷമിക്കണം, maid / domestic worker visa-യിൽ agency-ക്ക് വേണ്ടി ജോലി ചെയ്യാൻ പറ്റില്ല. ഈ visa-യിൽ Pulso-യിൽ join ചെയ്യാൻ കഴിയില്ല.\n\nവേറെ visa കിട്ടുമ്പോൾ ഇവിടെ Hi അയച്ച് വീണ്ടും join ചെയ്യുക.',
+    cancelledVisaStop:
+      'Pulso duties ചെയ്യാൻ valid UAE residence visa വേണം.\n\nപുതിയ visa കിട്ടുമ്പോൾ ഇവിടെ Hi അയച്ച് വീണ്ടും join ചെയ്യുക.',
     dhaHasQuestion: 'താങ്കൾക്ക് DHA nursing licence ഉണ്ടോ?',
     dhaHasRetry: 'ദയവായി ഉണ്ട് അല്ലെങ്കിൽ ഇതുവരെ ഇല്ല tap ചെയ്യുക.',
     dhaHasYes: 'ഉണ്ട്',
@@ -1519,7 +1546,7 @@ const UAE_PLAN_TEXTS = {
     reminder2: 'Hi {{name}}, Pulso app-ൽ sign in ചെയ്തതിന് ശേഷം മാത്രമേ duty offers വരൂ. 2 മിനിറ്റ് മതി.',
     needHelpTitle: 'സഹായം വേണം',
     labels: { visa: 'Visa', emirate: 'Emirate', dhaLicence: 'DHA licence' },
-    visaValues: { company: 'Company visa', family: 'Husband / family visa', visit: 'Visit visa', freelance: 'Freelance / part-time permit', other: 'Other' }
+    visaValues: { company: 'Company visa', family: 'Husband / family visa', visit: 'Visit visa', freelance: 'Freelance / part-time permit', investor: 'Investor / partner visa', student: 'Student visa', maid: 'Maid visa', cancelled: 'Visa cancelled', other: 'Other' }
   }
 };
 
@@ -1579,6 +1606,10 @@ function dubaiMessages(base, language) {
     visaQuestion: plan.visaQuestion,
     visitVisaStop: plan.visitVisaStop,
     visaPaperNotice: plan.visaPaperNotice,
+    visaOtherQuestion: plan.visaOtherQuestion,
+    visaOtherRetry: plan.visaOtherRetry,
+    maidVisaStop: plan.maidVisaStop,
+    cancelledVisaStop: plan.cancelledVisaStop,
     visaRetry: plan.visaRetry,
     dhaHasQuestion: plan.dhaHasQuestion,
     dhaHasRetry: plan.dhaHasRetry,
@@ -2498,6 +2529,7 @@ module.exports = {
   UAE_TIER_DEFAULTS,
   UAE_APP_LINKS,
   UAE_VISA_OPTIONS,
+  UAE_VISA_OTHER_OPTIONS,
   UAE_EMIRATES,
   UAE_EMIRATE_DISTRICTS,
   UAE_PLAN_TEXTS,

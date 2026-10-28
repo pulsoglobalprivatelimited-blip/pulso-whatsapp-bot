@@ -28,6 +28,7 @@ const {
   runWithProviderFlow,
   isUaeFlowActive,
   UAE_VISA_OPTIONS,
+  UAE_VISA_OTHER_OPTIONS,
   UAE_EMIRATES,
   UAE_APP_LINKS,
   HEIGHT_OPTIONS,
@@ -99,6 +100,7 @@ const {
   parseSex,
   parseDistrict,
   parseUaeVisa,
+  parseUaeVisaOther,
   parseEmirate,
   parseDhaHas,
   parseDistrictListAction,
@@ -346,6 +348,7 @@ function getStepForStatus(status) {
     [STATUS.AWAITING_DHA_LICENCE]: 8,
     [STATUS.AWAITING_DHA_LICENCE_HAS]: 7.5,
     [STATUS.AWAITING_VISA_TYPE]: 3.5,
+    [STATUS.AWAITING_VISA_OTHER]: 3.6,
     [STATUS.AWAITING_EMIRATE]: 12,
     [STATUS.AWAITING_NAME]: 9,
     [STATUS.AWAITING_AGE]: 10,
@@ -1035,6 +1038,19 @@ async function sendUaeVisaList(phone) {
       {
         title: 'Visa',
         rows: UAE_VISA_OPTIONS.map((o) => ({ id: o.id, title: o.title, ...(o.description ? { description: o.description } : {}) }))
+      }
+    ]
+  });
+}
+
+async function sendUaeVisaOtherList(phone) {
+  await sendAndLog(phone, 'list', {
+    body: MESSAGES.visaOtherQuestion,
+    buttonText: UI_TEXT.visaButtonText || 'Choose visa',
+    sections: [
+      {
+        title: 'Visa',
+        rows: UAE_VISA_OTHER_OPTIONS.map((o) => ({ id: o.id, title: o.title, ...(o.description ? { description: o.description } : {}) }))
       }
     ]
   });
@@ -2694,6 +2710,9 @@ async function sendPromptForCurrentStatus(phone, provider) {
     case STATUS.AWAITING_VISA_TYPE:
       await sendUaeVisaList(phone);
       return;
+    case STATUS.AWAITING_VISA_OTHER:
+      await sendUaeVisaOtherList(phone);
+      return;
     case STATUS.AWAITING_EMIRATE:
       await sendEmirateList(phone);
       return;
@@ -3464,6 +3483,7 @@ const STOP_ON_NOT_INTERESTED_STATUSES = new Set([
   STATUS.AWAITING_DHA_LICENCE,
   STATUS.AWAITING_DHA_LICENCE_HAS,
   STATUS.AWAITING_VISA_TYPE,
+  STATUS.AWAITING_VISA_OTHER,
   STATUS.AWAITING_EMIRATE,
   STATUS.AWAITING_NAME,
   STATUS.AWAITING_AGE,
@@ -3639,6 +3659,7 @@ const WELCOME_BACK_STATUSES = new Set([
   STATUS.AWAITING_DHA_LICENCE,
   STATUS.AWAITING_DHA_LICENCE_HAS,
   STATUS.AWAITING_VISA_TYPE,
+  STATUS.AWAITING_VISA_OTHER,
   STATUS.AWAITING_EMIRATE,
   STATUS.AWAITING_NAME,
   STATUS.AWAITING_AGE,
@@ -3784,6 +3805,41 @@ async function handleVisaType(phone, message) {
     await sendAndLog(phone, 'text', MESSAGES.visitVisaStop);
     return;
   }
+  // Founder, 29 Oct 2026: "Other" gets one more list before she goes on.
+  if (visa === 'other' && MESSAGES.visaOtherQuestion) {
+    await updateStatus(phone, STATUS.AWAITING_VISA_OTHER, 3.6);
+    await sendUaeVisaOtherList(phone);
+    return;
+  }
+  await saveVisaAndContinue(phone, visa);
+}
+
+/* The "Other" follow-up (29 Oct 2026). A maid visa or a cancelled visa
+   cannot work for an agency: she stops like a visit visa, the answer is
+   cleared so a restart asks again. */
+async function handleVisaOther(phone, message) {
+  const visa = parseUaeVisaOther(message);
+  if (!visa) {
+    await sendAndLog(phone, 'text', MESSAGES.visaOtherRetry);
+    await sendUaeVisaOtherList(phone);
+    return;
+  }
+  const stop = visa === 'maid' ? MESSAGES.maidVisaStop : visa === 'cancelled' ? MESSAGES.cancelledVisaStop : null;
+  if (stop) {
+    await updateProvider(phone, {
+      status: STATUS.NOT_INTERESTED_RESTARTABLE,
+      uaeVisaType: '',
+      uaeVisaStoppedAs: visa,
+      uaeVisitVisaStoppedAt: new Date().toISOString()
+    });
+    await appendHistory(phone, { type: 'system', event: `uae_${visa}_visa_stopped` });
+    await sendAndLog(phone, 'text', stop);
+    return;
+  }
+  await saveVisaAndContinue(phone, visa);
+}
+
+async function saveVisaAndContinue(phone, visa) {
   await updateProvider(phone, { uaeVisaType: visa, uaeVisaTypeAt: new Date().toISOString() });
   await appendHistory(phone, { type: 'system', event: 'uae_visa_type', visa });
   // Husband visa / freelance: the paper is uploaded in the app (WhatsApp
@@ -6061,6 +6117,9 @@ async function processIncomingMessage(phone, message) {
       return;
     case STATUS.AWAITING_VISA_TYPE:
       await handleVisaType(phone, message);
+      return;
+    case STATUS.AWAITING_VISA_OTHER:
+      await handleVisaOther(phone, message);
       return;
     case STATUS.AWAITING_EMIRATE:
       await handleEmirate(phone, message);
