@@ -184,6 +184,9 @@ function outboundToAppMessage(payload) {
       })),
     };
   }
+  if (kind === 'video_url' && body && typeof body === 'object') {
+    return body.link ? { kind: 'video', url: str(body.link, 500), text: str(body.caption, 1024) } : null;
+  }
   if (kind === 'video' && body && typeof body === 'object') {
     return body.mediaId ? { kind: 'video', mediaId: str(body.mediaId, 120), text: str(body.caption, 1024) } : null;
   }

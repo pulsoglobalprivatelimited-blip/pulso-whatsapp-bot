@@ -35,7 +35,7 @@ const {
 } = require('../flow');
 const { parseLicenceAnswer } = require('./uaeLicence');
 const subscriptionFee = require('./subscriptionFee');
-const { sendText, sendButtons, sendList, sendTemplate, sendVideoById, sendImageByUrl } = require('./metaClient');
+const { sendText, sendButtons, sendList, sendTemplate, sendVideoById, sendVideoByUrl, sendImageByUrl } = require('./metaClient');
 const { getHubAppActivation } = require('./hubAppActivationService');
 const {
   getOrCreateProvider,
@@ -140,6 +140,7 @@ const AGENT_HELP_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const TERMS_REMINDER_HISTORY_EVENT = 'terms_acceptance_reminder_sent';
 const DUTY_ACCEPT_VIDEO_HISTORY_EVENT = 'pulso_duty_accept_video_sent';
 const APP_ACTIVATION_VIDEO_HISTORY_EVENT = 'pulso_app_activation_video_sent';
+const UAE_HOW_TO_VIDEO_HISTORY_EVENT = 'pulso_uae_how_to_video_sent';
 const MOBILE_APP_CAMPAIGN_STATUS = {
   REQUIRED: 'required',
   ANNOUNCEMENT_SENT: 'announcement_sent',
@@ -290,6 +291,8 @@ async function sendAndLog(phone, kind, body, sender) {
       await sendTemplate(phone, body.name, body.languageCode, body.components);
     } else if (kind === 'video') {
       await sendVideoById(phone, body.mediaId, body.caption);
+    } else if (kind === 'video_url') {
+      await sendVideoByUrl(phone, body.link, body.caption);
     } else if (kind === 'image_url') {
       await sendImageByUrl(phone, body.link, body.caption);
     } else {
@@ -1569,6 +1572,20 @@ async function sendPulsoAppActivationVideo(phone, provider, sender = 'bot') {
   );
 }
 
+// Once per caregiver; the link is the video's identity, so a new file at a
+// new link is sent again.
+async function sendUaeHowToVideo(phone, provider, sender = 'bot') {
+  const link = config.uaeHowToVideoUrl;
+  if (!link || !MESSAGES.uaeHowToVideoCaption) return false;
+  const currentProvider = provider || (await getProvider(phone));
+  if (hasHistoryEvent(currentProvider, (e) => e && e.type === 'system' && e.event === UAE_HOW_TO_VIDEO_HISTORY_EVENT && e.link === link)) {
+    return false;
+  }
+  await sendAndLog(phone, 'video_url', { link, caption: MESSAGES.uaeHowToVideoCaption }, sender);
+  await appendHistory(phone, { type: 'system', event: UAE_HOW_TO_VIDEO_HISTORY_EVENT, link, sentAt: new Date().toISOString() });
+  return true;
+}
+
 async function sendOptionalVideo(sendVideo, phone, label) {
   try {
     return await sendVideo();
@@ -1795,6 +1812,11 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
         pulsoAppLinkSentAt: new Date().toISOString()
       });
       await sendAndLog(phone, 'text', MESSAGES.uaeAppInstructions, sender);
+      await sendOptionalVideo(
+        () => sendUaeHowToVideo(phone, refreshedProvider, sender),
+        phone,
+        'UAE_HOW_TO_VIDEO_SEND_ERROR'
+      );
       await sendPulsoAppInstalledConfirmationButtons(phone);
     }
   } else if (!sentPulsoAppQuestion) {

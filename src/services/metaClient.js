@@ -233,6 +233,18 @@ async function sendVideoById(to, mediaId, caption, options) {
   }, options);
 }
 
+async function sendVideoByUrl(to, link, caption, options) {
+  return sendRequest({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'video',
+    video: {
+      link,
+      caption
+    }
+  }, options);
+}
+
 async function sendButtons(to, body, buttons, options) {
   return sendRequest({
     messaging_product: 'whatsapp',
@@ -366,6 +378,7 @@ module.exports = {
   sendImageByUrl,
   sendDocumentByUrl,
   sendVideoById,
+  sendVideoByUrl,
   sendButtons,
   sendContacts,
   sendList,

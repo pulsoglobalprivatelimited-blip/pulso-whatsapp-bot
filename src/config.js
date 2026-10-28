@@ -66,6 +66,10 @@ module.exports = {
     process.env.PULSO_APP_ACTIVATION_VIDEO_MEDIA_ID,
     DEFAULT_PULSO_APP_ACTIVATION_VIDEO_MEDIA_ID
   ),
+  // The UAE how-to video (accept, PIN start, check-in; 28 Oct 2026). A web
+  // link, because an uploaded WhatsApp media id expires after 30 days.
+  uaeHowToVideoUrl:
+    process.env.UAE_HOW_TO_VIDEO_URL || 'https://www.pulso.co.in/uae/assets/how-to-take-a-duty.mp4',
   termsAndConditionsUrl: process.env.TERMS_AND_CONDITIONS_URL || '',
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
   bookingFirebaseProjectId:

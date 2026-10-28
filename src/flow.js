@@ -1620,6 +1620,10 @@ function dubaiMessages(base, language) {
       ? 'Please type only the number. Do not send photos or documents here.'
       : 'ദയവായി number മാത്രം type ചെയ്യുക. ഫോട്ടോയോ document-ഓ ഇവിടെ അയയ്ക്കരുത്.',
     uaeAppInstructions: en ? UAE_APP_INSTRUCTIONS_EN : UAE_APP_INSTRUCTIONS_ML,
+    // The how-to video is English only (founder, 28 Oct 2026).
+    uaeHowToVideoCaption: en
+      ? 'Watch this video to see how to take a duty in the Pulso app: accept an offer, start with the PIN and check in.'
+      : 'Pulso app-ൽ duty എടുക്കുന്നത് എങ്ങനെ എന്ന് ഈ video-ൽ കാണാം: offer accept ചെയ്യുക, PIN ഉപയോഗിച്ച് start ചെയ്യുക, check in ചെയ്യുക.',
     // The hub saw her sign in: what is left is the two photos.
     pulsoAppActivationVerified: en
       ? 'You are signed in to the Pulso app.\n\nBefore your first duty, add your Emirates ID and a selfie in the app. We check and reply within 1 day.\n\nPlease keep your app notifications turned on.'
