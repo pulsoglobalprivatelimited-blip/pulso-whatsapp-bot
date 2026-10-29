@@ -172,8 +172,16 @@ const MOBILE_APP_STAGE_ADD_DUTY_INTEREST = 'awaiting_add_duty_interest';
 
 let termsReminderInterval = null;
 
-function buildAgentHelpMessage() {
+// English to whoever chose English (founder, 29 Oct 2026); it was Malayalam for everyone.
+function buildAgentHelpMessage(provider) {
+  if (isEnglishProvider(provider)) return 'The Pulso support team will contact you soon.';
   return 'Pulso support team ഉടൻ തന്നെ താങ്കളെ ബന്ധപ്പെടുന്നതാണ്.';
+}
+
+function isEnglishProvider(provider) {
+  if (!provider) return false;
+  if (provider.language) return provider.language === 'en';
+  return /english/.test(String(provider.flowId || ''));
 }
 
 function getAgentHelpCooldownRemainingMs(provider) {
@@ -245,7 +253,7 @@ async function handleAgentHelpRequest(phone) {
 
   await appendHistory(phone, { type: 'system', event: 'agent_help_requested' });
   const updatedProvider = await getProvider(phone);
-  await sendAndLog(phone, 'text', buildAgentHelpMessage());
+  await sendAndLog(phone, 'text', buildAgentHelpMessage(updatedProvider || provider));
   await notifyAgentHelpRequested(updatedProvider);
 }
 
@@ -1799,7 +1807,7 @@ async function finalizeTermsAcceptance(phone, provider, sender = 'bot', options 
   try {
     const { shouldSendChannelInvite, channelInviteText } = require('./channelInvite');
     if (shouldSendChannelInvite(refreshedProvider)) {
-      await sendAndLog(phone, 'text', channelInviteText(), sender);
+      await sendAndLog(phone, 'text', channelInviteText(refreshedProvider), sender);
       await updateProvider(phone, { channelInviteSentAt: new Date().toISOString() });
     }
   } catch (error) {
@@ -6587,6 +6595,7 @@ async function rejectCertificate(phone, reviewedBy, notes, options = {}) {
 
 module.exports = {
   shouldEnterDubaiFlow,
+  buildAgentHelpMessage,
   runUaeAppReminderSweep,
   startUaeAppReminderScheduler,
   uaeReminderDue,

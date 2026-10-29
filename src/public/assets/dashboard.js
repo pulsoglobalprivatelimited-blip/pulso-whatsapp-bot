@@ -817,6 +817,11 @@ function formatAgentHelp(value) {
 
 function buildProviderIntroMessage(provider) {
   const greetingName = provider && provider.fullName ? ` ${provider.fullName}` : '';
+  // English to whoever chose English (founder, 29 Oct 2026).
+  const english = provider && (provider.language ? provider.language === 'en' : /english/.test(String(provider.flowId || '')));
+  if (english) {
+    return `Hello${greetingName}, I am Ashmila from the Pulso support team. I saw that you asked for more help. How can I help you?`;
+  }
   return `നമസ്കാരം${greetingName}, ഞാൻ Ashmila, Pulso support team-ിൽ നിന്നാണ് message ചെയ്യുന്നത്. താങ്കൾ കൂടുതൽ സഹായം ആവശ്യപ്പെട്ടതായി കണ്ടു. എങ്ങനെ സഹായിക്കാം?`;
 }
 

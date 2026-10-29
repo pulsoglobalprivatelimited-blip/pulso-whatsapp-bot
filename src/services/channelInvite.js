@@ -9,7 +9,12 @@ function channelUrl() {
   return String(process.env.CHANNEL_URL || DEFAULT_CHANNEL_URL).trim();
 }
 
-function channelInviteText() {
+/** English only for whoever chose English (founder, 29 Oct 2026); both for the rest, as before. */
+function channelInviteText(provider = {}) {
+  const english = provider.language ? provider.language === 'en' : /english/.test(String(provider.flowId || ''));
+  if (english) {
+    return ['Follow the Pulso duty channel 👇', 'New duties near you come here first.', channelUrl()].join('\n');
+  }
   return [
     'Pulso ഡ്യൂട്ടി ചാനൽ follow ചെയ്യുക 👇',
     'നിങ്ങളുടെ അടുത്തുള്ള പുതിയ ഡ്യൂട്ടികൾ ഇവിടെ ആദ്യം വരും.',

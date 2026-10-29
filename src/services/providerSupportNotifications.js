@@ -104,6 +104,16 @@ function buildProviderChatLink(phone) {
 
 function buildProviderIntroMessage(session) {
   const region = session && session.region ? ` (${session.region})` : '';
+  // English to whoever chose English (founder, 29 Oct 2026); same rule as the support bot itself.
+  const language = session && session.language ? session.language : (session && session.region === 'kerala' ? 'ml' : 'en');
+  if (language !== 'ml') {
+    return [
+      'Hello,',
+      'this is the Pulso support team.',
+      `I saw that you asked for help in the Provider Support bot${region}.`,
+      'How can I help you?'
+    ].join(' ');
+  }
   return [
     'നമസ്കാരം,',
     'ഞാൻ Pulso support team-ിൽ നിന്നാണ് message ചെയ്യുന്നത്.',
@@ -266,5 +276,6 @@ module.exports = {
   deliverOpsAlert,
   templateComponents,
   notifyProviderSupportHelpRequested,
-  notifyCarePartnerHelpRequested
+  notifyCarePartnerHelpRequested,
+  buildProviderIntroMessage
 };

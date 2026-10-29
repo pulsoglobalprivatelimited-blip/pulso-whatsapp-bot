@@ -515,6 +515,16 @@ function buildProviderContactLink(phone) {
 
 function buildProviderIntroMessage(provider, senderName = 'Ashmila') {
   const name = provider && provider.fullName ? provider.fullName : null;
+  // English to whoever chose English (founder, 29 Oct 2026).
+  const english = provider && (provider.language ? provider.language === 'en' : /english/.test(String(provider.flowId || '')));
+  if (english) {
+    return [
+      `Hello${name ? ` ${name}` : ''},`,
+      `I am ${senderName} from the Pulso support team.`,
+      'I saw that you asked for more help.',
+      'How can I help you?'
+    ].join(' ');
+  }
   return [
     `നമസ്കാരം${name ? ` ${name}` : ''},`,
     `ഞാൻ ${senderName}, Pulso support team-ിൽ നിന്നാണ് message ചെയ്യുന്നത്.`,
@@ -2056,6 +2066,7 @@ function parseReviewerAction(message) {
 module.exports = {
   requestBasicTierReasonSelection,
   formatProviderSummary,
+  buildProviderIntroMessage,
   buildProviderContactLink,
   buildCertificateReviewBodyValues,
   getRejectReasonDetails,
