@@ -36,6 +36,7 @@ const {
   heightLabelFor
 } = require('../flow');
 const { parseLicenceAnswer } = require('./uaeLicence');
+const uaePhotoReminder = require('./uaePhotoReminder');
 const subscriptionFee = require('./subscriptionFee');
 const { sendText, sendButtons, sendList, sendTemplate, sendVideoById, sendVideoByUrl, sendImageByUrl } = require('./metaClient');
 const { getHubAppActivation } = require('./hubAppActivationService');
@@ -4752,6 +4753,46 @@ async function runUaeAppReminderSweep(options = {}) {
   }
 }
 
+/* Emirates ID photo reminder (founder, 29 Oct 2026): signed in, no photos
+   yet. Decision and template in uaePhotoReminder.js; off until
+   UAE_PHOTO_REMINDERS_ENABLED=true. */
+let uaePhotoReminderInterval = null;
+let uaePhotoReminderRunning = false;
+async function runUaePhotoReminderSweep(now = Date.now()) {
+  if (uaePhotoReminderRunning) return { skipped: 'already_running' };
+  uaePhotoReminderRunning = true;
+  try {
+    const { getHubAppActivation } = require('./hubAppActivationService');
+    const { getHubFirestore } = require('./hubStorage');
+    const result = await uaePhotoReminder.runPhotoReminderSweep({
+      listUaeCompleted: async () => (await listProvidersByStatus(STATUS.COMPLETED))
+        .filter((p) => String(p.region || '').toLowerCase() === 'uae'),
+      hubUserFor: async (phone) => {
+        const hub = await getHubAppActivation(phone);
+        if (!hub || !hub.uid) return null;
+        const snap = await getHubFirestore().collection('users').doc(hub.uid).get();
+        return snap.exists ? snap.data() : null;
+      },
+      markSent: (phone, field, iso) => updateProvider(phone, { [field]: iso }),
+      send: (phone, body) => sendAndLog(phone, 'template', body, 'uae-photo-reminder'),
+      log: (phone, which) => appendHistory(phone, { type: 'system', event: `uae_photo_reminder_${which}` })
+    }, now);
+    if (result.sent1 || result.sent2 || result.errors) console.log('[UAE_PHOTO_REMINDER_SWEEP]', JSON.stringify(result));
+    return result;
+  } finally {
+    uaePhotoReminderRunning = false;
+  }
+}
+
+function startUaePhotoReminderScheduler() {
+  if (uaePhotoReminderInterval || !uaePhotoReminder.enabled()) return uaePhotoReminderInterval;
+  uaePhotoReminderInterval = setInterval(() => {
+    runUaePhotoReminderSweep().catch((error) => console.error('[UAE_PHOTO_REMINDER_SCHEDULER_ERROR]', error));
+  }, 30 * 60 * 1000);
+  if (typeof uaePhotoReminderInterval.unref === 'function') uaePhotoReminderInterval.unref();
+  return uaePhotoReminderInterval;
+}
+
 function startUaeAppReminderScheduler() {
   if (uaeReminderInterval || String(process.env.UAE_APP_REMINDERS_ENABLED || 'true') === 'false') return uaeReminderInterval;
   uaeReminderInterval = setInterval(() => {
@@ -6598,6 +6639,8 @@ module.exports = {
   buildAgentHelpMessage,
   runUaeAppReminderSweep,
   startUaeAppReminderScheduler,
+  runUaePhotoReminderSweep,
+  startUaePhotoReminderScheduler,
   uaeReminderDue,
   uaeNurseTierFor,
   runStillAvailableForInactiveProviders,

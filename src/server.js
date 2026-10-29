@@ -19,7 +19,8 @@ const {
   startSubscriptionFeeReminderScheduler,
   startDutyDaysMilestoneScheduler,
   startDetailsCheckScheduler,
-  startUaeAppReminderScheduler
+  startUaeAppReminderScheduler,
+  startUaePhotoReminderScheduler
 } = require('./services/onboardingFlow');
 const { getProviderTiers } = require('./services/providerTiersConfig');
 const { processProviderSupportMessage } = require('./services/providerSupportFlow');
@@ -1742,6 +1743,7 @@ initializeStorage()
     startDutyDaysMilestoneScheduler();
     startDetailsCheckScheduler();
     startUaeAppReminderScheduler();
+    startUaePhotoReminderScheduler();
     startCertificateReviewCatchUpScheduler();
     startPulsoAppActivationSweepScheduler();
     // The first pass runs behind the listener so a slow hub never delays boot.
