@@ -157,7 +157,12 @@ async function listProviderTermsReminderCandidates() {
       'termsReminderSentAt',
       'termsReminderCount',
       'termsReminderKind',
-      'verification'
+      'verification',
+      // The reminder reads her language from these; without them every
+      // English joiner got the Malayalam reminder (founder, 29 Oct 2026).
+      'flowId',
+      'language',
+      'region'
     )
     .get();
 

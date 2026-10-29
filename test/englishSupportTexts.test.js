@@ -39,3 +39,15 @@ test('channel invite: English only for English, both for the rest', () => {
   assert.ok(ML.test(m) && /Follow the Pulso duty channel/.test(m));
   assert.ok(ML.test(channelInviteText()));
 });
+
+test('terms reminder: the sweep loads her language, so English joiners get English', () => {
+  const src = require('fs').readFileSync(require.resolve('../src/services/storage.js'), 'utf8');
+  const body = src.slice(src.indexOf('async function listProviderTermsReminderCandidates'));
+  const select = body.slice(body.indexOf('.select('), body.indexOf(').get()'));
+  for (const field of ['flowId', 'language', 'region']) assert.ok(select.includes(`'${field}'`), field);
+  const flow = require('../src/flow');
+  for (const flowId of ['uae_english', 'kerala_english', 'karnataka_english']) {
+    flow.runWithProviderFlow({ flowId }, () => assert.ok(!ML.test(flow.MESSAGES.termsReminder), flowId));
+  }
+  flow.runWithProviderFlow({ flowId: 'kerala_malayalam' }, () => assert.ok(ML.test(flow.MESSAGES.termsReminder)));
+});
