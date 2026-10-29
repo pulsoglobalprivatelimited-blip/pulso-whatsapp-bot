@@ -4777,7 +4777,7 @@ async function runUaePhotoReminderSweep(now = Date.now()) {
       send: (phone, body) => sendAndLog(phone, 'template', body, 'uae-photo-reminder'),
       log: (phone, which) => appendHistory(phone, { type: 'system', event: `uae_photo_reminder_${which}` })
     }, now);
-    if (result.sent1 || result.sent2 || result.errors) console.log('[UAE_PHOTO_REMINDER_SWEEP]', JSON.stringify(result));
+    console.log('[UAE_PHOTO_REMINDER_SWEEP]', JSON.stringify(result));
     return result;
   } finally {
     uaePhotoReminderRunning = false;
@@ -4786,10 +4786,13 @@ async function runUaePhotoReminderSweep(now = Date.now()) {
 
 function startUaePhotoReminderScheduler() {
   if (uaePhotoReminderInterval || !uaePhotoReminder.enabled()) return uaePhotoReminderInterval;
-  uaePhotoReminderInterval = setInterval(() => {
-    runUaePhotoReminderSweep().catch((error) => console.error('[UAE_PHOTO_REMINDER_SCHEDULER_ERROR]', error));
-  }, 30 * 60 * 1000);
+  const run = () => runUaePhotoReminderSweep().catch((error) => console.error('[UAE_PHOTO_REMINDER_SCHEDULER_ERROR]', error));
+  uaePhotoReminderInterval = setInterval(run, 30 * 60 * 1000);
   if (typeof uaePhotoReminderInterval.unref === 'function') uaePhotoReminderInterval.unref();
+  // First pass soon after boot, so a restart never pushes it 30 minutes out.
+  const first = setTimeout(run, 2 * 60 * 1000);
+  if (typeof first.unref === 'function') first.unref();
+  console.log('[UAE_PHOTO_REMINDER] scheduler on');
   return uaePhotoReminderInterval;
 }
 
