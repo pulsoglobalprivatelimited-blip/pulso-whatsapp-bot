@@ -63,3 +63,27 @@ test('sweep marks before sending, sends once, and counts', async () => {
     ['log', '971500000150', 1]
   ]);
 });
+
+test('photo nudge: UAE, completed, app still waiting for photos', () => {
+  const r = require('../src/services/uaePhotoReminder');
+  const p = { region: 'uae', status: 'completed' };
+  assert.equal(r.needsPhotoNudge(p, { uaeLicence: { status: 'pending_photos' } }), true);
+  assert.equal(r.needsPhotoNudge(p, { uaeLicence: { status: 'rejected' } }), true);
+  assert.equal(r.needsPhotoNudge(p, { uaeLicence: { status: 'submitted' } }), false);
+  assert.equal(r.needsPhotoNudge(p, { uaeLicence: { status: 'approved' } }), false);
+  assert.equal(r.needsPhotoNudge(p, null), false);
+  assert.equal(r.needsPhotoNudge({ region: 'kerala', status: 'completed' }, { uaeLicence: { status: 'pending_photos' } }), false);
+  assert.equal(r.needsPhotoNudge({ region: 'uae', status: 'awaiting_terms_acceptance' }, { uaeLicence: { status: 'pending_photos' } }), false);
+  assert.match(r.PHOTO_NUDGE_TEXT, /Documents before your first duty/);
+  assert.match(r.PHOTO_NUDGE_TEXT, /do not send ID photos on WhatsApp/);
+});
+
+test('photo nudge: an album gets one reply, typed words always get it', () => {
+  const r = require('../src/services/uaePhotoReminder');
+  const now = Date.parse('2026-10-31T12:00:00Z');
+  const recent = { uaePhotoNudgeAt: '2026-10-31T11:55:00Z' };
+  assert.equal(r.nudgeQuiet(recent, true, now), true);
+  assert.equal(r.nudgeQuiet(recent, false, now), false);
+  assert.equal(r.nudgeQuiet({ uaePhotoNudgeAt: '2026-10-31T11:40:00Z' }, true, now), false);
+  assert.equal(r.nudgeQuiet({}, true, now), false);
+});

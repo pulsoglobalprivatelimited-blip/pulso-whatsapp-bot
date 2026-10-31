@@ -4753,6 +4753,34 @@ async function runUaeAppReminderSweep(options = {}) {
   }
 }
 
+/* A UAE caregiver whose app still waits for her photos writes or sends a
+   photo here: tell her where to take them, never take ID papers on WhatsApp
+   (founder, 31 Oct 2026). True when handled. */
+async function sendUaePhotoNudgeIfDue(phone, provider, message, now = Date.now()) {
+  if (!provider || String(provider.region || '').toLowerCase() !== 'uae') return false;
+  let hubUser = null;
+  try {
+    const { getHubAppActivation } = require('./hubAppActivationService');
+    const { getHubFirestore } = require('./hubStorage');
+    const hub = await getHubAppActivation(phone);
+    if (hub && hub.uid) {
+      const snap = await getHubFirestore().collection('users').doc(hub.uid).get();
+      hubUser = snap.exists ? snap.data() : null;
+    }
+  } catch (error) {
+    console.error('[UAE_PHOTO_NUDGE_HUB_ERROR]', phone, error && error.message);
+    return false;
+  }
+  if (!uaePhotoReminder.needsPhotoNudge(provider, hubUser)) return false;
+  const isMedia = ['image', 'document', 'video', 'unsupported'].includes(message && message.type);
+  if (uaePhotoReminder.nudgeQuiet(provider, isMedia, now)) return true;
+  await updateProvider(phone, { uaePhotoNudgeAt: new Date(now).toISOString() });
+  await sendAndLog(phone, 'text', uaePhotoReminder.PHOTO_NUDGE_TEXT);
+  await appendHistory(phone, { type: 'system', event: 'uae_photo_nudge', mediaType: isMedia ? message.type : null });
+  if (!isMedia && canRequestAgentHelp(provider)) await sendOptionalAgentHelpButton(phone);
+  return true;
+}
+
 /* Emirates ID photo reminder (founder, 29 Oct 2026): signed in, no photos
    yet. Decision and template in uaePhotoReminder.js; off until
    UAE_PHOTO_REMINDERS_ENABLED=true. */
@@ -5179,6 +5207,8 @@ async function handleCompleted(phone, message) {
     await handleAgentHelpRequest(phone);
     return;
   }
+
+  if (await sendUaePhotoNudgeIfDue(phone, provider, message)) return;
 
   await sendAndLog(phone, 'text', MESSAGES.completed);
   if (provider && provider.pulsoAppRequired && provider.pulsoAppActivationStatus !== 'verified') {

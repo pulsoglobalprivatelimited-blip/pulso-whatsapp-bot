@@ -43,6 +43,31 @@ function photoReminderDue(provider, hubUser, now) {
   return null;
 }
 
+/* Reply when she writes or sends a photo on WhatsApp while the app still
+   waits for her photos (founder approved, 31 Oct 2026): the bot used to say
+   "Your onboarding is already complete", which did not tell her where to go,
+   and one caregiver sent her ID papers on WhatsApp. */
+const PHOTO_NUDGE_TEXT =
+  'Please open the Pulso app. On the first screen, "Documents before your first duty", take the photos of your Emirates ID and a selfie.\n' +
+  'Please do not send ID photos on WhatsApp.';
+const NUDGE_QUIET_MS = 10 * 60 * 1000;
+
+function needsPhotoNudge(provider, hubUser) {
+  if (!provider || !hubUser) return false;
+  if (String(provider.region || '').toLowerCase() !== 'uae') return false;
+  if (provider.status !== 'completed') return false;
+  const status = (hubUser.uaeLicence || {}).status;
+  return status === 'pending_photos' || status === 'rejected';
+}
+
+/* An album arrives as several messages: one reply, then quiet for 10 minutes
+   for further photos. Typed words always get the reply. */
+function nudgeQuiet(provider, isMedia, now) {
+  if (!isMedia) return false;
+  const last = toMs(provider && provider.uaePhotoNudgeAt);
+  return Number.isFinite(last) && now - last < NUDGE_QUIET_MS;
+}
+
 function firstName(value) {
   return String(value || '').trim().split(/\s+/)[0] || 'there';
 }
@@ -81,6 +106,9 @@ async function runPhotoReminderSweep(deps, now = Date.now()) {
 
 module.exports = {
   TEMPLATE_NAME,
+  PHOTO_NUDGE_TEXT,
+  needsPhotoNudge,
+  nudgeQuiet,
   FIRST_AFTER_MS,
   SECOND_AFTER_MS,
   enabled,
