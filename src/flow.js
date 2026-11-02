@@ -1626,6 +1626,14 @@ function dubaiMessages(base, language) {
     certificateRequestNamed: withEmiratesIdLine(base.certificateRequestNamed, language),
     certificateRetry: withEmiratesIdLine(base.certificateRetry, language),
     certificateRetryNamed: withEmiratesIdLine(base.certificateRetryNamed, language),
+    // 2 Nov 2026: "I'll send it later" at the certificate step, and the reminder.
+    certificateLaterButton: en ? "I'll send it later" : 'പിന്നീട് അയയ്ക്കാം',
+    certificateLaterReply: en
+      ? 'Okay. Send your certificate here when you have it. We will remind you.'
+      : 'ശരി. Certificate കിട്ടുമ്പോൾ ഇവിടെ അയയ്ക്കുക. ഞങ്ങൾ ഓർമ്മിപ്പിക്കാം.',
+    certificateReminder: en
+      ? 'Hi {{name}}, to finish joining Pulso, please send a clear photo of your *{{paper}}* here.\nIf you do not have it yet, send it when you get it.'
+      : 'Hi {{name}}, Pulso-യിൽ ചേരുന്നത് പൂർത്തിയാക്കാൻ താങ്കളുടെ *{{paper}}*-ന്റെ വ്യക്തമായ ഫോട്ടോ ഇവിടെ അയയ്ക്കുക.\nഇപ്പോൾ കൈയിൽ ഇല്ലെങ്കിൽ കിട്ടുമ്പോൾ അയയ്ക്കുക.',
     certificateApproved: firstParagraph(base.certificateApproved),
     certificatePapers: { ...(base.certificatePapers || {}), cna: CNA_CERTIFICATE_PAPER[en ? 'en' : 'ml'] },
     qualificationRetry: swapExact(base.qualificationRetry, 'HCA /', 'HCA / CNA /'),

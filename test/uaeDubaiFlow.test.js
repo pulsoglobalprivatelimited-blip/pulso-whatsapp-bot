@@ -418,3 +418,70 @@ test('the UAE sandbox (+971 50 000 01xx) never alerts the real reviewers', async
   assert.equal(records.get(phone).status, STATUS.VERIFICATION_PENDING);
   assert.equal(sent.filter((m) => m.to !== phone).length, 0, 'nothing to the reviewers');
 });
+
+// ---- certificate later + reminder (founder approved, 2 Nov 2026) ------------
+const certReminder = require('../src/services/uaeCertificateReminder');
+const HOURS = (h) => new Date(Date.now() - h * 3600e3).toISOString();
+
+test('"Ok" at the certificate step gets the request with an "I\'ll send it later" button', async () => {
+  const phone = at(STATUS.AWAITING_CERTIFICATE, { qualification: 'cna' });
+  await say(phone, text('Ok'));
+  const last = lastToHer(phone);
+  assert.equal(last.kind, 'buttons');
+  assert.match(last.body, /CNA \(Certified Nursing Assistant\) certificate/);
+  assert.deepEqual(last.buttons.map((b) => b.title), ["I'll send it later"]);
+  assert.equal(records.get(phone).status, STATUS.AWAITING_CERTIFICATE);
+});
+
+test('the later button, or "not yet out", gets a calm reply and no repeat', async () => {
+  const phone = at(STATUS.AWAITING_CERTIFICATE, { qualification: 'cna' });
+  await say(phone, button(certReminder.LATER_ID));
+  assert.equal(lastToHer(phone).body, 'Okay. Send your certificate here when you have it. We will remind you.');
+  assert.ok(records.get(phone).uaeCertLaterAt);
+  const typed = at(STATUS.AWAITING_CERTIFICATE, { qualification: 'cna' });
+  for (const words of ['My certificate not yet out I finished my classes last Saturday', 'Ok dear I send it tomorrow']) {
+    await say(typed, text(words));
+    assert.equal(lastToHer(typed).body, 'Okay. Send your certificate here when you have it. We will remind you.', words);
+  }
+  assert.equal(records.get(typed).status, STATUS.AWAITING_CERTIFICATE);
+});
+
+test('a photo at the certificate step is still taken as the certificate', async () => {
+  const phone = at(STATUS.AWAITING_CERTIFICATE, { qualification: 'cna' });
+  await say(phone, { type: 'image', id: 'img-cert-1', image: { id: 'media-1', mime_type: 'image/jpeg' } });
+  assert.ok(archived.some((a) => a.phone === phone && a.category === 'certificate'), 'went to the certificate store');
+  assert.ok(!toHer(phone).some((m) => m.kind === 'buttons' || /We will remind you/.test(String(m.body))), 'no later button or reply');
+});
+
+test('reminder 1 at 20 hours inside the WhatsApp window, once; nothing for India', async () => {
+  const phone = at(STATUS.AWAITING_CERTIFICATE, { qualification: 'cna', fullName: 'Grace Achieng', lastInboundAt: HOURS(21) });
+  const india = at(STATUS.AWAITING_CERTIFICATE, { region: 'kerala', flowId: 'kerala_english', lastInboundAt: HOURS(21) });
+  const fresh = at(STATUS.AWAITING_CERTIFICATE, { lastInboundAt: HOURS(2) });
+  await bot.runUaeCertReminderSweep();
+  const last = lastToHer(phone);
+  assert.equal(last.kind, 'buttons');
+  assert.match(last.body, /^Hi Grace, to finish joining Pulso, please send a clear photo of your \*CNA \(Certified Nursing Assistant\) certificate\* here\./);
+  assert.deepEqual(last.buttons.map((b) => b.title), ["I'll send it later"]);
+  assert.ok(records.get(phone).uaeCertReminder1At);
+  assert.ok(events(phone).includes('uae_cert_reminder_1'));
+  assert.ok(!records.get(india).uaeCertReminder1At, 'India untouched');
+  assert.ok(!records.get(fresh).uaeCertReminder1At, 'too soon');
+  const count = toHer(phone).length;
+  await bot.runUaeCertReminderSweep();
+  assert.equal(toHer(phone).length, count, 'once only');
+});
+
+test('window closed: the template, only when approved; reminder 2 after 48 more hours', () => {
+  const now = Date.now();
+  const p = { phone: '971551112223', region: 'uae', status: 'awaiting_certificate', documents: {}, lastInboundAt: new Date(now - 30 * 3600e3).toISOString() };
+  assert.equal(certReminder.certReminderDue(p, now, { template: false }), null);
+  assert.deepEqual(certReminder.certReminderDue(p, now, { template: true }), { which: 1, mode: 'template' });
+  const after1 = { ...p, uaeCertReminder1At: new Date(now - 47 * 3600e3).toISOString() };
+  assert.equal(certReminder.certReminderDue(after1, now, { template: true }), null);
+  const later = { ...p, lastInboundAt: new Date(now - 70 * 3600e3).toISOString(), uaeCertReminder1At: new Date(now - 49 * 3600e3).toISOString() };
+  assert.deepEqual(certReminder.certReminderDue(later, now, { template: true }), { which: 2, mode: 'template' });
+  assert.equal(certReminder.certReminderDue({ ...later, uaeCertReminder2At: 'x' }, now, { template: true }), null);
+  assert.equal(certReminder.certReminderDue({ ...p, phone: '971500000105' }, now, { template: true }), null, 'sandbox');
+  assert.equal(certReminder.certReminderDue({ ...p, documents: { certificateAttachments: [{}] } }, now, { template: true }), null);
+  assert.equal(certReminder.templateBody({ fullName: 'Grace Achieng' }).components[0].parameters[0].text, 'Grace');
+});

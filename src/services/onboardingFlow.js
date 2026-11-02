@@ -37,6 +37,7 @@ const {
 } = require('../flow');
 const { parseLicenceAnswer } = require('./uaeLicence');
 const uaePhotoReminder = require('./uaePhotoReminder');
+const uaeCertReminder = require('./uaeCertificateReminder');
 const subscriptionFee = require('./subscriptionFee');
 const { sendText, sendButtons, sendList, sendTemplate, sendVideoById, sendVideoByUrl, sendImageByUrl } = require('./metaClient');
 const { getHubAppActivation } = require('./hubAppActivationService');
@@ -428,6 +429,21 @@ async function sendCertificateCollectionButtons(phone, provider) {
       { id: BUTTON_IDS.CERTIFICATE_CONTINUE, title: UI_TEXT.certificateContinueTitle }
     ]
   });
+}
+
+async function sendCertificateLaterButtons(phone, provider, body) {
+  await sendAndLog(phone, 'buttons', {
+    body,
+    buttons: [{ id: uaeCertReminder.LATER_ID, title: MESSAGES.certificateLaterButton }]
+  });
+}
+
+function buildCertificateReminderMessage(provider) {
+  const paper = certificatePaperFor(provider) || 'certificate';
+  const name = String((provider && provider.fullName) || '').trim().split(/\s+/)[0] || '';
+  return MESSAGES.certificateReminder
+    .replace('{{paper}}', paper)
+    .replace('Hi {{name}}, ', name ? `Hi ${name}, ` : '');
 }
 
 async function sendCertificateRetry(phone, provider, options = {}) {
@@ -3319,6 +3335,19 @@ async function handleCertificate(phone, message) {
   }
 
   const kind = classifyDocument(message);
+  // UAE (2 Nov 2026): typed words with nothing sent yet get the request with
+  // an "I'll send it later" button; "later / tomorrow / not yet" gets a
+  // calm reply instead of the same request again. The reminder follows.
+  if (kind !== 'certificate' && !attachments.length && MESSAGES.certificateLaterReply
+    && ['text', 'interactive', 'button'].includes(message && message.type)) {
+    if (getInteractiveReplyId(message) === uaeCertReminder.LATER_ID || uaeCertReminder.isLaterText(getMessageText(message))) {
+      await updateProvider(phone, { uaeCertLaterAt: new Date().toISOString() });
+      await sendAndLog(phone, 'text', MESSAGES.certificateLaterReply);
+      return;
+    }
+    await sendCertificateLaterButtons(phone, provider, buildCertificateRetryMessage(provider));
+    return;
+  }
   if (kind !== 'certificate') {
     if (attachments.length) {
       await finalizeCertificateCollection(phone);
@@ -4823,6 +4852,41 @@ function startUaePhotoReminderScheduler() {
   if (typeof first.unref === 'function') first.unref();
   console.log('[UAE_PHOTO_REMINDER] scheduler on');
   return uaePhotoReminderInterval;
+}
+
+/* UAE certificate reminder (founder approved, 2 Nov 2026); decision and
+   template in uaeCertificateReminder.js. */
+let uaeCertReminderInterval = null;
+let uaeCertReminderRunning = false;
+async function runUaeCertReminderSweep(now = Date.now()) {
+  if (uaeCertReminderRunning) return { skipped: 'already_running' };
+  uaeCertReminderRunning = true;
+  try {
+    const result = await uaeCertReminder.runCertReminderSweep({
+      listAwaiting: async () => (await listProvidersByStatus(STATUS.AWAITING_CERTIFICATE))
+        .filter((p) => String(p.region || '').toLowerCase() === 'uae'),
+      markSent: (phone, field, iso) => updateProvider(phone, { [field]: iso }),
+      sendText: (provider) => runWithProviderFlow(provider, () =>
+        sendCertificateLaterButtons(provider.phone, provider, buildCertificateReminderMessage(provider))),
+      sendTemplate: (phone, body) => sendAndLog(phone, 'template', body, 'uae-cert-reminder'),
+      log: (phone, which, mode) => appendHistory(phone, { type: 'system', event: `uae_cert_reminder_${which}`, mode })
+    }, now);
+    console.log('[UAE_CERT_REMINDER_SWEEP]', JSON.stringify(result));
+    return result;
+  } finally {
+    uaeCertReminderRunning = false;
+  }
+}
+
+function startUaeCertReminderScheduler() {
+  if (uaeCertReminderInterval || !uaeCertReminder.enabled()) return uaeCertReminderInterval;
+  const run = () => runUaeCertReminderSweep().catch((error) => console.error('[UAE_CERT_REMINDER_SCHEDULER_ERROR]', error));
+  uaeCertReminderInterval = setInterval(run, 30 * 60 * 1000);
+  if (typeof uaeCertReminderInterval.unref === 'function') uaeCertReminderInterval.unref();
+  const first = setTimeout(run, 3 * 60 * 1000);
+  if (typeof first.unref === 'function') first.unref();
+  console.log('[UAE_CERT_REMINDER] scheduler on');
+  return uaeCertReminderInterval;
 }
 
 function startUaeAppReminderScheduler() {
@@ -6681,6 +6745,8 @@ module.exports = {
   startUaeAppReminderScheduler,
   runUaePhotoReminderSweep,
   startUaePhotoReminderScheduler,
+  startUaeCertReminderScheduler,
+  runUaeCertReminderSweep,
   uaeReminderDue,
   uaeNurseTierFor,
   runStillAvailableForInactiveProviders,
