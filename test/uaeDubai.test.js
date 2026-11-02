@@ -198,7 +198,7 @@ test('no cooking question in Dubai until the doc gives an AED figure for it', ()
 const typed = (body) => ({ type: 'text', text: { body } });
 const tap = (id) => ({ type: 'interactive', interactive: { type: 'list_reply', list_reply: { id, title: 'x' } } });
 
-test('"DUBAI CAREGIVER" in any case starts region uae; typing Dubai alone does not', () => {
+test('"DUBAI CAREGIVER" in any case starts region uae; since 2 Nov 2026 a typed UAE place does too', () => {
   for (const words of ['DUBAI CAREGIVER', 'dubai caregiver', '  Dubai  Caregiver - I want a job']) {
     assert.equal(isDubaiCaregiverText(words), true, words);
     assert.equal(parseRegion(typed(words)), 'uae', words);
@@ -206,8 +206,8 @@ test('"DUBAI CAREGIVER" in any case starts region uae; typing Dubai alone does n
   assert.equal(isDubaiCaregiverText('caregiver in dubai'), false);
   assert.equal(isDubaiCaregiverText('DUBAI AGENCY'), false);
   assert.equal(parseRegion(tap(BUTTON_IDS.REGION_UAE)), 'uae');
-  assert.equal(parseRegion(typed('Dubai')), null);
-  assert.equal(parseRegion(typed('Uae')), null);
+  assert.equal(parseRegion(typed('Dubai')), 'uae');
+  assert.equal(parseRegion(typed('Uae')), 'uae');
   assert.equal(parseRegion(typed('Kerala')), 'kerala');
 });
 

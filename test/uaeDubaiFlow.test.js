@@ -135,14 +135,14 @@ test('"DUBAI CAREGIVER" picks region uae and asks only the language', async () =
   assert.equal(records.get(phone).status, STATUS.AWAITING_QUALIFICATION);
 });
 
-test('any other first message gets the region list WITHOUT UAE; typing Uae there does not pick Dubai', async () => {
+test('any other first message gets the region list WITHOUT UAE; typing Uae there picks UAE (2 Nov 2026)', async () => {
   const phone = dubaiNumber();
   await say(phone, text('Hi'));
   const list = lastToHer(phone);
   assert.equal(list.kind, 'list');
   assert.deepEqual(list.sections[0].rows.map((r) => r.title), ['Kerala', 'Karnataka']);
   await say(phone, text('Uae'));
-  assert.notEqual(records.get(phone).region, 'uae');
+  assert.equal(records.get(phone).region, 'uae');
 });
 
 test('a tap on a registered Dubai caregiver ad starts region uae even without the prefix', async () => {

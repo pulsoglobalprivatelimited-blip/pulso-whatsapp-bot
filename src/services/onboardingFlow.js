@@ -125,6 +125,7 @@ const {
   parseIndianMobile,
   parseUaeMobile,
   isDubaiCaregiverText,
+  isUaePlaceText,
   parseProfileConsent,
   parseProfilePhotoAction,
   parseStillAvailable,
@@ -6091,12 +6092,18 @@ function referralSourceOf(entry) {
  * Whether this message puts her in the Dubai flow: she has no region and no
  * flow yet (new, or still at the region list), and this message - or an
  * earlier one in her chat - carries the Dubai caregiver ad tag, or she typed
- * "DUBAI CAREGIVER".
+ * "DUBAI CAREGIVER" or a short line naming a UAE place, or she signed in to
+ * the app with a +971 number.
  */
 function shouldEnterDubaiFlow(provider, message) {
   if (!provider || provider.flowId || provider.region) return false;
   if (provider.status !== STATUS.NEW && provider.status !== STATUS.AWAITING_REGION_SELECTION) return false;
   if (isDubaiCaregiverText(getMessageText(message))) return true;
+  // 2 Nov 2026: the app's joining chat has no Dubai ad tag, and the region
+  // list shows only Kerala/Karnataka. A +971 login in the app, or a short
+  // line naming a UAE place, means UAE.
+  if (isUaePlaceText(getMessageText(message))) return true;
+  if (String(provider.phone || '').startsWith('971') && require('./metaClient').currentChannel() === 'app') return true;
   const ids = dubaiCaregiverAdIds();
   if (!ids.length) return false;
   if (ids.includes(referralSourceOf(message))) return true;

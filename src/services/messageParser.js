@@ -50,6 +50,7 @@ function parseRegion(message) {
 
   const normalized = normalizeText(getMessageText(message));
   if (isDubaiCaregiverText(getMessageText(message))) return 'uae';
+  if (isUaePlaceText(getMessageText(message))) return 'uae';
   if (['kerala', 'malayalam', 'ml'].includes(normalized)) return 'kerala';
   if (['karnataka', 'bangalore', 'bengaluru', 'english', 'en'].includes(normalized)) {
     return 'karnataka';
@@ -61,6 +62,17 @@ function parseRegion(message) {
    26 Oct 2026). Any case, any spacing, anything after it. */
 function isDubaiCaregiverText(text) {
   return /^\s*dubai\s+caregiver\b/i.test(String(text || ''));
+}
+
+/* A short line that names a UAE place: "Abu Dhabi", "I am in Dubai", "UAE".
+   2 Nov 2026: a caregiver who opened the app in Abu Dhabi typed it three
+   times at the Kerala/Karnataka list and ended up in Wayanad. Six words at
+   most, so "I worked in Dubai for five years, now in Kochi" stays India. */
+const UAE_PLACE = /\b(dubai|abu\s*dhabi|abudhabi|uae|u\.a\.e\.?|emirates|sharjah|ajman|al\s*ain|ras\s*al\s*khaimah|rak|fujairah|umm\s*al\s*quwain)\b/i;
+function isUaePlaceText(text) {
+  const t = String(text || '').trim();
+  if (!t || t.split(/\s+/).length > 6) return false;
+  return UAE_PLACE.test(t);
 }
 
 function parseLanguage(message) {
@@ -627,6 +639,7 @@ module.exports = {
   parseIndianMobile,
   parseUaeMobile,
   isDubaiCaregiverText,
+  isUaePlaceText,
   parseProfileConsent,
   parseProfilePhotoAction,
   parseStillAvailable,
