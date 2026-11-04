@@ -9,12 +9,12 @@ The coordinator gives **no rates**.
 
 | Who | Number they write to | What they do |
 |---|---|---|
-| Care coordinators: **7736108778** and **Afiq, 6238378859** | **+91 77361 29809** (support bot) | Types **request**, answers the questions, sends the note |
-| Reviewers: **9446600809, 8714105666, 7736108778** | get the note from 77361 29809 | **Book it** (sets rates there) · **Ask coordinator** · **Reject** |
+| Care coordinators: **9446600809** and **Afiq, 6238378859** | **+91 77361 29809** (support bot) | Types **request**, answers the questions, sends the note |
+| Reviewers: **9446600809, 8714105666** | get the note from 77361 29809 | **Book it** (sets rates there) · **Ask coordinator** · **Reject** |
 
 Decided (founder, 6 Oct 2026). The note goes to all three reviewers;
 whoever taps first decides, and the others see "Booked by … at 4:12 pm".
-7736108778 is both a coordinator and a reviewer: its own requests still go
+9446600809 is both a coordinator and a reviewer: its own requests still go
 to all three. Everyone else writing to 77361 29809 sees today's chat. The
 admin booking bot (**booking**) stays as it is for the three admins.
 
@@ -107,8 +107,8 @@ review again (the old note is marked "replaced").
 
 ## Decided (founder, 6 Oct 2026)
 
-1. Coordinators: 7736108778 and Afiq (6238378859).
-2. Reviewers: 9446600809, 8714105666 and 7736108778.
+1. Coordinators: 9446600809 and Afiq (6238378859).
+2. Reviewers: 9446600809, 8714105666 and 9446600809.
 3. The coordinator only gives the note; the reviewer creates everything.
 
 ## Order of work
@@ -130,11 +130,11 @@ review again (the old note is marked "replaced").
   built on `adminBookingFlow.js` (share the step table; drop `tier rates`,
   `afterCreation`; the summary's primary button becomes Send for review).
   Route on the support number after the admin check: sender in
-  `COORDINATOR_PHONES` (default `7736108778,6238378859`) and (start word
-  **request** or open request draft). 7736108778 is also an admin: "booking"
+  `COORDINATOR_PHONES` (default `9446600809,6238378859`) and (start word
+  **request** or open request draft). 9446600809 is also an admin: "booking"
   goes to the admin bot, "request" to this one; an open draft of either kind
   takes the next message. Reviewers: `COORDINATOR_REVIEWER_PHONES` (default
-  `9446600809,8714105666,7736108778`); first tap wins (transaction on the
+  `9446600809,8714105666`); first tap wins (transaction on the
   request's status).
 - Requests: Firestore `coordinatorBookingRequests/{R-number}`:
   `{ status: draft|pending|booked|rejected|replaced, coordinatorPhone,

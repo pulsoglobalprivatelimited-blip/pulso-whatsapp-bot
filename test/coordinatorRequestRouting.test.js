@@ -101,10 +101,10 @@ function reset() {
   hubCalls.length = 0;
 }
 
-test('the defaults: coordinators 7736108778 and 6238378859; reviewers 9446600809, 8714105666, 7736108778; template off', () => {
+test('the defaults: coordinators 9446600809 and 6238378859; reviewers 9446600809, 8714105666; template off', () => {
   const config = require('../src/config');
-  assert.deepEqual(config.coordinatorPhones, ['7736108778', '6238378859']);
-  assert.deepEqual(config.coordinatorReviewerPhones, ['9446600809', '8714105666', '7736108778']);
+  assert.deepEqual(config.coordinatorPhones, ['9446600809', '6238378859']);
+  assert.deepEqual(config.coordinatorReviewerPhones, ['9446600809', '8714105666']);
   assert.equal(config.coordinatorReviewTemplateEnabled, false);
   assert.equal(config.coordinatorReviewTemplateName, 'coordinator_booking_review');
 });
@@ -136,27 +136,27 @@ test('Afiq: "request" opens the request chat; "booking" and "hi" reach the suppo
 
 test('an admin who is not a coordinator: "booking" as before, "request" is the support chat', async () => {
   reset();
-  await processProviderSupportMessage('919446600809', text('booking'));
+  await processProviderSupportMessage('918714105666', text('booking'));
   assert.match(botSent[0].body, /^New booking\. Which agency/);
-  await processProviderSupportMessage('919446600809', text('cancel'));
+  await processProviderSupportMessage('918714105666', text('cancel'));
   reset();
-  await processProviderSupportMessage('919446600809', text('request'));
+  await processProviderSupportMessage('918714105666', text('request'));
   assert.equal(botSent.length, 0);
   assert.ok(supportSent.length > 0);
 });
 
-test('7736108778: "request" and "booking" each open their own chat; "call" still reaches the calling bot', async () => {
+test('9446600809: "request" and "booking" each open their own chat; "call" still reaches the calling bot', async () => {
   reset();
-  await processProviderSupportMessage('917736108778', text('request'));
+  await processProviderSupportMessage('919446600809', text('request'));
   assert.match(botSent[0].body, /^New booking request\./);
   reset();
-  await processProviderSupportMessage('917736108778', text('booking'));
+  await processProviderSupportMessage('919446600809', text('booking'));
   assert.match(botSent[0].body, /^New booking\. Which agency/);
   reset();
-  await processProviderSupportMessage('917736108778', text('call'));
+  await processProviderSupportMessage('919446600809', text('call'));
   assert.equal(botSent.length, 0, 'neither booking chat answered "call"');
-  assert.deepEqual(callBotTurns, ['917736108778'], 'the calling bot answered');
-  await processProviderSupportMessage('917736108778', text('cancel'));
+  assert.deepEqual(callBotTurns, ['919446600809'], 'the calling bot answered');
+  await processProviderSupportMessage('919446600809', text('cancel'));
 });
 
 test('a reviewer\'s tap on a request note is answered before any other bot', async () => {

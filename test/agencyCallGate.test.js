@@ -49,7 +49,7 @@ const store = require('../src/services/agencyCallStore');
 test.after(() => { Module._load = realLoad; });
 
 test('the founder is let in, in every form the webhook might give his number', async () => {
-  for (const form of ['917736108778', '+91 77361 08778', '7736108778', '917736108778@c.us']) {
+  for (const form of ['919446600809', '+91 94466 00809', '9446600809', '919446600809@c.us']) {
     assert.equal(await store.isCallAdmin(form), true, form);
   }
 });
@@ -67,7 +67,7 @@ test('an unreadable database locks everybody out, never lets everybody in', asyn
   try {
     assert.equal(await store.isCallAdmin('919876543210'), false);
     // The founder still gets in: his number does not need the database.
-    assert.equal(await store.isCallAdmin('917736108778'), true);
+    assert.equal(await store.isCallAdmin('919446600809'), true);
   } finally {
     throwOnRead = false;
   }
@@ -94,10 +94,10 @@ test('a database value that is not a list cannot open the gate', async () => {
 test('the configured list replaces the built-in one, so the founder can be removed', async () => {
   // If his number ever changes hands, setting AGENCY_CALL_BOT_PHONES must be
   // enough — a built-in number that nothing can switch off is a back door.
-  adminPhones = ['919446600809'];
+  adminPhones = ['918714105666'];
   try {
-    assert.equal(await store.isCallAdmin('919446600809'), true);
-    assert.equal(await store.isCallAdmin('917736108778'), false, 'the built-in default no longer applies');
+    assert.equal(await store.isCallAdmin('918714105666'), true);
+    assert.equal(await store.isCallAdmin('919446600809'), false, 'the built-in default no longer applies');
   } finally {
     adminPhones = null;
   }
@@ -109,5 +109,5 @@ test('the calling bot and the booking bot keep their own lists', async () => {
   const config = require('../src/config');
   assert.ok(Array.isArray(config.agencyCallBotPhones), 'the calling bot has its own key');
   assert.notEqual(config.agencyCallBotPhones, config.adminBookingBotPhones);
-  assert.equal(await store.isCallAdmin('9446600809'), false, 'a booking admin is not a calling admin');
+  assert.equal(await store.isCallAdmin('8714105666'), false, 'a booking admin is not a calling admin');
 });

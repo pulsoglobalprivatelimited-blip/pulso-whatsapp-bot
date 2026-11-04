@@ -89,7 +89,7 @@ const ADMIN_ID = {
 
 /* The coordinator chat's buttons carry their own prefix, so a tap on an old
    message from one chat can never be read as an answer in the other (one
-   number, 7736108778, has both). */
+   number, 9446600809, has both). */
 const ID = ADMIN_ID;
 const COORDINATOR_ID = Object.fromEntries(Object.entries(ADMIN_ID).map(([k, v]) => [k, v.replace(/^ab_/, 'cr_')]));
 

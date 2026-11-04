@@ -19,7 +19,7 @@ const CALLERS = 'agencyCallers';
 const CONFIG = 'agencyCallConfig';
 
 /** Who may use the calling commands. The founder, and whoever he adds later. */
-const DEFAULT_ADMINS = ['917736108778'];
+const DEFAULT_ADMINS = ['919446600809'];
 
 function digits(value) {
   return String(value == null ? '' : value).replace(/\D/g, '');

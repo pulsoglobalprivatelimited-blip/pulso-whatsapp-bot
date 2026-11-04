@@ -199,24 +199,22 @@ module.exports = {
      number has an admin login before anything is read or written. */
   adminBookingBotPhones: parseList(process.env.ADMIN_BOOKING_BOT_PHONES, [
     '8714105666',
-    '9446600809',
-    '7736108778'
+    '9446600809'
   ]),
   // Who may use the agency calling bot. Same shape as the booking bot's list
   // above, and deliberately its own key: the two bots guard different things,
   // and the call list is 500 agencies' numbers and what each said about us.
   agencyCallBotPhones: parseList(process.env.AGENCY_CALL_BOT_PHONES, [
-    '7736108778'
+    '9446600809'
   ]),
   /* Care coordinator booking requests (docs/coordinator_booking_request_plan.md,
      founder, 6 Oct 2026). Coordinators type "request" on the support number
      and send a note; nothing is created in Pulso Hub from their side. The note
      goes to every reviewer; the first tap decides. */
-  coordinatorPhones: parseList(process.env.COORDINATOR_PHONES, ['7736108778', '6238378859']),
+  coordinatorPhones: parseList(process.env.COORDINATOR_PHONES, ['9446600809', '6238378859']),
   coordinatorReviewerPhones: parseList(process.env.COORDINATOR_REVIEWER_PHONES, [
     '9446600809',
-    '8714105666',
-    '7736108778'
+    '8714105666'
   ]),
   // Outside a reviewer's 24-hour window only an approved template arrives.
   // Off until Meta has approved coordinator_booking_review.

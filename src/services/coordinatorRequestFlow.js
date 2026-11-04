@@ -749,7 +749,7 @@ function createCoordinatorRequests(deps = {}) {
   }
 
   /* The booking chat and the request chat. For a coordinator who is also an
-     admin (7736108778), "booking" opens the admin bot and "request" this one;
+     admin (9446600809), "booking" opens the admin bot and "request" this one;
      a button goes to the chat it came from (ab_ / cr_); anything else goes to
      whichever draft was touched last. Everyone else: the admin bot as before. */
   async function maybeHandleChats(phone, message) {

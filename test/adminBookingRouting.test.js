@@ -72,7 +72,7 @@ function reset() {
 
 test('the admin list defaults to the three numbers, as 91XXXXXXXXXX', () => {
   const config = require('../src/config');
-  assert.deepEqual(config.adminBookingBotPhones, ['8714105666', '9446600809', '7736108778']);
+  assert.deepEqual(config.adminBookingBotPhones, ['8714105666', '9446600809']);
   assert.equal(adminBookingFlow.normalizePhone('8714105666'), '918714105666');
   assert.equal(adminBookingFlow.normalizePhone('+91 87141 05666'), '918714105666');
   assert.equal(adminBookingFlow.normalizePhone('08714105666'), '918714105666');
@@ -97,24 +97,24 @@ test('an admin without a draft who does not type the start word gets the support
 
 test('an admin typing "Book" gets the booking chat, and the support chat says nothing', async () => {
   reset();
-  await processProviderSupportMessage('917736108778', text('Book'));
+  await processProviderSupportMessage('919446600809', text('Book'));
   assert.deepEqual(hubCalls.map((c) => c.action), ['whoami', 'listAgencies']);
-  assert.equal(hubCalls[0].phone, '917736108778');
+  assert.equal(hubCalls[0].phone, '919446600809');
   assert.equal(supportSent.length, 0);
   assert.match(bookingSent[0].body, /^New booking\. Which agency is it for\?/);
 
   // With the draft open, the next message stays in the booking chat.
   reset();
-  await processProviderSupportMessage('917736108778', text('grace'));
+  await processProviderSupportMessage('919446600809', text('grace'));
   assert.equal(supportSent.length, 0);
   assert.deepEqual(hubCalls.map((c) => c.action), ['listAgencies']);
 
   // Cancel closes it; after that the support chat answers again.
   reset();
-  await processProviderSupportMessage('917736108778', text('cancel'));
+  await processProviderSupportMessage('919446600809', text('cancel'));
   assert.equal(bookingSent[0].body, 'Booking cancelled. Type booking to start again.');
   reset();
-  await processProviderSupportMessage('917736108778', text('hi'));
+  await processProviderSupportMessage('919446600809', text('hi'));
   assert.equal(bookingSent.length, 0);
   assert.ok(supportSent.length > 0);
 });

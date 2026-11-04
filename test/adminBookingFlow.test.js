@@ -6,7 +6,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 process.env.WHATSAPP_DRY_RUN = 'true';
-process.env.ADMIN_BOOKING_BOT_PHONES = '8714105666,9446600809,7736108778';
+process.env.ADMIN_BOOKING_BOT_PHONES = '8714105666,9446600809';
 
 const flowModule = require('../src/services/adminBookingFlow');
 const { createAdminBookingFlow, memoryDraftStore, LIMITS } = flowModule;

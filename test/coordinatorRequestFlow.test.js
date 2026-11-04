@@ -11,10 +11,11 @@ process.env.WHATSAPP_DRY_RUN = 'true';
 const adminBooking = require('../src/services/adminBookingFlow');
 const coord = require('../src/services/coordinatorRequestFlow');
 
-const SANJU = '917736108778'; // coordinator, reviewer and admin
+const SANJU = '919446600809'; // coordinator, reviewer and admin
 const AFIQ = '916238378859'; // coordinator only
-const REVIEWER_A = '919446600809';
-const REVIEWER_B = '918714105666';
+const REVIEWER_A = '919446600809'; // reviewer and admin (also a coordinator since 4 Nov 2026)
+const REVIEWER_B = '918714105666'; // reviewer and admin, not a coordinator
+const REVIEWER_C = '919000000003'; // a third reviewer the harness injects
 const NOT_ADMIN = '919000000001'; // a reviewer Pulso Hub has no admin login for
 // Tuesday 6 Oct 2026, 10:00 IST.
 const NOW = Date.UTC(2026, 9, 6, 4, 30);
@@ -27,7 +28,7 @@ const DISTRICTS = ['thiruvananthapuram', 'kollam', 'alappuzha', 'kottayam', 'idu
   .map((key) => ({ key, label: key[0].toUpperCase() + key.slice(1) }));
 const COORDINATOR_ACTIONS = new Set(['whoami', 'listAgencies', 'listDistricts', 'checkLocation', 'listAgencyPatients']);
 
-function harness({ templateEnabled = false, reviewerPhones = [REVIEWER_A, REVIEWER_B, SANJU], overrides = {} } = {}) {
+function harness({ templateEnabled = false, reviewerPhones = [REVIEWER_A, REVIEWER_B, REVIEWER_C], overrides = {} } = {}) {
   const sent = [];
   const calls = [];
   let clock = NOW;
@@ -382,7 +383,7 @@ test('review note: template outside the 24-hour window when switched on, buttons
     assert.equal(h.to(reviewer).filter((m) => m.kind === 'buttons' && /^Booking request/.test(m.body)).length, 0);
   }
   const doc = await h.requests.get('R-1001');
-  assert.deepEqual(doc.deliveries.map((x) => [x.to, x.via]), [[REVIEWER_A, 'buttons'], [REVIEWER_B, 'template'], [SANJU, 'template']]);
+  assert.deepEqual(doc.deliveries.map((x) => [x.to, x.via]), [[REVIEWER_A, 'buttons'], [REVIEWER_B, 'template'], [REVIEWER_C, 'template']]);
 });
 
 test('review note: template off and outside the window, the buttons are still tried and the delivery logged', async () => {
@@ -662,7 +663,7 @@ test('Change something after sending: a replacement R-1002; R-1001 marked replac
   assert.equal((await h.requests.get('R-1002')).status, 'pending');
 });
 
-test('routing: 7736108778 has "booking", "request" and its drafts apart; Afiq has no "booking"; others untouched', async () => {
+test('routing: 9446600809 has "booking", "request" and its drafts apart; Afiq has no "booking"; others untouched', async () => {
   const h = harness();
   const req = await h.say(SANJU, text('request'));
   assert.match(req.replies[0].body, /^New booking request\./);
@@ -690,7 +691,7 @@ test('routing: 7736108778 has "booking", "request" and its drafts apart; Afiq ha
   const afiq = await h.say(AFIQ, text('booking'));
   assert.equal(afiq.handled, false);
   // A reviewer who is not a coordinator: "request" is not his.
-  const rev = await h.say(REVIEWER_A, text('request'));
+  const rev = await h.say(REVIEWER_B, text('request'));
   assert.equal(rev.handled, false);
   // Strangers: nothing, no hub call, no store read.
   const before = h.calls.length;
@@ -708,7 +709,7 @@ test('a coordinator\'s note tap from a non-reviewer, or a reviewer\'s from a non
   await happyToSummary(h);
   await h.say(AFIQ, btn('cr_create'));
   assert.equal(await h.flow.maybeHandlePriority(AFIQ, btn('coordreq_book_R-1001')), false);
-  assert.equal(await h.flow.maybeHandlePriority(REVIEWER_A, btn('coordreq_change_R-1001')), false);
+  assert.equal(await h.flow.maybeHandlePriority(REVIEWER_B, btn('coordreq_change_R-1001')), false);
   assert.equal((await h.requests.get('R-1001')).status, 'pending');
 });
 

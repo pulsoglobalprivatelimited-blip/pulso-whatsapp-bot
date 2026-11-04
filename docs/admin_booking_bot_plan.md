@@ -90,7 +90,7 @@ services. These stay in the app.
 ## Who can use it
 
 Only these three phones (founder, 4 Oct 2026): **8714105666, 9446600809,
-7736108778**.
+9446600809**.
 
 Each admin is known by **mobile number**, the same way they sign in to the
 Pulso admin app with a mobile OTP (founder, 4 Oct 2026). WhatsApp has already
@@ -125,7 +125,7 @@ no admin login, or loses its admin role, the bot refuses.
 
 ## Decided
 
-Number 77361 29809; admins 8714105666, 9446600809, 7736108778, known by
+Number 77361 29809; admins 8714105666, 9446600809, known by
 mobile number (OTP login); no documents, referral code or notes; location pin
 only; age, not date of birth (founder, 4 Oct 2026).
 

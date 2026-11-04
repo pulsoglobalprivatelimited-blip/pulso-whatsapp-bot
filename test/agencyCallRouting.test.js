@@ -11,7 +11,7 @@ const Module = require('node:module');
  */
 
 const SUPPORT_ID = 'support-number-id';
-const ADMIN = '917736108778';
+const ADMIN = '919446600809';
 const STRANGER = '919876543210';
 
 const sent = [];
