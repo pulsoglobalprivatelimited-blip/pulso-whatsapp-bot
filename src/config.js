@@ -165,7 +165,7 @@ module.exports = {
   subscriptionFeeEnabled: process.env.SUBSCRIPTION_FEE_ENABLED === 'true',
   subscriptionFeeRegions: process.env.SUBSCRIPTION_FEE_REGIONS || 'kerala',
   subscriptionFeeStartAt: process.env.SUBSCRIPTION_FEE_START_AT || '',
-  subscriptionFeeAmount: Number(process.env.SUBSCRIPTION_FEE_AMOUNT || 499),
+  subscriptionFeeAmount: Number(process.env.SUBSCRIPTION_FEE_AMOUNT || 99),
   subscriptionFeeFirstReminderHours: Number(process.env.SUBSCRIPTION_FEE_FIRST_REMINDER_HOURS || 24),
   subscriptionFeeSecondReminderHours: Number(process.env.SUBSCRIPTION_FEE_SECOND_REMINDER_HOURS || 72),
   // Both templates APPROVED by Meta on 22 Oct 2026, so these are the defaults;

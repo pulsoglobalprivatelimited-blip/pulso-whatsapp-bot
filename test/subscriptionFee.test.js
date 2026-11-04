@@ -43,7 +43,7 @@ test('a fee-payer reads the fee and market points first; the old points move dow
   const text = fee.termsIntroFor(kerala, ML, NOW);
   const paragraphs = text.split('\n\n');
   assert.equal(paragraphs[0], ML.termsIntro.split('\n\n')[0]);
-  assert.ok(paragraphs[1].startsWith('1. Pulso-യിൽ അംഗമാകുന്നതിനായി ഒറ്റത്തവണ ₹499 (tax included) സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കണം.'));
+  assert.ok(paragraphs[1].startsWith('1. Pulso-യിൽ അംഗമാകുന്നതിനായി ഒറ്റത്തവണ ₹99 (tax included) സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കണം.'));
   assert.ok(paragraphs[1].includes('ആദ്യത്തെ 7 ദിവസം സൗജന്യ ട്രയൽ'), 'the 7-day trial is in point 1 (founder, 24 Oct 2026)');
   assert.ok(paragraphs[2].startsWith('Pulso ആപ്പിലൂടെ 180 ദിവസത്തെ ജോലി'));
   assert.ok(paragraphs[3].startsWith('2. ഡ്യൂട്ടി ലഭ്യത മാർക്കറ്റ് ആവശ്യകത'));
@@ -54,7 +54,7 @@ test('a fee-payer reads the fee and market points first; the old points move dow
   assert.ok(!text.includes('\n\n1. ഡ്യൂട്ടി സ്വീകരിച്ച'));
   // English mirror
   const en = fee.termsIntroFor({ ...kerala, flowId: 'kerala_english' }, EN, NOW);
-  assert.ok(en.includes('\n\n1. To become a Pulso member, you pay a one-time subscription fee of ₹499 (tax included).'));
+  assert.ok(en.includes('\n\n1. To become a Pulso member, you pay a one-time subscription fee of ₹99 (tax included).'));
   assert.ok(en.includes('\n\n2. Duty availability depends on market requirements'));
   assert.ok(en.includes('\n\n3. After accepting your first duty, you need to collect a uniform kit worth Rs 1499.'));
   assert.ok(en.includes('\n\n5. We will share available duty offers'));
@@ -75,13 +75,13 @@ test('the working model drops "no registration fee" for a fee-payer, and says no
   // Founder, 24 Oct 2026: the fee is told only with the terms, after approval.
   const ml = fee.applyWorkingModelFeeLine(ML.workingModel, kerala, ML, NOW);
   assert.ok(!ml.includes('registration fee ഒന്നും നൽകേണ്ടതില്ല'));
-  assert.ok(!ml.includes('499'), 'no fee figure before the terms');
+  assert.ok(!ml.includes('₹99') && !ml.includes('499'), 'no fee figure before the terms');
   assert.ok(!ml.includes('സബ്സ്ക്രിപ്ഷൻ'));
   assert.ok(!/\n\n\n|\n\s*\n- *\n/.test(ml), 'no empty line left where the line was');
   assert.ok(ml.includes('- ഇഷ്ടമുള്ള duty-കൾ മാത്രം സ്വീകരിച്ചാൽ മതി\n\n'), 'the list before it ends cleanly');
   const en = fee.applyWorkingModelFeeLine(EN.workingModel, { ...kerala, flowId: 'kerala_english' }, EN, NOW);
   assert.ok(!en.includes('There is no registration fee to join Pulso'));
-  assert.ok(!en.includes('499') && !/subscription/i.test(en));
+  assert.ok(!en.includes('₹99') && !en.includes('499') && !/subscription/i.test(en));
   const old = { ...kerala, createdAt: new Date(START - DAY).toISOString() };
   assert.equal(fee.applyWorkingModelFeeLine(ML.workingModel, old, ML, NOW), ML.workingModel);
 });
@@ -89,10 +89,10 @@ test('the working model drops "no registration fee" for a fee-payer, and says no
 test('the record written at Accept, and a paid one is never overwritten', () => {
   // Pay-first shape (trial switched off), as before 24 Oct 2026.
   const r = fee.dueRecord(kerala, '2026-11-02T10:00:00.000Z', { ...fee.settings(), trialDays: 0 });
-  assert.deepEqual(r, { required: true, status: 'due', amount: 499, dueSince: '2026-11-02T10:00:00.000Z', remindersSent: 0 });
+  assert.deepEqual(r, { required: true, status: 'due', amount: 99, dueSince: '2026-11-02T10:00:00.000Z', remindersSent: 0 });
   // With the 7-day trial (the default now): `trial`, no dates until the hub stamps the first sign-in.
   const t = fee.dueRecord(kerala, '2026-11-02T10:00:00.000Z');
-  assert.deepEqual(t, { required: true, status: 'trial', amount: 499, trialDays: 7, acceptedAt: '2026-11-02T10:00:00.000Z', trialStartsAt: null, trialEndsAt: null, remindersSent: 0 });
+  assert.deepEqual(t, { required: true, status: 'trial', amount: 99, trialDays: 7, acceptedAt: '2026-11-02T10:00:00.000Z', trialStartsAt: null, trialEndsAt: null, remindersSent: 0 });
   assert.deepEqual(fee.dueRecord({ ...kerala, subscriptionFee: { ...t, trialStartsAt: 'x' } }), { ...t, trialStartsAt: 'x' }, 'a running trial is kept');
   const paid = { required: true, status: 'paid', amount: 500, paidAt: 'x' };
   assert.deepEqual(fee.dueRecord({ ...kerala, subscriptionFee: paid }), paid);
@@ -133,7 +133,7 @@ test('the hub says she paid: record marked, receipt sent, said once', async () =
   assert.equal(deps.calls.updates[0].subscriptionFee.remindersSent, 1, 'earlier fields kept');
   assert.equal(deps.calls.texts.length, 1);
   assert.ok(deps.calls.texts[0].body.includes('PS/26-27/000001'));
-  assert.ok(deps.calls.texts[0].body.startsWith('നന്ദി! ₹499'));
+  assert.ok(deps.calls.texts[0].body.startsWith('നന്ദി! ₹99'));
   assert.equal(deps.calls.docs[0].link, 'https://x/r.pdf');
   assert.equal(deps.calls.history.filter((e) => e.event === 'subscription_fee_paid').length, 1);
   // The webhook and the app confirm the same payment: no second message.
@@ -172,7 +172,7 @@ test('trial: the words mention 7 days, in the terms and after Accept, both langu
     assert.ok(/7 ദിവസം|7 days/.test(m.termsAcceptedFee), 'after Accept');
     assert.ok(!/അതിനു ശേഷം ഡ്യൂട്ടി ഓഫറുകൾ ലഭിച്ചു തുടങ്ങും|Duty offers start after that/.test(m.termsAcceptedFee), 'no longer "pay first, then offers"');
     assert.ok(m.subscriptionFeeTrialReminder.includes('{{days}}'));
-    assert.ok(m.subscriptionFeeTrialOver.includes('499'));
+    assert.ok(m.subscriptionFeeTrialOver.includes('₹99'));
   }
   assert.ok(ML.termsAcceptedFee.startsWith('നന്ദി. Pulso ആപ്പ് ഇൻസ്റ്റാൾ ചെയ്ത്'));
   assert.equal(fee.trialReminderText({ ...kerala, language: 'ml' }, 2), ML.subscriptionFeeTrialReminder.replace('{{days}}', '2'));
@@ -211,7 +211,7 @@ test('trial: the hub stamps the first sign-in; the sweep reminds at 2 days and 1
 });
 
 test('trial: the hub locks her; one "trial over" message; paid/waived never locked; pay-first reminders stay out', async () => {
-  const rec = { required: true, status: 'trial', amount: 499, trialDays: 7, trialStartsAt: 'a', trialEndsAt: 'b', remindersSent: 2 };
+  const rec = { required: true, status: 'trial', amount: 99, trialDays: 7, trialStartsAt: 'a', trialEndsAt: 'b', remindersSent: 2 };
   const deps = fakeDeps({ ...kerala, subscriptionFee: rec });
   const lockedAt = new Date(NOW + 9 * DAY).toISOString();
   assert.deepEqual(await fee.markLocked({ phone: '919876543210', lockedAt }, deps), { ok: true, known: true });

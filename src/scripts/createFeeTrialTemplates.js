@@ -20,25 +20,25 @@ const TEMPLATES = [
   {
     name: 'provider_fee_trial_reminder',
     language: 'ml',
-    body: 'നമസ്കാരം {{1}}, നിങ്ങളുടെ Pulso സൗജന്യ ട്രയൽ {{2}} ദിവസം കൂടി മാത്രം. അതിനു ശേഷവും ഡ്യൂട്ടി ഓഫറുകൾ കാണാൻ ₹499 സബ്സ്ക്രിപ്ഷൻ ഫീസ് Pulso ആപ്പിൽ ഇപ്പോൾ തന്നെ അടയ്ക്കാം. – ടീം Pulso',
+    body: 'നമസ്കാരം {{1}}, നിങ്ങളുടെ Pulso സൗജന്യ ട്രയൽ {{2}} ദിവസം കൂടി മാത്രം. അതിനു ശേഷവും ഡ്യൂട്ടി ഓഫറുകൾ കാണാൻ ₹99 സബ്സ്ക്രിപ്ഷൻ ഫീസ് Pulso ആപ്പിൽ ഇപ്പോൾ തന്നെ അടയ്ക്കാം. – ടീം Pulso',
     example: ['Jisha', '2']
   },
   {
     name: 'provider_fee_trial_reminder',
     language: 'en',
-    body: 'Hello {{1}}, your Pulso free trial has {{2}} day(s) left. To keep seeing duty offers after it, you can pay the ₹499 subscription fee in the Pulso app now. – Team Pulso',
+    body: 'Hello {{1}}, your Pulso free trial has {{2}} day(s) left. To keep seeing duty offers after it, you can pay the ₹99 subscription fee in the Pulso app now. – Team Pulso',
     example: ['Jisha', '2']
   },
   {
     name: 'provider_fee_trial_over',
     language: 'ml',
-    body: 'നമസ്കാരം {{1}}, നിങ്ങളുടെ Pulso സൗജന്യ ട്രയൽ കഴിഞ്ഞു. പുതിയ ഡ്യൂട്ടികളുടെ അറിയിപ്പുകൾ തുടർന്നും വരും; അവ കാണാനും സ്വീകരിക്കാനും Pulso ആപ്പിൽ ₹499 സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കുക. – ടീം Pulso',
+    body: 'നമസ്കാരം {{1}}, നിങ്ങളുടെ Pulso സൗജന്യ ട്രയൽ കഴിഞ്ഞു. പുതിയ ഡ്യൂട്ടികളുടെ അറിയിപ്പുകൾ തുടർന്നും വരും; അവ കാണാനും സ്വീകരിക്കാനും Pulso ആപ്പിൽ ₹99 സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കുക. – ടീം Pulso',
     example: ['Jisha']
   },
   {
     name: 'provider_fee_trial_over',
     language: 'en',
-    body: 'Hello {{1}}, your Pulso free trial is over. Alerts for new duties will keep coming; to see and accept them, pay the ₹499 subscription fee in the Pulso app. – Team Pulso',
+    body: 'Hello {{1}}, your Pulso free trial is over. Alerts for new duties will keep coming; to see and accept them, pay the ₹99 subscription fee in the Pulso app. – Team Pulso',
     example: ['Jisha']
   }
 ];
