@@ -44,7 +44,7 @@ test('a fee-payer reads the fee and market points first; the old points move dow
   const paragraphs = text.split('\n\n');
   assert.equal(paragraphs[0], ML.termsIntro.split('\n\n')[0]);
   assert.ok(paragraphs[1].startsWith('1. Pulso-യിൽ അംഗമാകുന്നതിനായി ഒറ്റത്തവണ ₹99 (tax included) സബ്സ്ക്രിപ്ഷൻ ഫീസ് അടയ്ക്കണം.'));
-  assert.ok(paragraphs[1].includes('ആദ്യത്തെ 7 ദിവസം സൗജന്യ ട്രയൽ'), 'the 7-day trial is in point 1 (founder, 24 Oct 2026)');
+  assert.ok(paragraphs[1].includes('ആദ്യത്തെ 3 മാസം സൗജന്യ ട്രയൽ'), 'the 3-month trial is in point 1 (founder, 5 Nov 2026)');
   assert.ok(paragraphs[2].startsWith('Pulso ആപ്പിലൂടെ 180 ദിവസത്തെ ജോലി'));
   assert.ok(paragraphs[3].startsWith('2. ഡ്യൂട്ടി ലഭ്യത മാർക്കറ്റ് ആവശ്യകത'));
   assert.ok(paragraphs[3].includes('കേരളത്തിൽ'));
@@ -168,8 +168,8 @@ test('ops waived the fee: reminders stop, she is not messaged', async () => {
 // ---- 7-day free trial (founder, 24 Oct 2026) ----------------------------------
 test('trial: the words mention 7 days, in the terms and after Accept, both languages', () => {
   for (const m of [ML, EN]) {
-    assert.ok(/7 ദിവസം|7 days/.test(m.termsFeePoints[0]), 'terms point 1');
-    assert.ok(/7 ദിവസം|7 days/.test(m.termsAcceptedFee), 'after Accept');
+    assert.ok(/3 മാസം|3 months/.test(m.termsFeePoints[0]), 'terms point 1');
+    assert.ok(/3 മാസം|3 months/.test(m.termsAcceptedFee), 'after Accept');
     assert.ok(!/അതിനു ശേഷം ഡ്യൂട്ടി ഓഫറുകൾ ലഭിച്ചു തുടങ്ങും|Duty offers start after that/.test(m.termsAcceptedFee), 'no longer "pay first, then offers"');
     assert.ok(m.subscriptionFeeTrialReminder.includes('{{days}}'));
     assert.ok(m.subscriptionFeeTrialOver.includes('₹99'));
