@@ -282,6 +282,9 @@ module.exports = {
   // Care partner (home care agency) help on the provider support number. Off by
   // default so the branch can ship before the hub credentials are in place.
   partnerHelpEnabled: process.env.PARTNER_HELP_ENABLED === 'true',
+  // Agency support requests from the apps' "Chat with Pulso support" (founder,
+  // 5 Nov 2026): the alert goes to these WhatsApp numbers only.
+  agencySupportAlertPhones: parseList(process.env.AGENCY_SUPPORT_ALERT_PHONES, ['919446600809']),
   partnerConsoleUrl: process.env.PARTNER_CONSOLE_URL || 'https://admin.pulso.co.in',
   // Opens the existing partner deck on +91 77361 01039 with the PARTNER ENQUIRY
   // text pre-filled, so no pitch is duplicated in this bot.

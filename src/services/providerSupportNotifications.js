@@ -272,7 +272,58 @@ async function notifyCarePartnerHelpRequested(session, reason) {
   return { recipients };
 }
 
+/**
+ * Agency support request (founder, 5 Nov 2026): one alert per request to the
+ * founder's WhatsApp. The approved template care_partner_help_alert carries
+ * topic + their words, agency and phone, so it arrives even outside the 24-hour
+ * window; the free-form body (when it can go) adds the desk link.
+ */
+function oneLine(value, max) {
+  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+async function notifyAgencySupportRequest(session, request) {
+  const agencyPhone = normalizePhone(session && session.phone);
+  const supportBotPhone = normalizePhone(config.providerSupportBotWhatsappNumber);
+  const recipients = (config.agencySupportAlertPhones || [])
+    .map(normalizePhone)
+    .filter(Boolean)
+    .filter((phone) => phone !== agencyPhone && phone !== supportBotPhone)
+    .filter((phone, index, list) => list.indexOf(phone) === index);
+  if (!recipients.length) return null;
+
+  const name = oneLine(session && session.agencyName, 60) || 'An agency';
+  const photos = (request.media || []).length;
+  const words = oneLine(request.text, 400) || (photos ? '(photo only)' : '-');
+  const deskLink = config.baseUrl
+    ? `${String(config.baseUrl).replace(/\/$/, '')}/admin/provider-support?phone=${agencyPhone}`
+    : null;
+  const body = joinLines([
+    'Agency needs help',
+    `Agency: ${name}${agencyPhone ? ` (+${agencyPhone})` : ''}`,
+    `Topic: ${request.topicLabel}`,
+    `Message: ${words}${photos ? ` (${photos} photo${photos > 1 ? 's' : ''})` : ''}`,
+    deskLink ? `Reply on the desk: ${deskLink}` : null
+  ]);
+  const template = {
+    name: config.partnerHelpTemplateName,
+    language: config.partnerHelpTemplateLanguage,
+    components: templateComponents(config.partnerHelpTemplateVariables, [
+      oneLine(`${request.topicLabel}: ${words}${photos ? ' (photo)' : ''}`, 500),
+      name,
+      agencyPhone ? `+${agencyPhone}` : '-'
+    ])
+  };
+
+  for (const phone of recipients) {
+    const result = await deliverOpsAlert(phone, body, template, { agencyPhone, agencySupport: true });
+    console.log('[AGENCY_SUPPORT_ALERT_SENT]', JSON.stringify({ to: phone, agencyPhone, ...result }));
+  }
+  return { recipients };
+}
+
 module.exports = {
+  notifyAgencySupportRequest,
   deliverOpsAlert,
   templateComponents,
   notifyProviderSupportHelpRequested,

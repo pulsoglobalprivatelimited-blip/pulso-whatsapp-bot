@@ -1,4 +1,6 @@
 const { getFirestore } = require('./storage');
+const config = require('../config');
+const { sendText } = require('./metaClient');
 
 const COLLECTION = 'providerSupportSessions';
 
@@ -106,7 +108,28 @@ async function resetProviderSupportSession(phone) {
   };
 }
 
+/**
+ * The desk's reply (5 Nov 2026): goes from the support number into her chat,
+ * and into the history as "Pulso team". Free-form, so only inside 24 hours of
+ * her last message; Meta's refusal comes back as the error.
+ */
+async function replyToProviderSupportSession(phone, text, by = 'desk') {
+  const normalizedPhone = normalizePhone(phone);
+  const body = String(text || '').trim().slice(0, 4000);
+  if (!normalizedPhone) throw new Error('phone required');
+  if (!body) throw new Error('reply text required');
+  const ref = collectionRef().doc(normalizedPhone);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error('No support chat with this number');
+  await sendText(normalizedPhone, body, config.providerSupportPhoneNumberId ? { phoneNumberId: config.providerSupportPhoneNumberId } : undefined);
+  const at = new Date().toISOString();
+  await ref.collection('events').add({ type: 'outbound_message', payload: { kind: 'text', body, by }, createdAt: at });
+  await ref.set({ lastDeskReplyAt: at, updatedAt: at }, { merge: true });
+  return { ok: true, at };
+}
+
 module.exports = {
+  replyToProviderSupportSession,
   getProviderSupportSessionDetail,
   listProviderSupportSessions,
   resetProviderSupportSession

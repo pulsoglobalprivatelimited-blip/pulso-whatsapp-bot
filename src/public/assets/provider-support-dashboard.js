@@ -34,6 +34,7 @@ if (backToListButton) {
 }
 document.getElementById('history-bottom-button').addEventListener('click', scrollHistoryToBottom);
 document.getElementById('reset-session-button').addEventListener('click', resetSelectedSession);
+document.getElementById('reply-send-button').addEventListener('click', sendDeskReply);
 sessionSearchInput.addEventListener('input', () => {
   currentSearch = normalizeSearchTerm(sessionSearchInput.value);
   renderList();
@@ -163,7 +164,7 @@ function updateMetrics() {
 // What they said they are. Sessions from before the question existed came from
 // a provider-only line, so they read as caregivers.
 function sessionAudience(session) {
-  return session.audience === 'partner' ? 'partner' : 'provider';
+  return session.audience === 'partner' || session.audience === 'agency_support' ? 'partner' : 'provider';
 }
 
 // What pulso-hub actually knows about the number. The gap between this and the
@@ -174,7 +175,7 @@ function partnerKind(session) {
 }
 
 function agencyName(session) {
-  return (session.partner && session.partner.name) || '';
+  return (session.partner && session.partner.name) || session.agencyName || '';
 }
 
 function matchesAudienceFilter(session) {
@@ -334,12 +335,30 @@ function renderHistoryBubble(entry) {
     return `
       <article class="history-item history-item-outbound">
         <div class="history-meta">
-          <span class="history-sender">Support bot</span>
+          <span class="history-sender">${payload.by === 'desk' ? 'Pulso team' : 'Support bot'}</span>
           <time>${escapeHtml(formatTime(entry.createdAt))}</time>
         </div>
         <div class="history-bubble">
           ${kind !== 'text' ? `<div class="history-label">${escapeHtml(kind)}</div>` : ''}
           <div class="history-text">${escapeHtml(content || 'Message sent')}</div>
+        </div>
+      </article>
+    `;
+  }
+
+  if (entry.event === 'agency_support_requested' || entry.event === 'agency_support_followup') {
+    const item = entry.request || entry.issue || {};
+    const media = (item.media || (item.mediaId ? [{ id: item.mediaId }] : [])).filter((m) => m && m.id);
+    const title = entry.event === 'agency_support_requested' ? `Agency request · ${item.topicLabel || ''}` : 'Agency added';
+    return `
+      <article class="history-item history-item-inbound">
+        <div class="history-meta">
+          <span class="history-sender">${escapeHtml(title)}</span>
+          <time>${escapeHtml(formatTime(entry.createdAt))}</time>
+        </div>
+        <div class="history-bubble">
+          <div class="history-text">${escapeHtml(item.text || (media.length ? '(photo)' : ''))}</div>
+          ${media.map((m) => `<a class="attachment-action" href="/admin/whatsapp-media/${encodeURIComponent(m.id)}" target="_blank" rel="noreferrer">Open photo</a>`).join(' ')}
         </div>
       </article>
     `;
@@ -381,6 +400,39 @@ function getOutboundContent(payload) {
     });
   }
   return lines.join('\n');
+}
+
+async function sendDeskReply() {
+  if (!selectedPhone) return;
+  const box = document.getElementById('reply-text');
+  const status = document.getElementById('reply-status');
+  const button = document.getElementById('reply-send-button');
+  const text = box.value.trim();
+  status.className = 'form-status';
+  if (!text) {
+    status.textContent = 'Type a reply first.';
+    status.classList.add('error');
+    return;
+  }
+  button.disabled = true;
+  button.textContent = 'Sending...';
+  try {
+    await fetchJson(`/admin/provider-support/sessions/${encodeURIComponent(selectedPhone)}/reply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    box.value = '';
+    status.textContent = 'Sent.';
+    status.classList.add('success');
+    await renderDetail(selectedPhone);
+  } catch (error) {
+    status.textContent = `Not sent: ${error.message}`;
+    status.classList.add('error');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Send reply';
+  }
 }
 
 async function resetSelectedSession() {

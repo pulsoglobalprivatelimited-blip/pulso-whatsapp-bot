@@ -6,12 +6,14 @@ const { getInteractiveReplyId, getMessageText, normalizeText } = require('./mess
 const { getProvider } = require('./providerService');
 const {
   notifyProviderSupportHelpRequested,
-  notifyCarePartnerHelpRequested
+  notifyCarePartnerHelpRequested,
+  notifyAgencySupportRequest
 } = require('./providerSupportNotifications');
 const { PARTNER_KIND, resolveCarePartner } = require('./carePartnerService');
 const carePartnerFlow = require('./carePartnerFlow');
 const coordinatorRequests = require('./coordinatorRequestFlow');
 const { maybeHandleAgencyCall } = require('./agencyCallService');
+const agencySupport = require('./agencySupportFlow');
 
 const COLLECTION = 'providerSupportSessions';
 const SUPPORT_HELP_COOLDOWN_MS = 12 * 60 * 60 * 1000;
@@ -221,19 +223,15 @@ function supportHelpAcceptedMessage(language = 'en') {
   ].join('\n');
 }
 
+// No phone number for agencies (founder, 5 Nov 2026): they reach us here.
 function partnerHelpAcceptedMessage(language = 'en') {
-  const phone = config.partnerSupportPhone || config.providerSupportPhone;
 
   if (isMalayalam(language)) {
     return [
       'ഞങ്ങളുടെ partner team-നെ അറിയിച്ചിട്ടുണ്ട്.',
       'Team പരിശോധിച്ച് ആവശ്യമെങ്കിൽ നിങ്ങളെ ബന്ധപ്പെടും.',
       '',
-      'Support time:',
-      'രാവിലെ 10:00 മുതൽ വൈകുന്നേരം 5:00 വരെ',
-      '',
-      'Urgent help-നായി വിളിക്കുക:',
-      phone
+      'ഇവിടെ WhatsApp-ൽ തന്നെ മറുപടി നൽകും.'
     ].join('\n');
   }
 
@@ -241,11 +239,7 @@ function partnerHelpAcceptedMessage(language = 'en') {
     'Our partner team has been informed.',
     'The team will review and contact you if needed.',
     '',
-    'Support time:',
-    '10:00 AM to 5:00 PM',
-    '',
-    'For urgent help, call:',
-    phone
+    'We will reply here on WhatsApp.'
   ].join('\n');
 }
 
@@ -632,6 +626,14 @@ const partnerDeps = {
   switchToProvider
 };
 
+const agencySupportDeps = {
+  sendAndLog,
+  updateSession,
+  addSessionEvent,
+  notify: notifyAgencySupportRequest,
+  now: () => Date.now()
+};
+
 async function sendMenuForSession(phone, session = {}) {
   const partner = session.partner || {};
   if (getSessionAudience(session) === AUDIENCE.PARTNER && partner.kind && partner.kind !== PARTNER_KIND.UNKNOWN) {
@@ -674,8 +676,10 @@ async function handleAudienceSelection(phone, message, session = {}) {
       return;
     }
 
-    const updatedSession = await updateSession(phone, { audience: AUDIENCE.PARTNER, partner });
-    await sendRegionPrompt(phone, regionPromptOptions(updatedSession));
+    // A known agency gets the agency support chat (5 Nov 2026), same as
+    // tapping "Chat with Pulso support" in the app.
+    const updatedSession = await updateSession(phone, { partner });
+    await agencySupport.start(agencySupportDeps, phone, message, updatedSession, { name: partner.name || '' });
     return;
   }
 
@@ -821,6 +825,18 @@ async function processProviderSupportMessage(phone, message) {
   });
 
   const session = await getSession(phone);
+
+  // Agency support from the apps (5 Nov 2026): "AGENCY SUPPORT · <name>" starts
+  // it from any state; its own states are answered before the old questions.
+  if (agencySupport.isStartMessage(message)) {
+    await agencySupport.start(agencySupportDeps, phone, message, session || {});
+    return;
+  }
+  if (session && agencySupport.isAgencyStatus(session.status)) {
+    await agencySupport.handle(agencySupportDeps, phone, message, session);
+    return;
+  }
+
   if (!session || shouldStartOver(message)) {
     if (config.partnerHelpEnabled) {
       await sendAudiencePrompt(phone);

@@ -258,20 +258,14 @@ function prospectHoldMessage(session = {}) {
     return [
       `${partnerName(session)} — താങ്കളുടെ Pulso partner account ഇപ്പോഴും set up ചെയ്തുകൊണ്ടിരിക്കുകയാണ്.`,
       '',
-      'ഞങ്ങളുടെ partner team-നെ അറിയിച്ചിട്ടുണ്ട്. അവർ താങ്കളെ ബന്ധപ്പെടും.',
-      '',
-      'Urgent help-നായി വിളിക്കുക:',
-      supportPhone()
+      'ഞങ്ങളുടെ partner team-നെ അറിയിച്ചിട്ടുണ്ട്. ഇവിടെ WhatsApp-ൽ തന്നെ മറുപടി നൽകും.'
     ].join('\n');
   }
 
   return [
     `${partnerName(session)} — your Pulso partner account is still being set up.`,
     '',
-    'Our partner team has been informed and will contact you.',
-    '',
-    'For urgent help, call:',
-    supportPhone()
+    'Our partner team has been informed and will reply here on WhatsApp.'
   ].join('\n');
 }
 

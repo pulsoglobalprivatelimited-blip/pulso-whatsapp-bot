@@ -28,6 +28,7 @@ const { processProviderSupportMessage } = require('./services/providerSupportFlo
 const {
   getProviderSupportSessionDetail,
   listProviderSupportSessions,
+  replyToProviderSupportSession,
   resetProviderSupportSession
 } = require('./services/providerSupportAdminService');
 const {
@@ -1212,6 +1213,16 @@ app.get('/admin/provider-support/sessions/:phone', async (req, res) => {
     return res.json(session);
   } catch (error) {
     return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/admin/provider-support/sessions/:phone/reply', async (req, res) => {
+  try {
+    const result = await replyToProviderSupportSession(req.params.phone, req.body && req.body.text);
+    return res.json(result);
+  } catch (error) {
+    const detail = error.response && error.response.data && error.response.data.error;
+    return res.status(400).json({ error: (detail && detail.message) || error.message });
   }
 });
 
